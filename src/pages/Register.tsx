@@ -18,10 +18,7 @@ const Register: React.FC = () => {
 
       await setDoc(doc(db, "users", userCredential.user.uid), {
         name: name,
-        email: email,
-        dailyCalories: 0,
-        macros: { protein: 0, carbs: 0, fat: 0 },
-        foodLog: []
+        email: email
       });
 
       alert("Account created successfully!");
