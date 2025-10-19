@@ -16,13 +16,15 @@ const Register: React.FC = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
 
+      // Create user document in Firestore
       await setDoc(doc(db, "users", userCredential.user.uid), {
         name: name,
         email: email
       });
 
-      alert("Account created successfully!");
-      history.push("/login");
+      // Instead of going back to login, send user to setup profile
+      history.push("/setup-profile");
+
     } catch (error: any) {
       alert(error.message);
     }
