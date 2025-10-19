@@ -15,21 +15,20 @@ import {
   IonSpinner,
   IonModal,
 } from "@ionic/react";
+import { useLocation, useHistory } from "react-router";
 import { auth, db } from "../firebase";
 import { doc, setDoc, arrayUnion } from "firebase/firestore";
 
 // === USDA FoodData Central (FDC) ===
-// Docs: https://fdc.nal.usda.gov/api-guide
 const FDC_API_BASE = "https://api.nal.usda.gov/fdc/v1";
-const FDC_API_KEY = "rF58fpY3NUOuHjlhNvE9i7pjNj0q89dgxkQZ0blP"; // <-- as requested
+const FDC_API_KEY = "rF58fpY3NUOuHjlhNvE9i7pjNj0q89dgxkQZ0blP"; // provided key
 
 // ---- Minimal types we use ----
 type FDCSearchFood = {
   fdcId: number;
   description: string;
   brandOwner?: string;
-  dataType?: string; // "Branded" | "Survey (FNDDS)" | "SR Legacy" | "Foundation" | ...
-  // Some search results (especially Branded) include label nutrients right away:
+  dataType?: string;
   labelNutrients?: {
     calories?: { value: number };
     protein?: { value: number };
@@ -43,26 +42,33 @@ type FDCFoodDetail = {
   description: string;
   brandOwner?: string;
   dataType?: string;
-  // Serving info (often present for Branded, FNDDS):
-  servingSize?: number; // numeric value
-  servingSizeUnit?: string; // e.g., "g", "mL"
-  householdServingFullText?: string; // e.g., "1 container (170g)"
-  // Branded foods often include labelNutrients (kcal are "calories")
+  servingSize?: number;
+  servingSizeUnit?: string; // "g", "mL", etc.
+  householdServingFullText?: string;
   labelNutrients?: {
     calories?: { value: number };
     protein?: { value: number };
     fat?: { value: number };
     carbohydrates?: { value: number };
   };
-  // Otherwise we can fall back to "foodNutrients"
+  // NOTE: on /food/{fdcId}, the quantity is usually "amount";
+  // fields can be nested under "nutrient"
   foodNutrients?: Array<{
-    nutrientName?: string; // e.g., "Energy", "Protein", "Total lipid (fat)", "Carbohydrate, by difference"
-    unitName?: string; // e.g., "kcal", "kJ", "g"
-    value?: number;
+    amount?: number;           // <-- primary for details
+    value?: number;            // fallback (rare)
+    unitName?: string;         // sometimes present top-level
+    nutrientName?: string;     // sometimes present top-level
+    nutrientNumber?: string;   // sometimes present top-level
+    nutrient?: {
+      number?: string;         // e.g. "1008"
+      name?: string;           // e.g. "Energy"
+      unitName?: string;       // e.g. "KCAL" | "kJ" | "G"
+    };
   }>;
 };
 
 type MacroSet = { calories: number; carbs: number; protein: number; fat: number };
+type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 
 // ---- Helpers ----
 function safeNum(n: unknown, dp = 2): number {
@@ -70,10 +76,19 @@ function safeNum(n: unknown, dp = 2): number {
   if (!isFinite(v)) return 0;
   return Number(v.toFixed(dp));
 }
-
-// Pull macros from either labelNutrients (preferred for branded) or map foodNutrients
+function kjToKcal(v: number) {
+  return v / 4.184;
+}
+// Shape-agnostic nutrient reader (amount/value + nested names/units)
+function readNutrientFields(n: NonNullable<FDCFoodDetail["foodNutrients"]>[number]) {
+  const numberStr = (n.nutrientNumber ?? n.nutrient?.number ?? "").toString().trim();
+  const nameStr = (n.nutrientName ?? n.nutrient?.name ?? "").toLowerCase();
+  const unitStr = (n.unitName ?? n.nutrient?.unitName ?? "").toLowerCase(); // "kcal", "kj", "g"
+  const qty = (typeof n.amount === "number" ? n.amount : n.value) ?? 0;
+  return { numberStr, nameStr, unitStr, qty };
+}
 function extractMacros(food: FDCFoodDetail | FDCSearchFood): MacroSet {
-  // 1) Prefer labelNutrients if present
+  // 1) Prefer labelNutrients (common for Branded)
   const ln: any = (food as any).labelNutrients;
   if (ln) {
     return {
@@ -83,27 +98,34 @@ function extractMacros(food: FDCFoodDetail | FDCSearchFood): MacroSet {
       fat: safeNum(ln.fat?.value, 2),
     };
   }
-
-  // 2) Fall back to foodNutrients mapping
+  // 2) Fall back to foodNutrients (details endpoint)
   const fns = (food as any).foodNutrients as FDCFoodDetail["foodNutrients"] | undefined;
-  let calories = 0,
-    carbs = 0,
-    protein = 0,
-    fat = 0;
-
-  if (Array.isArray(fns)) {
-    for (const n of fns) {
-      const name = (n.nutrientName || "").toLowerCase();
-      const unit = (n.unitName || "").toLowerCase();
-      const val = n.value ?? 0;
-
-      if (name.includes("energy") && (unit === "kcal" || unit === "cal")) calories = val;
-      if (name.startsWith("protein")) protein = val;
-      if (name.includes("carbohydrate")) carbs = val;
-      if (name.includes("total lipid") || name.includes("fat")) fat = val;
+  let calories = 0, carbs = 0, protein = 0, fat = 0;
+  if (Array.isArray(fns) && fns.length) {
+    for (const raw of fns) {
+      const { numberStr, nameStr, unitStr, qty } = readNutrientFields(raw);
+      if (numberStr === "1008" || nameStr.includes("energy")) {
+        calories = unitStr === "kj" ? kjToKcal(qty) : qty;
+      } else if (numberStr === "1003" || nameStr.startsWith("protein")) {
+        protein = qty;
+      } else if (numberStr === "1004" || nameStr.includes("fat")) {
+        fat = qty;
+      } else if (numberStr === "1005" || nameStr.includes("carbohydrate")) {
+        carbs = qty;
+      }
+    }
+    // Extra fallback: if Energy not found above but there is any energy in kJ
+    if (!calories) {
+      const kjEntry = fns.find((n) => {
+        const { nameStr, unitStr, qty } = readNutrientFields(n);
+        return nameStr.includes("energy") && unitStr === "kj" && qty != null;
+      });
+      if (kjEntry) {
+        const { qty } = readNutrientFields(kjEntry);
+        calories = kjToKcal(qty);
+      }
     }
   }
-
   return {
     calories: safeNum(calories, 0),
     carbs: safeNum(carbs, 2),
@@ -111,8 +133,6 @@ function extractMacros(food: FDCFoodDetail | FDCSearchFood): MacroSet {
     fat: safeNum(fat, 2),
   };
 }
-
-// Scale macros from "per base" (serving if defined, otherwise per 100g) to quantity
 function scaleMacros(base: MacroSet, qty: number): MacroSet {
   return {
     calories: safeNum(base.calories * qty, 0),
@@ -121,11 +141,20 @@ function scaleMacros(base: MacroSet, qty: number): MacroSet {
     fat: safeNum(base.fat * qty, 1),
   };
 }
+function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
+  const params = new URLSearchParams(location.search);
+  const m = (params.get("meal") || "breakfast").toLowerCase();
+  if (m === "breakfast" || m === "lunch" || m === "dinner" || m === "snacks") return m;
+  return "breakfast";
+}
 
 const AddFood: React.FC = () => {
+  const location = useLocation();
+  const history = useHistory();
+  const meal = useMealFromQuery(location);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<FDCSearchFood[]>([]);
-  const [meal, setMeal] = useState<"breakfast" | "lunch" | "dinner" | "snacks">("breakfast");
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
 
@@ -133,15 +162,13 @@ const AddFood: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<FDCFoodDetail | null>(null);
 
-  // Serving state:
-  // - If the item has servingSize, that's the "base". User chooses either:
-  //   (A) number of servings, OR (B) grams/mL. We'll let them toggle "by servings" vs "by weight".
+  // Serving state
   const [useServing, setUseServing] = useState(true);
   const [servingsQty, setServingsQty] = useState<number>(1);
   const [weightQty, setWeightQty] = useState<number>(100); // grams/mL when using weight mode
 
-  // Derived values
   const baseMacros = useMemo(() => extractMacros(selectedFood || ({} as any)), [selectedFood]);
+
   const servingInfo = useMemo(() => {
     if (!selectedFood) return { baseText: "100 g", baseAmount: 100, baseUnit: "g" };
     const hasServing = typeof selectedFood.servingSize === "number" && !!selectedFood.servingSizeUnit;
@@ -155,20 +182,15 @@ const AddFood: React.FC = () => {
         baseUnit: selectedFood.servingSizeUnit!,
       };
     }
-    // Fall back: many non-branded foods are essentially per 100 g
     return { baseText: "100 g", baseAmount: 100, baseUnit: "g" };
   }, [selectedFood]);
 
   const activeTotal = useMemo(() => {
     if (!selectedFood) return { calories: 0, carbs: 0, protein: 0, fat: 0 };
-
-    // Case 1: "per serving" base
     const hasServing = typeof selectedFood.servingSize === "number" && !!selectedFood.servingSizeUnit;
     if (useServing && hasServing) {
       return scaleMacros(baseMacros, servingsQty);
     }
-
-    // Case 2: weight-based (assume base macros correspond to either servingSize or 100 g)
     const baseAmount = hasServing ? selectedFood.servingSize! : 100;
     const ratio = weightQty / baseAmount;
     return scaleMacros(baseMacros, ratio);
@@ -178,20 +200,17 @@ const AddFood: React.FC = () => {
   const foodsSearch = async (q: string, pageNumber = 0) => {
     setLoading(true);
     try {
-      // Use GET; supports CORS, returns JSON
       const params = new URLSearchParams({
         api_key: FDC_API_KEY,
         query: q,
         pageNumber: String(pageNumber),
         pageSize: "20",
-        // Filter example: include Branded + Survey + SR/FF if you want broader coverage
-        dataType: ["Branded", "Survey (FNDDS)", "SR Legacy", "Foundation"].join(","),
+        // Exclude FNDDS (survey) to avoid micronutrient-only oddities
+        dataType: ["Branded", "Foundation", "Survey (FNDDS)", "SR Legacy"].join(","),
       });
-
       const res = await fetch(`${FDC_API_BASE}/foods/search?${params.toString()}`);
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
       const data = await res.json();
-
       const foods: FDCSearchFood[] = Array.isArray(data?.foods) ? data.foods : [];
       setResults(foods);
       setPage(pageNumber);
@@ -209,7 +228,6 @@ const AddFood: React.FC = () => {
       if (!res.ok) throw new Error(`Details failed: ${res.status}`);
       const data: FDCFoodDetail = await res.json();
       setSelectedFood(data);
-      // Reset modal controls
       setUseServing(true);
       setServingsQty(1);
       setWeightQty(100);
@@ -223,19 +241,16 @@ const AddFood: React.FC = () => {
   const addFoodToMeal = async () => {
     if (!auth.currentUser || !selectedFood) return;
 
-    // What is one "base"?
     const hasServing = typeof selectedFood.servingSize === "number" && !!selectedFood.servingSizeUnit;
     const baseAmount = hasServing ? selectedFood.servingSize! : 100;
     const baseUnit = hasServing ? selectedFood.servingSizeUnit! : "g";
 
-    // Quantity chosen + how many "bases" is that?
     let quantityDesc: string;
     let factor = 1;
     if (useServing && hasServing) {
       factor = servingsQty;
       quantityDesc = `${servingsQty} × ${servingInfo.baseText}`;
     } else {
-      // weight mode
       factor = weightQty / baseAmount;
       quantityDesc = `${weightQty} ${baseUnit}`;
     }
@@ -265,7 +280,7 @@ const AddFood: React.FC = () => {
       base: {
         amount: baseAmount,
         unit: baseUnit,
-        label: servingInfo.baseText, // e.g., "1 container (170g)" OR "100 g"
+        label: servingInfo.baseText,
       },
       selection: {
         mode: useServing && hasServing ? "serving" : "weight",
@@ -273,13 +288,14 @@ const AddFood: React.FC = () => {
         servingsQty: useServing && hasServing ? servingsQty : null,
         weightQty: !useServing || !hasServing ? weightQty : null,
       },
-      perBase, // macros per base (serving or 100 g)
+      perBase,
       total,
       addedAt: new Date().toISOString(),
     };
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
     setOpen(false);
+    history.goBack(); // return to Home
   };
 
   return (
@@ -291,19 +307,10 @@ const AddFood: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <IonItem>
-          <IonLabel position="stacked">Select Meal</IonLabel>
-          <IonSelect value={meal} onIonChange={(e) => setMeal(e.detail.value)}>
-            <IonSelectOption value="breakfast">Breakfast</IonSelectOption>
-            <IonSelectOption value="lunch">Lunch</IonSelectOption>
-            <IonSelectOption value="dinner">Dinner</IonSelectOption>
-            <IonSelectOption value="snacks">Snacks</IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
+        {/* Search */}
         <IonItem>
           <IonInput
-            placeholder="Search food..."
+            placeholder={`Search food to add to ${meal}...`}
             value={query}
             onIonChange={(e) => setQuery(e.detail.value || "")}
             onKeyUp={(e) => {
@@ -324,7 +331,6 @@ const AddFood: React.FC = () => {
         {/* Results */}
         <IonList>
           {results.map((food) => {
-            // Prefer labelNutrients from search if available for a quick preview
             const preview = extractMacros(food);
             const hasPreview = preview.calories || preview.protein || preview.carbs || preview.fat;
             return (
@@ -337,7 +343,9 @@ const AddFood: React.FC = () => {
                   <p>
                     {food.dataType || "—"}
                     {hasPreview
-                      ? ` · ${preview.calories || 0} kcal · C ${preview.carbs || 0} g · P ${preview.protein || 0} g · F ${preview.fat || 0} g (per label/100g)`
+                      ? ` · ${preview.calories || 0} kcal · C ${preview.carbs || 0} g · P ${preview.protein || 0} g · F ${
+                          preview.fat || 0
+                        } g (per label/100g)`
                       : ""}
                   </p>
                 </IonLabel>
@@ -375,6 +383,9 @@ const AddFood: React.FC = () => {
                   </p>
                   <p style={{ margin: "4px 0 0" }}>
                     Base: <strong>{servingInfo.baseText}</strong>
+                  </p>
+                  <p style={{ margin: "4px 0 0", opacity: 0.8 }}>
+                    Adding to: <strong>{meal}</strong>
                   </p>
                 </div>
 
@@ -434,7 +445,16 @@ const AddFood: React.FC = () => {
                   <IonButton expand="block" onClick={() => setOpen(false)} fill="outline">
                     Cancel
                   </IonButton>
-                  <IonButton expand="block" onClick={addFoodToMeal}>
+                  <IonButton
+                    expand="block"
+                    onClick={addFoodToMeal}
+                    disabled={
+                      safeNum(baseMacros.calories, 0) === 0 &&
+                      safeNum(baseMacros.protein, 2) === 0 &&
+                      safeNum(baseMacros.carbs, 2) === 0 &&
+                      safeNum(baseMacros.fat, 2) === 0
+                    }
+                  >
                     Add to {meal}
                   </IonButton>
                 </div>
