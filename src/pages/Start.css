@@ -1,0 +1,88 @@
+/* Ensure the page has a solid fallback color behind the video */
+.start-content {
+  --background: #000; /* Ionic var */
+  background: #000;   /* fallback */
+}
+
+/* Background video container fills viewport, sits behind content */
+.bg-video {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none; /* let taps/clicks pass through */
+}
+
+/* <video> scales to cover */
+.bg-video__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Optional dark scrim for text contrast (tune the opacity as needed) */
+.bg-video__scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.25), rgba(0,0,0,0.6) 70%);
+}
+
+/* Foreground stack (your existing code) */
+/* Fill the viewport and center everything */
+.fixed-center {
+  position: absolute;
+  inset: 0;                          
+  display: flex;
+  flex-direction: column;
+  justify-content: center;           
+  align-items: center;               
+  text-align: center;
+  padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
+  z-index: 1; /* sits above the video */
+}
+
+/* Stack styling */
+.start-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  margin-bottom: 0.5rem;
+}
+
+.start-title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.1;
+  color: #fff;
+}
+
+.start-subtitle {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #d1d5db; /* slightly brighter for readability */
+  margin: 0 0 0.75rem 0;
+}
+
+/* Buttons */
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 90vw);
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.start-btn {
+  width: 100%;
+  border-radius: 14px;
+}
+
+/* Respect reduced motion preferences: pause background video */
+@media (prefers-reduced-motion: reduce) {
+  .bg-video__media { animation: none; }
+  .bg-video__media { display: none; } /* or remove to keep a static frame */
+  .bg-video__scrim { background: rgba(0,0,0,0.6); }
+}

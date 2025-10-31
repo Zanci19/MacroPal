@@ -1,0 +1,234 @@
+/* ==========================
+   Home.css — MacroPal Home
+   ========================== */
+
+:root {
+  --mp-surface: var(--ion-card-background, #12161b);
+  --mp-bg: var(--ion-background-color, #0f1115);
+  --mp-text: var(--ion-text-color, #e5e7eb);
+  --mp-text-muted: rgba(229, 231, 235, 0.7);
+  --mp-border: rgba(255, 255, 255, 0.09);
+  --mp-ring-accent: var(--ion-color-primary, #3b82f6);
+  --mp-good: #22c55e;
+  --mp-bad: #ef4444;
+  --mp-chip-bg: rgba(255, 255, 255, 0.06);
+  --mp-shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.45);
+  --mp-shadow-strong: 0 10px 30px rgba(0,0,0,.55);
+
+  --mp-r-card: 16px;
+  --mp-sub: 0.95rem;
+}
+
+/* Base */
+.home-content {
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,0.06), transparent 60%),
+    radial-gradient(1000px 600px at 100% -20%, rgba(99,102,241,0.06), transparent 55%),
+    var(--mp-bg);
+  min-height: 100%;
+}
+ion-title { font-weight: 800; letter-spacing: .2px; }
+
+/* Card */
+ion-card {
+  border-radius: var(--mp-r-card);
+  background: var(--mp-surface);
+  box-shadow: var(--mp-shadow);
+  border: 1px solid var(--mp-border);
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong); border-color: rgba(255,255,255,0.14); }
+
+/* ---------- SUMMARY ---------- */
+
+.fs-summary { padding-bottom: 8px; }
+.fs-summary__hdr { padding: 12px 16px; background: transparent; }
+.fs-summary__hdr ion-card-title { font-weight: 800; letter-spacing: .2px; }
+
+.fs-summary__row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px 8px 14px;
+}
+
+.fs-summary__left {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.ring-pct {
+  font-weight: 800;
+  font-size: .95rem;
+  color: var(--mp-text);
+  opacity: .9;
+}
+
+.fs-summary__mid { display: grid; gap: 10px; }
+.fs-metric-title { font-size: 0.95rem; color: var(--mp-text-muted); }
+
+.fs-summary__right {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+.fs-metric-value {
+  font-weight: 800;
+  font-size: 1.3rem;
+}
+
+/* Macros row under summary */
+.fs-macros {
+  display: flex;
+  gap: 10px;
+  padding: 4px 14px 12px 14px;
+  border-top: 1px solid var(--mp-border);
+}
+.fs-macro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--mp-chip-bg);
+  border: 1px dashed var(--mp-border);
+}
+.fs-macro__label {
+  font-weight: 800;
+  opacity: .9;
+}
+.fs-macro__val {
+  color: var(--mp-text);
+  font-weight: 600;
+}
+
+/* ---------- MEALS ---------- */
+
+.fs-meal {
+  position: relative;
+  border-radius: var(--mp-r-card);
+  border: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+}
+
+.fs-meal__hdr { padding: 0 !important; } /* IonItem renders full width */
+
+.fs-meal__row {
+  --padding-start: 14px;
+  --inner-padding-end: 10px;
+  --inner-padding-top: 8px;
+  --inner-padding-bottom: 8px;
+  --min-height: 58px;
+  width: 100%;
+  background: transparent;
+  align-items: center;
+}
+.fs-meal__icon { font-size: 20px; opacity: .95; }
+.fs-meal__title-text {
+  font-size: 1.06rem;
+  font-weight: 800;
+  letter-spacing: .1px;
+  color: var(--mp-text);
+  margin: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+/* Plus button: icon only (no square) */
+.fs-meal__add {
+  --padding-start: 0;
+  --padding-end: 0;
+  --border-radius: 9999px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  background: transparent !important;
+  border: none !important;
+}
+.fs-meal__add ion-icon {
+  font-size: 20px;
+  opacity: 0.95;
+  color: var(--mp-ring-accent);
+}
+.fs-meal__add:hover { transform: scale(1.05); }
+
+/* Content area – stretch left */
+.fs-meal ion-card-content {
+  padding: 12px 12px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.meal-total {
+  margin: 2px 0 10px 0;
+  text-align: center;
+  width: fit-content;
+  align-self: center;
+  font: 600 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+  color: var(--mp-text);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--mp-chip-bg);
+  border: 1px dashed var(--mp-border);
+}
+
+ion-list { background: transparent !important; width: 100%; }
+.meal-item {
+  --padding-start: 12px;
+  --inner-padding-end: 8px;
+  --min-height: 56px;
+  --background: transparent;
+  --border-color: rgba(255,255,255,0.08);
+  --border-style: solid;
+  --border-width: 0 0 1px 0;
+}
+.meal-item:last-child { --border-width: 0; }
+.meal-item h2 { font-weight: 600; margin: 0 0 2px 0; color: var(--mp-text); }
+.meal-item p { color: var(--mp-text-muted); margin: 0; font-size: var(--mp-sub); }
+
+.kcal-badge {
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--mp-chip-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  min-width: 86px;
+  text-align: center;
+}
+
+/* Delete button */
+.row-remove { opacity: .85; transition: transform .15s ease, opacity .15s ease, filter .15s ease; }
+.row-remove:hover { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 4px 8px rgba(239,68,68,0.2)); }
+
+/* Misc */
+.ion-text-center ion-spinner { transform: translateZ(0); filter: drop-shadow(0 1px 8px rgba(0,0,0,0.25)); }
+@keyframes mp-fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+ion-card, ion-item { animation: mp-fade-in-up .24s ease both; }
+
+html, body, ion-content {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Small phones */
+@media (max-width: 420px) {
+  .fs-summary__row { grid-template-columns: 56px 1fr auto; gap: 10px; }
+  .fs-metric-value { font-size: 1.15rem; }
+  .fs-meal__row {
+    --padding-start: 12px;
+    --inner-padding-end: 8px;
+    --min-height: 54px;
+  }
+  .fs-meal__add { width: 28px; height: 28px; }
+}
