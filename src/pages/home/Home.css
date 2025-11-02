@@ -207,10 +207,6 @@ ion-list { background: transparent !important; width: 100%; }
   text-align: center;
 }
 
-/* Delete button */
-.row-remove { opacity: .85; transition: transform .15s ease, opacity .15s ease, filter .15s ease; }
-.row-remove:hover { transform: scale(1.05); opacity: 1; filter: drop-shadow(0 4px 8px rgba(239,68,68,0.2)); }
-
 /* Misc */
 .ion-text-center ion-spinner { transform: translateZ(0); filter: drop-shadow(0 1px 8px rgba(0,0,0,0.25)); }
 @keyframes mp-fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -232,3 +228,28 @@ html, body, ion-content {
   }
   .fs-meal__add { width: 28px; height: 28px; }
 }
+/* Make the swipe options cover the row content while dragging */
+.overlay-options {
+  position: relative;
+}
+.overlay-options ion-item-options {
+  position: absolute !important;
+  inset: 0 !important;             /* cover the whole row */
+  display: flex;
+  z-index: 2;                       /* above the item */
+  pointer-events: auto;
+}
+.overlay-options ion-item {
+  position: relative;
+  z-index: 1;                       /* below the options layer */
+}
+.overlay-options ion-item-options[side="start"] { justify-content: flex-start; }
+.overlay-options ion-item-options[side="end"]   { justify-content: flex-end;  }
+
+/* Home.css additions */
+.del-btn {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  margin-right: 6px;
+}
+.del-btn ion-icon { font-size: 20px; opacity: .95; }

@@ -1,35 +1,21 @@
+// src/pages/home/Home.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonButtons,
-  IonContent,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
-  IonButton,
-  IonIcon,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonSpinner,
+  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonContent,
+  IonCard, IonCardHeader, IonCardTitle, IonCardContent,
+  IonButton, IonIcon, IonList, IonItem, IonLabel, IonSpinner, IonChip, IonToast
 } from "@ionic/react";
 import {
-  addCircleOutline,
-  logOutOutline,
-  trashOutline,
-  sunnyOutline,
-  restaurantOutline,
-  cafeOutline,
-  fastFoodOutline,
+  addCircleOutline, logOutOutline,
+  sunnyOutline, restaurantOutline, cafeOutline, fastFoodOutline,
+  flameOutline, trashOutline
 } from "ionicons/icons";
 import { useHistory } from "react-router";
 import { auth, db } from "../../firebase";
+import {
+  doc, getDoc, onSnapshot, runTransaction, setDoc
+} from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, onSnapshot, updateDoc, arrayRemove } from "firebase/firestore";
 import "./Home.css";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
@@ -66,44 +52,21 @@ type Profile = {
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-/** Simple SVG circular progress ring (uses currentColor) */
-const ProgressRing: React.FC<{
-  size?: number;
-  stroke?: number;
-  progress: number; // 0..1
-}> = ({ size = 64, stroke = 8, progress }) => {
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(1, progress || 0));
-  const dash = clamped * circumference;
-
+/** Progress ring */
+const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number }> = ({
+  size = 64, stroke = 8, progress
+}) => {
+  const r = (size - stroke) / 2;
+  const C = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(1, progress || 0));
   return (
     <div style={{ width: size, height: size, position: "relative" }}>
       <svg width={size} height={size}>
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeOpacity="0.18"
-          strokeWidth={stroke}
-          fill="transparent"
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={stroke}
-          fill="transparent"
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference - dash}`}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-        />
+        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeOpacity="0.18" strokeWidth={stroke} fill="none" />
+        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeWidth={stroke} fill="none"
+          strokeLinecap="round" strokeDasharray={`${p*C} ${C - p*C}`} transform={`rotate(-90 ${size/2} ${size/2})`} />
       </svg>
-      <div className="ring-center">
-        <div className="ring-pct">{Math.round(clamped * 100)}%</div>
-      </div>
+      <div className="ring-center"><div className="ring-pct">{Math.round(p*100)}%</div></div>
     </div>
   );
 };
@@ -113,99 +76,86 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  const [uid, setUid] = useState<string | null>(null);
+  const [todayKey, setTodayKey] = useState<string>(() => new Date().toISOString().split("T")[0]);
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [caloriesNeeded, setCaloriesNeeded] = useState<number | null>(null);
 
   const [dayData, setDayData] = useState<Record<MealKey, DiaryEntry[]>>({
-    breakfast: [],
-    lunch: [],
-    dinner: [],
-    snacks: [],
+    breakfast: [], lunch: [], dinner: [], snacks: [],
   });
 
-  // Auth + Profile fetch + subscribe to today's foods
+  const [streak, setStreak] = useState<number>(0);
+
+  // last deleted for undo
+  const [lastDeleted, setLastDeleted] = useState<{
+    meal: MealKey; index: number; item: DiaryEntry;
+  } | null>(null);
+
+  const [toast, setToast] = useState<{ open: boolean; message: string }>(
+    { open: false, message: "" }
+  );
+
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        history.replace("/login");
-        return;
-      }
+      if (!user) { history.replace("/login"); return; }
+      setUid(user.uid);
 
-      // Load profile
+      // profile
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists() || !userDoc.data()?.age) {
-        history.replace("/setup-profile");
-        return;
-      }
-      const data = userDoc.data() as Profile;
-      setProfile(data);
+      if (!userDoc.exists() || !userDoc.data()?.age) { history.replace("/setup-profile"); return; }
+      const p = userDoc.data() as Profile; setProfile(p);
 
-      // === Mifflin-St Jeor ===
-      const { age, weight, height, gender, goal, activity } = data;
+      // calories
+      const { age, weight, height, gender, goal, activity } = p;
+      let bmr = gender === "male"
+        ? 10*weight + 6.25*height - 5*age + 5
+        : 10*weight + 6.25*height - 5*age - 161;
+      const mult = activity === "light" ? 1.375 : activity === "moderate" ? 1.55 : activity === "very" ? 1.725 : activity === "extra" ? 1.9 : 1.2;
+      let daily = bmr * mult; if (goal === "lose") daily -= 500; else if (goal === "gain") daily += 500;
+      setCaloriesNeeded(Math.max(800, Math.round(daily)));
 
-      let bmr =
-        gender === "male"
-          ? 10 * weight + 6.25 * height - 5 * age + 5
-          : 10 * weight + 6.25 * height - 5 * age - 161;
-
-      let activityMultiplier = 1.2;
-      switch (activity) {
-        case "light":
-          activityMultiplier = 1.375;
-          break;
-        case "moderate":
-          activityMultiplier = 1.55;
-          break;
-        case "very":
-          activityMultiplier = 1.725;
-          break;
-        case "extra":
-          activityMultiplier = 1.9;
-          break;
-        default:
-          activityMultiplier = 1.2; // sedentary
-      }
-
-      let dailyCalories = bmr * activityMultiplier;
-
-      if (goal === "lose") dailyCalories -= 500;
-      else if (goal === "gain") dailyCalories += 500;
-
-      dailyCalories = Math.max(800, Math.round(dailyCalories)); // sensible minimum
-      setCaloriesNeeded(dailyCalories);
-
-      // Subscribe to today's diary
-      const today = new Date().toISOString().split("T")[0];
-      const ref = doc(db, "users", user.uid, "foods", today);
-      const unsubDoc = onSnapshot(ref, (snap) => {
+      // diary subscribe
+      const key = new Date().toISOString().split("T")[0];
+      setTodayKey(key);
+      const ref = doc(db, "users", user.uid, "foods", key);
+      const unsubDoc = onSnapshot(ref, async (snap) => {
         const d = snap.data() || {};
         setDayData({
-          breakfast: d.breakfast || [],
-          lunch: d.lunch || [],
-          dinner: d.dinner || [],
-          snacks: d.snacks || [],
+          breakfast: d.breakfast || [], lunch: d.lunch || [], dinner: d.dinner || [], snacks: d.snacks || [],
         });
         setLoading(false);
+
+        // simple 14-day streak
+        const today = new Date();
+        let s = 0;
+        for (let i=0;i<14;i++){
+          const dt = new Date(today); dt.setDate(today.getDate()-i);
+          const k = dt.toISOString().split("T")[0];
+          const ds = await getDoc(doc(db, "users", user.uid, "foods", k));
+          const dd = ds.data();
+          const any = !!(dd?.breakfast?.length || dd?.lunch?.length || dd?.dinner?.length || dd?.snacks?.length);
+          if (any) s++; else break;
+        }
+        setStreak(s);
       });
 
-      return () => unsubDoc();
+      return () => { unsubDoc(); };
     });
 
     return () => unsubAuth();
   }, [history]);
 
-  // Totals
+  // totals
   const totals = useMemo(() => {
     const sum = (arr: DiaryEntry[]) =>
-      arr.reduce(
-        (acc, it) => ({
-          calories: acc.calories + (it.total?.calories || 0),
-          carbs: acc.carbs + (it.total?.carbs || 0),
-          protein: acc.protein + (it.total?.protein || 0),
-          fat: acc.fat + (it.total?.fat || 0),
-        }),
-        { calories: 0, carbs: 0, protein: 0, fat: 0 }
-      );
+      arr.reduce((a, it) => ({
+        calories: a.calories + (it.total?.calories || 0),
+        carbs: a.carbs + (it.total?.carbs || 0),
+        protein: a.protein + (it.total?.protein || 0),
+        fat: a.fat + (it.total?.fat || 0),
+      }), { calories: 0, carbs: 0, protein: 0, fat: 0 });
 
     const perMeal = {
       breakfast: sum(dayData.breakfast),
@@ -213,61 +163,113 @@ const Home: React.FC = () => {
       dinner: sum(dayData.dinner),
       snacks: sum(dayData.snacks),
     };
-
-    const day = Object.values(perMeal).reduce(
-      (acc, m) => ({
-        calories: acc.calories + m.calories,
-        carbs: acc.carbs + m.carbs,
-        protein: acc.protein + m.protein,
-        fat: acc.fat + m.fat,
-      }),
-      { calories: 0, carbs: 0, protein: 0, fat: 0 }
-    );
+    const day = Object.values(perMeal).reduce((a,m)=>({
+      calories: a.calories+m.calories, carbs: a.carbs+m.carbs, protein: a.protein+m.protein, fat: a.fat+m.fat
+    }), { calories:0, carbs:0, protein:0, fat:0 });
 
     return { perMeal, day };
   }, [dayData]);
 
-  const kcalConsumed = Math.max(0, Math.round(totals.day.calories));
+  const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
   const kcalGoal = caloriesNeeded ?? 0;
   const kcalLeft = Math.max(0, Math.round(kcalGoal - kcalConsumed));
   const progress = kcalGoal > 0 ? Math.min(1, kcalConsumed / kcalGoal) : 0;
 
-  const pretty = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const macroTargets = useMemo(() => {
+    if (!profile || !caloriesNeeded) return null;
+    const proteinG = Math.round(1.8 * profile.weight);
+    const fatG = Math.max(45, Math.round(0.8 * profile.weight));
+    const proteinK = proteinG * 4, fatK = fatG * 9;
+    const carbsG = Math.round(Math.max(0, kcalGoal - proteinK - fatK) / 4);
+    return { proteinG, fatG, carbsG };
+  }, [profile, caloriesNeeded, kcalGoal]);
 
-  // Ionicon map
+  const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
+
   const mealIcon: Record<MealKey, string> = {
-    breakfast: sunnyOutline,
-    lunch: restaurantOutline,
-    dinner: cafeOutline,
-    snacks: fastFoodOutline,
+    breakfast: sunnyOutline, lunch: restaurantOutline, dinner: cafeOutline, snacks: fastFoodOutline,
   };
 
   const handleLogout = async () => {
+    try { setLoggingOut(true); await signOut(auth); history.replace("/login"); }
+    catch { alert("Failed to log out. Please try again."); }
+    finally { setLoggingOut(false); }
+  };
+
+  // delete with optimistic UI and remember for undo
+  const deleteFood = async (meal: MealKey, index: number) => {
+    if (!uid) return;
+    const current = dayData[meal] || [];
+    if (index < 0 || index >= current.length) return;
+    const item = current[index];
+
+    // optimistic local update
+    const nextMealArr = [...current];
+    nextMealArr.splice(index, 1);
+    setDayData({ ...dayData, [meal]: nextMealArr });
+    setLastDeleted({ meal, index, item });
+    setToast({ open: true, message: `Removed ${item.name}.` });
+
     try {
-      setLoggingOut(true);
-      await signOut(auth);
-      history.replace("/login");
-    } catch (err) {
-      console.error(err);
-      alert("Failed to log out. Please try again.");
-    } finally {
-      setLoggingOut(false);
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", todayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const arr: DiaryEntry[] = [...(data[meal] || [])];
+        // defensive find by addedAt if indices shifted
+        const idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+        if (idx >= 0) arr.splice(idx, 1);
+        else if (index <= arr.length) arr.splice(index, 1);
+        tx.set(ref, { [meal]: arr }, { merge: true });
+      });
+    } catch {
+      // revert on failure
+      const reverted = [...(dayData[meal] || [])];
+      reverted.splice(index, 0, item);
+      setDayData({ ...dayData, [meal]: reverted });
+      setLastDeleted(null);
+      setToast({ open: true, message: "Delete failed." });
     }
   };
 
-  const removeFood = async (meal: MealKey, entry: DiaryEntry) => {
-    if (!auth.currentUser) return;
-    const ok = window.confirm(`Remove "${entry.name}" from ${pretty(meal)}?`);
-    if (!ok) return;
+  const undoDelete = async () => {
+    if (!uid || !lastDeleted) return;
+    const { meal, index, item } = lastDeleted;
+
+    // optimistic local restore
+    const arr = [...(dayData[meal] || [])];
+    const insertAt = Math.min(Math.max(index, 0), arr.length);
+    arr.splice(insertAt, 0, item);
+    setDayData({ ...dayData, [meal]: arr });
+    setLastDeleted(null);
+
     try {
-      const today = new Date().toISOString().split("T")[0];
-      const ref = doc(db, "users", auth.currentUser.uid, "foods", today);
-      await updateDoc(ref, { [meal]: arrayRemove(entry) });
-    } catch (err) {
-      console.error(err);
-      alert("Could not remove the item. Try again.");
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", todayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const cur: DiaryEntry[] = [...(data[meal] || [])];
+
+        // if already present, skip duplicate
+        const exists = cur.some((x) => x.addedAt === item.addedAt);
+        if (!exists) {
+          const pos = Math.min(Math.max(index, 0), cur.length);
+          cur.splice(pos, 0, item);
+          tx.set(ref, { [meal]: cur }, { merge: true });
+        }
+      });
+    } catch {
+      // if backend restore fails, remove the optimistic insert
+      const arr2 = [...(dayData[meal] || [])];
+      const i2 = arr2.findIndex((x) => x.addedAt === item.addedAt);
+      if (i2 >= 0) { arr2.splice(i2, 1); setDayData({ ...dayData, [meal]: arr2 }); }
+      setToast({ open: true, message: "Undo failed." });
     }
   };
+
+  const ringColor = progress <= 0.9 ? "var(--ion-color-success)"
+                   : progress <= 1.1 ? "var(--ion-color-warning)"
+                   : "var(--ion-color-danger)";
 
   return (
     <IonPage>
@@ -284,10 +286,17 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="home-content ion-padding">
-        {/* ====== Summary header ====== */}
+        {/* Summary */}
         <IonCard className="fs-summary">
           <IonCardHeader className="fs-summary__hdr">
-            <IonCardTitle>Today</IonCardTitle>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <IonCardTitle>Today</IonCardTitle>
+              {streak > 1 && (
+                <IonChip color="success" style={{ marginInlineStart: 8 }}>
+                  <IonIcon icon={flameOutline} /><span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+                </IonChip>
+              )}
+            </div>
           </IonCardHeader>
 
           <IonCardContent className="fs-summary__row">
@@ -297,21 +306,13 @@ const Home: React.FC = () => {
               </div>
             ) : (
               <>
-                {/* Left: ring (blue <100%, red >=100%) */}
-                <div
-                  className="fs-summary__left"
-                  style={{ color: progress < 1 ? "var(--ion-color-primary, #3b82f6)" : "var(--mp-bad, #ef4444)" }}
-                >
+                <div className="fs-summary__left" style={{ color: ringColor }}>
                   <ProgressRing size={64} stroke={8} progress={progress} />
                 </div>
-
-                {/* Middle: metric titles */}
                 <div className="fs-summary__mid">
                   <div className="fs-metric-title">Calories Remaining</div>
                   <div className="fs-metric-title">Calories Consumed</div>
                 </div>
-
-                {/* Right: metric values */}
                 <div className="fs-summary__right">
                   <div className="fs-metric-value">{kcalLeft}</div>
                   <div className="fs-metric-value">{kcalConsumed}</div>
@@ -320,98 +321,117 @@ const Home: React.FC = () => {
             )}
           </IonCardContent>
 
-          {/* Macros row */}
           {profile && caloriesNeeded != null && (
-            <div className="fs-macros">
-              <div className="fs-macro">
-                <span className="fs-macro__label">C</span>
-                <span className="fs-macro__val">{totals.day.carbs.toFixed(1)} g</span>
+            <>
+              <div className="fs-macros">
+                <div className="fs-macro"><span className="fs-macro__label">Carbohydrates</span><span className="fs-macro__val">{totals.day.carbs.toFixed(1)} g</span></div>
+                <div className="fs-macro"><span className="fs-macro__label">Protein</span><span className="fs-macro__val">{totals.day.protein.toFixed(1)} g</span></div>
+                <div className="fs-macro"><span className="fs-macro__label">Fat</span><span className="fs-macro__val">{totals.day.fat.toFixed(1)} g</span></div>
               </div>
-              <div className="fs-macro">
-                <span className="fs-macro__label">P</span>
-                <span className="fs-macro__val">{totals.day.protein.toFixed(1)} g</span>
-              </div>
-              <div className="fs-macro">
-                <span className="fs-macro__label">F</span>
-                <span className="fs-macro__val">{totals.day.fat.toFixed(1)} g</span>
-              </div>
-            </div>
+
+              {(() => {
+                const t = macroTargets; if (!t) return null;
+                return (
+                  <div className="fs-macro-bars" style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}>
+                    {[{k:"carbs",g:totals.day.carbs,tg:t.carbsG,l:"Carbohydrates"},
+                      {k:"protein",g:totals.day.protein,tg:t.proteinG,l:"Protein"},
+                      {k:"fat",g:totals.day.fat,tg:t.fatG,l:"Fat"}].map(({k,g,tg,l})=>{
+                        const pct = Math.min(1, tg ? g/tg : 0);
+                        return (
+                          <div key={k} style={{ display: "grid", gap: 4 }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                              <span>{l}</span><span>{g.toFixed(0)} / {tg} g</span>
+                            </div>
+                            <div style={{ height:8, background:"var(--ion-color-light)", borderRadius:9999, overflow:"hidden" }}>
+                              <div style={{ width:`${pct*100}%`, height:"100%", background:"var(--ion-color-primary)" }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })()}
+            </>
           )}
         </IonCard>
 
-        {loading && (
-          <div className="ion-text-center" style={{ padding: 24 }}>
-            <IonSpinner name="dots" />
-          </div>
-        )}
+        {loading && <div className="ion-text-center" style={{ padding: 24 }}><IonSpinner name="dots" /></div>}
 
-        {/* ====== Meals ====== */}
-        {!loading &&
-          MEALS.map((meal) => {
-            const hasItems = (dayData[meal] || []).length > 0;
-            return (
-              <IonCard key={meal} className={`fs-meal ${hasItems ? "is-open" : ""}`}>
-                <IonCardHeader className="fs-meal__hdr">
-                  <IonItem lines="none" className="fs-meal__row" detail={false}>
-                    <IonIcon slot="start" className="fs-meal__icon" icon={mealIcon[meal]} aria-hidden="true" />
-                    <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
-                    <IonButton
-                      slot="end"
-                      className="fs-meal__add"
-                      fill="clear"
-                      onClick={() => history.push(`/add-food?meal=${meal}`)}
-                      aria-label={`Add to ${meal}`}
-                    >
-                      <IonIcon icon={addCircleOutline} />
-                    </IonButton>
-                  </IonItem>
-                </IonCardHeader>
+        {/* Meals */}
+        {!loading && MEALS.map((meal) => {
+          const items = dayData[meal] || [];
+          const hasItems = items.length > 0;
+          return (
+            <IonCard key={meal} className={`fs-meal ${hasItems ? "is-open" : ""}`}>
+              <IonCardHeader className="fs-meal__hdr">
+                <IonItem lines="none" className="fs-meal__row" detail={false}>
+                  <IonIcon slot="start" className="fs-meal__icon" icon={mealIcon[meal]} aria-hidden="true" />
+                  <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+                  <IonButton slot="end" className="fs-meal__add" fill="clear"
+                    onClick={() => history.push(`/add-food?meal=${meal}`)} aria-label={`Add to ${meal}`}>
+                    <IonIcon icon={addCircleOutline} />
+                  </IonButton>
+                </IonItem>
+              </IonCardHeader>
 
-                {hasItems && (
-                  <IonCardContent>
-                    <p className="meal-total">
-                      Total: {Math.round(totals.perMeal[meal].calories)} kcal · C {totals.perMeal[meal].carbs.toFixed(1)} g · P{" "}
-                      {totals.perMeal[meal].protein.toFixed(1)} g · F {totals.perMeal[meal].fat.toFixed(1)} g
-                    </p>
+              {hasItems && (
+                <IonCardContent>
+                  <p className="meal-total">
+                    Total: {Math.round(totals.perMeal[meal].calories)} kcal · Carbohydrates {totals.perMeal[meal].carbs.toFixed(1)} g ·
+                    {" "}Protein {totals.perMeal[meal].protein.toFixed(1)} g · Fat {totals.perMeal[meal].fat.toFixed(1)} g
+                  </p>
 
-                    <IonList>
-                      {dayData[meal].map((it, idx) => {
-                        const kcal = Math.round(it.total.calories);
-                        return (
-                          <IonItem key={`${it.addedAt}-${idx}`} className="meal-item">
-                            <IonLabel>
-                              <h2>
-                                {it.name}
-                                {it.brand ? ` · ${it.brand}` : ""}
-                              </h2>
-                              <p>
-                                C {it.total.carbs.toFixed(1)} g · P {it.total.protein.toFixed(1)} g · F {it.total.fat.toFixed(1)} g
-                              </p>
-                            </IonLabel>
+                  <IonList>
+                    {items.map((it, idx) => {
+                      const kcal = Math.round(it.total.calories);
+                      return (
+                        <IonItem key={`${it.addedAt}-${idx}`} className="meal-item">
+                          <IonLabel>
+                            <h2>
+                              {it.name}{it.brand ? ` · ${it.brand}` : ""}
+                            </h2>
+                            <p>
+                              Carbohydrates {it.total.carbs.toFixed(1)} g ·
+                              {" "}Protein {it.total.protein.toFixed(1)} g ·
+                              {" "}Fat {it.total.fat.toFixed(1)} g
+                            </p>
+                          </IonLabel>
 
-                            <div className="kcal-badge" slot="end">
-                              {kcal} kcal
-                            </div>
+                          <IonButton
+                            slot="end"
+                            fill="clear"
+                            aria-label={`Remove ${it.name}`}
+                            onClick={() => deleteFood(meal, idx)}
+                            className="del-btn"
+                          >
+                            <IonIcon icon={trashOutline} />
+                          </IonButton>
 
-                            <IonButton
-                              slot="end"
-                              fill="clear"
-                              color="danger"
-                              aria-label={`Remove ${it.name}`}
-                              onClick={() => removeFood(meal, it)}
-                              className="row-remove"
-                            >
-                              <IonIcon icon={trashOutline} />
-                            </IonButton>
-                          </IonItem>
-                        );
-                      })}
-                    </IonList>
-                  </IonCardContent>
-                )}
-              </IonCard>
-            );
-          })}
+                          <div className="kcal-badge" slot="end">{kcal} kcal</div>
+                        </IonItem>
+                      );
+                    })}
+                  </IonList>
+                </IonCardContent>
+              )}
+            </IonCard>
+          );
+        })}
+
+        <IonToast
+          isOpen={toast.open}
+          message={toast.message}
+          duration={2500}
+          buttons={[
+            {
+              text: "Undo",
+              role: "cancel",
+              side: "end",
+              handler: () => undoDelete(),
+            },
+          ]}
+          onDidDismiss={() => setToast({ open: false, message: "" })}
+        />
       </IonContent>
     </IonPage>
   );
