@@ -51,7 +51,9 @@ const ScanBarcode: React.FC = () => {
       // Prefer back camera if available
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
       let devId = devices[0]?.deviceId;
-      const back = devices.find(d => /back|rear|environment/i.test(d.label || ""));
+      const back = devices.find((device: MediaDeviceInfo) =>
+        /back|rear|environment/i.test(device.label || "")
+      );
       if (back) devId = back.deviceId;
 
       // Decode once

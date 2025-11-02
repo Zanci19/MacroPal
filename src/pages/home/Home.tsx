@@ -1,22 +1,42 @@
 // src/pages/home/Home.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonContent,
   IonCard, IonCardHeader, IonCardTitle, IonCardContent,
-  IonButton, IonIcon, IonList, IonItem, IonLabel, IonSpinner, IonChip, IonToast
+  IonButton, IonIcon, IonList, IonItem, IonLabel, IonSpinner, IonChip, IonToast,
+  IonInput, IonTextarea, IonModal, IonSelect, IonSelectOption
 } from "@ionic/react";
 import {
   addCircleOutline, logOutOutline,
   sunnyOutline, restaurantOutline, cafeOutline, fastFoodOutline,
-  flameOutline, trashOutline
+  flameOutline, trashOutline, waterOutline, createOutline, analyticsOutline,
+  scaleOutline, flashOutline
 } from "ionicons/icons";
 import { useHistory } from "react-router";
 import { auth, db } from "../../firebase";
 import {
-  doc, getDoc, onSnapshot, runTransaction, setDoc
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  runTransaction,
+  setDoc
 } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import "./Home.css";
+import {
+  Bar,
+  BarChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 type Macros = { calories: number; carbs: number; protein: number; fat: number };
@@ -93,9 +113,39 @@ const Home: React.FC = () => {
     meal: MealKey; index: number; item: DiaryEntry;
   } | null>(null);
 
-  const [toast, setToast] = useState<{ open: boolean; message: string }>(
-    { open: false, message: "" }
+  const [toast, setToast] = useState<{ open: boolean; message: string; allowUndo?: boolean }>(
+    { open: false, message: "", allowUndo: false }
   );
+
+  const [hydration, setHydration] = useState<{ waterMl: number; targetMl: number; lastUpdated?: string }>(
+    { waterMl: 0, targetMl: 2000 }
+  );
+  const [hydrationTargetInput, setHydrationTargetInput] = useState<string>("2000");
+  const [hydrationSaving, setHydrationSaving] = useState(false);
+
+  const [dailyNote, setDailyNote] = useState<string>("");
+  const [savingNote, setSavingNote] = useState(false);
+
+  const [weeklyTotals, setWeeklyTotals] = useState<
+    { date: string; label: string; calories: number; protein: number; carbs: number; fat: number }[]
+  >([]);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
+
+  const [weightEntries, setWeightEntries] = useState<{ date: string; weight: number }[]>([]);
+  const [weightInput, setWeightInput] = useState<string>("");
+  const [savingWeight, setSavingWeight] = useState(false);
+
+  const [quickAdd, setQuickAdd] = useState({
+    open: false,
+    meal: null as MealKey | null,
+    name: "",
+    calories: "",
+    carbs: "",
+    protein: "",
+    fat: "",
+    note: "",
+  });
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
 
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
@@ -125,6 +175,14 @@ const Home: React.FC = () => {
         setDayData({
           breakfast: d.breakfast || [], lunch: d.lunch || [], dinner: d.dinner || [], snacks: d.snacks || [],
         });
+        const recommendedWater = Math.max(1500, Math.round((p?.weight || 60) * 35));
+        const waterTargetMl = typeof d.waterTargetMl === "number" && d.waterTargetMl > 0
+          ? d.waterTargetMl
+          : recommendedWater;
+        const waterMl = typeof d.waterMl === "number" && d.waterMl >= 0 ? d.waterMl : 0;
+        setHydration({ waterMl, targetMl: waterTargetMl, lastUpdated: d.waterUpdatedAt });
+        setHydrationTargetInput(String(waterTargetMl || ""));
+        setDailyNote(typeof d.note === "string" ? d.note : "");
         setLoading(false);
 
         // simple 14-day streak
@@ -146,6 +204,83 @@ const Home: React.FC = () => {
 
     return () => unsubAuth();
   }, [history]);
+
+  const loadWeights = useCallback(async () => {
+    if (!uid) return;
+    try {
+      const q = query(
+        collection(db, "users", uid, "weights"),
+        orderBy("date", "desc"),
+        limit(14)
+      );
+      const snap = await getDocs(q);
+      const entries = snap.docs
+        .map((docSnap) => {
+          const data = docSnap.data() as { weight?: number; date?: string };
+          const wtRaw = typeof data.weight === "number" ? data.weight : Number(data.weight);
+          if (!isFinite(wtRaw)) return null;
+          const date = data.date || docSnap.id;
+          return { date, weight: Number(wtRaw.toFixed(1)) };
+        })
+        .filter(Boolean) as { date: string; weight: number }[];
+      setWeightEntries(entries);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [uid]);
+
+  useEffect(() => {
+    loadWeights();
+  }, [loadWeights]);
+
+  useEffect(() => {
+    if (!uid) return;
+    let cancelled = false;
+    const fetchWeekly = async () => {
+      setWeeklyLoading(true);
+      try {
+        const todayDate = new Date(todayKey);
+        const days: { date: string; label: string; calories: number; protein: number; carbs: number; fat: number }[] = [];
+        for (let i = 6; i >= 0; i -= 1) {
+          const dt = new Date(todayDate);
+          dt.setDate(todayDate.getDate() - i);
+          const key = dt.toISOString().split("T")[0];
+          const ds = await getDoc(doc(db, "users", uid, "foods", key));
+          const data = (ds.data() || {}) as Record<string, unknown>;
+          const meals: DiaryEntry[][] = MEALS.map((meal) => (
+            (data[meal] as DiaryEntry[] | undefined) || []
+          ));
+          const totals = meals.reduce(
+            (acc, arr) => {
+              arr.forEach((item) => {
+                acc.calories += item.total?.calories || 0;
+                acc.carbs += item.total?.carbs || 0;
+                acc.protein += item.total?.protein || 0;
+                acc.fat += item.total?.fat || 0;
+              });
+              return acc;
+            },
+            { calories: 0, carbs: 0, protein: 0, fat: 0 }
+          );
+          days.push({
+            date: key,
+            label: dt.toLocaleDateString(undefined, { weekday: "short" }),
+            calories: Math.round(totals.calories),
+            protein: Number(totals.protein.toFixed(1)),
+            carbs: Number(totals.carbs.toFixed(1)),
+            fat: Number(totals.fat.toFixed(1)),
+          });
+        }
+        if (!cancelled) setWeeklyTotals(days);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setWeeklyLoading(false);
+      }
+    };
+    fetchWeekly();
+    return () => { cancelled = true; };
+  }, [uid, todayKey, dayData]);
 
   // totals
   const totals = useMemo(() => {
@@ -190,6 +325,64 @@ const Home: React.FC = () => {
     breakfast: sunnyOutline, lunch: restaurantOutline, dinner: cafeOutline, snacks: fastFoodOutline,
   };
 
+  const hydrationProgress = hydration.targetMl > 0
+    ? Math.min(1, hydration.waterMl / hydration.targetMl)
+    : 0;
+
+  const latestWeight = weightEntries[0]?.weight;
+  const previousWeight = weightEntries[1]?.weight;
+  const weightDelta = latestWeight != null && previousWeight != null
+    ? Number((latestWeight - previousWeight).toFixed(1))
+    : null;
+
+  const insights = useMemo(() => {
+    const messages: string[] = [];
+    const perMeal = totals.perMeal;
+    const richestMeal = MEALS.reduce((best, meal) =>
+      perMeal[meal].calories > perMeal[best].calories ? meal : best,
+    MEALS[0]);
+    if (perMeal[richestMeal].calories > 0) {
+      messages.push(`${pretty(richestMeal)} is your biggest meal today at ${Math.round(perMeal[richestMeal].calories)} kcal.`);
+    }
+    if (macroTargets) {
+      const proteinLeft = Math.round(macroTargets.proteinG - totals.day.protein);
+      if (proteinLeft > 0) {
+        messages.push(`You need ${proteinLeft} g more protein to hit your goal.`);
+      } else {
+        messages.push(`You've exceeded your protein goal by ${Math.abs(proteinLeft)} g — great job!`);
+      }
+      const carbLeft = Math.round(macroTargets.carbsG - totals.day.carbs);
+      if (carbLeft < -20) {
+        messages.push(`Carbs are ${Math.abs(carbLeft)} g over target; consider lighter options later.`);
+      }
+    }
+    if (hydration.targetMl > 0) {
+      const pct = Math.round(hydrationProgress * 100);
+      if (pct < 50) {
+        messages.push("Hydration is under 50% of your goal — drink some water.");
+      } else {
+        messages.push(`Hydration goal is ${pct}% complete.`);
+      }
+    }
+    if (weeklyTotals.length) {
+      const avg = weeklyTotals.reduce((acc, cur) => acc + cur.calories, 0) / weeklyTotals.length;
+      const diff = Math.round(totals.day.calories - avg);
+      if (Math.abs(diff) >= 10) {
+        messages.push(`Today you are ${diff >= 0 ? "above" : "below"} the 7-day average by ${Math.abs(diff)} kcal.`);
+      }
+    }
+    return Array.from(new Set(messages)).slice(0, 4);
+  }, [totals, macroTargets, hydration.targetMl, hydrationProgress, weeklyTotals]);
+
+  const toastButtons = toast.allowUndo && lastDeleted
+    ? [{
+        text: "Undo",
+        role: "cancel" as const,
+        side: "end" as const,
+        handler: () => undoDelete(),
+      }]
+    : undefined;
+
   const handleLogout = async () => {
     try { setLoggingOut(true); await signOut(auth); history.replace("/login"); }
     catch { alert("Failed to log out. Please try again."); }
@@ -208,7 +401,7 @@ const Home: React.FC = () => {
     nextMealArr.splice(index, 1);
     setDayData({ ...dayData, [meal]: nextMealArr });
     setLastDeleted({ meal, index, item });
-    setToast({ open: true, message: `Removed ${item.name}.` });
+    setToast({ open: true, message: `Removed ${item.name}.`, allowUndo: true });
 
     try {
       await runTransaction(db, async (tx) => {
@@ -228,7 +421,7 @@ const Home: React.FC = () => {
       reverted.splice(index, 0, item);
       setDayData({ ...dayData, [meal]: reverted });
       setLastDeleted(null);
-      setToast({ open: true, message: "Delete failed." });
+      setToast({ open: true, message: "Delete failed.", allowUndo: false });
     }
   };
 
@@ -263,7 +456,166 @@ const Home: React.FC = () => {
       const arr2 = [...(dayData[meal] || [])];
       const i2 = arr2.findIndex((x) => x.addedAt === item.addedAt);
       if (i2 >= 0) { arr2.splice(i2, 1); setDayData({ ...dayData, [meal]: arr2 }); }
-      setToast({ open: true, message: "Undo failed." });
+      setToast({ open: true, message: "Undo failed.", allowUndo: false });
+    }
+  };
+
+  const adjustWater = async (delta: number) => {
+    if (!uid) return;
+    const prev = hydration.waterMl;
+    const next = Math.max(0, Math.round(prev + delta));
+    setHydration((h) => ({ ...h, waterMl: next }));
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foods", todayKey),
+        { waterMl: next, waterUpdatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+      setToast({ open: true, message: `Water logged: ${next} ml`, allowUndo: false });
+    } catch (err) {
+      console.error(err);
+      setHydration((h) => ({ ...h, waterMl: prev }));
+      setToast({ open: true, message: "Unable to update water", allowUndo: false });
+    }
+  };
+
+  const saveWaterTarget = async () => {
+    if (!uid) return;
+    const target = Math.max(500, Math.round(Number(hydrationTargetInput) || 0));
+    const prev = hydration.targetMl;
+    setHydration((h) => ({ ...h, targetMl: target }));
+    setHydrationSaving(true);
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foods", todayKey),
+        { waterTargetMl: target },
+        { merge: true }
+      );
+      setHydrationTargetInput(String(target));
+      setToast({ open: true, message: `Saved hydration goal (${target} ml)`, allowUndo: false });
+    } catch (err) {
+      console.error(err);
+      setHydration((h) => ({ ...h, targetMl: prev }));
+      setToast({ open: true, message: "Unable to save hydration goal", allowUndo: false });
+    } finally {
+      setHydrationSaving(false);
+    }
+  };
+
+  const saveDailyNote = async () => {
+    if (!uid) return;
+    setSavingNote(true);
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foods", todayKey),
+        { note: dailyNote, noteUpdatedAt: new Date().toISOString() },
+        { merge: true }
+      );
+      setToast({ open: true, message: "Saved daily reflection", allowUndo: false });
+    } catch (err) {
+      console.error(err);
+      setToast({ open: true, message: "Unable to save note", allowUndo: false });
+    } finally {
+      setSavingNote(false);
+    }
+  };
+
+  const saveWeight = async () => {
+    if (!uid) return;
+    const parsed = Number(weightInput);
+    if (!isFinite(parsed) || parsed <= 0) {
+      setToast({ open: true, message: "Enter a valid weight", allowUndo: false });
+      return;
+    }
+    setSavingWeight(true);
+    try {
+      await setDoc(
+        doc(db, "users", uid, "weights", todayKey),
+        {
+          weight: Number(parsed.toFixed(1)),
+          date: todayKey,
+          recordedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+      setWeightInput("");
+      await loadWeights();
+      setToast({ open: true, message: "Weight logged", allowUndo: false });
+    } catch (err) {
+      console.error(err);
+      setToast({ open: true, message: "Unable to save weight", allowUndo: false });
+    } finally {
+      setSavingWeight(false);
+    }
+  };
+
+  const openQuickAdd = (meal: MealKey) => {
+    setQuickAdd({
+      open: true,
+      meal,
+      name: "",
+      calories: "",
+      carbs: "",
+      protein: "",
+      fat: "",
+      note: "",
+    });
+  };
+
+  const closeQuickAdd = () => {
+    setQuickAdd((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleQuickAddSave = async () => {
+    if (!uid || !quickAdd.meal) return;
+    const meal = quickAdd.meal;
+    const name = quickAdd.name.trim() || "Quick add calories";
+    const calories = Math.max(0, Math.round(Number(quickAdd.calories) || 0));
+    const parseMacro = (val: string) => {
+      const num = Number(val);
+      if (!isFinite(num) || num < 0) return 0;
+      return Number(num.toFixed(1));
+    };
+    const carbs = parseMacro(quickAdd.carbs);
+    const protein = parseMacro(quickAdd.protein);
+    const fat = parseMacro(quickAdd.fat);
+    const note = quickAdd.note.trim();
+    const entry: DiaryEntry = {
+      fdcId: Number(new Date().valueOf()),
+      name,
+      brand: note ? note : "Quick Add",
+      dataType: "QUICK_ADD",
+      base: { amount: 1, unit: "serving", label: "Custom" },
+      selection: { mode: "serving", note },
+      perBase: { calories, carbs, protein, fat },
+      total: { calories, carbs, protein, fat },
+      addedAt: new Date().toISOString(),
+    };
+
+    setQuickAddSaving(true);
+    setDayData((prevState) => ({
+      ...prevState,
+      [meal]: [...(prevState[meal] || []), entry],
+    }));
+    try {
+      await setDoc(
+        doc(db, "users", uid, "foods", todayKey),
+        { [meal]: arrayUnion(entry) },
+        { merge: true }
+      );
+      setToast({ open: true, message: `Added ${name}`, allowUndo: false });
+      closeQuickAdd();
+    } catch (err) {
+      console.error(err);
+      setDayData((prevState) => {
+        const current = [...(prevState[meal] || [])];
+        const idx = current.findIndex((it) => it.addedAt === entry.addedAt);
+        if (idx >= 0) current.splice(idx, 1);
+        return { ...prevState, [meal]: current };
+      });
+      setToast({ open: true, message: "Unable to quick add", allowUndo: false });
+    } finally {
+      setQuickAddSaving(false);
     }
   };
 
@@ -355,6 +707,184 @@ const Home: React.FC = () => {
           )}
         </IonCard>
 
+        <IonCard className="fs-quick">
+          <IonCardHeader className="fs-card__hdr">
+            <IonCardTitle><IonIcon icon={flashOutline} />Quick actions</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent className="fs-quick__content">
+            <IonButton expand="block" fill="clear" onClick={() => history.push("/scan-barcode")}>
+              <IonIcon slot="start" icon={flashOutline} />Scan a barcode
+            </IonButton>
+            <IonButton expand="block" fill="clear" onClick={() => history.push("/add-food")}>
+              <IonIcon slot="start" icon={addCircleOutline} />Browse food database
+            </IonButton>
+            <IonButton expand="block" fill="clear" onClick={() => openQuickAdd("snacks")}>
+              <IonIcon slot="start" icon={fastFoodOutline} />Quick add calories
+            </IonButton>
+          </IonCardContent>
+        </IonCard>
+
+        <IonCard className="fs-hydration">
+          <IonCardHeader className="fs-card__hdr">
+            <IonCardTitle><IonIcon icon={waterOutline} />Hydration tracker</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <div className="fs-hydration__row">
+              <div className="fs-hydration__progress">
+                <ProgressRing size={72} stroke={8} progress={hydrationProgress} />
+                <div className="fs-hydration__center">
+                  <IonIcon icon={waterOutline} />
+                  <strong>{Math.round(hydrationProgress * 100)}%</strong>
+                  <span>{hydration.waterMl}/{hydration.targetMl} ml</span>
+                </div>
+              </div>
+              <div className="fs-hydration__actions">
+                <div className="fs-hydration__buttons">
+                  {[250, 350, 500].map((ml) => (
+                    <IonButton key={ml} size="small" onClick={() => adjustWater(ml)}>
+                      +{ml} ml
+                    </IonButton>
+                  ))}
+                  <IonButton size="small" color="medium" onClick={() => adjustWater(-250)}>
+                    -250 ml
+                  </IonButton>
+                </div>
+                <IonItem lines="none" className="fs-hydration__item">
+                  <IonLabel position="stacked">Daily goal (ml)</IonLabel>
+                  <IonInput
+                    type="number"
+                    value={hydrationTargetInput}
+                    onIonChange={(e) => setHydrationTargetInput(e.detail.value || "")}
+                    inputmode="numeric"
+                  />
+                </IonItem>
+                <IonButton
+                  expand="block"
+                  onClick={saveWaterTarget}
+                  disabled={hydrationSaving}
+                >
+                  Save hydration goal
+                </IonButton>
+              </div>
+            </div>
+          </IonCardContent>
+        </IonCard>
+
+        <IonCard className="fs-weekly">
+          <IonCardHeader className="fs-card__hdr">
+            <IonCardTitle><IonIcon icon={analyticsOutline} />7-day calorie trend</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            {weeklyLoading ? (
+              <div className="ion-text-center" style={{ padding: 16 }}>
+                <IonSpinner name="lines" />
+              </div>
+            ) : weeklyTotals.length ? (
+              <div className="fs-weekly__chart">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={weeklyTotals}>
+                    <XAxis dataKey="label" stroke="var(--mp-text-muted)" tickLine={false} axisLine={false} />
+                    <YAxis stroke="var(--mp-text-muted)" tickLine={false} axisLine={false} width={36} />
+                    <Tooltip
+                      cursor={{ fill: "rgba(255,255,255,0.05)" }}
+                      contentStyle={{ background: "var(--mp-surface)", borderRadius: 12, border: "1px solid var(--mp-border)", color: "var(--mp-text)" }}
+                      formatter={(value: number) => [`${Math.round(value)} kcal`, "Calories"]}
+                    />
+                    <Bar dataKey="calories" fill="var(--ion-color-primary)" radius={[10, 10, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="fs-weekly__meta">
+                  <span>Average: {Math.round(weeklyTotals.reduce((acc, cur) => acc + cur.calories, 0) / weeklyTotals.length)} kcal</span>
+                  <span>Highest: {Math.max(...weeklyTotals.map((d) => d.calories))} kcal</span>
+                </div>
+              </div>
+            ) : (
+              <p>No data for the past week yet.</p>
+            )}
+          </IonCardContent>
+        </IonCard>
+
+        {insights.length > 0 && (
+          <IonCard className="fs-insights">
+            <IonCardHeader className="fs-card__hdr">
+              <IonCardTitle><IonIcon icon={analyticsOutline} />Coach insights</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <ul>
+                {insights.map((tip, idx) => (
+                  <li key={idx}>{tip}</li>
+                ))}
+              </ul>
+            </IonCardContent>
+          </IonCard>
+        )}
+
+        <IonCard className="fs-weight">
+          <IonCardHeader className="fs-card__hdr">
+            <IonCardTitle><IonIcon icon={scaleOutline} />Weight check-in</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <div className="fs-weight__summary">
+              <IonIcon icon={scaleOutline} />
+              <div>
+                <div className="fs-weight__current">
+                  {latestWeight != null ? `${latestWeight.toFixed(1)} kg` : "No entry yet"}
+                </div>
+                {weightDelta != null && (
+                  <div className={`fs-weight__delta ${weightDelta > 0 ? "is-up" : weightDelta < 0 ? "is-down" : ""}`}>
+                    {weightDelta > 0 ? "+" : weightDelta < 0 ? "" : "±"}{Math.abs(weightDelta)} kg since last entry
+                  </div>
+                )}
+              </div>
+            </div>
+            <IonItem lines="none" className="fs-weight__item">
+              <IonLabel position="stacked">Today's weight (kg)</IonLabel>
+              <IonInput
+                type="number"
+                value={weightInput}
+                inputmode="decimal"
+                onIonChange={(e) => setWeightInput(e.detail.value || "")}
+              />
+            </IonItem>
+            <IonButton expand="block" onClick={saveWeight} disabled={savingWeight}>
+              Log weight
+            </IonButton>
+            {weightEntries.length > 0 && (
+              <div className="fs-weight__history">
+                <h3>Recent entries</h3>
+                <ul>
+                  {weightEntries.map((entry) => (
+                    <li key={entry.date}>
+                      <span>{entry.date}</span>
+                      <span>{entry.weight.toFixed(1)} kg</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </IonCardContent>
+        </IonCard>
+
+        <IonCard className="fs-note">
+          <IonCardHeader className="fs-card__hdr">
+            <IonCardTitle><IonIcon icon={createOutline} />Daily reflection</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <IonItem lines="none" className="fs-note__item">
+              <IonLabel position="stacked">How did today feel?</IonLabel>
+              <IonTextarea
+                autoGrow
+                value={dailyNote}
+                onIonChange={(e) => setDailyNote(e.detail.value || "")}
+                maxlength={400}
+              />
+            </IonItem>
+            <IonButton expand="block" onClick={saveDailyNote} disabled={savingNote}>
+              <IonIcon slot="start" icon={createOutline} />Save note
+            </IonButton>
+          </IonCardContent>
+        </IonCard>
+
         {loading && <div className="ion-text-center" style={{ padding: 24 }}><IonSpinner name="dots" /></div>}
 
         {/* Meals */}
@@ -367,6 +897,15 @@ const Home: React.FC = () => {
                 <IonItem lines="none" className="fs-meal__row" detail={false}>
                   <IonIcon slot="start" className="fs-meal__icon" icon={mealIcon[meal]} aria-hidden="true" />
                   <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+                  <IonButton
+                    slot="end"
+                    className="fs-meal__add"
+                    fill="clear"
+                    onClick={() => openQuickAdd(meal)}
+                    aria-label={`Quick add to ${meal}`}
+                  >
+                    <IonIcon icon={flashOutline} />
+                  </IonButton>
                   <IonButton slot="end" className="fs-meal__add" fill="clear"
                     onClick={() => history.push(`/add-food?meal=${meal}`)} aria-label={`Add to ${meal}`}>
                     <IonIcon icon={addCircleOutline} />
@@ -418,19 +957,96 @@ const Home: React.FC = () => {
           );
         })}
 
+        <IonModal isOpen={quickAdd.open} onDidDismiss={closeQuickAdd}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Quick add calories</IonTitle>
+              <IonButtons slot="end">
+                <IonButton onClick={closeQuickAdd}>Close</IonButton>
+              </IonButtons>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding">
+            <IonItem lines="full">
+              <IonLabel position="stacked">Meal</IonLabel>
+              <IonSelect
+                value={quickAdd.meal ?? "snacks"}
+                onIonChange={(e) => setQuickAdd((prev) => ({
+                  ...prev,
+                  meal: (e.detail.value as MealKey) || prev.meal || "snacks",
+                }))}
+              >
+                {MEALS.map((meal) => (
+                  <IonSelectOption key={meal} value={meal}>{pretty(meal)}</IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonItem>
+            <IonItem lines="full">
+              <IonLabel position="stacked">Name</IonLabel>
+              <IonInput
+                value={quickAdd.name}
+                placeholder="e.g. Protein shake"
+                onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, name: e.detail.value || "" }))}
+              />
+            </IonItem>
+            <IonItem lines="full">
+              <IonLabel position="stacked">Calories</IonLabel>
+              <IonInput
+                type="number"
+                inputmode="numeric"
+                value={quickAdd.calories}
+                onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, calories: e.detail.value || "" }))}
+              />
+            </IonItem>
+            <div className="fs-quick__grid">
+              <IonItem lines="full">
+                <IonLabel position="stacked">Carbs (g)</IonLabel>
+                <IonInput
+                  type="number"
+                  inputmode="decimal"
+                  value={quickAdd.carbs}
+                  onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, carbs: e.detail.value || "" }))}
+                />
+              </IonItem>
+              <IonItem lines="full">
+                <IonLabel position="stacked">Protein (g)</IonLabel>
+                <IonInput
+                  type="number"
+                  inputmode="decimal"
+                  value={quickAdd.protein}
+                  onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, protein: e.detail.value || "" }))}
+                />
+              </IonItem>
+              <IonItem lines="full">
+                <IonLabel position="stacked">Fat (g)</IonLabel>
+                <IonInput
+                  type="number"
+                  inputmode="decimal"
+                  value={quickAdd.fat}
+                  onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, fat: e.detail.value || "" }))}
+                />
+              </IonItem>
+            </div>
+            <IonItem lines="full">
+              <IonLabel position="stacked">Notes</IonLabel>
+              <IonTextarea
+                autoGrow
+                value={quickAdd.note}
+                onIonChange={(e) => setQuickAdd((prev) => ({ ...prev, note: e.detail.value || "" }))}
+              />
+            </IonItem>
+            <IonButton expand="block" onClick={handleQuickAddSave} disabled={quickAddSaving}>
+              <IonIcon slot="start" icon={fastFoodOutline} />Save entry
+            </IonButton>
+          </IonContent>
+        </IonModal>
+
         <IonToast
           isOpen={toast.open}
           message={toast.message}
           duration={2500}
-          buttons={[
-            {
-              text: "Undo",
-              role: "cancel",
-              side: "end",
-              handler: () => undoDelete(),
-            },
-          ]}
-          onDidDismiss={() => setToast({ open: false, message: "" })}
+          buttons={toastButtons}
+          onDidDismiss={() => setToast({ open: false, message: "", allowUndo: false })}
         />
       </IonContent>
     </IonPage>
