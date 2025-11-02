@@ -22,6 +22,7 @@ import {
 import { useLocation, useHistory } from "react-router";
 import { auth, db } from "../firebase";
 import { doc, setDoc, arrayUnion } from "firebase/firestore";
+import { Macros, MealKey } from "../types/nutrition";
 
 /** =========================
  *  Open Food Facts via Firebase Functions proxy
@@ -65,9 +66,6 @@ type OFFNutriments = {
   ["carbohydrates_serving"]?: number;
 };
 
-type MacroSet = { calories: number; carbs: number; protein: number; fat: number };
-type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
-
 /** =========================
  *  Helpers
  *  ========================= */
@@ -91,7 +89,7 @@ function parseServingSize(servingSize?: string): { grams?: number; ml?: number; 
   return { label, grams: undefined, ml: undefined };
 }
 
-function macrosPer100g(nutri?: OFFNutriments): MacroSet {
+function macrosPer100g(nutri?: OFFNutriments): Macros {
   return {
     calories: safeNum(nutri?.["energy-kcal_100g"], 0),
     carbs: safeNum(nutri?.["carbohydrates_100g"], 2),
@@ -100,7 +98,7 @@ function macrosPer100g(nutri?: OFFNutriments): MacroSet {
   };
 }
 
-function macrosPerServing(nutri?: OFFNutriments): MacroSet {
+function macrosPerServing(nutri?: OFFNutriments): Macros {
   return {
     calories: safeNum(nutri?.["energy-kcal_serving"], 0),
     carbs: safeNum(nutri?.["carbohydrates_serving"], 2),
@@ -109,7 +107,7 @@ function macrosPerServing(nutri?: OFFNutriments): MacroSet {
   };
 }
 
-function scale(base: MacroSet, qty: number): MacroSet {
+function scale(base: Macros, qty: number): Macros {
   return {
     calories: safeNum(base.calories * qty, 0),
     carbs: safeNum(base.carbs * qty, 1),
