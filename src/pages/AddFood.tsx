@@ -17,11 +17,14 @@ import {
   IonButtons,
   IonBackButton,
   IonToast,
+  IonChip,
+  IonIcon,
 } from "@ionic/react";
 
 import { useLocation, useHistory } from "react-router";
 import { auth, db } from "../firebase";
 import { doc, setDoc, arrayUnion } from "firebase/firestore";
+import { calendarOutline } from "ionicons/icons";
 
 /** =========================
  *  Open Food Facts via Firebase Functions proxy
@@ -126,6 +129,14 @@ function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
     : "breakfast";
 }
 
+function parseDateParam(params: URLSearchParams, todayKey: string): string {
+  const raw = params.get("date");
+  if (!raw) return todayKey;
+  const trimmed = raw.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return todayKey;
+  return trimmed > todayKey ? todayKey : trimmed;
+}
+
 /** =========================
  *  Component
  *  ========================= */
@@ -133,6 +144,25 @@ const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const meal = useMealFromQuery(location);
+  const todayKey = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const [targetDate, setTargetDate] = useState<string>(() =>
+    parseDateParam(new URLSearchParams(location.search), todayKey)
+  );
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const iso = parseDateParam(params, todayKey);
+    setTargetDate((prev) => (prev === iso ? prev : iso));
+  }, [location.search, todayKey]);
+  const targetDateLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(new Date(targetDate)),
+    [targetDate]
+  );
+  const isToday = targetDate === todayKey;
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OFFSearchHit[]>([]);
@@ -313,9 +343,13 @@ const AddFood: React.FC = () => {
     // Totals
     const total = scale(perBase, factor);
 
+    if (!auth.currentUser) {
+      setToast({ show: true, message: "Please sign in again.", color: "danger" });
+      return;
+    }
+
     // Build the item
-    const today = new Date().toISOString().split("T")[0];
-    const userRef = doc(db, "users", auth.currentUser.uid, "foods", today);
+    const userRef = doc(db, "users", auth.currentUser.uid, "foods", targetDate);
 
     const item = {
       code: selectedFood.code,
@@ -341,7 +375,8 @@ const AddFood: React.FC = () => {
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
     setOpen(false);
-    history.replace("/app/home");
+    const query = targetDate === todayKey ? "" : `?date=${targetDate}`;
+    history.replace(`/app/home${query}`);
   };
 
   /** =========================
@@ -381,6 +416,15 @@ const AddFood: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+          <IonChip color="primary" outline style={{ paddingInline: 12, gap: 6 }}>
+            <IonIcon icon={calendarOutline} />
+            <IonLabel>
+              {isToday ? `Adding to today (${targetDateLabel})` : `Adding to ${targetDateLabel}`}
+            </IonLabel>
+          </IonChip>
+        </div>
+
         {/* Search input */}
         <IonItem>
           <IonInput
@@ -413,7 +457,7 @@ const AddFood: React.FC = () => {
           <IonButton
             expand="block"
             fill="outline"
-            onClick={() => history.push(`/scan-barcode?meal=${meal}`)}
+            onClick={() => history.push(`/scan-barcode?meal=${meal}&date=${targetDate}`)}
           >
             Barcode scanner
           </IonButton>

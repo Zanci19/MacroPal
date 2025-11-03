@@ -26,8 +26,64 @@
     radial-gradient(1000px 600px at 100% -20%, rgba(99,102,241,0.06), transparent 55%),
     var(--mp-bg);
   min-height: 100%;
+  --padding-bottom: calc(120px + var(--ion-safe-area-bottom, env(safe-area-inset-bottom, 0px)));
+  padding-bottom: var(--padding-bottom);
 }
 ion-title { font-weight: 800; letter-spacing: .2px; }
+
+/* Date controls */
+.fs-date-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.fs-date-bar ion-button {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  height: 42px;
+  width: 42px;
+  border-radius: 12px;
+  color: var(--mp-text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.fs-date-bar ion-button[disabled] {
+  opacity: 0.4;
+}
+.fs-date-pill {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--mp-border);
+  background: rgba(255,255,255,0.04);
+  color: var(--mp-text);
+  font: 600 0.95rem/1.2 var(--ion-font-family, system-ui);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s ease, transform .2s ease;
+}
+.fs-date-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,0.18);
+}
+.fs-date-pill ion-icon {
+  font-size: 18px;
+  margin-bottom: 2px;
+  opacity: 0.85;
+}
+.fs-date-pill__primary { font-weight: 800; letter-spacing: .2px; }
+.fs-date-pill__secondary { font-size: .8rem; color: var(--mp-text-muted); }
+
+.fs-today-btn {
+  margin-bottom: 12px;
+  --background: rgba(59,130,246,0.12);
+  --border-radius: 14px;
+  --color: var(--mp-text);
+}
 
 /* Card */
 ion-card {
@@ -118,6 +174,7 @@ ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong
   border: 1px solid var(--mp-border);
   background: var(--mp-surface);
   box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  margin-bottom: 14px;
 }
 
 .fs-meal__hdr { padding: 0 !important; } /* IonItem renders full width */
@@ -207,6 +264,60 @@ ion-list { background: transparent !important; width: 100%; }
   text-align: center;
 }
 
+/* Insights */
+.fs-insights {
+  margin-top: 12px;
+}
+.fs-insights__hdr {
+  padding: 12px 16px;
+  background: transparent;
+}
+.fs-insights__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.fs-insights__title ion-icon {
+  font-size: 20px;
+  color: var(--ion-color-warning);
+}
+.fs-insights__list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--mp-text);
+}
+.fs-insights__list li {
+  line-height: 1.35;
+}
+
+/* Date picker modal */
+.fs-date-modal {
+  --backdrop-opacity: 0.55;
+}
+.fs-date-modal__content {
+  padding: 18px 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fs-date-modal ion-datetime {
+  border-radius: 16px;
+  border: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+}
+.fs-date-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.fs-date-modal__actions ion-button {
+  --border-radius: 12px;
+}
+
 /* Misc */
 .ion-text-center ion-spinner { transform: translateZ(0); filter: drop-shadow(0 1px 8px rgba(0,0,0,0.25)); }
 @keyframes mp-fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
@@ -219,6 +330,9 @@ html, body, ion-content {
 
 /* Small phones */
 @media (max-width: 420px) {
+  .fs-date-bar ion-button { height: 38px; width: 38px; }
+  .fs-date-pill { padding: 8px 12px; font-size: 0.9rem; }
+  .fs-date-pill__secondary { font-size: 0.72rem; }
   .fs-summary__row { grid-template-columns: 56px 1fr auto; gap: 10px; }
   .fs-metric-value { font-size: 1.15rem; }
   .fs-meal__row {
