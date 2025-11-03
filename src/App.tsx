@@ -74,7 +74,7 @@ const TabsShell: React.FC = () => (
     <IonTabBar slot="bottom">
       <IonTabButton tab="left" href="/app/left">
         <IonIcon aria-hidden="true" icon={appsOutline} />
-        <IonLabel>Left</IonLabel>
+        <IonLabel>Insights</IonLabel>
       </IonTabButton>
 
       <IonTabButton tab="home" href="/app/home">

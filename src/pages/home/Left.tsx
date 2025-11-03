@@ -7,18 +7,20 @@ import {
 } from "@ionic/react";
 import {
   downloadOutline, barChartOutline, pieChartOutline, trendingUpOutline,
-  timeOutline, analyticsOutline, medalOutline
+  analyticsOutline, medalOutline
 } from "ionicons/icons";
 
 import { auth, db } from "../../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, orderBy, query } from "firebase/firestore";
 
 // Recharts
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ComposedChart, Area
+  BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from "recharts";
+
+import ProgressRing from "../../components/ProgressRing";
 
 /* ============================
    Types
@@ -79,17 +81,6 @@ function sumDay(doc: DayDoc) {
   return { macros, byMeal, items: all };
 }
 
-function movingAvg(vals: number[], w: number) {
-  const out: number[] = [];
-  let s = 0;
-  for (let i = 0; i < vals.length; i++) {
-    s += vals[i];
-    if (i >= w) s -= vals[i - w];
-    out.push(i >= w - 1 ? Math.round(s / w) : NaN);
-  }
-  return out;
-}
-
 function collectMicroKeys(items: DiaryEntry[]) {
   const keys = new Set<string>();
   items.forEach((it) => {
@@ -114,6 +105,7 @@ const Left: React.FC = () => {
   const [days, setDays] = useState<{ key: string; data: DayDoc; roll: ReturnType<typeof sumDay> }[]>([]);
 
   const [microKey, setMicroKey] = useState<string | undefined>(undefined);
+  const [weightEntries, setWeightEntries] = useState<{ date: string; weight: number }[]>([]);
 
   // Fetch last 60 days
   useEffect(() => {
@@ -127,7 +119,16 @@ const Left: React.FC = () => {
       const today = new Date();
       const keys = Array.from({ length: 60 }, (_, i) => dayKey(addDays(today, -i)));
       const reads = keys.map((k) => getDoc(doc(db, "users", user.uid, "foods", k)));
-      const snaps = await Promise.all(reads);
+
+      const weightQuery = query(
+        collection(db, "users", user.uid, "weights"),
+        orderBy("date", "asc")
+      );
+
+      const [snaps, weightSnap] = await Promise.all([
+        Promise.all(reads),
+        getDocs(weightQuery).catch(() => null),
+      ]);
 
       // oldest first
       const list = snaps
@@ -136,6 +137,23 @@ const Left: React.FC = () => {
         .map((d) => ({ ...d, roll: sumDay(d.data) }));
 
       setDays(list);
+
+      if (weightSnap) {
+        const weights = weightSnap.docs
+          .map((d) => {
+            const data = d.data() as { date?: string; weight?: number; value?: number };
+            const date = data?.date || d.id;
+            const raw = data?.weight ?? data?.value;
+            const weight = typeof raw === "number" ? raw : Number(raw);
+            if (!date || !isFinite(weight)) return null;
+            return { date, weight: Number(weight.toFixed(1)) };
+          })
+          .filter((x): x is { date: string; weight: number } => !!x);
+        setWeightEntries(weights);
+      } else {
+        setWeightEntries([]);
+      }
+
       setLoading(false);
     });
     return () => unsub();
@@ -148,10 +166,6 @@ const Left: React.FC = () => {
     if (tf === "30d") return days.slice(-30);
     return days.slice(-60);
   }, [days, tf]);
-
-  // series
-  const kcalSeries = useMemo(() => view.map(d => Math.round(d.roll.macros.calories)), [view]);
-  const kcalMA7 = useMemo(() => movingAvg(kcalSeries, 7), [kcalSeries]);
 
   const macroEnergyByDay = useMemo(() => view.map((d) => ({
     date: fmtDate(d.key),
@@ -185,6 +199,75 @@ const Left: React.FC = () => {
       fat: +(totals.fat / n).toFixed(1),
     };
   }, [totals, dayTable.length]);
+
+  const calorieGoal = useMemo(() => {
+    if (!profile) return null;
+    const { age, weight, height, gender, goal, activity } = profile;
+    let bmr =
+      gender === "male"
+        ? 10 * weight + 6.25 * height - 5 * age + 5
+        : 10 * weight + 6.25 * height - 5 * age - 161;
+    const mult =
+      activity === "light"
+        ? 1.375
+        : activity === "moderate"
+        ? 1.55
+        : activity === "very"
+        ? 1.725
+        : activity === "extra"
+        ? 1.9
+        : 1.2;
+    let daily = bmr * mult;
+    if (goal === "lose") daily -= 500;
+    else if (goal === "gain") daily += 500;
+    return Math.max(800, Math.round(daily));
+  }, [profile]);
+
+  const todayTotals = useMemo(() => {
+    const key = dayKey(new Date());
+    const found = days.find((d) => d.key === key);
+    return found?.roll.macros ?? { calories: 0, carbs: 0, protein: 0, fat: 0 };
+  }, [days]);
+
+  const todayCalories = Math.round(todayTotals.calories);
+  const caloriesRemaining = calorieGoal != null ? Math.max(0, calorieGoal - todayCalories) : null;
+  const calorieProgress = calorieGoal ? Math.min(1, todayCalories / calorieGoal) : 0;
+  const calorieColor =
+    calorieProgress <= 0.9
+      ? "var(--ion-color-success)"
+      : calorieProgress <= 1.1
+      ? "var(--ion-color-warning)"
+      : "var(--ion-color-danger)";
+
+  const todayMacroSummary = useMemo(
+    () => ({
+      carbs: +todayTotals.carbs.toFixed(1),
+      protein: +todayTotals.protein.toFixed(1),
+      fat: +todayTotals.fat.toFixed(1),
+    }),
+    [todayTotals]
+  );
+
+  const todayTargets = useMemo(() => {
+    if (!profile || !calorieGoal) return null;
+    const proteinG = Math.round(1.8 * profile.weight);
+    const fatG = Math.max(45, Math.round(0.8 * profile.weight));
+    const proteinK = proteinG * 4;
+    const fatK = fatG * 9;
+    const carbsG = Math.round(Math.max(0, calorieGoal - proteinK - fatK) / 4);
+    return { proteinG, fatG, carbsG };
+  }, [profile, calorieGoal]);
+
+  const weightChartData = useMemo(
+    () =>
+      weightEntries.map((entry) => ({
+        date: fmtDate(entry.date),
+        weight: entry.weight,
+      })),
+    [weightEntries]
+  );
+
+  const latestWeight = weightEntries.length ? weightEntries[weightEntries.length - 1] : null;
 
   // macro donut data
   const macroDonut = useMemo(() => ([
@@ -255,7 +338,7 @@ const Left: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Analytics</IonTitle>
+          <IonTitle>Insights & Analytics</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -368,35 +451,69 @@ const Left: React.FC = () => {
               </IonRow>
             </IonGrid>
 
-            {/* Calories trend + MA7 */}
             <IonCard>
               <IonCardHeader>
                 <IonCardTitle>
-                  Calories trend
-                  <IonChip color="medium" style={{ marginLeft: 8 }}>
-                    <IonIcon icon={timeOutline} />&nbsp;{tf}
-                  </IonChip>
+                  Weight check-ins
+                  {latestWeight && (
+                    <IonChip color="secondary" style={{ marginLeft: 8 }}>
+                      <IonIcon icon={analyticsOutline} />&nbsp;{latestWeight.weight.toFixed(1)} kg
+                    </IonChip>
+                  )}
                 </IonCardTitle>
-                <IonCardSubtitle>Daily calories and 7-day moving average</IonCardSubtitle>
+                <IonCardSubtitle>Tracked entries from the past 60 days</IonCardSubtitle>
               </IonCardHeader>
               <IonCardContent>
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <ComposedChart data={view.map((d, i) => ({
-                      date: fmtDate(d.key),
-                      kcal: kcalSeries[i],
-                      ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Area type="monotone" dataKey="kcal" name="Calories" fill={palette[0]} stroke={palette[0]} opacity={0.25} />
-                      <Line type="monotone" dataKey="ma7" name="MA7" stroke={palette[1]} dot={false} strokeWidth={2} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
+                {weightChartData.length === 0 ? (
+                  <div className="ion-text-center" style={{ padding: 24, opacity: 0.7 }}>
+                    No weight entries found yet.
+                  </div>
+                ) : (
+                  <div style={{ width: "100%", height: 260 }}>
+                    <ResponsiveContainer>
+                      <LineChart data={weightChartData}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                        <XAxis dataKey="date" />
+                        <YAxis unit=" kg" />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="weight" stroke={palette[4]} strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </IonCardContent>
+            </IonCard>
+
+            <IonCard>
+              <IonCardHeader>
+                <IonCardTitle>
+                  Today's calories
+                  <IonChip color="medium" style={{ marginLeft: 8 }}>
+                    Goal vs intake
+                  </IonChip>
+                </IonCardTitle>
+                <IonCardSubtitle>Live progress for the current day</IonCardSubtitle>
+              </IonCardHeader>
+              <IonCardContent>
+                {!profile || calorieGoal == null ? (
+                  <div className="ion-text-center" style={{ padding: 24 }}><IonSpinner name="dots" /></div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "center" }}>
+                    <div style={{ color: calorieColor }}><ProgressRing size={96} stroke={10} progress={calorieProgress} /></div>
+                    <div style={{ flex: "1 1 220px", display: "grid", gap: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span>Goal</span><strong>{calorieGoal} kcal</strong></div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span>Consumed</span><strong>{todayCalories} kcal</strong></div>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}><span>Remaining</span><strong>{caloriesRemaining != null ? `${caloriesRemaining} kcal` : "—"}</strong></div>
+                      {todayTargets && (
+                        <div style={{ marginTop: 8, display: "grid", gap: 6, fontSize: 13 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Carbohydrates</span><span>{todayMacroSummary.carbs.toFixed(0)} / {todayTargets.carbsG} g</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Protein</span><span>{todayMacroSummary.protein.toFixed(0)} / {todayTargets.proteinG} g</span></div>
+                          <div style={{ display: "flex", justifyContent: "space-between" }}><span>Fat</span><span>{todayMacroSummary.fat.toFixed(0)} / {todayTargets.fatG} g</span></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </IonCardContent>
             </IonCard>
 
@@ -527,7 +644,7 @@ const Left: React.FC = () => {
                   <IonCardTitle>
                     Micronutrient trend
                     <IonChip color="medium" style={{ marginLeft: 8 }}>
-                      <IonIcon icon={timeOutline} />&nbsp;{microKey}
+                      <IonIcon icon={analyticsOutline} />&nbsp;{microKey}
                     </IonChip>
                   </IonCardTitle>
                   <IonCardSubtitle>Auto-detected numeric fields in your entries</IonCardSubtitle>

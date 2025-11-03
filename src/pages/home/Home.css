@@ -26,6 +26,7 @@
     radial-gradient(1000px 600px at 100% -20%, rgba(99,102,241,0.06), transparent 55%),
     var(--mp-bg);
   min-height: 100%;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 ion-title { font-weight: 800; letter-spacing: .2px; }
 
@@ -46,68 +47,25 @@ ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong
 .fs-summary__hdr { padding: 12px 16px; background: transparent; }
 .fs-summary__hdr ion-card-title { font-weight: 800; letter-spacing: .2px; }
 
-.fs-summary__row {
+.fs-summary__stats {
+  padding: 12px 16px 16px 16px;
+}
+.fs-summary__stats-grid {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 14px 8px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
 }
-
-.fs-summary__left {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.fs-summary__stat {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--mp-border);
+  background: var(--mp-chip-bg);
 }
-.ring-center {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-}
-.ring-pct {
-  font-weight: 800;
-  font-size: .95rem;
-  color: var(--mp-text);
-  opacity: .9;
-}
-
-.fs-summary__mid { display: grid; gap: 10px; }
 .fs-metric-title { font-size: 0.95rem; color: var(--mp-text-muted); }
-
-.fs-summary__right {
-  display: grid;
-  gap: 10px;
-  justify-items: end;
-}
 .fs-metric-value {
   font-weight: 800;
-  font-size: 1.3rem;
-}
-
-/* Macros row under summary */
-.fs-macros {
-  display: flex;
-  gap: 10px;
-  padding: 4px 14px 12px 14px;
-  border-top: 1px solid var(--mp-border);
-}
-.fs-macro {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: var(--mp-chip-bg);
-  border: 1px dashed var(--mp-border);
-}
-.fs-macro__label {
-  font-weight: 800;
-  opacity: .9;
-}
-.fs-macro__val {
-  color: var(--mp-text);
-  font-weight: 600;
+  font-size: 1.25rem;
+  margin-top: 4px;
 }
 
 /* ---------- MEALS ---------- */

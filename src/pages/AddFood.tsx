@@ -152,6 +152,10 @@ const AddFood: React.FC = () => {
     { show: false, message: "", color: "success" }
   );
 
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddLabel, setQuickAddLabel] = useState("");
+  const [quickAddCalories, setQuickAddCalories] = useState<number | null>(null);
+
   // Handle coming from ScanBarcode
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -344,6 +348,58 @@ const AddFood: React.FC = () => {
     history.replace("/app/home");
   };
 
+  const handleQuickAdd = async () => {
+    if (!auth.currentUser) return;
+    const calories = Math.round(Math.max(0, Number(quickAddCalories ?? 0)));
+    if (calories <= 0) {
+      setToast({ show: true, message: "Enter calories greater than zero", color: "danger" });
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    const userRef = doc(db, "users", auth.currentUser.uid, "foods", today);
+    const now = new Date().toISOString();
+    const label = quickAddLabel.trim();
+
+    const item = {
+      name: label || "Quick add calories",
+      brand: null,
+      dataSource: "quick_add",
+      base: { amount: calories, unit: "kcal", label: "Quick add" },
+      selection: {
+        mode: "serving" as const,
+        note: `${calories} kcal manual entry`,
+        servingsQty: 1,
+        weightQty: null,
+      },
+      perBase: {
+        calories,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+      },
+      total: {
+        calories,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+      },
+      addedAt: now,
+    };
+
+    try {
+      await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+      setToast({ show: true, message: `Added ${calories} kcal to ${meal}.`, color: "success" });
+      setQuickAddOpen(false);
+      setQuickAddLabel("");
+      setQuickAddCalories(null);
+      history.replace("/app/home");
+    } catch (e: any) {
+      console.error(e);
+      setToast({ show: true, message: "Failed to add quick calories", color: "danger" });
+    }
+  };
+
   /** =========================
    *  Active totals for the modal (live preview)
    *  ========================= */
@@ -417,6 +473,19 @@ const AddFood: React.FC = () => {
           >
             Barcode scanner
           </IonButton>
+
+          <IonButton
+            expand="block"
+            fill="outline"
+            color="secondary"
+            onClick={() => {
+              setQuickAddLabel("");
+              setQuickAddCalories(null);
+              setQuickAddOpen(true);
+            }}
+          >
+            Quick add calories
+          </IonButton>
         </div>
 
         {/* Results */}
@@ -461,6 +530,43 @@ const AddFood: React.FC = () => {
             </IonButton>
           </div>
         )}
+
+        {/* Quick add calories */}
+        <IonModal isOpen={quickAddOpen} onDidDismiss={() => setQuickAddOpen(false)}>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Quick add calories</IonTitle>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding">
+            <IonItem>
+              <IonLabel position="stacked">Description (optional)</IonLabel>
+              <IonInput
+                placeholder="e.g. Snack"
+                value={quickAddLabel}
+                onIonChange={(e) => setQuickAddLabel(e.detail.value ?? "")}
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Calories</IonLabel>
+              <IonInput
+                type="number"
+                inputMode="numeric"
+                value={quickAddCalories ?? ""}
+                min="1"
+                onIonChange={(e) => setQuickAddCalories(e.detail.value ? Number(e.detail.value) : null)}
+              />
+            </IonItem>
+            <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
+              <IonButton expand="block" fill="outline" onClick={() => setQuickAddOpen(false)}>
+                Cancel
+              </IonButton>
+              <IonButton expand="block" onClick={handleQuickAdd}>
+                Add to {meal}
+              </IonButton>
+            </div>
+          </IonContent>
+        </IonModal>
 
         {/* Details modal */}
         <IonModal isOpen={open} onDidDismiss={() => setOpen(false)}>
