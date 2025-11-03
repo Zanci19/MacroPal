@@ -52,25 +52,6 @@ type Profile = {
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-/** Progress ring */
-const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number }> = ({
-  size = 64, stroke = 8, progress
-}) => {
-  const r = (size - stroke) / 2;
-  const C = 2 * Math.PI * r;
-  const p = Math.max(0, Math.min(1, progress || 0));
-  return (
-    <div style={{ width: size, height: size, position: "relative" }}>
-      <svg width={size} height={size}>
-        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeOpacity="0.18" strokeWidth={stroke} fill="none" />
-        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeWidth={stroke} fill="none"
-          strokeLinecap="round" strokeDasharray={`${p*C} ${C - p*C}`} transform={`rotate(-90 ${size/2} ${size/2})`} />
-      </svg>
-      <div className="ring-center"><div className="ring-pct">{Math.round(p*100)}%</div></div>
-    </div>
-  );
-};
-
 const Home: React.FC = () => {
   const history = useHistory();
   const [loading, setLoading] = useState(true);
@@ -173,8 +154,6 @@ const Home: React.FC = () => {
   const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
   const kcalGoal = caloriesNeeded ?? 0;
   const kcalLeft = Math.max(0, Math.round(kcalGoal - kcalConsumed));
-  const progress = kcalGoal > 0 ? Math.min(1, kcalConsumed / kcalGoal) : 0;
-
   const macroTargets = useMemo(() => {
     if (!profile || !caloriesNeeded) return null;
     const proteinG = Math.round(1.8 * profile.weight);
@@ -267,10 +246,6 @@ const Home: React.FC = () => {
     }
   };
 
-  const ringColor = progress <= 0.9 ? "var(--ion-color-success)"
-                   : progress <= 1.1 ? "var(--ion-color-warning)"
-                   : "var(--ion-color-danger)";
-
   return (
     <IonPage>
       <IonHeader>
@@ -299,59 +274,47 @@ const Home: React.FC = () => {
             </div>
           </IonCardHeader>
 
-          <IonCardContent className="fs-summary__row">
+          <IonCardContent className="fs-summary__stats">
             {!profile || caloriesNeeded == null ? (
               <div className="ion-text-center" style={{ padding: 24 }}>
                 <IonSpinner name="dots" />
               </div>
             ) : (
-              <>
-                <div className="fs-summary__left" style={{ color: ringColor }}>
-                  <ProgressRing size={64} stroke={8} progress={progress} />
+              <div className="fs-summary__stats-grid">
+                <div className="fs-summary__stat">
+                  <div className="fs-metric-title">Goal</div>
+                  <div className="fs-metric-value">{kcalGoal}</div>
                 </div>
-                <div className="fs-summary__mid">
-                  <div className="fs-metric-title">Calories Remaining</div>
-                  <div className="fs-metric-title">Calories Consumed</div>
-                </div>
-                <div className="fs-summary__right">
-                  <div className="fs-metric-value">{kcalLeft}</div>
+                <div className="fs-summary__stat">
+                  <div className="fs-metric-title">Consumed</div>
                   <div className="fs-metric-value">{kcalConsumed}</div>
                 </div>
-              </>
+                <div className="fs-summary__stat">
+                  <div className="fs-metric-title">Remaining</div>
+                  <div className="fs-metric-value">{kcalLeft}</div>
+                </div>
+              </div>
             )}
           </IonCardContent>
 
-          {profile && caloriesNeeded != null && (
-            <>
-              <div className="fs-macros">
-                <div className="fs-macro"><span className="fs-macro__label">Carbohydrates</span><span className="fs-macro__val">{totals.day.carbs.toFixed(1)} g</span></div>
-                <div className="fs-macro"><span className="fs-macro__label">Protein</span><span className="fs-macro__val">{totals.day.protein.toFixed(1)} g</span></div>
-                <div className="fs-macro"><span className="fs-macro__label">Fat</span><span className="fs-macro__val">{totals.day.fat.toFixed(1)} g</span></div>
-              </div>
-
-              {(() => {
-                const t = macroTargets; if (!t) return null;
-                return (
-                  <div className="fs-macro-bars" style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}>
-                    {[{k:"carbs",g:totals.day.carbs,tg:t.carbsG,l:"Carbohydrates"},
-                      {k:"protein",g:totals.day.protein,tg:t.proteinG,l:"Protein"},
-                      {k:"fat",g:totals.day.fat,tg:t.fatG,l:"Fat"}].map(({k,g,tg,l})=>{
-                        const pct = Math.min(1, tg ? g/tg : 0);
-                        return (
-                          <div key={k} style={{ display: "grid", gap: 4 }}>
-                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
-                              <span>{l}</span><span>{g.toFixed(0)} / {tg} g</span>
-                            </div>
-                            <div style={{ height:8, background:"var(--ion-color-light)", borderRadius:9999, overflow:"hidden" }}>
-                              <div style={{ width:`${pct*100}%`, height:"100%", background:"var(--ion-color-primary)" }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                );
-              })()}
-            </>
+          {profile && caloriesNeeded != null && macroTargets && (
+            <div className="fs-macro-bars" style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}>
+              {[{k:"carbs",g:totals.day.carbs,tg:macroTargets.carbsG,l:"Carbohydrates"},
+                {k:"protein",g:totals.day.protein,tg:macroTargets.proteinG,l:"Protein"},
+                {k:"fat",g:totals.day.fat,tg:macroTargets.fatG,l:"Fat"}].map(({k,g,tg,l})=>{
+                  const pct = Math.min(1, tg ? g/tg : 0);
+                  return (
+                    <div key={k} style={{ display: "grid", gap: 4 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                        <span>{l}</span><span>{g.toFixed(0)} / {tg} g</span>
+                      </div>
+                      <div style={{ height:8, background:"var(--ion-color-light)", borderRadius:9999, overflow:"hidden" }}>
+                        <div style={{ width:`${pct*100}%`, height:"100%", background:"var(--ion-color-primary)" }} />
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
           )}
         </IonCard>
 
