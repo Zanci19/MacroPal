@@ -1,2 +1,15 @@
 /* For information on how to create your own theme, please see:
 http://ionicframework.com/docs/theming/ */
+
+body[data-large-text="true"] {
+  font-size: 1.05rem;
+}
+
+body[data-large-text="true"] ion-label,
+body[data-large-text="true"] ion-input,
+body[data-large-text="true"] ion-select,
+body[data-large-text="true"] ion-note,
+body[data-large-text="true"] ion-text,
+body[data-large-text="true"] ion-button {
+  font-size: 1.05em;
+}

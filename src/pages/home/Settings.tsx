@@ -1,12 +1,22 @@
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-  IonList, IonItem, IonLabel, IonIcon
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonIcon,
+  IonNote,
 } from "@ionic/react";
 import {
   personCircleOutline, createOutline, notificationsOutline, shieldCheckmarkOutline,
   lockClosedOutline, colorPaletteOutline, swapVerticalOutline, cloudUploadOutline,
   linkOutline, informationCircleOutline
 } from "ionicons/icons";
+import { useMemo } from "react";
+import { useSettings } from "../../context/SettingsContext";
 
 // Single source of truth for sections
 export const SETTINGS_SECTIONS: { key: string; label: string; icon?: string }[] = [
@@ -23,6 +33,29 @@ export const SETTINGS_SECTIONS: { key: string; label: string; icon?: string }[] 
 ];
 
 const Settings: React.FC = () => {
+  const { settings } = useSettings();
+
+  const detailText = useMemo(() => ({
+    account: settings.account.displayName || settings.account.email,
+    goals: `${settings.goals.calorieTarget} kcal goal`,
+    notifications: settings.notifications.dailySummary ? "Daily summary on" : "Daily summary off",
+    privacy: settings.privacy.diaryPrivate ? "Diary hidden" : "Diary visible",
+    security: settings.security.requirePin ? "PIN enabled" : "PIN not set",
+    appearance:
+      settings.appearance.theme === "system"
+        ? "Theme follows system"
+        : `Theme: ${settings.appearance.theme}`,
+    units: `${settings.units.energy} · ${settings.units.weight}`,
+    data: "Import / export",
+    integrations: [
+      settings.integrations.googleFitConnected ? "Google Fit" : null,
+      settings.integrations.appleHealthConnected ? "Apple Health" : null,
+    ]
+      .filter(Boolean)
+      .join(", ") || "No integrations",
+    about: "Version info",
+  }), [settings]);
+
   return (
     <IonPage>
       <IonHeader>
@@ -35,7 +68,10 @@ const Settings: React.FC = () => {
           {SETTINGS_SECTIONS.map((s) => (
             <IonItem key={s.key} detail routerLink={`/app/settings/${s.key}`}>
               {s.icon && <IonIcon slot="start" icon={s.icon} />}
-              <IonLabel>{s.label}</IonLabel>
+              <IonLabel>
+                <h2>{s.label}</h2>
+                <IonNote>{detailText[s.key as keyof typeof detailText]}</IonNote>
+              </IonLabel>
             </IonItem>
           ))}
         </IonList>
