@@ -1,0 +1,114 @@
+:root {
+  --ion-font-family: "Inter", "SF Pro Text", "Segoe UI", "Roboto", sans-serif;
+
+  --ion-color-primary: #7c5cff;
+  --ion-color-primary-rgb: 124, 92, 255;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #6d51e0;
+  --ion-color-primary-tint: #8a6cff;
+
+  --ion-color-secondary: #60a5fa;
+  --ion-color-secondary-rgb: 96, 165, 250;
+  --ion-color-secondary-contrast: #0b1220;
+  --ion-color-secondary-contrast-rgb: 11, 18, 32;
+  --ion-color-secondary-shade: #558fdc;
+  --ion-color-secondary-tint: #70b0fb;
+
+  --ion-color-tertiary: #34d399;
+  --ion-color-tertiary-rgb: 52, 211, 153;
+  --ion-color-tertiary-contrast: #04121a;
+  --ion-color-tertiary-contrast-rgb: 4, 18, 26;
+  --ion-color-tertiary-shade: #2fba87;
+  --ion-color-tertiary-tint: #48d8a3;
+
+  --ion-color-medium: #94a3b8;
+  --ion-color-medium-rgb: 148, 163, 184;
+  --ion-color-medium-contrast: #0b1220;
+  --ion-color-medium-contrast-rgb: 11, 18, 32;
+  --ion-color-medium-shade: #828fa1;
+  --ion-color-medium-tint: #9fadc0;
+
+  --ion-background-color: #07090f;
+  --ion-background-color-rgb: 7, 9, 15;
+  --ion-text-color: #edf1f7;
+  --ion-text-color-rgb: 237, 241, 247;
+
+  --mp-surface-soft: rgba(15, 18, 28, 0.85);
+  --mp-surface-solid: #101622;
+  --mp-border-strong: rgba(255, 255, 255, 0.08);
+  --mp-glass-outline: rgba(255, 255, 255, 0.16);
+  --mp-shadow-lg: 0 24px 60px rgba(4, 7, 16, 0.55);
+  --mp-shadow-md: 0 18px 36px rgba(6, 10, 20, 0.4);
+  --mp-gradient: radial-gradient(circle at 20% 20%, rgba(124, 92, 255, 0.25), transparent 55%),
+                 radial-gradient(circle at 80% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+                 linear-gradient(160deg, #05070b 0%, #090d16 45%, #05060a 100%);
+}
+
+html, body, ion-app, ion-content {
+  color: var(--ion-text-color);
+}
+
+body {
+  background: #05070b;
+  min-height: 100vh;
+  letter-spacing: 0.01em;
+}
+
+ion-app {
+  background: var(--mp-gradient);
+}
+
+ion-toolbar {
+  --background: rgba(10, 14, 24, 0.72);
+  --border-color: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+ion-title {
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+ion-button {
+  --border-radius: 14px;
+  --box-shadow: 0 18px 32px rgba(124, 92, 255, 0.26);
+  font-weight: 600;
+}
+
+ion-button.button-outline {
+  --box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(4px);
+}
+
+ion-toast::part(container) {
+  border-radius: 16px;
+  background: rgba(15, 18, 28, 0.85);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--mp-shadow-md);
+}
+
+ion-spinner {
+  --color: var(--ion-color-primary);
+}
+
+/* Reduce Ion card background to match glass aesthetic */
+ion-card {
+  backdrop-filter: blur(12px);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(124, 92, 255, 0.75), rgba(96, 165, 250, 0.75));
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(11, 17, 28, 0.4);
+}

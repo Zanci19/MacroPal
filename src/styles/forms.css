@@ -1,0 +1,198 @@
+.mp-auth-content {
+  --background: transparent;
+  background: var(--mp-gradient);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 64px 18px 48px;
+  overflow: hidden;
+}
+
+.mp-auth-content::before,
+.mp-auth-content::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.mp-auth-content::before {
+  background: radial-gradient(circle, rgba(124, 92, 255, 0.42), rgba(124, 92, 255, 0));
+  top: -260px;
+  right: -120px;
+}
+
+.mp-auth-content::after {
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.4), rgba(56, 189, 248, 0));
+  bottom: -260px;
+  left: -120px;
+}
+
+.mp-auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  background: var(--mp-surface-soft);
+  border: 1px solid var(--mp-border-strong);
+  border-radius: 26px;
+  padding: 34px 26px 30px;
+  box-shadow: var(--mp-shadow-lg);
+  backdrop-filter: blur(16px);
+}
+
+.mp-auth-card--wider {
+  width: min(620px, 100%);
+}
+
+.mp-auth-card__logo {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  background: rgba(124, 92, 255, 0.22);
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+  color: var(--ion-color-primary);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mp-auth-card h1 {
+  font-size: 1.95rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.mp-auth-card p {
+  margin: 0;
+}
+
+.mp-auth-subtitle {
+  font-size: 1.05rem;
+  color: rgba(226, 232, 240, 0.72);
+  margin-bottom: 26px;
+}
+
+.mp-auth-form {
+  display: grid;
+  gap: 16px;
+}
+
+.mp-auth-card ion-item {
+  --background: rgba(12, 16, 26, 0.65);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-style: solid;
+  --border-width: 1px;
+  --inner-padding-end: 12px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --min-height: 58px;
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.mp-auth-card ion-input,
+.mp-auth-card ion-select {
+  --color: #f8fafc;
+  --placeholder-color: rgba(226, 232, 240, 0.5);
+  font-size: 0.98rem;
+}
+
+.mp-auth-card ion-select::part(icon) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mp-auth-button {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.mp-auth-footer {
+  margin-top: 22px;
+  display: grid;
+  gap: 6px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.mp-auth-footer button,
+.mp-auth-footer ion-button {
+  --padding-start: 0;
+  --padding-end: 0;
+  --box-shadow: none;
+  font-weight: 600;
+}
+
+.mp-auth-footer ion-button.button-clear {
+  color: var(--ion-color-secondary);
+}
+
+.mp-auth-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+  margin: 26px 0 6px;
+}
+
+.mp-auth-muted {
+  color: rgba(226, 232, 240, 0.6);
+  font-size: 0.94rem;
+}
+
+.mp-auth-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.mp-auth-card--wider .mp-auth-grid {
+  margin-top: 6px;
+}
+
+.mp-pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mp-pill {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --background: rgba(148, 163, 184, 0.14);
+  --color: rgba(226, 232, 240, 0.88);
+  --box-shadow: none;
+  border-radius: 999px;
+  text-transform: none;
+  transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.mp-pill.is-active {
+  --background: rgba(124, 92, 255, 0.28);
+  --color: #f5f7ff;
+  transform: translateY(-1px);
+}
+
+@media (min-width: 620px) {
+  .mp-auth-card--wider .mp-auth-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .mp-auth-card {
+    padding: 28px 20px 26px;
+  }
+}

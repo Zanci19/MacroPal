@@ -9,7 +9,7 @@ const Start: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="home-content ion-padding">
+      <IonContent className="start-content" fullscreen>
         {/* Background video (fixed, behind everything) */}
         <div className="bg-video" slot="fixed" aria-hidden="true">
           <video
@@ -45,7 +45,7 @@ const Start: React.FC = () => {
             <IonButton
               size="large"
               fill="outline"
-              className="start-btn"
+              className="start-btn start-btn--outline"
               onClick={() => router.push("/register")}
             >
               Register

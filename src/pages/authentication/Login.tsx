@@ -1,8 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { IonPage, IonContent, IonInput, IonButton, IonHeader, IonTitle, IonToolbar, IonText, IonItem, IonToast } from "@ionic/react";
+import {
+  IonPage,
+  IonContent,
+  IonInput,
+  IonButton,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  IonText,
+  IonItem,
+  IonToast
+} from "@ionic/react";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useHistory } from "react-router";
+import "../../styles/forms.css";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -51,31 +63,50 @@ const Login: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
-        <IonItem>
-          <IonInput
-            placeholder="Email"
-            type="email"
-            value={email}
-            onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
-          />
-        </IonItem>
+      <IonContent className="mp-auth-content">
+        <div className="mp-auth-card" role="main">
+          <div className="mp-auth-card__logo" aria-hidden="true">MP</div>
+          <h1>Welcome back</h1>
+          <p className="mp-auth-subtitle">Sign in to pick up where you left off and stay on top of your daily macros.</p>
 
-        <IonItem>
-          <IonInput
-            placeholder="Password"
-            type="password"
-            value={password}
-            onIonChange={(e: any) => setPassword(e?.detail?.value ?? '')}
-          />
-        </IonItem>
+          <div className="mp-auth-form">
+            <IonItem lines="none">
+              <IonInput
+                labelPlacement="stacked"
+                label="Email"
+                placeholder="you@example.com"
+                type="email"
+                value={email}
+                onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
+              />
+            </IonItem>
 
-        <IonButton expand="full" onClick={handleLogin}>Login</IonButton>
+            <IonItem lines="none">
+              <IonInput
+                labelPlacement="stacked"
+                label="Password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onIonChange={(e: any) => setPassword(e?.detail?.value ?? '')}
+              />
+            </IonItem>
+          </div>
 
-        <IonText className="ion-text-center" color="medium"><p>Don't have an account?</p></IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/register")}>Create Account</IonButton>
-        <IonText className="ion-text-center" color="medium"><p>Forgot your password?</p></IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/reset-password")}>Reset Password</IonButton>
+          <IonButton className="mp-auth-button" expand="block" size="large" onClick={handleLogin}>
+            Login
+          </IonButton>
+
+          <div className="mp-auth-divider" aria-hidden="true" />
+
+          <div className="mp-auth-footer">
+            <IonText className="mp-auth-muted">Don't have an account yet?</IonText>
+            <IonButton fill="clear" onClick={() => history.push("/register")}>Create account</IonButton>
+
+            <IonText className="mp-auth-muted">Forgot your password?</IonText>
+            <IonButton fill="clear" onClick={() => history.push("/reset-password")}>Reset it</IonButton>
+          </div>
+        </div>
 
         <IonToast
           isOpen={toast.show}

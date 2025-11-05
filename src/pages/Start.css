@@ -1,88 +1,130 @@
-/* Ensure the page has a solid fallback color behind the video */
 .start-content {
-  --background: #000; /* Ionic var */
-  background: #000;   /* fallback */
+  --background: transparent;
+  background: var(--mp-gradient);
+  color: var(--ion-text-color);
+  position: relative;
+  display: block;
+  padding: 0;
 }
 
-/* Background video container fills viewport, sits behind content */
+.start-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(5, 7, 11, 0.6), rgba(8, 12, 21, 0.8));
+  pointer-events: none;
+  z-index: 0;
+}
+
 .bg-video {
   position: absolute;
   inset: 0;
   overflow: hidden;
   z-index: 0;
-  pointer-events: none; /* let taps/clicks pass through */
+  pointer-events: none;
 }
 
-/* <video> scales to cover */
 .bg-video__media {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  filter: saturate(1.2) brightness(0.9);
 }
 
-/* Optional dark scrim for text contrast (tune the opacity as needed) */
 .bg-video__scrim {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.25), rgba(0,0,0,0.6) 70%);
+  background: radial-gradient(circle at center, rgba(7, 11, 20, 0.35), rgba(7, 9, 15, 0.82));
 }
 
-/* Foreground stack (your existing code) */
-/* Fill the viewport and center everything */
 .fixed-center {
   position: absolute;
-  inset: 0;                          
+  inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;           
-  align-items: center;               
+  justify-content: center;
+  align-items: center;
   text-align: center;
-  padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
-  z-index: 1; /* sits above the video */
+  padding: env(safe-area-inset-top) 1.75rem env(safe-area-inset-bottom);
+  z-index: 2;
+  gap: 0.5rem;
 }
 
-/* Stack styling */
 .start-logo {
-  width: 140px;
-  height: 140px;
+  width: clamp(110px, 16vw, 150px);
+  height: clamp(110px, 16vw, 150px);
   object-fit: contain;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  filter: drop-shadow(0 22px 45px rgba(10, 16, 28, 0.6));
 }
 
 .start-title {
-  font-size: 2.8rem;
+  font-size: clamp(2.4rem, 6vw, 3.2rem);
   font-weight: 800;
   margin: 0;
-  line-height: 1.1;
-  color: #fff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, #f9fafc 0%, #c7d2fe 45%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .start-subtitle {
-  font-size: 1.2rem;
+  font-size: clamp(1.1rem, 2.4vw, 1.35rem);
   font-weight: 500;
-  color: #d1d5db; /* slightly brighter for readability */
-  margin: 0 0 0.75rem 0;
+  color: rgba(240, 244, 255, 0.78);
+  margin: 0 0 1.2rem 0;
 }
 
-/* Buttons */
 .start-actions {
   display: flex;
   flex-direction: column;
-  width: min(420px, 90vw);
+  align-items: center;
   gap: 0.75rem;
-  margin-top: 0.25rem;
+  width: min(420px, 92vw);
+  margin-top: 0.75rem;
+  z-index: 3;
 }
 
 .start-btn {
   width: 100%;
-  border-radius: 14px;
+  --border-radius: 18px;
+  --background: rgba(124, 92, 255, 0.28);
+  --color: #f9fbff;
+  --box-shadow: 0 24px 42px rgba(124, 92, 255, 0.28);
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-/* Respect reduced motion preferences: pause background video */
+.start-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.start-btn--outline {
+  --border-color: rgba(255, 255, 255, 0.4);
+  --background: rgba(12, 16, 26, 0.55);
+  --color: #e7ecff;
+  --box-shadow: 0 20px 38px rgba(15, 20, 35, 0.45);
+}
+
+@media (min-width: 640px) {
+  .start-actions {
+    flex-direction: row;
+  }
+
+  .start-btn {
+    flex: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bg-video__media { animation: none; }
-  .bg-video__media { display: none; } /* or remove to keep a static frame */
-  .bg-video__scrim { background: rgba(0,0,0,0.6); }
+  .bg-video__media {
+    display: none;
+  }
+  .bg-video__scrim {
+    background: rgba(6, 10, 18, 0.8);
+  }
 }
