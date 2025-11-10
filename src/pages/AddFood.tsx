@@ -179,17 +179,6 @@ const AddFood: React.FC = () => {
 
   // Handle coming from ScanBarcode
   useEffect(() => {
-    if (!selectedFood) return;
-    const canServing = !!selectedFood.serving_size && !!(
-      perServing.calories || perServing.carbs || perServing.protein || perServing.fat
-    );
-    const canWeight = !!(
-      per100g.calories || per100g.carbs || per100g.protein || per100g.fat
-    );
-
-    // If current mode is invalid, flip to the valid one
-    if (useServing && !canServing && canWeight) setUseServing(false);
-    if (!useServing && !canWeight && canServing) setUseServing(true);
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
     const q = params.get("q");
@@ -205,20 +194,23 @@ const AddFood: React.FC = () => {
     (async () => {
       if (code) {
         try {
+          // ✅ FIXED URL (and removed stray space)
           const r = await fetch(`${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`);
           if (r.ok) {
             const data: OFFBarcodeResponse = await r.json();
             if ("status" in data && data.status === 1) {
-            setToast({ show: true, message: "Item found", color: "success" });
-            const p = data.product;
-            const ps = macrosPerServing(p.nutriments);
-            const canServing = !!p.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
-            setSelectedFood(p);
-            setUseServing(canServing);
-            setServingsQty(1);
-            setWeightQty(100);
-            setOpen(true);
-          } else {
+              setToast({ show: true, message: "Item found", color: "success" });
+
+              const p = data.product;
+              const ps = macrosPerServing(p.nutriments);
+              const canServing = !!p.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+
+              setSelectedFood(p);
+              setUseServing(canServing);   // start on Serving only if it’s valid
+              setServingsQty(1);
+              setWeightQty(100);
+              setOpen(true);
+            } else {
               setToast({ show: true, message: "Item not found — showing search.", color: "danger" });
               setQuery(code);
               await foodsSearch(code, 1);
@@ -236,7 +228,10 @@ const AddFood: React.FC = () => {
         } finally {
           cleanUrl();
         }
-      } else if (q) {
+        return;
+      }
+
+      if (q) {
         setQuery(q);
         const count = await foodsSearch(q, 1);
         setToast({
@@ -245,12 +240,16 @@ const AddFood: React.FC = () => {
           color: count > 0 ? "success" : "danger",
         });
         cleanUrl();
-      } else if (found) {
+        return;
+      }
+
+      if (found) {
         cleanUrl();
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
+
 
   /** =========================
    *  API calls
