@@ -17,6 +17,16 @@ import {
   IonButtons,
   IonBackButton,
   IonToast,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonSegment,
+  IonSegmentButton,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonText,
 } from "@ionic/react";
 
 import { useLocation, useHistory } from "react-router";
@@ -144,7 +154,8 @@ const AddFood: React.FC = () => {
   const [selectedFood, setSelectedFood] = useState<OFFProduct | null>(null);
 
   // Input mode + quantities
-  const [useServing, setUseServing] = useState(true);
+  // Start in weight mode; we’ll flip to serving later if data exists.
+  const [useServing, setUseServing] = useState<boolean>(false);
   const [servingsQty, setServingsQty] = useState<number>(1);
   const [weightQty, setWeightQty] = useState<number>(100);
 
@@ -152,8 +163,33 @@ const AddFood: React.FC = () => {
     { show: false, message: "", color: "success" }
   );
 
+  // Derived numerics
+  const per100g = useMemo(() => macrosPer100g(selectedFood?.nutriments), [selectedFood]);
+  const perServing = useMemo(() => macrosPerServing(selectedFood?.nutriments), [selectedFood]);
+  const parsedServing = useMemo(() => parseServingSize(selectedFood?.serving_size), [selectedFood]);
+
+  const hasServingMacros = useMemo(
+    () => !!(perServing.calories || perServing.carbs || perServing.protein || perServing.fat),
+    [perServing]
+  );
+  const has100gMacros = useMemo(
+    () => !!(per100g.calories || per100g.carbs || per100g.protein || per100g.fat),
+    [per100g]
+  );
+
   // Handle coming from ScanBarcode
   useEffect(() => {
+    if (!selectedFood) return;
+    const canServing = !!selectedFood.serving_size && !!(
+      perServing.calories || perServing.carbs || perServing.protein || perServing.fat
+    );
+    const canWeight = !!(
+      per100g.calories || per100g.carbs || per100g.protein || per100g.fat
+    );
+
+    // If current mode is invalid, flip to the valid one
+    if (useServing && !canServing && canWeight) setUseServing(false);
+    if (!useServing && !canWeight && canServing) setUseServing(true);
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
     const q = params.get("q");
@@ -173,13 +209,16 @@ const AddFood: React.FC = () => {
           if (r.ok) {
             const data: OFFBarcodeResponse = await r.json();
             if ("status" in data && data.status === 1) {
-              setToast({ show: true, message: "Item found", color: "success" });
-              setSelectedFood(data.product);
-              setUseServing(true);
-              setServingsQty(1);
-              setWeightQty(100);
-              setOpen(true);
-            } else {
+            setToast({ show: true, message: "Item found", color: "success" });
+            const p = data.product;
+            const ps = macrosPerServing(p.nutriments);
+            const canServing = !!p.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+            setSelectedFood(p);
+            setUseServing(canServing);
+            setServingsQty(1);
+            setWeightQty(100);
+            setOpen(true);
+          } else {
               setToast({ show: true, message: "Item not found — showing search.", color: "danger" });
               setQuery(code);
               await foodsSearch(code, 1);
@@ -212,20 +251,6 @@ const AddFood: React.FC = () => {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
-
-  // Derived numerics
-  const per100g = useMemo(() => macrosPer100g(selectedFood?.nutriments), [selectedFood]);
-  const perServing = useMemo(() => macrosPerServing(selectedFood?.nutriments), [selectedFood]);
-  const parsedServing = useMemo(() => parseServingSize(selectedFood?.serving_size), [selectedFood]);
-
-  const hasServingMacros = useMemo(
-    () => !!(perServing.calories || perServing.carbs || perServing.protein || perServing.fat),
-    [perServing]
-  );
-  const has100gMacros = useMemo(
-    () => !!(per100g.calories || per100g.carbs || per100g.protein || per100g.fat),
-    [per100g]
-  );
 
   /** =========================
    *  API calls
@@ -261,13 +286,18 @@ const AddFood: React.FC = () => {
       if (!r.ok) throw new Error(`Details failed: ${r.status}`);
       const data: OFFBarcodeResponse = await r.json();
       if ("status" in data && data.status === 1) {
-        setSelectedFood(data.product);
-        setUseServing(true);
+        const p = data.product;
+        const ps = macrosPerServing(p.nutriments);
+        const canServing = !!p.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+        setSelectedFood(p);
+        setUseServing(canServing);
         setServingsQty(1);
         setWeightQty(100);
         setOpen(true);
         return;
       }
+
+
       throw new Error("Not found");
     } catch (e: any) {
       console.error(e);
@@ -281,10 +311,8 @@ const AddFood: React.FC = () => {
   const addFoodToMeal = async () => {
     if (!auth.currentUser || !selectedFood) return;
 
-    // Decide mode and base
     const useServingMode = useServing && selectedFood.serving_size && hasServingMacros;
 
-    // Base macros + label + meta depend on mode
     const perBase: MacroSet = useServingMode ? perServing : per100g;
     const baseLabel = useServingMode
       ? (parsedServing.label || selectedFood.serving_size || "1 serving")
@@ -298,7 +326,6 @@ const AddFood: React.FC = () => {
           }
         : { amount: 100, unit: "g", label: "100 g" };
 
-    // Factor + UI note
     let factor = 1;
     let quantityDesc = "";
     if (useServingMode) {
@@ -310,10 +337,8 @@ const AddFood: React.FC = () => {
       quantityDesc = `${grams} g`;
     }
 
-    // Totals
     const total = scale(perBase, factor);
 
-    // Build the item
     const today = new Date().toISOString().split("T")[0];
     const userRef = doc(db, "users", auth.currentUser.uid, "foods", today);
 
@@ -322,12 +347,12 @@ const AddFood: React.FC = () => {
       name: selectedFood.product_name || "(no name)",
       brand: selectedFood.brands || null,
       dataSource: "openfoodfacts",
-      base: baseMeta, // ← reflects the chosen mode
+      base: baseMeta,
       selection: {
         mode: useServingMode ? "serving" : "weight",
         note: quantityDesc,
         servingsQty: useServingMode ? factor : null,
-        weightQty: useServingMode ? null : Math.round(factor * 100), // grams actually entered
+        weightQty: useServingMode ? null : Math.round(factor * 100),
       },
       perBase: {
         calories: safeNum(perBase.calories, 0),
@@ -462,84 +487,155 @@ const AddFood: React.FC = () => {
           </div>
         )}
 
-        {/* Details modal */}
+        {/* Details modal — REDESIGNED */}
         <IonModal isOpen={open} onDidDismiss={() => setOpen(false)}>
           <IonHeader>
             <IonToolbar>
               <IonTitle>{selectedFood?.product_name || "(no name)"}</IonTitle>
             </IonToolbar>
           </IonHeader>
+
           <IonContent className="ion-padding">
             {selectedFood && (
               <>
+                {/* Subheader */}
                 <div style={{ marginBottom: 12 }}>
                   <p style={{ margin: 0, opacity: 0.7 }}>
                     {selectedFood.brands ? `${selectedFood.brands}` : ""}
                     {selectedFood.brands && selectedFood.nutriscore_grade ? " · " : ""}
                     {selectedFood.nutriscore_grade ? `Nutri-Score ${selectedFood.nutriscore_grade.toUpperCase()}` : ""}
                   </p>
-                  <p style={{ margin: "4px 0 0" }}>
-                    Base: <strong>{previewPerBaseLabel}</strong>
-                  </p>
                   <p style={{ margin: "4px 0 0", opacity: 0.8 }}>
                     Adding to: <strong>{meal}</strong>
                   </p>
                 </div>
 
-                <IonItem>
-                  <IonLabel position="stacked">Input mode</IonLabel>
-                  <IonSelect
-                    value={useServing ? "serving" : "weight"}
-                    onIonChange={(e) => setUseServing(e.detail.value === "serving")}
-                  >
-                    <IonSelectOption
-                      value="serving"
-                      disabled={!selectedFood.serving_size || !hasServingMacros}
-                    >
-                      By serving
-                    </IonSelectOption>
-                    <IonSelectOption value="weight">By weight (g)</IonSelectOption>
-                  </IonSelect>
-                </IonItem>
+                {/* Mode toggle */}
+                <IonSegment
+                  value={useServing ? "serving" : "weight"}
+                  onIonChange={(e) => setUseServing(e.detail.value === "serving")}
+                >
+                  <IonSegmentButton value="serving" disabled={!selectedFood.serving_size || !hasServingMacros}>
+                    <IonLabel>Serving</IonLabel>
+                  </IonSegmentButton>
+                  <IonSegmentButton value="weight" disabled={!has100gMacros}>
+                    <IonLabel>Weight</IonLabel>
+                  </IonSegmentButton>
+                </IonSegment>
 
+                {/* Quantity steppers */}
                 {useServing && selectedFood.serving_size && hasServingMacros ? (
-                  <IonItem>
-                    <IonLabel position="stacked">Servings</IonLabel>
-                    <IonInput
-                      type="number"
-                      value={servingsQty}
-                      min="0.1"
-                      step="0.1"
-                      onIonChange={(e) => setServingsQty(Math.max(0.1, Number(e.detail.value)))}
-                    />
-                  </IonItem>
+                  <IonCard style={{ marginTop: 12 }}>
+                    <IonCardHeader>
+                      <IonCardTitle style={{ fontSize: 16 }}>
+                        Quantity · <span style={{ opacity: 0.7 }}>{previewPerBaseLabel}</span>
+                      </IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 8, alignItems: "center" }}>
+                        <IonButton
+                          fill="outline"
+                          onClick={() => setServingsQty((v) => Math.max(0.1, safeNum(v - 0.5, 1)))}
+                        >
+                          −
+                        </IonButton>
+                        <IonInput
+                          type="number"
+                          inputmode="decimal"
+                          value={servingsQty}
+                          min="0.1"
+                          step="0.1"
+                          onIonChange={(e) => setServingsQty(Math.max(0.1, Number(e.detail.value)))}
+                          style={{ textAlign: "center" }}
+                        />
+                        <IonButton
+                          fill="outline"
+                          onClick={() => setServingsQty((v) => safeNum(v + 0.5, 1))}
+                        >
+                          +
+                        </IonButton>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
                 ) : (
-                  <IonItem>
-                    <IonLabel position="stacked">Amount (g)</IonLabel>
-                    <IonInput
-                      type="number"
-                      value={weightQty}
-                      min="1"
-                      step="1"
-                      onIonChange={(e) => setWeightQty(Math.max(1, Number(e.detail.value)))}
-                    />
-                  </IonItem>
+                  <IonCard style={{ marginTop: 12 }}>
+                    <IonCardHeader>
+                      <IonCardTitle style={{ fontSize: 16 }}>Amount · <span style={{ opacity: 0.7 }}>grams</span></IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <div style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", gap: 8, alignItems: "center" }}>
+                        <IonButton
+                          fill="outline"
+                          onClick={() => setWeightQty((v) => Math.max(1, v - 10))}
+                        >
+                          −10
+                        </IonButton>
+                        <IonInput
+                          type="number"
+                          inputmode="numeric"
+                          value={weightQty}
+                          min="1"
+                          step="1"
+                          onIonChange={(e) => setWeightQty(Math.max(1, Number(e.detail.value)))}
+                          style={{ textAlign: "center" }}
+                        />
+                        <IonButton
+                          fill="outline"
+                          onClick={() => setWeightQty((v) => v + 10)}
+                        >
+                          +10
+                        </IonButton>
+                      </div>
+                    </IonCardContent>
+                  </IonCard>
                 )}
 
-                <div style={{ marginTop: 16 }}>
-                  <h3>Per base ({previewPerBaseLabel})</h3>
-                  <p>
-                    {safeNum(previewPerBaseMacros.calories, 0)} kcal · C {safeNum(previewPerBaseMacros.carbs, 2)} g · P {safeNum(previewPerBaseMacros.protein, 2)} g · F{" "}
-                    {safeNum(previewPerBaseMacros.fat, 2)} g
-                  </p>
-                  <h3>Total</h3>
-                  <p>
-                    {safeNum(previewTotal.calories, 0)} kcal · C {safeNum(previewTotal.carbs, 1)} g · P {safeNum(previewTotal.protein, 1)} g · F{" "}
-                    {safeNum(previewTotal.fat, 1)} g
-                  </p>
-                </div>
+                {/* Totals card — single, clean summary */}
+                <IonCard style={{ marginTop: 8 }}>
+                  <IonCardHeader>
+                    <IonCardTitle style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                      <span>Nutrition total</span>
+                      <IonText color="medium" style={{ fontSize: 12 }}>
+                        {useServing
+                          ? `${safeNum(servingsQty, 1)} × ${previewPerBaseLabel}`
+                          : `${Math.max(1, weightQty)} g (base: ${previewPerBaseLabel})`}
+                      </IonText>
+                    </IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ textAlign: "center", marginBottom: 8 }}>
+                      <div style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>
+                        {safeNum(previewTotal.calories, 0)} kcal
+                      </div>
+                    </div>
 
-                <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
+                    <IonGrid>
+                      <IonRow>
+                        <IonCol className="ion-text-center">
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>Carbs</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>
+                            {safeNum(previewTotal.carbs, 1)} g
+                          </div>
+                        </IonCol>
+                        <IonCol className="ion-text-center">
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>Protein</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>
+                            {safeNum(previewTotal.protein, 1)} g
+                          </div>
+                        </IonCol>
+                        <IonCol className="ion-text-center">
+                          <div style={{ fontSize: 12, opacity: 0.7 }}>Fat</div>
+                          <div style={{ fontSize: 18, fontWeight: 700 }}>
+                            {safeNum(previewTotal.fat, 1)} g
+                          </div>
+                        </IonCol>
+                      </IonRow>
+                    </IonGrid>
+                  </IonCardContent>
+                </IonCard>
+
+                {/* Actions */}
+                <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                   <IonButton expand="block" onClick={() => setOpen(false)} fill="outline">
                     Cancel
                   </IonButton>
