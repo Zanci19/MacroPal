@@ -29,6 +29,38 @@
 }
 ion-title { font-weight: 800; letter-spacing: .2px; }
 
+.fs-datebar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.fs-datebar ion-button[fill="clear"] {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --background-hover: rgba(255,255,255,0.05);
+  border-radius: 9999px;
+}
+.fs-datebtn {
+  --border-radius: 9999px;
+  --padding-start: 18px;
+  --padding-end: 18px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.fs-datebtn__label {
+  font-weight: 700;
+  letter-spacing: .2px;
+}
+.fs-datebtn__badge {
+  margin-left: 4px;
+}
+
+
 /* Card */
 ion-card {
   border-radius: var(--mp-r-card);
@@ -91,6 +123,11 @@ ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong
   gap: 10px;
   padding: 4px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
+}
+.fs-summary__goal {
+  padding: 0 16px 6px;
+  font-size: 0.85rem;
+  color: var(--mp-text-muted);
 }
 .fs-macro {
   display: inline-flex;

@@ -14,7 +14,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
-  useFetchStreams: false,
   experimentalAutoDetectLongPolling: true,
   // experimentalForceLongPolling: true, // <- alternative; you can enable this instead of auto-detect if needed
 });

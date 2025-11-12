@@ -1,20 +1,53 @@
 // src/pages/home/Home.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonIcon, IonList, IonItem, IonLabel, IonSpinner, IonChip, IonToast
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonButton,
+  IonIcon,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonSpinner,
+  IonChip,
+  IonToast,
+  IonBadge,
+  IonDatetime,
+  IonModal,
 } from "@ionic/react";
 import {
-  addCircleOutline, logOutOutline,
-  sunnyOutline, restaurantOutline, cafeOutline, fastFoodOutline,
-  flameOutline, trashOutline
+  addCircleOutline,
+  logOutOutline,
+  sunnyOutline,
+  restaurantOutline,
+  cafeOutline,
+  fastFoodOutline,
+  flameOutline,
+  trashOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
+  calendarOutline,
 } from "ionicons/icons";
-import { useHistory } from "react-router";
+import { useHistory, useLocation } from "react-router";
 import { auth, db } from "../../firebase";
-import {
-  doc, getDoc, onSnapshot, runTransaction, setDoc
-} from "firebase/firestore";
+import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import "./Home.css";
+import {
+  clampDateKeyToToday,
+  formatDateKey,
+  isDateKey,
+  shiftDateKey,
+  todayDateKey,
+} from "../../utils/date";
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 type Macros = { calories: number; carbs: number; protein: number; fat: number };
@@ -71,11 +104,21 @@ const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number 
 
 const Home: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const [uid, setUid] = useState<string | null>(null);
-  const [todayKey, setTodayKey] = useState<string>(() => new Date().toISOString().split("T")[0]);
+  const [activeDateKey, setActiveDateKey] = useState<string>(() => {
+    const params = new URLSearchParams(location.search);
+    const qDate = params.get("date");
+    if (isDateKey(qDate)) {
+      return clampDateKeyToToday(qDate);
+    }
+    return todayDateKey();
+  });
+  const [pendingDateKey, setPendingDateKey] = useState<string>(activeDateKey);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [caloriesNeeded, setCaloriesNeeded] = useState<number | null>(null);
@@ -95,55 +138,111 @@ const Home: React.FC = () => {
     { open: false, message: "" }
   );
 
+  const refreshStreak = useCallback(async (userId: string) => {
+    const todayKeyValue = todayDateKey();
+    let s = 0;
+    for (let i = 0; i < 14; i++) {
+      const offset = shiftDateKey(todayKeyValue, -i);
+      const ds = await getDoc(doc(db, "users", userId, "foods", offset));
+      const dd = ds.data();
+      const any = !!(
+        dd?.breakfast?.length ||
+        dd?.lunch?.length ||
+        dd?.dinner?.length ||
+        dd?.snacks?.length
+      );
+      if (any) s++;
+      else break;
+    }
+    setStreak(s);
+  }, []);
+
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) { history.replace("/login"); return; }
+      if (!user) {
+        history.replace("/login");
+        return;
+      }
       setUid(user.uid);
 
       // profile
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists() || !userDoc.data()?.age) { history.replace("/setup-profile"); return; }
-      const p = userDoc.data() as Profile; setProfile(p);
+      if (!userDoc.exists() || !userDoc.data()?.age) {
+        history.replace("/setup-profile");
+        return;
+      }
+      const p = userDoc.data() as Profile;
+      setProfile(p);
 
       // calories
       const { age, weight, height, gender, goal, activity } = p;
-      let bmr = gender === "male"
-        ? 10*weight + 6.25*height - 5*age + 5
-        : 10*weight + 6.25*height - 5*age - 161;
-      const mult = activity === "light" ? 1.375 : activity === "moderate" ? 1.55 : activity === "very" ? 1.725 : activity === "extra" ? 1.9 : 1.2;
-      let daily = bmr * mult; if (goal === "lose") daily -= 500; else if (goal === "gain") daily += 500;
+      let bmr =
+        gender === "male"
+          ? 10 * weight + 6.25 * height - 5 * age + 5
+          : 10 * weight + 6.25 * height - 5 * age - 161;
+      const mult =
+        activity === "light"
+          ? 1.375
+          : activity === "moderate"
+          ? 1.55
+          : activity === "very"
+          ? 1.725
+          : activity === "extra"
+          ? 1.9
+          : 1.2;
+      let daily = bmr * mult;
+      if (goal === "lose") daily -= 500;
+      else if (goal === "gain") daily += 500;
       setCaloriesNeeded(Math.max(800, Math.round(daily)));
 
-      // diary subscribe
-      const key = new Date().toISOString().split("T")[0];
-      setTodayKey(key);
-      const ref = doc(db, "users", user.uid, "foods", key);
-      const unsubDoc = onSnapshot(ref, async (snap) => {
-        const d = snap.data() || {};
-        setDayData({
-          breakfast: d.breakfast || [], lunch: d.lunch || [], dinner: d.dinner || [], snacks: d.snacks || [],
-        });
-        setLoading(false);
+      // ensure active date is clamped to today when logging in on a new day
+      setActiveDateKey((prev) => clampDateKeyToToday(prev));
 
-        // simple 14-day streak
-        const today = new Date();
-        let s = 0;
-        for (let i=0;i<14;i++){
-          const dt = new Date(today); dt.setDate(today.getDate()-i);
-          const k = dt.toISOString().split("T")[0];
-          const ds = await getDoc(doc(db, "users", user.uid, "foods", k));
-          const dd = ds.data();
-          const any = !!(dd?.breakfast?.length || dd?.lunch?.length || dd?.dinner?.length || dd?.snacks?.length);
-          if (any) s++; else break;
-        }
-        setStreak(s);
-      });
-
-      return () => { unsubDoc(); };
+      await refreshStreak(user.uid);
     });
 
     return () => unsubAuth();
-  }, [history]);
+  }, [history, refreshStreak]);
+
+  useEffect(() => {
+    if (!uid) return;
+    setLoading(true);
+    setLastDeleted(null);
+    setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
+    const unsub = onSnapshot(doc(db, "users", uid, "foods", activeDateKey), (snap) => {
+      const d = snap.data() || {};
+      setDayData({
+        breakfast: d.breakfast || [],
+        lunch: d.lunch || [],
+        dinner: d.dinner || [],
+        snacks: d.snacks || [],
+      });
+      setLoading(false);
+      refreshStreak(uid);
+    });
+
+    return () => unsub();
+  }, [uid, activeDateKey, refreshStreak]);
+
+  useEffect(() => {
+    if (!uid) return;
+    refreshStreak(uid);
+  }, [uid, refreshStreak]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("date") === activeDateKey) return;
+    params.set("date", activeDateKey);
+    history.replace({ pathname: location.pathname, search: `?${params.toString()}` });
+  }, [activeDateKey, history, location.pathname, location.search]);
+
+  const todayKey = todayDateKey();
+  const isToday = activeDateKey === todayKey;
+  const activeDateLabel = formatDateKey(activeDateKey, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 
   // totals
   const totals = useMemo(() => {
@@ -172,6 +271,13 @@ const Home: React.FC = () => {
   const kcalGoal = caloriesNeeded ?? 0;
   const kcalLeft = Math.max(0, Math.round(kcalGoal - kcalConsumed));
   const progress = kcalGoal > 0 ? Math.min(1, kcalConsumed / kcalGoal) : 0;
+  const kcalDelta = kcalConsumed - kcalGoal;
+  const summaryDifferenceLabel = isToday
+    ? "Calories Remaining"
+    : kcalDelta >= 0
+    ? "Over target"
+    : "Under target";
+  const summaryDifferenceValue = isToday ? kcalLeft : Math.abs(kcalDelta);
 
   const macroTargets = useMemo(() => {
     if (!profile || !caloriesNeeded) return null;
@@ -197,6 +303,7 @@ const Home: React.FC = () => {
   // delete with optimistic UI and remember for undo
   const deleteFood = async (meal: MealKey, index: number) => {
     if (!uid) return;
+    const dayKey = activeDateKey;
     const current = dayData[meal] || [];
     if (index < 0 || index >= current.length) return;
     const item = current[index];
@@ -210,7 +317,7 @@ const Home: React.FC = () => {
 
     try {
       await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", todayKey);
+        const ref = doc(db, "users", uid, "foods", dayKey);
         const snap = await tx.get(ref);
         const data = snap.data() || {};
         const arr: DiaryEntry[] = [...(data[meal] || [])];
@@ -233,6 +340,7 @@ const Home: React.FC = () => {
   const undoDelete = async () => {
     if (!uid || !lastDeleted) return;
     const { meal, index, item } = lastDeleted;
+    const dayKey = activeDateKey;
 
     // optimistic local restore
     const arr = [...(dayData[meal] || [])];
@@ -243,7 +351,7 @@ const Home: React.FC = () => {
 
     try {
       await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", todayKey);
+        const ref = doc(db, "users", uid, "foods", dayKey);
         const snap = await tx.get(ref);
         const data = snap.data() || {};
         const cur: DiaryEntry[] = [...(data[meal] || [])];
@@ -265,9 +373,34 @@ const Home: React.FC = () => {
     }
   };
 
-  const ringColor = progress <= 0.9 ? "var(--ion-color-success)"
-                   : progress <= 1.1 ? "var(--ion-color-warning)"
-                   : "var(--ion-color-danger)";
+  const ringColor =
+    progress <= 0.9
+      ? "var(--ion-color-success)"
+      : progress <= 1.1
+      ? "var(--ion-color-warning)"
+      : "var(--ion-color-danger)";
+
+  const goRelativeDay = (delta: number) => {
+    setActiveDateKey((prev) => clampDateKeyToToday(shiftDateKey(prev, delta)));
+  };
+
+  const openPicker = () => {
+    setPendingDateKey(activeDateKey);
+    setShowDatePicker(true);
+  };
+
+  const confirmPicker = () => {
+    setActiveDateKey(clampDateKeyToToday(pendingDateKey));
+    setShowDatePicker(false);
+  };
+
+  const handleDateChange = (value: string | null | undefined) => {
+    if (!value) return;
+    const key = value.split("T")[0];
+    if (isDateKey(key)) {
+      setPendingDateKey(clampDateKeyToToday(key));
+    }
+  };
 
   return (
     <IonPage>
@@ -284,6 +417,37 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="home-content ion-padding">
+        <div className="fs-datebar" role="group" aria-label="Select day">
+          <IonButton
+            fill="clear"
+            shape="round"
+            onClick={() => goRelativeDay(-1)}
+            aria-label="Previous day"
+          >
+            <IonIcon icon={chevronBackOutline} />
+          </IonButton>
+
+          <IonButton className="fs-datebtn" fill="outline" onClick={openPicker}>
+            <IonIcon slot="start" icon={calendarOutline} />
+            <span className="fs-datebtn__label">{activeDateLabel}</span>
+            {isToday && (
+              <IonBadge color="success" className="fs-datebtn__badge">
+                Today
+              </IonBadge>
+            )}
+          </IonButton>
+
+          <IonButton
+            fill="clear"
+            shape="round"
+            onClick={() => goRelativeDay(1)}
+            aria-label="Next day"
+            disabled={isToday}
+          >
+            <IonIcon icon={chevronForwardOutline} />
+          </IonButton>
+        </div>
+
         {/* Summary */}
         <IonCard className="fs-summary">
           <IonCardHeader className="fs-summary__hdr">
@@ -308,11 +472,11 @@ const Home: React.FC = () => {
                   <ProgressRing size={64} stroke={8} progress={progress} />
                 </div>
                 <div className="fs-summary__mid">
-                  <div className="fs-metric-title">Calories Remaining</div>
+                  <div className="fs-metric-title">{summaryDifferenceLabel}</div>
                   <div className="fs-metric-title">Calories Consumed</div>
                 </div>
                 <div className="fs-summary__right">
-                  <div className="fs-metric-value">{kcalLeft}</div>
+                  <div className="fs-metric-value">{summaryDifferenceValue}</div>
                   <div className="fs-metric-value">{kcalConsumed}</div>
                 </div>
               </>
@@ -321,6 +485,9 @@ const Home: React.FC = () => {
 
           {profile && caloriesNeeded != null && (
             <>
+              <div className="fs-summary__goal">
+                Goal: {kcalGoal} kcal
+              </div>
               <div className="fs-macros">
                 <div className="fs-macro"><span className="fs-macro__label">Carbohydrates</span><span className="fs-macro__val">{totals.day.carbs.toFixed(1)} g</span></div>
                 <div className="fs-macro"><span className="fs-macro__label">Protein</span><span className="fs-macro__val">{totals.day.protein.toFixed(1)} g</span></div>
@@ -365,8 +532,13 @@ const Home: React.FC = () => {
                 <IonItem lines="none" className="fs-meal__row" detail={false}>
                   <IonIcon slot="start" className="fs-meal__icon" icon={mealIcon[meal]} aria-hidden="true" />
                   <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
-                  <IonButton slot="end" className="fs-meal__add" fill="clear"
-                    onClick={() => history.push(`/add-food?meal=${meal}`)} aria-label={`Add to ${meal}`}>
+                  <IonButton
+                    slot="end"
+                    className="fs-meal__add"
+                    fill="clear"
+                    onClick={() => history.push(`/add-food?meal=${meal}&date=${activeDateKey}`)}
+                    aria-label={`Add to ${meal}`}
+                  >
                     <IonIcon icon={addCircleOutline} />
                   </IonButton>
                 </IonItem>
@@ -431,6 +603,30 @@ const Home: React.FC = () => {
           onDidDismiss={() => setToast({ open: false, message: "" })}
         />
       </IonContent>
+
+      <IonModal isOpen={showDatePicker} onDidDismiss={() => setShowDatePicker(false)}>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Select a day</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <IonDatetime
+            presentation="date"
+            value={`${pendingDateKey}T00:00:00`}
+            max={`${todayKey}T23:59:59`}
+            onIonChange={(e) => handleDateChange(e.detail.value?.toString())}
+          />
+          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+            <IonButton expand="block" fill="outline" onClick={() => setShowDatePicker(false)}>
+              Cancel
+            </IonButton>
+            <IonButton expand="block" onClick={confirmPicker}>
+              View day
+            </IonButton>
+          </div>
+        </IonContent>
+      </IonModal>
     </IonPage>
   );
 };

@@ -27,11 +27,15 @@ import {
   IonRow,
   IonCol,
   IonText,
+  IonChip,
+  IonIcon,
 } from "@ionic/react";
 
 import { useLocation, useHistory } from "react-router";
 import { auth, db } from "../firebase";
 import { doc, setDoc, arrayUnion } from "firebase/firestore";
+import { calendarOutline } from "ionicons/icons";
+import { clampDateKeyToToday, formatDateKey, isDateKey, todayDateKey } from "../utils/date";
 
 /** =========================
  *  Open Food Facts via Firebase Functions proxy
@@ -136,6 +140,15 @@ function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
     : "breakfast";
 }
 
+function useDateFromQuery(location: ReturnType<typeof useLocation>): string {
+  const params = new URLSearchParams(location.search);
+  const d = params.get("date");
+  if (isDateKey(d)) {
+    return clampDateKeyToToday(d!);
+  }
+  return todayDateKey();
+}
+
 /** =========================
  *  Component
  *  ========================= */
@@ -143,6 +156,7 @@ const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const meal = useMealFromQuery(location);
+  const dateKey = useDateFromQuery(location);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OFFSearchHit[]>([]);
@@ -167,6 +181,10 @@ const AddFood: React.FC = () => {
   const per100g = useMemo(() => macrosPer100g(selectedFood?.nutriments), [selectedFood]);
   const perServing = useMemo(() => macrosPerServing(selectedFood?.nutriments), [selectedFood]);
   const parsedServing = useMemo(() => parseServingSize(selectedFood?.serving_size), [selectedFood]);
+  const friendlyDate = useMemo(
+    () => formatDateKey(dateKey, { weekday: "short", month: "short", day: "numeric" }),
+    [dateKey]
+  );
 
   const hasServingMacros = useMemo(
     () => !!(perServing.calories || perServing.carbs || perServing.protein || perServing.fat),
@@ -338,8 +356,7 @@ const AddFood: React.FC = () => {
 
     const total = scale(perBase, factor);
 
-    const today = new Date().toISOString().split("T")[0];
-    const userRef = doc(db, "users", auth.currentUser.uid, "foods", today);
+    const userRef = doc(db, "users", auth.currentUser.uid, "foods", dateKey);
 
     const item = {
       code: selectedFood.code,
@@ -365,7 +382,7 @@ const AddFood: React.FC = () => {
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
     setOpen(false);
-    history.replace("/app/home");
+    history.replace(`/app/home?date=${dateKey}`);
   };
 
   /** =========================
@@ -398,13 +415,20 @@ const AddFood: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/home" />
+            <IonBackButton defaultHref={`/app/home?date=${dateKey}`} />
           </IonButtons>
           <IonTitle>Add Food</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
+        <IonChip color="primary" style={{ marginBottom: 12 }}>
+          <IonIcon icon={calendarOutline} />
+          <span style={{ marginLeft: 6 }}>
+            {friendlyDate} · {meal}
+          </span>
+        </IonChip>
+
         {/* Search input */}
         <IonItem>
           <IonInput
@@ -437,7 +461,7 @@ const AddFood: React.FC = () => {
           <IonButton
             expand="block"
             fill="outline"
-            onClick={() => history.push(`/scan-barcode?meal=${meal}`)}
+            onClick={() => history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`)}
           >
             Barcode scanner
           </IonButton>
@@ -505,7 +529,7 @@ const AddFood: React.FC = () => {
                     {selectedFood.nutriscore_grade ? `Nutri-Score ${selectedFood.nutriscore_grade.toUpperCase()}` : ""}
                   </p>
                   <p style={{ margin: "4px 0 0", opacity: 0.8 }}>
-                    Adding to: <strong>{meal}</strong>
+                    Adding to: <strong>{meal}</strong> · {friendlyDate}
                   </p>
                 </div>
 

@@ -5,6 +5,7 @@ import {
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
@@ -14,6 +15,15 @@ function useMealFromQuery(location: ReturnType<typeof useLocation>) {
   return (["breakfast","lunch","dinner","snacks"] as const).includes(m as any) ? (m as any) : "breakfast";
 }
 
+function useDateFromQuery(location: ReturnType<typeof useLocation>) {
+  const p = new URLSearchParams(location.search);
+  const d = p.get("date");
+  if (isDateKey(d)) {
+    return clampDateKeyToToday(d!);
+  }
+  return todayDateKey();
+}
+
 const ScanBarcode: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
@@ -21,6 +31,7 @@ const ScanBarcode: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const meal = useMealFromQuery(location);
+  const dateKey = useDateFromQuery(location);
 
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +80,7 @@ const ScanBarcode: React.FC = () => {
 
       // Try OFF lookup first; AddFood will show modal if found, else search list
       // We don't do the fetch here (network/permissions are fine), but redirect and let AddFood handle UX/toasts consistently.
-      history.replace(`/add-food?meal=${meal}&code=${encodeURIComponent(code)}&found=1`);
+      history.replace(`/add-food?meal=${meal}&date=${dateKey}&code=${encodeURIComponent(code)}&found=1`);
     } catch (e: any) {
       console.error(e);
       setError(e?.message ?? "Failed to start camera");
@@ -89,7 +100,7 @@ const ScanBarcode: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/add-food?meal=${meal}`} />
+            <IonBackButton defaultHref={`/add-food?meal=${meal}&date=${dateKey}`} />
           </IonButtons>
           <IonTitle>Scan barcode</IonTitle>
         </IonToolbar>
@@ -162,7 +173,7 @@ const ScanBarcode: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() => history.replace(`/add-food?meal=${meal}`)}
+                onClick={() => history.replace(`/add-food?meal=${meal}&date=${dateKey}`)}
               >
                 Back to Add Food
               </IonButton>
