@@ -24,6 +24,7 @@ const SetupProfile: React.FC = () => {
   const [goal, setGoal] = useState<"lose" | "maintain" | "gain">("maintain");
   const [gender, setGender] = useState<"male" | "female">("male");
   const [activity, setActivity] = useState<"sedentary" | "light" | "moderate" | "very" | "extra">("sedentary");
+  const [waterTarget, setWaterTarget] = useState<number | null>(2000);
 
   const [toast, setToast] = useState<{ show: boolean; message: string; color?: string }>({
     show: false,
@@ -40,6 +41,13 @@ const SetupProfile: React.FC = () => {
       return;
     }
 
+    if (!age || !weight || !height) {
+      setToast({ show: true, message: "Please fill age, weight and height.", color: "danger" });
+      return;
+    }
+
+    const sanitizedWater = waterTarget && waterTarget > 0 ? Math.round(waterTarget) : 2000;
+
     try {
       // ✅ Use setDoc with merge so it creates the doc if missing (avoids "No document to update")
       await setDoc(
@@ -51,6 +59,7 @@ const SetupProfile: React.FC = () => {
           goal,
           gender,
           activity,
+          waterTarget: sanitizedWater,
           // optional: updatedAt for your own bookkeeping
           updatedAt: new Date().toISOString(),
         },
@@ -100,6 +109,17 @@ const SetupProfile: React.FC = () => {
             inputmode="numeric"
             placeholder="e.g., 179"
             onIonChange={(e) => setHeight(e.detail.value ? Number(e.detail.value) : null)}
+          />
+        </IonItem>
+
+        <IonItem>
+          <IonLabel position="stacked">Daily water goal (ml)</IonLabel>
+          <IonInput
+            type="number"
+            inputmode="numeric"
+            placeholder="e.g., 2000"
+            value={waterTarget ?? ""}
+            onIonChange={(e) => setWaterTarget(e.detail.value ? Number(e.detail.value) : null)}
           />
         </IonItem>
 

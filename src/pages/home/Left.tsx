@@ -16,8 +16,27 @@ import { doc, getDoc } from "firebase/firestore";
 
 // Recharts
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ComposedChart, Area
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar,
+  ComposedChart,
+  Area,
+  ReferenceLine,
 } from "recharts";
 
 /* ============================
@@ -35,7 +54,7 @@ type DiaryEntry = {
   addedAt: string;
   [k: string]: any;
 };
-type DayDoc = Partial<Record<MealKey, DiaryEntry[]>>;
+type DayDoc = { hydrationMl?: number } & Partial<Record<MealKey, DiaryEntry[]>>;
 type Profile = {
   age: number;
   weight: number;
@@ -43,9 +62,12 @@ type Profile = {
   gender: "male" | "female";
   goal: "lose" | "maintain" | "gain";
   activity: "sedentary" | "light" | "moderate" | "very" | "extra";
+  waterTarget?: number;
 };
 
 type TF = "7d" | "30d" | "60d";
+
+type MacroTotals = Macros & { hydration: number };
 
 /* ============================
    Helpers
@@ -76,7 +98,9 @@ function sumDay(doc: DayDoc) {
     return acc;
   }, {} as Record<MealKey, Macros>);
 
-  return { macros, byMeal, items: all };
+  const hydrationMl = typeof doc.hydrationMl === "number" ? doc.hydrationMl : 0;
+
+  return { macros, byMeal, items: all, hydrationMl };
 }
 
 function movingAvg(vals: number[], w: number) {
@@ -114,6 +138,8 @@ const Left: React.FC = () => {
   const [days, setDays] = useState<{ key: string; data: DayDoc; roll: ReturnType<typeof sumDay> }[]>([]);
 
   const [microKey, setMicroKey] = useState<string | undefined>(undefined);
+
+  const waterGoal = profile?.waterTarget && profile.waterTarget > 0 ? profile.waterTarget : null;
 
   // Fetch last 60 days
   useEffect(() => {
@@ -160,21 +186,43 @@ const Left: React.FC = () => {
     fatK: d.roll.macros.fat * 9,
   })), [view]);
 
-  const dayTable = useMemo(() => view.map((d) => ({
-    date: d.key,
-    calories: Math.round(d.roll.macros.calories),
-    carbs: +d.roll.macros.carbs.toFixed(1),
-    protein: +d.roll.macros.protein.toFixed(1),
-    fat: +d.roll.macros.fat.toFixed(1),
-  })), [view]);
+  const hydrationSeries = useMemo(
+    () =>
+      view.map((d) => ({
+        date: fmtDate(d.key),
+        hydration: Math.round(d.roll.hydrationMl || 0),
+      })),
+    [view]
+  );
+
+  const dayTable = useMemo(
+    () =>
+      view.map((d) => ({
+        date: d.key,
+        calories: Math.round(d.roll.macros.calories),
+        carbs: +d.roll.macros.carbs.toFixed(1),
+        protein: +d.roll.macros.protein.toFixed(1),
+        fat: +d.roll.macros.fat.toFixed(1),
+        hydration: Math.round(d.roll.hydrationMl || 0),
+      })),
+    [view]
+  );
 
   // macro totals and averages
-  const totals = useMemo(() => dayTable.reduce((a, x) => ({
-    calories: a.calories + x.calories,
-    carbs: a.carbs + x.carbs,
-    protein: a.protein + x.protein,
-    fat: a.fat + x.fat,
-  }), { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros), [dayTable]);
+  const totals = useMemo(
+    () =>
+      dayTable.reduce(
+        (a, x) => ({
+          calories: a.calories + x.calories,
+          carbs: a.carbs + x.carbs,
+          protein: a.protein + x.protein,
+          fat: a.fat + x.fat,
+          hydration: a.hydration + x.hydration,
+        }),
+        { calories: 0, carbs: 0, protein: 0, fat: 0, hydration: 0 } as MacroTotals
+      ),
+    [dayTable]
+  );
 
   const avg = useMemo(() => {
     const n = Math.max(1, dayTable.length);
@@ -183,6 +231,7 @@ const Left: React.FC = () => {
       carbs: +(totals.carbs / n).toFixed(1),
       protein: +(totals.protein / n).toFixed(1),
       fat: +(totals.fat / n).toFixed(1),
+      hydration: Math.round(totals.hydration / n),
     };
   }, [totals, dayTable.length]);
 
@@ -234,8 +283,8 @@ const Left: React.FC = () => {
   // export
   const exportCSV = () => {
     const rows = [
-      ["date","calories","carbohydrates_g","protein_g","fat_g"].join(","),
-      ...dayTable.map(r => [r.date, r.calories, r.carbs, r.protein, r.fat].join(","))
+      ["date","calories","carbohydrates_g","protein_g","fat_g","hydration_ml"].join(","),
+      ...dayTable.map(r => [r.date, r.calories, r.carbs, r.protein, r.fat, r.hydration].join(","))
     ].join("\n");
     const blob = new Blob([rows], { type: "text/csv" });
     const url = URL.createObjectURL(blob); const a = document.createElement("a");
@@ -303,13 +352,14 @@ const Left: React.FC = () => {
                       </IonCardTitle>
                       <IonCardSubtitle>Across the selected range</IonCardSubtitle>
                     </IonCardHeader>
-                    <IonCardContent>
-                      <div>Carbohydrates {avg.carbs.toFixed(0)} g</div>
-                      <div>Protein {avg.protein.toFixed(0)} g</div>
-                      <div>Fat {avg.fat.toFixed(0)} g</div>
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
+                  <IonCardContent>
+                    <div>Carbohydrates {avg.carbs.toFixed(0)} g</div>
+                    <div>Protein {avg.protein.toFixed(0)} g</div>
+                    <div>Fat {avg.fat.toFixed(0)} g</div>
+                    <div>Water {avg.hydration} ml</div>
+                  </IonCardContent>
+                </IonCard>
+              </IonCol>
 
                 <IonCol size="6">
                   <IonCard>
@@ -395,6 +445,50 @@ const Left: React.FC = () => {
                       <Area type="monotone" dataKey="kcal" name="Calories" fill={palette[0]} stroke={palette[0]} opacity={0.25} />
                       <Line type="monotone" dataKey="ma7" name="MA7" stroke={palette[1]} dot={false} strokeWidth={2} />
                     </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </IonCardContent>
+            </IonCard>
+
+            <IonCard>
+              <IonCardHeader>
+                <IonCardTitle>
+                  Hydration trend
+                  <IonChip
+                    color={waterGoal && avg.hydration >= waterGoal ? "success" : "medium"}
+                    style={{ marginLeft: 8 }}
+                  >
+                    <IonIcon icon={analyticsOutline} />&nbsp;Avg {avg.hydration} ml
+                  </IonChip>
+                </IonCardTitle>
+                <IonCardSubtitle>Daily water intake</IonCardSubtitle>
+              </IonCardHeader>
+              <IonCardContent>
+                <div style={{ width: "100%", height: 260 }}>
+                  <ResponsiveContainer>
+                    <LineChart data={hydrationSeries}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="hydration"
+                        name="Water (ml)"
+                        stroke={palette[4]}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      {waterGoal ? (
+                        <ReferenceLine
+                          y={waterGoal}
+                          stroke={palette[5]}
+                          strokeDasharray="6 4"
+                          label={{ value: `Goal ${waterGoal} ml`, position: "top", fill: "var(--ion-text-color, #fff)", fontSize: 12 }}
+                        />
+                      ) : null}
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               </IonCardContent>
@@ -629,7 +723,7 @@ const Left: React.FC = () => {
             <IonCard>
               <IonCardHeader>
                 <IonCardTitle>Daily rollup</IonCardTitle>
-                <IonCardSubtitle>Carbohydrates, protein, fat per day</IonCardSubtitle>
+                <IonCardSubtitle>Carbohydrates, protein, fat, water per day</IonCardSubtitle>
               </IonCardHeader>
               <IonCardContent>
                 <div style={{ fontSize: 13, lineHeight: 1.6, opacity: 0.9 }}>
@@ -637,7 +731,7 @@ const Left: React.FC = () => {
                     <div key={d.date} style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 10 }}>
                       <div style={{ fontWeight: 700 }}>{d.date}</div>
                       <div>
-                        {d.calories} kcal · Carbohydrates {d.carbs.toFixed(0)} g · Protein {d.protein.toFixed(0)} g · Fat {d.fat.toFixed(0)} g
+                        {d.calories} kcal · Carbohydrates {d.carbs.toFixed(0)} g · Protein {d.protein.toFixed(0)} g · Fat {d.fat.toFixed(0)} g · Water {d.hydration} ml
                       </div>
                     </div>
                   ))}

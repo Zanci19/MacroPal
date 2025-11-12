@@ -217,6 +217,65 @@ html, body, ion-content {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---------- HYDRATION ---------- */
+.hydration-card {
+  margin-top: 16px;
+}
+
+.hydration-card__hdr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hydration-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hydration-label {
+  font-size: 0.85rem;
+  color: var(--mp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.hydration-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.hydration-progress {
+  margin-top: 12px;
+}
+
+.hydration-progress ion-progress-bar {
+  --background: rgba(255, 255, 255, 0.08);
+  --progress-background: var(--ion-color-primary);
+  border-radius: 9999px;
+  height: 10px;
+}
+
+.hydration-status {
+  margin: 6px 0 0 0;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.hydration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.hydration-actions ion-button {
+  flex: 1 1 120px;
+}
+
 /* Small phones */
 @media (max-width: 420px) {
   .fs-summary__row { grid-template-columns: 56px 1fr auto; gap: 10px; }
