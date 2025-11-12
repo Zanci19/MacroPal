@@ -1,12 +1,38 @@
 // src/pages/home/Home.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonContent, IonCard, IonCardHeader, IonCardTitle, IonCardContent, IonButton, IonIcon, IonList, IonItem, IonLabel, IonSpinner, IonChip, IonToast
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonContent,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonButton,
+  IonIcon,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonSpinner,
+  IonChip,
+  IonToast,
+  IonProgressBar,
+  IonText,
 } from "@ionic/react";
 import {
-  addCircleOutline, logOutOutline,
-  sunnyOutline, restaurantOutline, cafeOutline, fastFoodOutline,
-  flameOutline, trashOutline
+  addCircleOutline,
+  logOutOutline,
+  sunnyOutline,
+  restaurantOutline,
+  cafeOutline,
+  fastFoodOutline,
+  flameOutline,
+  trashOutline,
+  waterOutline,
+  refreshOutline,
 } from "ionicons/icons";
 import { useHistory } from "react-router";
 import { auth, db } from "../../firebase";
@@ -45,6 +71,7 @@ type Profile = {
   gender: "male" | "female";
   goal: "lose" | "maintain" | "gain";
   activity: "sedentary" | "light" | "moderate" | "very" | "extra";
+  waterTarget?: number;
   [k: string]: any;
 };
 
@@ -86,6 +113,13 @@ const Home: React.FC = () => {
 
   const [streak, setStreak] = useState<number>(0);
 
+  const [hydrationMl, setHydrationMl] = useState<number>(0);
+  const [hydrationToast, setHydrationToast] = useState<{
+    open: boolean;
+    message: string;
+    color?: string;
+  }>({ open: false, message: "", color: "success" });
+
   // last deleted for undo
   const [lastDeleted, setLastDeleted] = useState<{
     meal: MealKey; index: number; item: DiaryEntry;
@@ -123,6 +157,7 @@ const Home: React.FC = () => {
         setDayData({
           breakfast: d.breakfast || [], lunch: d.lunch || [], dinner: d.dinner || [], snacks: d.snacks || [],
         });
+        setHydrationMl(typeof d.hydrationMl === "number" ? d.hydrationMl : 0);
         setLoading(false);
 
         // simple 14-day streak
@@ -174,7 +209,7 @@ const Home: React.FC = () => {
   const progress = kcalGoal > 0 ? Math.min(1, kcalConsumed / kcalGoal) : 0;
 
   const macroTargets = useMemo(() => {
-    if (!profile || !caloriesNeeded) return null;
+    if (!profile || !caloriesNeeded || !profile.weight) return null;
     const proteinG = Math.round(1.8 * profile.weight);
     const fatG = Math.max(45, Math.round(0.8 * profile.weight));
     const proteinK = proteinG * 4, fatK = fatG * 9;
@@ -186,6 +221,60 @@ const Home: React.FC = () => {
 
   const mealIcon: Record<MealKey, string> = {
     breakfast: sunnyOutline, lunch: restaurantOutline, dinner: cafeOutline, snacks: fastFoodOutline,
+  };
+
+  const hydrationTarget = profile?.waterTarget && profile.waterTarget > 0 ? profile.waterTarget : 2000;
+  const hydrationProgress = hydrationTarget > 0 ? Math.min(1, hydrationMl / hydrationTarget) : 0;
+  const hydrationStatus = hydrationTarget > 0
+    ? hydrationMl >= hydrationTarget
+      ? `Goal met! ${hydrationMl - hydrationTarget} ml over`
+      : `${Math.max(0, hydrationTarget - hydrationMl)} ml to go`
+    : "Set a water goal in Settings.";
+
+  const updateHydration = async (delta: number) => {
+    if (!uid || !todayKey || delta === 0) return;
+    const prev = hydrationMl;
+    const optimistic = Math.max(0, prev + delta);
+    setHydrationMl(optimistic);
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", todayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const current = typeof data.hydrationMl === "number" ? data.hydrationMl : 0;
+        const next = Math.max(0, current + delta);
+        tx.set(ref, { hydrationMl: next }, { merge: true });
+      });
+
+      const message = delta > 0
+        ? `Logged ${delta} ml of water.`
+        : `Removed ${Math.abs(delta)} ml.`;
+      setHydrationToast({ open: true, message, color: "success" });
+    } catch (err) {
+      console.error(err);
+      setHydrationMl(prev);
+      setHydrationToast({ open: true, message: "Couldn't update water log.", color: "danger" });
+    }
+  };
+
+  const resetHydration = async () => {
+    if (!uid || !todayKey) return;
+    const prev = hydrationMl;
+    setHydrationMl(0);
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", todayKey);
+        await tx.get(ref);
+        tx.set(ref, { hydrationMl: 0 }, { merge: true });
+      });
+      setHydrationToast({ open: true, message: "Hydration reset.", color: "medium" });
+    } catch (err) {
+      console.error(err);
+      setHydrationMl(prev);
+      setHydrationToast({ open: true, message: "Couldn't reset hydration.", color: "danger" });
+    }
   };
 
   const handleLogout = async () => {
@@ -353,6 +442,51 @@ const Home: React.FC = () => {
           )}
         </IonCard>
 
+        <IonCard className="hydration-card">
+          <IonCardHeader className="hydration-card__hdr">
+            <IonCardTitle>Hydration</IonCardTitle>
+            <IonChip
+              color={hydrationProgress >= 1 ? "success" : "medium"}
+              style={{ marginInlineStart: "auto" }}
+            >
+              <IonIcon icon={waterOutline} />
+              <span style={{ marginLeft: 6 }}>Goal {hydrationTarget} ml</span>
+            </IonChip>
+          </IonCardHeader>
+          <IonCardContent>
+            <div className="hydration-stats">
+              <div>
+                <div className="hydration-label">Drank</div>
+                <div className="hydration-value">{hydrationMl} ml</div>
+              </div>
+              <div>
+                <div className="hydration-label">Remaining</div>
+                <div className="hydration-value">
+                  {hydrationTarget > 0 ? Math.max(0, hydrationTarget - hydrationMl) : "—"} ml
+                </div>
+              </div>
+            </div>
+
+            <div className="hydration-progress">
+              <IonProgressBar value={hydrationProgress} color={hydrationProgress >= 1 ? "success" : undefined} />
+              <IonText color="medium">
+                <p className="hydration-status">{hydrationStatus}</p>
+              </IonText>
+            </div>
+
+            <div className="hydration-actions">
+              <IonButton fill="outline" onClick={() => updateHydration(-250)} disabled={hydrationMl === 0}>
+                −250 ml
+              </IonButton>
+              <IonButton onClick={() => updateHydration(250)}>+250 ml</IonButton>
+              <IonButton onClick={() => updateHydration(500)}>+500 ml</IonButton>
+              <IonButton fill="clear" color="medium" onClick={resetHydration}>
+                <IonIcon slot="start" icon={refreshOutline} />Reset
+              </IonButton>
+            </div>
+          </IonCardContent>
+        </IonCard>
+
         {loading && <div className="ion-text-center" style={{ padding: 24 }}><IonSpinner name="dots" /></div>}
 
         {/* Meals */}
@@ -429,6 +563,13 @@ const Home: React.FC = () => {
             },
           ]}
           onDidDismiss={() => setToast({ open: false, message: "" })}
+        />
+        <IonToast
+          isOpen={hydrationToast.open}
+          message={hydrationToast.message}
+          color={hydrationToast.color}
+          duration={1800}
+          onDidDismiss={() => setHydrationToast({ open: false, message: "" })}
         />
       </IonContent>
     </IonPage>
