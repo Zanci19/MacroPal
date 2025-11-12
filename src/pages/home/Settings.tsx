@@ -1,28 +1,118 @@
+// src/pages/settings/Settings.tsx
+import React from "react";
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonContent,
-  IonList, IonItem, IonLabel, IonIcon
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonList,
+  IonItem,
+  IonLabel,
+  IonNote,
+  IonButton,
+  IonIcon,
+  IonAlert,
+  IonToast,
+  IonText,
 } from "@ionic/react";
 import {
-  personCircleOutline, createOutline, notificationsOutline, shieldCheckmarkOutline,
-  lockClosedOutline, colorPaletteOutline, swapVerticalOutline, cloudUploadOutline,
-  linkOutline, informationCircleOutline
+  personCircleOutline,
+  logOutOutline,
+  keyOutline,
+  mailOutline,
+  warningOutline,
 } from "ionicons/icons";
-
-// Single source of truth for sections
-export const SETTINGS_SECTIONS: { key: string; label: string; icon?: string }[] = [
-  { key: "account",         label: "Account",                icon: personCircleOutline },
-  { key: "goals",           label: "Goals & Preferences",    icon: createOutline },
-  { key: "notifications",   label: "Notifications",          icon: notificationsOutline },
-  { key: "privacy",         label: "Privacy",                icon: shieldCheckmarkOutline },
-  { key: "security",        label: "Security",               icon: lockClosedOutline },
-  { key: "appearance",      label: "Appearance",             icon: colorPaletteOutline },
-  { key: "units",           label: "Units & Localization",   icon: swapVerticalOutline },
-  { key: "data",            label: "Data & Export",          icon: cloudUploadOutline },
-  { key: "integrations",    label: "Integrations",           icon: linkOutline },
-  { key: "about",           label: "About",                  icon: informationCircleOutline },
-];
+import { auth } from "../../firebase";
+import {
+  sendEmailVerification,
+  sendPasswordResetEmail,
+  signOut,
+  deleteUser,
+} from "firebase/auth";
+import { useHistory } from "react-router-dom";
 
 const Settings: React.FC = () => {
+  const history = useHistory();
+  const user = auth.currentUser;
+
+  const [toast, setToast] = React.useState<{
+    show: boolean;
+    message: string;
+    color?: string;
+  }>({ show: false, message: "", color: "success" });
+
+  const [confirmDelete, setConfirmDelete] = React.useState(false);
+
+  const handleVerifyEmail = async () => {
+    if (!auth.currentUser) return;
+    try {
+      await sendEmailVerification(auth.currentUser);
+      setToast({ show: true, message: "Verification email sent.", color: "success" });
+    } catch (e: any) {
+      setToast({
+        show: true,
+        message: e?.message || "Could not send verification email.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const email = auth.currentUser?.email || "";
+    if (!email) {
+      setToast({ show: true, message: "No email on account.", color: "danger" });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setToast({ show: true, message: "Password reset email sent.", color: "success" });
+    } catch (e: any) {
+      setToast({
+        show: true,
+        message: e?.message || "Could not send password reset email.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!auth.currentUser) return;
+    try {
+      await deleteUser(auth.currentUser);
+      setToast({ show: true, message: "Account deleted.", color: "success" });
+      history.replace("/login");
+    } catch (e: any) {
+      setToast({
+        show: true,
+        message:
+          e?.message ||
+          "Deletion failed. You may need to log out and back in, then try again (recent login required).",
+        color: "danger",
+      });
+    }
+  };
+
+  if (!user) {
+    return (
+      <IonPage>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Settings</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <IonText color="medium">Please log in.</IonText>
+          <IonButton className="ion-margin-top" onClick={() => history.push("/login")}>
+            Go to Login
+          </IonButton>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  const verified = !!user.emailVerified;
+
   return (
     <IonPage>
       <IonHeader>
@@ -30,16 +120,84 @@ const Settings: React.FC = () => {
           <IonTitle>Settings</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent>
-        <IonList inset>
-          {SETTINGS_SECTIONS.map((s) => (
-            <IonItem key={s.key} detail routerLink={`/app/settings/${s.key}`}>
-              {s.icon && <IonIcon slot="start" icon={s.icon} />}
-              <IonLabel>{s.label}</IonLabel>
-            </IonItem>
-          ))}
+
+      <IonContent className="ion-padding">
+        {/* Profile summary */}
+        <IonList>
+          <IonItem lines="full">
+            <IonIcon slot="start" icon={personCircleOutline} />
+            <IonLabel>
+              <h2>{user.displayName || "Unnamed User"}</h2>
+              <p>{user.email}</p>
+            </IonLabel>
+            <IonNote slot="end" color={verified ? "success" : "warning"}>
+              {verified ? "Verified" : "Unverified"}
+            </IonNote>
+          </IonItem>
+        </IonList>
+
+        {/* Account actions (only working features) */}
+        <IonList>
+          <IonItem lines="full">
+            <IonLabel>Email verification</IonLabel>
+            <IonButton
+              fill="outline"
+              onClick={handleVerifyEmail}
+              disabled={verified}
+            >
+              <IonIcon slot="start" icon={mailOutline} />
+              {verified ? "Verified" : "Send link"}
+            </IonButton>
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Password</IonLabel>
+            <IonButton onClick={handleResetPassword}>
+              <IonIcon slot="start" icon={keyOutline} />
+              Send reset email
+            </IonButton>
+          </IonItem>
+
+          <IonItem lines="full" button onClick={async () => await signOut(auth)}>
+            <IonIcon slot="start" icon={logOutOutline} />
+            <IonLabel>Sign out</IonLabel>
+          </IonItem>
+
+          <IonItem lines="none">
+            <IonButton color="danger" onClick={() => setConfirmDelete(true)}>
+              <IonIcon slot="start" icon={warningOutline} />
+              Delete account
+            </IonButton>
+          </IonItem>
         </IonList>
       </IonContent>
+
+      {/* Confirm delete */}
+      <IonAlert
+        isOpen={confirmDelete}
+        header="Delete account?"
+        message="This is permanent and cannot be undone."
+        buttons={[
+          { text: "Cancel", role: "cancel", handler: () => setConfirmDelete(false) },
+          {
+            text: "Delete",
+            role: "destructive",
+            handler: async () => {
+              setConfirmDelete(false);
+              await handleDeleteAccount();
+            },
+          },
+        ]}
+        onDidDismiss={() => setConfirmDelete(false)}
+      />
+
+      <IonToast
+        isOpen={toast.show}
+        message={toast.message}
+        color={toast.color}
+        duration={2200}
+        onDidDismiss={() => setToast({ show: false, message: "" })}
+      />
     </IonPage>
   );
 };

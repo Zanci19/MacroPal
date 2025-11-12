@@ -1,45 +1,133 @@
-import React, { useEffect, useState } from "react";
-import { IonPage, IonContent, IonInput, IonButton, IonHeader, IonTitle, IonToolbar, IonText, IonItem, IonToast } from "@ionic/react";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase";
-import { useHistory } from "react-router";
+import React, { useState } from "react";
+import {
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonContent,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonButton,
+  IonText,
+  IonToast,
+  IonSpinner,
+} from "@ionic/react";
+import {
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
+import { auth, db } from "../../firebase";
+import { useHistory } from "react-router-dom";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const history = useHistory();
-  const [toast, setToast] = useState<{ show: boolean; message: string; color?: string }>({
+
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // when set, we'll navigate after the toast closes
+  const [nextRoute, setNextRoute] = useState<string | null>(null);
+
+  const [toast, setToast] = React.useState<{
+    show: boolean;
+    message: string;
+    color?: "success" | "danger" | "warning";
+    buttons?: { text: string; role?: "cancel" | "destructive"; handler?: () => void }[];
+  }>({
     show: false,
-    message: '',
-    color: 'success'
+    message: "",
+    color: "success",
   });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        history.push("/app/home");
-      }
-    });
-    return unsubscribe;
-  }, [history]);
+  const showToast = (
+    message: string,
+    color: "success" | "danger" | "warning" = "danger",
+    buttons?: { text: string; role?: "cancel" | "destructive"; handler?: () => void }[]
+  ) => setToast({ show: true, message, color, buttons });
 
   const handleLogin = async () => {
-    if (!email.trim()) {
-      setToast({ show: true, message: "Please enter your email.", color: "danger" });
-      return;
-    }
-    if (!password) {
-      setToast({ show: true, message: "Please enter your password.", color: "danger" });
+    if (!email.trim() || !pw.trim()) {
+      showToast("Please enter your email and password.");
       return;
     }
 
+    setBusy(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      setToast({ show: true, message: "Logged in successfully.", color: "success" });
-      // onAuthStateChanged will navigate to /app/home
-    } catch (error: any) {
-      console.error(error);
-      setToast({ show: true, message: error?.message ?? "Failed to sign in.", color: "danger" });
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), pw);
+
+      // Block unverified users
+      if (!cred.user.emailVerified) {
+        const userForEmail = cred.user;
+        const resend = async () => {
+          try {
+            await sendEmailVerification(userForEmail);
+            showToast("Verification email sent. Please check your inbox.", "success");
+          } catch (e) {
+            showToast("Could not send verification email. Try again later.");
+            console.error(e);
+          }
+        };
+
+        await signOut(auth);
+        showToast("Please verify your email to continue.", "warning", [
+          { text: "Resend email", handler: resend },
+        ]);
+        return;
+      }
+
+      // Email verified — ensure Firestore user document exists and check if profile is complete
+      const userRef = doc(db, "users", cred.user.uid);
+      const snap = await getDoc(userRef);
+
+      let targetRoute = "/setup-profile";
+
+      if (snap.exists()) {
+        const data = snap.data();
+        if (
+          data.age &&
+          data.weight &&
+          data.height &&
+          data.goal &&
+          data.gender &&
+          data.activity
+        ) {
+          targetRoute = "/app/home";
+        } else {
+          targetRoute = "/setup-profile";
+        }
+      } else {
+        // Create basic user doc if missing
+        await setDoc(
+          userRef,
+          {
+            uid: cred.user.uid,
+            email: cred.user.email ?? null,
+            displayName: cred.user.displayName ?? null,
+            createdAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+        targetRoute = "/setup-profile";
+      }
+
+      // Show success toast and navigate AFTER it dismisses
+      setNextRoute(targetRoute);
+      showToast("Welcome back!", "success");
+    } catch (err: any) {
+      const msg =
+        err?.code === "auth/invalid-credential" || err?.code === "auth/wrong-password"
+          ? "Incorrect email or password."
+          : err?.code === "auth/user-not-found"
+          ? "No account found with that email."
+          : err?.message || "Login failed.";
+      showToast(msg);
+      console.error(err);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -47,42 +135,62 @@ const Login: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Login</IonTitle>
+          <IonTitle>Log In</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
         <IonItem>
+          <IonLabel position="stacked">Email</IonLabel>
           <IonInput
-            placeholder="Email"
             type="email"
+            inputmode="email"
+            autocomplete="email"
+            placeholder="you@example.com"
             value={email}
-            onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
+            onIonChange={(e: any) => setEmail(e?.detail?.value ?? "")}
           />
         </IonItem>
 
         <IonItem>
+          <IonLabel position="stacked">Password</IonLabel>
           <IonInput
-            placeholder="Password"
             type="password"
-            value={password}
-            onIonChange={(e: any) => setPassword(e?.detail?.value ?? '')}
+            autocomplete="current-password"
+            placeholder="Your password"
+            value={pw}
+            onIonChange={(e: any) => setPw(e?.detail?.value ?? "")}
           />
         </IonItem>
 
-        <IonButton expand="full" onClick={handleLogin}>Login</IonButton>
+        <IonButton expand="block" className="ion-margin-top" onClick={handleLogin} disabled={busy}>
+          {busy ? <IonSpinner name="dots" /> : "Log In"}
+        </IonButton>
 
-        <IonText className="ion-text-center" color="medium"><p>Don't have an account?</p></IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/register")}>Create Account</IonButton>
-        <IonText className="ion-text-center" color="medium"><p>Forgot your password?</p></IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/reset-password")}>Reset Password</IonButton>
+        <IonText className="ion-text-center" color="medium">
+          <p className="ion-margin-top">No account?</p>
+        </IonText>
+        <IonButton fill="clear" expand="block" onClick={() => history.push("/register")}>
+          Create one
+        </IonButton>
 
         <IonToast
           isOpen={toast.show}
-          onDidDismiss={() => setToast(s => ({ ...s, show: false }))}
+          // For success/error toasts without buttons, auto-dismiss after 1800ms.
+          duration={toast.buttons ? undefined : 1800}
           message={toast.message}
           color={toast.color}
-          duration={3000}
+          buttons={toast.buttons}
+          onDidDismiss={() => {
+            // close toast state
+            setToast((s) => ({ ...s, show: false, buttons: undefined }));
+            // if a post-toast navigation is pending, do it now
+            if (nextRoute) {
+              const go = nextRoute;
+              setNextRoute(null);
+              history.push(go);
+            }
+          }}
         />
       </IonContent>
     </IonPage>

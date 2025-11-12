@@ -26,7 +26,6 @@ import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/home/Home";
 import Left from "./pages/home/Left";
 import Settings from "./pages/home/Settings"; // Settings index list
-import SettingsSection from "./pages/home/settings/Section"; // Dynamic subpage: /app/settings/:section
 import ScanBarcode from "./pages/ScanBarcode";
 
 /* Core CSS required for Ionic components to work properly */
@@ -65,8 +64,6 @@ const TabsShell: React.FC = () => (
 
       {/* Settings index and dynamic sections */}
       <Route exact path="/app/settings" component={Settings} />
-      <Route path="/app/settings/:section" component={SettingsSection} />
-
       {/* Fallback inside tabs */}
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
