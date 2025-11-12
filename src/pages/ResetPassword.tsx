@@ -1,20 +1,20 @@
-import React from 'react';
+import React from "react";
 import {
-    IonButton,
-    IonContent,
-    IonHeader,
-    IonInput,
-    IonItem,
-    IonPage,
-    IonText,
-    IonTitle,
-    IonToolbar,
-    IonToast
-} from '@ionic/react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { useHistory } from 'react-router-dom';
-// adjust this import to your actual firebase config file that exports `auth`
-import { auth } from '../firebase';
+  IonButton,
+  IonContent,
+  IonHeader,
+  IonInput,
+  IonItem,
+  IonPage,
+  IonText,
+  IonTitle,
+  IonToolbar,
+  IonToast
+} from "@ionic/react";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { useHistory } from "react-router-dom";
+import { auth } from "../firebase";
+import "../styles/forms.css";
 
 const ResetPassword: React.FC = () => {
     const [email, setEmail] = React.useState<string>('');
@@ -49,31 +49,38 @@ const ResetPassword: React.FC = () => {
                 </IonToolbar>
             </IonHeader>
 
-            <IonContent className="ion-padding">
-                <h2 className="start-subtitle">
-                    Please enter the email associated with your account:
-                </h2>
+            <IonContent className="mp-auth-content">
+                <div className="mp-auth-card" role="main">
+                    <div className="mp-auth-card__logo" aria-hidden="true">MP</div>
+                    <h1>Reset your password</h1>
+                    <p className="mp-auth-subtitle">
+                        Enter the email associated with your account and we will send you a secure reset link.
+                    </p>
 
-                <IonItem>
-                    <IonInput
-                        value={email}
-                        placeholder="Email"
-                        type="email"
-                        onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
-                    />
-                </IonItem>
+                    <div className="mp-auth-form">
+                        <IonItem lines="none">
+                            <IonInput
+                                labelPlacement="stacked"
+                                label="Email"
+                                placeholder="you@example.com"
+                                type="email"
+                                value={email}
+                                onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
+                            />
+                        </IonItem>
+                    </div>
 
-                <IonButton expand="full" onClick={handleRecoverPassword}>
-                    Recover Password
-                </IonButton>
+                    <IonButton className="mp-auth-button" expand="block" size="large" onClick={handleRecoverPassword}>
+                        Send reset link
+                    </IonButton>
 
-                <IonText className="ion-text-center" color="medium">
-                    <p>Already have an account?</p>
-                </IonText>
-
-                <IonButton fill="clear" expand="block" onClick={() => history.push('/login')}>
-                    Log In
-                </IonButton>
+                    <div className="mp-auth-footer">
+                        <IonText className="mp-auth-muted">Remembered your password?</IonText>
+                        <IonButton fill="clear" onClick={() => history.push('/login')}>
+                            Back to login
+                        </IonButton>
+                    </div>
+                </div>
 
                 <IonToast
                     isOpen={toast.show}

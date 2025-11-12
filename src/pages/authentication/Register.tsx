@@ -1,10 +1,22 @@
 // ...existing code...
 import React, { useState } from "react";
-import { IonPage, IonContent, IonInput, IonButton, IonHeader, IonTitle, IonToolbar, IonText, IonItem, IonToast } from "@ionic/react";
+import {
+  IonPage,
+  IonContent,
+  IonInput,
+  IonButton,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
+  IonText,
+  IonItem,
+  IonToast
+} from "@ionic/react";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth, db } from "../../firebase";
 import { useHistory } from "react-router-dom";
 import { doc, setDoc } from "firebase/firestore";
+import "../../styles/forms.css";
 // ...existing code...
 
 const Register: React.FC = () => {
@@ -62,23 +74,55 @@ const Register: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
-        <IonItem>
-          <IonInput placeholder="Name" value={name} onIonChange={(e: any) => setName(e?.detail?.value ?? '')} />
-        </IonItem>
-        <IonItem>
-          <IonInput placeholder="Email" type="email" value={email} onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')} />
-        </IonItem>
-        <IonItem>
-          <IonInput placeholder="Password" type="password" value={password} onIonChange={(e: any) => setPassword(e?.detail?.value ?? '')} />
-        </IonItem>
+      <IonContent className="mp-auth-content">
+        <div className="mp-auth-card" role="main">
+          <div className="mp-auth-card__logo" aria-hidden="true">MP</div>
+          <h1>Create your account</h1>
+          <p className="mp-auth-subtitle">Join MacroPal and get personalised goals tailored to your body and ambition.</p>
 
-        <IonButton expand="full" onClick={handleRegister}>Sign Up</IonButton>
+          <div className="mp-auth-form">
+            <IonItem lines="none">
+              <IonInput
+                labelPlacement="stacked"
+                label="Full name"
+                placeholder="Jordan Smith"
+                value={name}
+                onIonChange={(e: any) => setName(e?.detail?.value ?? '')}
+              />
+            </IonItem>
 
-        <IonText className="ion-text-center" color="medium">
-          <p>Already have an account?</p>
-        </IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/login")}>Log In</IonButton>
+            <IonItem lines="none">
+              <IonInput
+                labelPlacement="stacked"
+                label="Email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
+              />
+            </IonItem>
+
+            <IonItem lines="none">
+              <IonInput
+                labelPlacement="stacked"
+                label="Password"
+                type="password"
+                placeholder="Choose a secure password"
+                value={password}
+                onIonChange={(e: any) => setPassword(e?.detail?.value ?? '')}
+              />
+            </IonItem>
+          </div>
+
+          <IonButton className="mp-auth-button" expand="block" size="large" onClick={handleRegister}>
+            Sign up
+          </IonButton>
+
+          <div className="mp-auth-footer">
+            <IonText className="mp-auth-muted">Already using MacroPal?</IonText>
+            <IonButton fill="clear" onClick={() => history.push("/login")}>Log in</IonButton>
+          </div>
+        </div>
 
         <IonToast
           isOpen={toast.show}
