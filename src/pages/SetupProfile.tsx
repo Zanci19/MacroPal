@@ -14,8 +14,13 @@ import {
   IonToast,
 } from "@ionic/react";
 import { auth, db } from "../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useHistory } from "react-router";
+
+const toNumOrNull = (v: any) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
 
 const SetupProfile: React.FC = () => {
   const [age, setAge] = useState<number | null>(null);
@@ -23,8 +28,9 @@ const SetupProfile: React.FC = () => {
   const [height, setHeight] = useState<number | null>(null);
   const [goal, setGoal] = useState<"lose" | "maintain" | "gain">("maintain");
   const [gender, setGender] = useState<"male" | "female">("male");
-  const [activity, setActivity] = useState<"sedentary" | "light" | "moderate" | "very" | "extra">("sedentary");
-
+  const [activity, setActivity] = useState<
+    "sedentary" | "light" | "moderate" | "very" | "extra"
+  >("sedentary");
   const [toast, setToast] = useState<{ show: boolean; message: string; color?: string }>({
     show: false,
     message: "",
@@ -33,34 +39,46 @@ const SetupProfile: React.FC = () => {
 
   const history = useHistory();
 
+  const showToast = (message: string, color: "success" | "danger" | "warning" = "danger") =>
+    setToast({ show: true, message, color });
+
   const handleSave = async () => {
     const user = auth.currentUser;
     if (!user) {
-      setToast({ show: true, message: "Not signed in.", color: "danger" });
+      showToast("You must be logged in.");
       return;
     }
 
     try {
-      // ✅ Use setDoc with merge so it creates the doc if missing (avoids "No document to update")
+      const userRef = doc(db, "users", user.uid);
+
+      // Upsert profile (create if missing, update if exists)
       await setDoc(
-        doc(db, "users", user.uid),
+        userRef,
         {
-          age,
-          weight,
-          height,
-          goal,
-          gender,
-          activity,
-          // optional: updatedAt for your own bookkeeping
-          updatedAt: new Date().toISOString(),
+          profile: {
+            age,
+            weight,
+            height,
+            goal,
+            gender,
+            activity,
+            updatedAt: serverTimestamp(),
+          },
+          // Helpful base fields in case the doc didn’t exist yet:
+          uid: user.uid,
+          email: user.email ?? null,
+          displayName: user.displayName ?? null,
+          createdAt: serverTimestamp(), // set once; merge won’t overwrite existing value
         },
         { merge: true }
       );
 
-      setToast({ show: true, message: "Profile saved.", color: "success" });
+      showToast("Profile saved.", "success");
       history.push("/app/home");
     } catch (error: any) {
-      setToast({ show: true, message: `Error saving profile: ${error.message}`, color: "danger" });
+      showToast("Error saving profile: " + (error?.message || "Unknown error"));
+      console.error(error);
     }
   };
 
@@ -78,8 +96,7 @@ const SetupProfile: React.FC = () => {
           <IonInput
             type="number"
             inputmode="numeric"
-            placeholder="e.g., 17"
-            onIonChange={(e) => setAge(e.detail.value ? Number(e.detail.value) : null)}
+            onIonChange={(e) => setAge(toNumOrNull(e.detail.value))}
           />
         </IonItem>
 
@@ -88,8 +105,7 @@ const SetupProfile: React.FC = () => {
           <IonInput
             type="number"
             inputmode="decimal"
-            placeholder="e.g., 70"
-            onIonChange={(e) => setWeight(e.detail.value ? Number(e.detail.value) : null)}
+            onIonChange={(e) => setWeight(toNumOrNull(e.detail.value))}
           />
         </IonItem>
 
@@ -98,8 +114,7 @@ const SetupProfile: React.FC = () => {
           <IonInput
             type="number"
             inputmode="numeric"
-            placeholder="e.g., 179"
-            onIonChange={(e) => setHeight(e.detail.value ? Number(e.detail.value) : null)}
+            onIonChange={(e) => setHeight(toNumOrNull(e.detail.value))}
           />
         </IonItem>
 
@@ -113,14 +128,23 @@ const SetupProfile: React.FC = () => {
 
         <IonItem>
           <IonLabel position="stacked">Goal</IonLabel>
-          <div style={{ display: "flex", gap: "8px", width: "100%", marginTop: "8px" }}>
-            <IonButton expand="block" fill={goal === "lose" ? "solid" : "outline"} onClick={() => setGoal("lose")}>
+          <div className="ion-margin-top" style={{ display: "flex", gap: 8 }}>
+            <IonButton
+              fill={goal === "lose" ? "solid" : "outline"}
+              onClick={() => setGoal("lose")}
+            >
               Lose
             </IonButton>
-            <IonButton expand="block" fill={goal === "maintain" ? "solid" : "outline"} onClick={() => setGoal("maintain")}>
+            <IonButton
+              fill={goal === "maintain" ? "solid" : "outline"}
+              onClick={() => setGoal("maintain")}
+            >
               Maintain
             </IonButton>
-            <IonButton expand="block" fill={goal === "gain" ? "solid" : "outline"} onClick={() => setGoal("gain")}>
+            <IonButton
+              fill={goal === "gain" ? "solid" : "outline"}
+              onClick={() => setGoal("gain")}
+            >
               Gain
             </IonButton>
           </div>
@@ -137,16 +161,16 @@ const SetupProfile: React.FC = () => {
           </IonSelect>
         </IonItem>
 
-        <IonButton expand="block" style={{ marginTop: 16 }} onClick={handleSave}>
+        <IonButton expand="full" className="ion-margin-top" onClick={handleSave}>
           Save Profile
         </IonButton>
 
         <IonToast
           isOpen={toast.show}
+          onDidDismiss={() => setToast((s) => ({ ...s, show: false }))}
           message={toast.message}
           color={toast.color}
-          duration={2200}
-          onDidDismiss={() => setToast((t) => ({ ...t, show: false }))}
+          duration={2500}
         />
       </IonContent>
     </IonPage>
