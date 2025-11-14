@@ -1,4 +1,3 @@
-// src/pages/settings/Settings.tsx
 import React from "react";
 import {
   IonPage,
@@ -43,12 +42,17 @@ const Settings: React.FC = () => {
   }>({ show: false, message: "", color: "success" });
 
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [confirmDeleteName, setConfirmDeleteName] = React.useState(false);
 
   const handleVerifyEmail = async () => {
     if (!auth.currentUser) return;
     try {
       await sendEmailVerification(auth.currentUser);
-      setToast({ show: true, message: "Verification email sent.", color: "success" });
+      setToast({
+        show: true,
+        message: "Verification email sent.",
+        color: "success",
+      });
     } catch (e: any) {
       setToast({
         show: true,
@@ -61,12 +65,20 @@ const Settings: React.FC = () => {
   const handleResetPassword = async () => {
     const email = auth.currentUser?.email || "";
     if (!email) {
-      setToast({ show: true, message: "No email on account.", color: "danger" });
+      setToast({
+        show: true,
+        message: "No email on account.",
+        color: "danger",
+      });
       return;
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      setToast({ show: true, message: "Password reset email sent.", color: "success" });
+      setToast({
+        show: true,
+        message: "Password reset email sent.",
+        color: "success",
+      });
     } catch (e: any) {
       setToast({
         show: true,
@@ -103,7 +115,10 @@ const Settings: React.FC = () => {
         </IonHeader>
         <IonContent className="ion-padding">
           <IonText color="medium">Please log in.</IonText>
-          <IonButton className="ion-margin-top" onClick={() => history.push("/login")}>
+          <IonButton
+            className="ion-margin-top"
+            onClick={() => history.push("/login")}
+          >
             Go to Login
           </IonButton>
         </IonContent>
@@ -112,6 +127,7 @@ const Settings: React.FC = () => {
   }
 
   const verified = !!user.emailVerified;
+  const usernameToType = user.displayName || user.email || "DELETE";
 
   return (
     <IonPage>
@@ -136,7 +152,7 @@ const Settings: React.FC = () => {
           </IonItem>
         </IonList>
 
-        {/* Account actions (only working features) */}
+        {/* Account actions */}
         <IonList>
           <IonItem lines="full">
             <IonLabel>Email verification</IonLabel>
@@ -158,7 +174,13 @@ const Settings: React.FC = () => {
             </IonButton>
           </IonItem>
 
-          <IonItem lines="full" button onClick={async () => await signOut(auth)}>
+          <IonItem
+            lines="full"
+            button
+            onClick={async () => {
+              await signOut(auth);
+            }}
+          >
             <IonIcon slot="start" icon={logOutOutline} />
             <IonLabel>Sign out</IonLabel>
           </IonItem>
@@ -172,23 +194,68 @@ const Settings: React.FC = () => {
         </IonList>
       </IonContent>
 
-      {/* Confirm delete */}
+      {/* First confirmation alert */}
       <IonAlert
         isOpen={confirmDelete}
         header="Delete account?"
         message="This is permanent and cannot be undone."
         buttons={[
-          { text: "Cancel", role: "cancel", handler: () => setConfirmDelete(false) },
           {
-            text: "Delete",
+            text: "Cancel",
+            role: "cancel",
+            handler: () => setConfirmDelete(false),
+          },
+          {
+            text: "Continue",
             role: "destructive",
-            handler: async () => {
+            handler: () => {
               setConfirmDelete(false);
-              await handleDeleteAccount();
+              setConfirmDeleteName(true);
             },
           },
         ]}
         onDidDismiss={() => setConfirmDelete(false)}
+      />
+
+      {/* Second confirmation with username typing */}
+      <IonAlert
+        isOpen={confirmDeleteName}
+        header="Type your name to confirm"
+        message={`To permanently delete your MacroPal account, please type: "${usernameToType}"`}
+        inputs={[
+          {
+            name: "typedName",
+            placeholder: usernameToType,
+          },
+        ]}
+        buttons={[
+          {
+            text: "Cancel",
+            role: "cancel",
+            handler: () => {
+              setConfirmDeleteName(false);
+            },
+          },
+          {
+            text: "Delete",
+            role: "destructive",
+            handler: (data: any) => {
+              const typed = (data?.typedName || "").trim();
+              if (typed !== usernameToType) {
+                setToast({
+                  show: true,
+                  message:
+                    "Name does not match. Please type it exactly as shown.",
+                  color: "danger",
+                });
+                return false;
+              }
+              setConfirmDeleteName(false);
+              void handleDeleteAccount();
+            },
+          },
+        ]}
+        onDidDismiss={() => setConfirmDeleteName(false)}
       />
 
       <IonToast
@@ -196,7 +263,9 @@ const Settings: React.FC = () => {
         message={toast.message}
         color={toast.color}
         duration={2200}
-        onDidDismiss={() => setToast({ show: false, message: "" })}
+        onDidDismiss={() =>
+          setToast((t) => ({ ...t, show: false, message: "" }))
+        }
       />
     </IonPage>
   );

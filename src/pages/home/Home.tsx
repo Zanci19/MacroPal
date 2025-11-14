@@ -22,10 +22,12 @@ import {
   IonBadge,
   IonDatetime,
   IonModal,
+  IonActionSheet,
+  IonReorderGroup,
+  IonReorder,
 } from "@ionic/react";
 import {
   addCircleOutline,
-  logOutOutline,
   sunnyOutline,
   restaurantOutline,
   cafeOutline,
@@ -35,11 +37,11 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   calendarOutline,
+  ellipsisVertical,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
-import { auth, db } from "../../firebase";
+import { db } from "../../firebase";
 import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import "./Home.css";
 import {
   clampDateKeyToToday,
@@ -49,43 +51,21 @@ import {
   todayDateKey,
 } from "../../utils/date";
 
-type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
-type Macros = { calories: number; carbs: number; protein: number; fat: number };
+import type {
+  MealKey,
+  Macros,
+  DiaryEntry,
+  DayDiaryDoc,
+} from "../../types";
 
-type DiaryEntry = {
-  fdcId: number;
-  code?: string;
-  name: string;
-  brand?: string | null;
-  dataType?: string | null;
-  base?: { amount: number; unit: string; label: string };
-  selection?: {
-    mode: "serving" | "weight";
-    note: string;
-    servingsQty?: number | null;
-    weightQty?: number | null;
-  };
-  perBase?: Macros;
-  total: Macros;
-  addedAt: string;
-  [k: string]: any;
-};
-
-type Profile = {
-  age: number;
-  weight: number; // kg
-  height: number; // cm
-  gender: "male" | "female";
-  goal: "lose" | "maintain" | "gain";
-  activity: "sedentary" | "light" | "moderate" | "very" | "extra";
-  [k: string]: any;
-};
+import { useProfile } from "../../hooks/useProfile";
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-/** Progress ring */
 const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number }> = ({
-  size = 64, stroke = 8, progress
+  size = 64,
+  stroke = 8,
+  progress,
 }) => {
   const r = (size - stroke) / 2;
   const C = 2 * Math.PI * r;
@@ -93,11 +73,30 @@ const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number 
   return (
     <div style={{ width: size, height: size, position: "relative" }}>
       <svg width={size} height={size}>
-        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeOpacity="0.18" strokeWidth={stroke} fill="none" />
-        <circle cx={size/2} cy={size/2} r={r} stroke="currentColor" strokeWidth={stroke} fill="none"
-          strokeLinecap="round" strokeDasharray={`${p*C} ${C - p*C}`} transform={`rotate(-90 ${size/2} ${size/2})`} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="currentColor"
+          strokeOpacity="0.18"
+          strokeWidth={stroke}
+          fill="none"
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke="currentColor"
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${p * C} ${C - p * C}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
       </svg>
-      <div className="ring-center"><div className="ring-pct">{Math.round(p*100)}%</div></div>
+      <div className="ring-center">
+        <div className="ring-pct">{Math.round(p * 100)}%</div>
+      </div>
     </div>
   );
 };
@@ -105,10 +104,10 @@ const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number 
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
-  const [loading, setLoading] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
 
-  const [uid, setUid] = useState<string | null>(null);
+  const { uid, profile, loading: profileLoading } = useProfile();
+
+  const [loading, setLoading] = useState(true);
   const [activeDateKey, setActiveDateKey] = useState<string>(() => {
     const params = new URLSearchParams(location.search);
     const qDate = params.get("date");
@@ -120,23 +119,35 @@ const Home: React.FC = () => {
   const [pendingDateKey, setPendingDateKey] = useState<string>(activeDateKey);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [caloriesNeeded, setCaloriesNeeded] = useState<number | null>(null);
-
-  const [dayData, setDayData] = useState<Record<MealKey, DiaryEntry[]>>({
-    breakfast: [], lunch: [], dinner: [], snacks: [],
+  const [dayData, setDayData] = useState<DayDiaryDoc>({
+    breakfast: [],
+    lunch: [],
+    dinner: [],
+    snacks: [],
   });
 
   const [streak, setStreak] = useState<number>(0);
 
-  // last deleted for undo
   const [lastDeleted, setLastDeleted] = useState<{
-    meal: MealKey; index: number; item: DiaryEntry;
+    meal: MealKey;
+    index: number;
+    item: DiaryEntry;
   } | null>(null);
 
-  const [toast, setToast] = useState<{ open: boolean; message: string }>(
-    { open: false, message: "" }
-  );
+  const [toast, setToast] = useState<{ open: boolean; message: string }>({
+    open: false,
+    message: "",
+  });
+
+  const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
+  const [dayMenuOpen, setDayMenuOpen] = useState(false);
+
+  const [collapsedMeals, setCollapsedMeals] = useState<Record<MealKey, boolean>>({
+    breakfast: false,
+    lunch: false,
+    dinner: false,
+    snacks: false,
+  });
 
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
@@ -158,64 +169,36 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        history.replace("/login");
-        return;
-      }
-      setUid(user.uid);
+    if (profileLoading) return;
 
-      // profile
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      if (!userDoc.exists() || !userDoc.data()?.age) {
-        history.replace("/setup-profile");
-        return;
-      }
-      const p = userDoc.data() as Profile;
-      setProfile(p);
+    if (!uid) {
+      history.replace("/login");
+      return;
+    }
 
-      // calories
-      const { age, weight, height, gender, goal, activity } = p;
-      let bmr =
-        gender === "male"
-          ? 10 * weight + 6.25 * height - 5 * age + 5
-          : 10 * weight + 6.25 * height - 5 * age - 161;
-      const mult =
-        activity === "light"
-          ? 1.375
-          : activity === "moderate"
-          ? 1.55
-          : activity === "very"
-          ? 1.725
-          : activity === "extra"
-          ? 1.9
-          : 1.2;
-      let daily = bmr * mult;
-      if (goal === "lose") daily -= 500;
-      else if (goal === "gain") daily += 500;
-      setCaloriesNeeded(Math.max(800, Math.round(daily)));
+    if (!profile || !profile.age) {
+      history.replace("/setup-profile");
+      return;
+    }
 
-      // ensure active date is clamped to today when logging in on a new day
-      setActiveDateKey((prev) => clampDateKeyToToday(prev));
-
-      await refreshStreak(user.uid);
-    });
-
-    return () => unsubAuth();
-  }, [history, refreshStreak]);
+    setActiveDateKey((prev) => clampDateKeyToToday(prev));
+    refreshStreak(uid);
+  }, [profileLoading, uid, profile, history, refreshStreak]);
 
   useEffect(() => {
     if (!uid) return;
     setLoading(true);
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
-    const unsub = onSnapshot(doc(db, "users", uid, "foods", activeDateKey), (snap) => {
-      const d = snap.data() || {};
+
+    const ref = doc(db, "users", uid, "foods", activeDateKey);
+    const unsub = onSnapshot(ref, (snap) => {
+      const raw = snap.data() as Partial<DayDiaryDoc> | undefined;
       setDayData({
-        breakfast: d.breakfast || [],
-        lunch: d.lunch || [],
-        dinner: d.dinner || [],
-        snacks: d.snacks || [],
+        breakfast: raw?.breakfast ?? [],
+        lunch: raw?.lunch ?? [],
+        dinner: raw?.dinner ?? [],
+        snacks: raw?.snacks ?? [],
       });
       setLoading(false);
       refreshStreak(uid);
@@ -223,11 +206,6 @@ const Home: React.FC = () => {
 
     return () => unsub();
   }, [uid, activeDateKey, refreshStreak]);
-
-  useEffect(() => {
-    if (!uid) return;
-    refreshStreak(uid);
-  }, [uid, refreshStreak]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -244,15 +222,44 @@ const Home: React.FC = () => {
     day: "numeric",
   });
 
-  // totals
+  const caloriesNeeded = useMemo(() => {
+    if (!profile) return null;
+    const { age, weight, height, gender, goal, activity } = profile;
+
+    let bmr =
+      gender === "male"
+        ? 10 * weight + 6.25 * height - 5 * age + 5
+        : 10 * weight + 6.25 * height - 5 * age - 161;
+
+    const mult =
+      activity === "light"
+        ? 1.375
+        : activity === "moderate"
+        ? 1.55
+        : activity === "very"
+        ? 1.725
+        : activity === "extra"
+        ? 1.9
+        : 1.2;
+
+    let daily = bmr * mult;
+    if (goal === "lose") daily -= 500;
+    else if (goal === "gain") daily += 500;
+
+    return Math.max(800, Math.round(daily));
+  }, [profile]);
+
   const totals = useMemo(() => {
     const sum = (arr: DiaryEntry[]) =>
-      arr.reduce((a, it) => ({
-        calories: a.calories + (it.total?.calories || 0),
-        carbs: a.carbs + (it.total?.carbs || 0),
-        protein: a.protein + (it.total?.protein || 0),
-        fat: a.fat + (it.total?.fat || 0),
-      }), { calories: 0, carbs: 0, protein: 0, fat: 0 });
+      arr.reduce(
+        (a, it) => ({
+          calories: a.calories + (it.total?.calories || 0),
+          carbs: a.carbs + (it.total?.carbs || 0),
+          protein: a.protein + (it.total?.protein || 0),
+          fat: a.fat + (it.total?.fat || 0),
+        }),
+        { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+      );
 
     const perMeal = {
       breakfast: sum(dayData.breakfast),
@@ -260,9 +267,15 @@ const Home: React.FC = () => {
       dinner: sum(dayData.dinner),
       snacks: sum(dayData.snacks),
     };
-    const day = Object.values(perMeal).reduce((a,m)=>({
-      calories: a.calories+m.calories, carbs: a.carbs+m.carbs, protein: a.protein+m.protein, fat: a.fat+m.fat
-    }), { calories:0, carbs:0, protein:0, fat:0 });
+    const day = Object.values(perMeal).reduce(
+      (a, m) => ({
+        calories: a.calories + m.calories,
+        carbs: a.carbs + m.carbs,
+        protein: a.protein + m.protein,
+        fat: a.fat + m.fat,
+      }),
+      { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+    );
 
     return { perMeal, day };
   }, [dayData]);
@@ -283,7 +296,8 @@ const Home: React.FC = () => {
     if (!profile || !caloriesNeeded) return null;
     const proteinG = Math.round(1.8 * profile.weight);
     const fatG = Math.max(45, Math.round(0.8 * profile.weight));
-    const proteinK = proteinG * 4, fatK = fatG * 9;
+    const proteinK = proteinG * 4;
+    const fatK = fatG * 9;
     const carbsG = Math.round(Math.max(0, kcalGoal - proteinK - fatK) / 4);
     return { proteinG, fatG, carbsG };
   }, [profile, caloriesNeeded, kcalGoal]);
@@ -291,16 +305,12 @@ const Home: React.FC = () => {
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
 
   const mealIcon: Record<MealKey, string> = {
-    breakfast: sunnyOutline, lunch: restaurantOutline, dinner: cafeOutline, snacks: fastFoodOutline,
+    breakfast: sunnyOutline,
+    lunch: restaurantOutline,
+    dinner: cafeOutline,
+    snacks: fastFoodOutline,
   };
 
-  const handleLogout = async () => {
-    try { setLoggingOut(true); await signOut(auth); history.replace("/login"); }
-    catch { alert("Failed to log out. Please try again."); }
-    finally { setLoggingOut(false); }
-  };
-
-  // delete with optimistic UI and remember for undo
   const deleteFood = async (meal: MealKey, index: number) => {
     if (!uid) return;
     const dayKey = activeDateKey;
@@ -308,7 +318,6 @@ const Home: React.FC = () => {
     if (index < 0 || index >= current.length) return;
     const item = current[index];
 
-    // optimistic local update
     const nextMealArr = [...current];
     nextMealArr.splice(index, 1);
     setDayData({ ...dayData, [meal]: nextMealArr });
@@ -321,14 +330,12 @@ const Home: React.FC = () => {
         const snap = await tx.get(ref);
         const data = snap.data() || {};
         const arr: DiaryEntry[] = [...(data[meal] || [])];
-        // defensive find by addedAt if indices shifted
         const idx = arr.findIndex((x) => x.addedAt === item.addedAt);
         if (idx >= 0) arr.splice(idx, 1);
         else if (index <= arr.length) arr.splice(index, 1);
         tx.set(ref, { [meal]: arr }, { merge: true });
       });
     } catch {
-      // revert on failure
       const reverted = [...(dayData[meal] || [])];
       reverted.splice(index, 0, item);
       setDayData({ ...dayData, [meal]: reverted });
@@ -342,7 +349,6 @@ const Home: React.FC = () => {
     const { meal, index, item } = lastDeleted;
     const dayKey = activeDateKey;
 
-    // optimistic local restore
     const arr = [...(dayData[meal] || [])];
     const insertAt = Math.min(Math.max(index, 0), arr.length);
     arr.splice(insertAt, 0, item);
@@ -356,7 +362,6 @@ const Home: React.FC = () => {
         const data = snap.data() || {};
         const cur: DiaryEntry[] = [...(data[meal] || [])];
 
-        // if already present, skip duplicate
         const exists = cur.some((x) => x.addedAt === item.addedAt);
         if (!exists) {
           const pos = Math.min(Math.max(index, 0), cur.length);
@@ -365,11 +370,229 @@ const Home: React.FC = () => {
         }
       });
     } catch {
-      // if backend restore fails, remove the optimistic insert
       const arr2 = [...(dayData[meal] || [])];
       const i2 = arr2.findIndex((x) => x.addedAt === item.addedAt);
-      if (i2 >= 0) { arr2.splice(i2, 1); setDayData({ ...dayData, [meal]: arr2 }); }
+      if (i2 >= 0) {
+        arr2.splice(i2, 1);
+        setDayData({ ...dayData, [meal]: arr2 });
+      }
       setToast({ open: true, message: "Undo failed." });
+    }
+  };
+
+  const clearMeal = async (meal: MealKey) => {
+    if (!uid) return;
+    if (!window.confirm(`Remove all foods from ${meal}?`)) return;
+
+    const dayKey = activeDateKey;
+
+    const emptyMeal: DiaryEntry[] = [];
+    setDayData((prev) => ({
+      ...prev,
+      [meal]: emptyMeal,
+    }));
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", dayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        tx.set(ref, { ...data, [meal]: emptyMeal }, { merge: true });
+      });
+      setToast({ open: true, message: `Removed all foods from ${meal}.` });
+    } catch {
+      setToast({ open: true, message: "Could not clear this meal." });
+    }
+  };
+
+  const copyMealFromYesterday = async (meal: MealKey) => {
+    if (!uid) return;
+
+    const todayKeyValue = activeDateKey;
+    const yesterdayKey = shiftDateKey(todayKeyValue, -1);
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const yRef = doc(db, "users", uid, "foods", yesterdayKey);
+        const tRef = doc(db, "users", uid, "foods", todayKeyValue);
+
+        const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
+        const yData = ySnap.data() || {};
+        const tData = tSnap.data() || {};
+
+        const yArr: DiaryEntry[] = yData[meal] || [];
+        const curArr: DiaryEntry[] = tData[meal] || [];
+
+        if (!yArr.length) {
+          throw new Error("No entries to copy from yesterday.");
+        }
+        if (curArr.length) {
+          throw new Error("This meal already has entries today.");
+        }
+
+        tx.set(
+          tRef,
+          {
+            ...tData,
+            [meal]: yArr,
+          },
+          { merge: true }
+        );
+      });
+
+      setToast({ open: true, message: `Copied ${pretty(meal)} from yesterday.` });
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message: e?.message || "Could not copy from yesterday.",
+      });
+    } finally {
+      setCopyMenuMeal(null);
+    }
+  };
+
+  const clearDay = async () => {
+    if (!uid) return;
+    if (!window.confirm("Remove all foods from this day?")) return;
+
+    const dayKey = activeDateKey;
+
+    const empty: DayDiaryDoc = {
+      breakfast: [],
+      lunch: [],
+      dinner: [],
+      snacks: [],
+    };
+
+    setDayData(empty);
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", dayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        tx.set(
+          ref,
+          {
+            ...data,
+            breakfast: [],
+            lunch: [],
+            dinner: [],
+            snacks: [],
+          },
+          { merge: true }
+        );
+      });
+      setToast({ open: true, message: "Cleared all meals for this day." });
+    } catch {
+      setToast({ open: true, message: "Could not clear this day." });
+    }
+  };
+
+  const copyDayFromYesterday = async () => {
+    if (!uid) return;
+
+    const todayKeyValue = activeDateKey;
+    const yesterdayKey = shiftDateKey(todayKeyValue, -1);
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const yRef = doc(db, "users", uid, "foods", yesterdayKey);
+        const tRef = doc(db, "users", uid, "foods", todayKeyValue);
+
+        const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
+        const yData = ySnap.data() || {};
+        const tData = tSnap.data() || {};
+
+        const yDay: DayDiaryDoc = {
+          breakfast: yData.breakfast || [],
+          lunch: yData.lunch || [],
+          dinner: yData.dinner || [],
+          snacks: yData.snacks || [],
+        };
+
+        const tDay: DayDiaryDoc = {
+          breakfast: tData.breakfast || [],
+          lunch: tData.lunch || [],
+          dinner: tData.dinner || [],
+          snacks: tData.snacks || [],
+        };
+
+        const yHasAny =
+          yDay.breakfast.length ||
+          yDay.lunch.length ||
+          yDay.dinner.length ||
+          yDay.snacks.length;
+
+        if (!yHasAny) {
+          throw new Error("No entries to copy from yesterday.");
+        }
+
+        const tHasAny =
+          tDay.breakfast.length ||
+          tDay.lunch.length ||
+          tDay.dinner.length ||
+          tDay.snacks.length;
+
+        if (tHasAny) {
+          throw new Error("This day already has entries.");
+        }
+
+        tx.set(
+          tRef,
+          {
+            ...tData,
+            breakfast: yDay.breakfast,
+            lunch: yDay.lunch,
+            dinner: yDay.dinner,
+            snacks: yDay.snacks,
+          },
+          { merge: true }
+        );
+      });
+
+      setToast({ open: true, message: "Copied entire day from yesterday." });
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message: e?.message || "Could not copy entire day.",
+      });
+    } finally {
+      setDayMenuOpen(false);
+    }
+  };
+
+  const handleReorder = async (meal: MealKey, ev: CustomEvent) => {
+    if (!uid) {
+      (ev as any).detail.complete();
+      return;
+    }
+    const from = (ev as any).detail.from as number;
+    const to = (ev as any).detail.to as number;
+
+    setDayData((prev) => {
+      const current = [...(prev[meal] || [])];
+      if (from < 0 || from >= current.length) return prev;
+      const [moved] = current.splice(from, 1);
+      current.splice(to, 0, moved);
+      return { ...prev, [meal]: current };
+    });
+
+    (ev as any).detail.complete();
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", activeDateKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const arr: DiaryEntry[] = [...(data[meal] || [])];
+        if (from < 0 || from >= arr.length) return;
+        const [moved] = arr.splice(from, 1);
+        arr.splice(to, 0, moved);
+        tx.set(ref, { ...data, [meal]: arr }, { merge: true });
+      });
+    } catch {
+      setToast({ open: true, message: "Reorder failed." });
     }
   };
 
@@ -402,17 +625,18 @@ const Home: React.FC = () => {
     }
   };
 
+  const toggleMealCollapsed = (meal: MealKey) => {
+    setCollapsedMeals((prev) => ({
+      ...prev,
+      [meal]: !prev[meal],
+    }));
+  };
+
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonTitle>Home</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={handleLogout} disabled={loggingOut}>
-              <IonIcon slot="start" icon={logOutOutline} />
-              {loggingOut ? "Signing out..." : "Logout"}
-            </IonButton>
-          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -446,16 +670,25 @@ const Home: React.FC = () => {
           >
             <IonIcon icon={chevronForwardOutline} />
           </IonButton>
+
+          <IonButton
+            fill="clear"
+            shape="round"
+            onClick={() => setDayMenuOpen(true)}
+            aria-label="Day options"
+          >
+            <IonIcon icon={ellipsisVertical} />
+          </IonButton>
         </div>
 
-        {/* Summary */}
         <IonCard className="fs-summary">
           <IonCardHeader className="fs-summary__hdr">
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <IonCardTitle>Today</IonCardTitle>
               {streak > 1 && (
                 <IonChip color="success" style={{ marginInlineStart: 8 }}>
-                  <IonIcon icon={flameOutline} /><span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+                  <IonIcon icon={flameOutline} />
+                  <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
                 </IonChip>
               )}
             </div>
@@ -485,34 +718,53 @@ const Home: React.FC = () => {
 
           {profile && caloriesNeeded != null && (
             <>
-              <div className="fs-summary__goal">
-                Goal: {kcalGoal} kcal
-              </div>
-              <div className="fs-macros">
-                <div className="fs-macro"><span className="fs-macro__label">Carbohydrates</span><span className="fs-macro__val">{totals.day.carbs.toFixed(1)} g</span></div>
-                <div className="fs-macro"><span className="fs-macro__label">Protein</span><span className="fs-macro__val">{totals.day.protein.toFixed(1)} g</span></div>
-                <div className="fs-macro"><span className="fs-macro__label">Fat</span><span className="fs-macro__val">{totals.day.fat.toFixed(1)} g</span></div>
-              </div>
-
               {(() => {
-                const t = macroTargets; if (!t) return null;
+                const t = macroTargets;
+                if (!t) return null;
                 return (
-                  <div className="fs-macro-bars" style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}>
-                    {[{k:"carbs",g:totals.day.carbs,tg:t.carbsG,l:"Carbohydrates"},
-                      {k:"protein",g:totals.day.protein,tg:t.proteinG,l:"Protein"},
-                      {k:"fat",g:totals.day.fat,tg:t.fatG,l:"Fat"}].map(({k,g,tg,l})=>{
-                        const pct = Math.min(1, tg ? g/tg : 0);
-                        return (
-                          <div key={k} style={{ display: "grid", gap: 4 }}>
-                            <div style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
-                              <span>{l}</span><span>{g.toFixed(0)} / {tg} g</span>
-                            </div>
-                            <div style={{ height:8, background:"var(--ion-color-light)", borderRadius:9999, overflow:"hidden" }}>
-                              <div style={{ width:`${pct*100}%`, height:"100%", background:"var(--ion-color-primary)" }} />
-                            </div>
+                  <div
+                    className="fs-macro-bars"
+                    style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
+                  >
+                    {[
+                      { k: "carbs", g: totals.day.carbs, tg: t.carbsG, l: "Carbohydrates" },
+                      { k: "protein", g: totals.day.protein, tg: t.proteinG, l: "Protein" },
+                      { k: "fat", g: totals.day.fat, tg: t.fatG, l: "Fat" },
+                    ].map(({ k, g, tg, l }) => {
+                      const pct = Math.min(1, tg ? g / tg : 0);
+                      return (
+                        <div key={k} style={{ display: "grid", gap: 4 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              fontSize: 12,
+                            }}
+                          >
+                            <span>{l}</span>
+                            <span>
+                              {g.toFixed(0)} / {tg} g
+                            </span>
                           </div>
-                        );
-                      })}
+                          <div
+                            style={{
+                              height: 8,
+                              background: "var(--ion-color-light)",
+                              borderRadius: 9999,
+                              overflow: "hidden",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: `${pct * 100}%`,
+                                height: "100%",
+                                background: "var(--ion-color-primary)",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })()}
@@ -520,73 +772,167 @@ const Home: React.FC = () => {
           )}
         </IonCard>
 
-        {loading && <div className="ion-text-center" style={{ padding: 24 }}><IonSpinner name="dots" /></div>}
+        {loading && (
+          <div className="ion-text-center" style={{ padding: 24 }}>
+            <IonSpinner name="dots" />
+          </div>
+        )}
 
-        {/* Meals */}
-        {!loading && MEALS.map((meal) => {
-          const items = dayData[meal] || [];
-          const hasItems = items.length > 0;
-          return (
-            <IonCard key={meal} className={`fs-meal ${hasItems ? "is-open" : ""}`}>
-              <IonCardHeader className="fs-meal__hdr">
-                <IonItem lines="none" className="fs-meal__row" detail={false}>
-                  <IonIcon slot="start" className="fs-meal__icon" icon={mealIcon[meal]} aria-hidden="true" />
-                  <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
-                  <IonButton
-                    slot="end"
-                    className="fs-meal__add"
-                    fill="clear"
-                    onClick={() => history.push(`/add-food?meal=${meal}&date=${activeDateKey}`)}
-                    aria-label={`Add to ${meal}`}
+        {!loading &&
+          MEALS.map((meal) => {
+            const items = dayData[meal] || [];
+            const hasItems = items.length > 0;
+            const isCollapsed = collapsedMeals[meal];
+
+            return (
+              <IonCard key={meal} className={`fs-meal ${hasItems ? "is-open" : ""}`}>
+                <IonCardHeader className="fs-meal__hdr">
+                  <IonItem
+                    lines="none"
+                    className="fs-meal__row"
+                    detail={false}
+                    button
+                    onClick={() => toggleMealCollapsed(meal)}
                   >
-                    <IonIcon icon={addCircleOutline} />
-                  </IonButton>
-                </IonItem>
-              </IonCardHeader>
+                    <IonIcon
+                      slot="start"
+                      className="fs-meal__icon"
+                      icon={mealIcon[meal]}
+                      aria-hidden="true"
+                    />
+                    <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+                    <IonButton
+                      slot="end"
+                      className="fs-meal__add"
+                      fill="clear"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
+                      }}
+                      aria-label={`Add to ${meal}`}
+                    >
+                      <IonIcon icon={addCircleOutline} />
+                    </IonButton>
+                  </IonItem>
+                </IonCardHeader>
 
-              {hasItems && (
-                <IonCardContent>
-                  <p className="meal-total">
-                    Total: {Math.round(totals.perMeal[meal].calories)} kcal · Carbohydrates {totals.perMeal[meal].carbs.toFixed(1)} g ·
-                    {" "}Protein {totals.perMeal[meal].protein.toFixed(1)} g · Fat {totals.perMeal[meal].fat.toFixed(1)} g
-                  </p>
+                {hasItems && !isCollapsed && (
+                  <IonCardContent>
+                    <p className="meal-total">
+                      Total: {Math.round(totals.perMeal[meal].calories)} kcal · Carbohydrates{" "}
+                      {totals.perMeal[meal].carbs.toFixed(1)} g · Protein{" "}
+                      {totals.perMeal[meal].protein.toFixed(1)} g · Fat{" "}
+                      {totals.perMeal[meal].fat.toFixed(1)} g
+                    </p>
 
-                  <IonList>
-                    {items.map((it, idx) => {
-                      const kcal = Math.round(it.total.calories);
-                      return (
-                        <IonItem key={`${it.addedAt}-${idx}`} className="meal-item">
-                          <IonLabel>
-                            <h2>
-                              {it.name}{it.brand ? ` · ${it.brand}` : ""}
-                            </h2>
-                            <p>
-                              Carbohydrates {it.total.carbs.toFixed(1)} g ·
-                              {" "}Protein {it.total.protein.toFixed(1)} g ·
-                              {" "}Fat {it.total.fat.toFixed(1)} g
-                            </p>
-                          </IonLabel>
+                    <IonButton
+                      size="small"
+                      fill="outline"
+                      onClick={() => setCopyMenuMeal(meal)}
+                      style={{ marginBottom: 8 }}
+                    >
+                      More options
+                    </IonButton>
 
-                          <IonButton
-                            slot="end"
-                            fill="clear"
-                            aria-label={`Remove ${it.name}`}
-                            onClick={() => deleteFood(meal, idx)}
-                            className="del-btn"
-                          >
-                            <IonIcon icon={trashOutline} />
-                          </IonButton>
+                    <IonList>
+                      <IonReorderGroup
+                        disabled={false}
+                        onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
+                      >
+                        {items.map((it, idx) => {
+                          const kcal = Math.round(it.total.calories);
+                          return (
+                            <IonItem key={`${it.addedAt}-${idx}`} className="meal-item">
+                              <IonReorder slot="start" />
+                              <IonLabel>
+                                <h2>
+                                  {it.name}
+                                  {it.brand ? ` · ${it.brand}` : ""}
+                                </h2>
+                                <p>
+                                  Carbohydrates {it.total.carbs.toFixed(1)} g · Protein{" "}
+                                  {it.total.protein.toFixed(1)} g · Fat{" "}
+                                  {it.total.fat.toFixed(1)} g
+                                </p>
+                              </IonLabel>
 
-                          <div className="kcal-badge" slot="end">{kcal} kcal</div>
-                        </IonItem>
-                      );
-                    })}
-                  </IonList>
-                </IonCardContent>
-              )}
-            </IonCard>
-          );
-        })}
+                              <IonButton
+                                slot="end"
+                                fill="clear"
+                                aria-label={`Remove ${it.name}`}
+                                onClick={() => deleteFood(meal, idx)}
+                                className="del-btn"
+                              >
+                                <IonIcon icon={trashOutline} />
+                              </IonButton>
+
+                              <div className="kcal-badge" slot="end">
+                                {kcal} kcal
+                              </div>
+                            </IonItem>
+                          );
+                        })}
+                      </IonReorderGroup>
+                    </IonList>
+                  </IonCardContent>
+                )}
+              </IonCard>
+            );
+          })}
+
+        <IonActionSheet
+          isOpen={copyMenuMeal !== null}
+          onDidDismiss={() => setCopyMenuMeal(null)}
+          header={copyMenuMeal ? `Actions for ${pretty(copyMenuMeal)}` : undefined}
+          buttons={[
+            {
+              text: "Copy from yesterday",
+              handler: () => {
+                if (copyMenuMeal) {
+                  copyMealFromYesterday(copyMenuMeal);
+                }
+              },
+            },
+            {
+              text: "Remove all foods from this meal",
+              role: "destructive",
+              handler: () => {
+                if (copyMenuMeal) {
+                  clearMeal(copyMenuMeal);
+                }
+              },
+            },
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
+
+        <IonActionSheet
+          isOpen={dayMenuOpen}
+          onDidDismiss={() => setDayMenuOpen(false)}
+          header="Day actions"
+          buttons={[
+            {
+              text: "Copy entire day from yesterday",
+              handler: () => {
+                copyDayFromYesterday();
+              },
+            },
+            {
+              text: "Clear all meals for this day",
+              role: "destructive",
+              handler: () => {
+                clearDay();
+              },
+            },
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
 
         <IonToast
           isOpen={toast.open}
@@ -618,7 +964,11 @@ const Home: React.FC = () => {
             onIonChange={(e) => handleDateChange(e.detail.value?.toString())}
           />
           <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-            <IonButton expand="block" fill="outline" onClick={() => setShowDatePicker(false)}>
+            <IonButton
+              expand="block"
+              fill="outline"
+              onClick={() => setShowDatePicker(false)}
+            >
               Cancel
             </IonButton>
             <IonButton expand="block" onClick={confirmPicker}>

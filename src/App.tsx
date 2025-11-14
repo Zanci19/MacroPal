@@ -11,7 +11,7 @@ import {
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
-import { homeOutline, settingsOutline, appsOutline } from "ionicons/icons";
+import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
 
 /* Standalone pages (non-tab) */
 import Login from "./pages/authentication/Login";
@@ -24,7 +24,7 @@ import ResetPassword from "./pages/ResetPassword";
 
 /* Tab pages */
 import Home from "./pages/home/Home";
-import Left from "./pages/home/Left";
+import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings"; // Settings index list
 import ScanBarcode from "./pages/ScanBarcode";
 
@@ -59,7 +59,7 @@ const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
       {/* Home & Left tabs */}
-      <Route exact path="/app/left" component={Left} />
+      <Route exact path="/app/left" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
 
       {/* Settings index and dynamic sections */}
@@ -70,8 +70,8 @@ const TabsShell: React.FC = () => (
 
     <IonTabBar slot="bottom">
       <IonTabButton tab="left" href="/app/left">
-        <IonIcon aria-hidden="true" icon={appsOutline} />
-        <IonLabel>Left</IonLabel>
+        <IonIcon aria-hidden="true" icon={analyticsSharp} />
+        <IonLabel>Analytics</IonLabel>
       </IonTabButton>
 
       <IonTabButton tab="home" href="/app/home">
