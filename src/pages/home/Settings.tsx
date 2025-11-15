@@ -21,7 +21,8 @@ import {
   keyOutline,
   mailOutline,
   warningOutline,
-} from "ionicons/icons";
+  cafeOutline,
+} from "ionicons/icons"; // <-- added cafe icon
 import { auth } from "../../firebase";
 import {
   sendEmailVerification,
@@ -174,6 +175,18 @@ const Settings: React.FC = () => {
             </IonButton>
           </IonItem>
 
+          {/* ❤️ Buy me a coffee button */}
+          <IonItem
+            lines="full"
+            button
+            onClick={() =>
+              window.open("https://buymeacoffee.com/zanci19", "_blank")
+            }
+          >
+            <IonIcon slot="start" icon={cafeOutline} />
+            <IonLabel>Buy me a coffee ☕</IonLabel>
+          </IonItem>
+
           <IonItem
             lines="full"
             button
@@ -194,7 +207,7 @@ const Settings: React.FC = () => {
         </IonList>
       </IonContent>
 
-      {/* First confirmation alert */}
+      {/* Alerts + Toasts (unchanged) */}
       <IonAlert
         isOpen={confirmDelete}
         header="Delete account?"
@@ -217,7 +230,6 @@ const Settings: React.FC = () => {
         onDidDismiss={() => setConfirmDelete(false)}
       />
 
-      {/* Second confirmation with username typing */}
       <IonAlert
         isOpen={confirmDeleteName}
         header="Type your name to confirm"

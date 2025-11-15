@@ -21,6 +21,7 @@ import SetupProfile from "./pages/SetupProfile";
 import CheckLogin from "./pages/CheckLogin";
 import Start from "./pages/Start";
 import ResetPassword from "./pages/ResetPassword";
+import AuthLoading from "./pages/authentication/AuthLoading";
 
 /* Tab pages */
 import Home from "./pages/home/Home";
@@ -100,6 +101,7 @@ const App: React.FC = () => (
         <Route exact path="/start" component={Start} />
         <Route exact path="/reset-password" component={ResetPassword} />
         <Route exact path="/scan-barcode" component={ScanBarcode} />
+        <Route exact path="/auth-loading" component={AuthLoading} />
 
         {/* ---- Tabs (show bottom bar) ---- */}
         <Route path="/app" component={TabsShell} />
