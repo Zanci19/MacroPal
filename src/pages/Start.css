@@ -20,24 +20,37 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+
+  /* 🔥 hide until ready */
+  opacity: 0;
+  transition: opacity 180ms ease-out;
+}
+
+/* Once React sets videoReady=true */
+.bg-video.is-ready .bg-video__media {
+  opacity: 1;
 }
 
 /* Optional dark scrim for text contrast (tune the opacity as needed) */
 .bg-video__scrim {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, rgba(0,0,0,0.25), rgba(0,0,0,0.6) 70%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.25),
+    rgba(0, 0, 0, 0.6) 70%
+  );
 }
 
 /* Foreground stack (your existing code) */
 /* Fill the viewport and center everything */
 .fixed-center {
   position: absolute;
-  inset: 0;                          
+  inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;           
-  align-items: center;               
+  justify-content: center;
+  align-items: center;
   text-align: center;
   padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
   z-index: 1; /* sits above the video */
@@ -80,9 +93,20 @@
   border-radius: 14px;
 }
 
+/* Try to nuke any browser controls if they appear */
+.bg-video__media::-webkit-media-controls {
+  display: none !important;
+}
+.bg-video__media::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
 /* Respect reduced motion preferences: pause background video */
 @media (prefers-reduced-motion: reduce) {
-  .bg-video__media { animation: none; }
-  .bg-video__media { display: none; } /* or remove to keep a static frame */
-  .bg-video__scrim { background: rgba(0,0,0,0.6); }
+  .bg-video__media {
+    display: none;
+  }
+  .bg-video__scrim {
+    background: rgba(0, 0, 0, 0.6);
+  }
 }

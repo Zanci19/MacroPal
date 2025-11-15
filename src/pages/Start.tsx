@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { IonPage, IonContent, IonButton, useIonRouter } from "@ionic/react";
 import "./Start.css";
 import logo from "../assets/logo.png";
@@ -6,12 +6,16 @@ import bgVideo from "../assets/start_bg_loop.mp4";
 
 const Start: React.FC = () => {
   const router = useIonRouter();
+  const [videoReady, setVideoReady] = useState(false);
 
   return (
     <IonPage>
-      <IonContent className="home-content ion-padding">
+      <IonContent className="start-content ion-padding">
         {/* Background video (fixed, behind everything) */}
-        <div className="bg-video" slot="fixed" aria-hidden="true">
+        <div
+          className={`bg-video ${videoReady ? "is-ready" : ""}`}
+          aria-hidden="true"
+        >
           <video
             className="bg-video__media"
             autoPlay
@@ -21,15 +25,21 @@ const Start: React.FC = () => {
             preload="auto"
             controls={false}
             disablePictureInPicture
+            onCanPlayThrough={() => setVideoReady(true)}
           >
             <source src={bgVideo} type="video/mp4" />
           </video>
+
           {/* optional dark overlay for contrast */}
           <div className="bg-video__scrim" />
         </div>
 
         {/* Foreground content (fixed, centered) */}
-        <div className="fixed-center" slot="fixed" role="main" aria-label="MacroPal Start">
+        <div
+          className="fixed-center"
+          role="main"
+          aria-label="MacroPal Start"
+        >
           <img src={logo} alt="MacroPal logo" className="start-logo" />
           <h1 className="start-title">MacroPal</h1>
           <h2 className="start-subtitle">Your macros. Simplified.</h2>
