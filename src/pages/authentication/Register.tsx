@@ -1,4 +1,3 @@
-// src/pages/auth/Register.tsx
 import React, { useState } from "react";
 import {
   IonPage,
@@ -19,7 +18,7 @@ import {
   sendEmailVerification,
   signOut,
 } from "firebase/auth";
-import { auth } from "../../firebase";
+import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
 
 // Small helpers
@@ -46,16 +45,36 @@ const Register: React.FC = () => {
     color: "success",
   });
 
-  const showToast = (message: string, color: "success" | "danger" | "warning" = "danger") =>
-    setToast({ show: true, message, color });
+  const showToast = (
+    message: string,
+    color: "success" | "danger" | "warning" = "danger"
+  ) => setToast({ show: true, message, color });
 
   const handleRegister = async () => {
+    trackEvent("register_attempt", {
+      has_name: !!name.trim(),
+      has_email: !!email.trim(),
+    });
+
     // Client-side validation (fail fast with clear messages)
-    if (!name.trim()) return showToast("Please enter your name.");
-    if (!emailOk(email)) return showToast("Please enter a valid email address.");
-    if (!passwordStrongEnough(pw))
-      return showToast("Password must be at least 8 characters and include a letter and a number.");
-    if (pw !== pw2) return showToast("Passwords do not match.");
+    if (!name.trim()) {
+      trackEvent("register_validation_failed", { reason: "name_empty" });
+      return showToast("Please enter your name.");
+    }
+    if (!emailOk(email)) {
+      trackEvent("register_validation_failed", { reason: "invalid_email" });
+      return showToast("Please enter a valid email address.");
+    }
+    if (!passwordStrongEnough(pw)) {
+      trackEvent("register_validation_failed", { reason: "weak_password" });
+      return showToast(
+        "Password must be at least 8 characters and include a letter and a number."
+      );
+    }
+    if (pw !== pw2) {
+      trackEvent("register_validation_failed", { reason: "password_mismatch" });
+      return showToast("Passwords do not match.");
+    }
 
     try {
       // Create auth user
@@ -67,26 +86,32 @@ const Register: React.FC = () => {
       // Send verification email (ActionCodeSettings optional; keep simple default)
       await sendEmailVerification(cred.user);
 
-      // Important: DO NOT create Firestore user doc yet.
-      // We only create profile data after the user confirms ownership (emailVerified).
-      // You can do this on first verified login, or on a dedicated /setup-profile step
-      // that rechecks `auth.currentUser.emailVerified === true`.
+      trackEvent("register_success", {
+        uid: cred.user.uid,
+        has_display_name: !!name.trim(),
+      });
 
       // Immediately sign out so unverified users cannot continue into the app
       await signOut(auth);
-
+      trackEvent("register_signed_out_unverified", {
+        uid: cred.user.uid,
+      });
+      
       showToast("Verification email sent. Please check your inbox.", "success");
 
       // Short delay so the toast is visible, then return to login
       setTimeout(() => history.push("/login"), 900);
     } catch (err: any) {
+      const code = err?.code || "unknown";
+      trackEvent("register_error", { code });
+
       // Friendly error mapping
       const msg =
-        err?.code === "auth/email-already-in-use"
+        code === "auth/email-already-in-use"
           ? "This email is already registered."
-          : err?.code === "auth/invalid-email"
+          : code === "auth/invalid-email"
           ? "Invalid email address."
-          : err?.code === "auth/weak-password"
+          : code === "auth/weak-password"
           ? "Password is too weak."
           : err?.message || "Registration failed.";
       showToast(msg);
@@ -146,14 +171,25 @@ const Register: React.FC = () => {
           />
         </IonItem>
 
-        <IonButton expand="block" className="ion-margin-top" onClick={handleRegister}>
+        <IonButton
+          expand="block"
+          className="ion-margin-top"
+          onClick={handleRegister}
+        >
           Sign Up
         </IonButton>
 
         <IonText className="ion-text-center" color="medium">
           <p className="ion-margin-top">Already have an account?</p>
         </IonText>
-        <IonButton fill="clear" expand="block" onClick={() => history.push("/login")}>
+        <IonButton
+          fill="clear"
+          expand="block"
+          onClick={() => {
+            trackEvent("navigate_to_login_from_register");
+            history.push("/login");
+          }}
+        >
           Log In
         </IonButton>
 

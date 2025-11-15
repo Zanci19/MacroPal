@@ -13,7 +13,7 @@ import {
   IonSelectOption,
   IonToast,
 } from "@ionic/react";
-import { auth, db } from "../firebase";
+import { auth, db, trackEvent } from "../firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useHistory } from "react-router";
 
@@ -23,15 +23,15 @@ const toNumOrNull = (v: any) => {
   return Number.isFinite(n) ? n : null;
 };
 
-type Activity =
-  | "sedentary"
-  | "light"
-  | "moderate"
-  | "very"
-  | "extra";
-
+type Activity = "sedentary" | "light" | "moderate" | "very" | "extra";
 type Goal = "lose" | "maintain" | "gain";
 type Gender = "male" | "female";
+
+type MacroTargets = {
+  proteinG: number;
+  fatG: number;
+  carbsG: number;
+};
 
 type ProfileData = {
   age: number | null;
@@ -40,6 +40,59 @@ type ProfileData = {
   goal: Goal;
   gender: Gender;
   activity: Activity;
+  // new fields:
+  caloriesTarget?: number;
+  macroTargets?: MacroTargets;
+};
+
+// moved formula here – this will be the single source of truth
+const computeTargets = (
+  age: number,
+  weight: number,
+  height: number,
+  gender: Gender,
+  goal: Goal,
+  activity: Activity
+): { calories: number; proteinG: number; fatG: number; carbsG: number } | null => {
+  if (!age || !weight || !height) return null;
+
+  // 1) BMR (Mifflin–St Jeor)
+  let bmr =
+    gender === "male"
+      ? 10 * weight + 6.25 * height - 5 * age + 5
+      : 10 * weight + 6.25 * height - 5 * age - 161;
+
+  // 2) Activity factor
+  const mult =
+    activity === "light"
+      ? 1.375
+      : activity === "moderate"
+      ? 1.55
+      : activity === "very"
+      ? 1.725
+      : activity === "extra"
+      ? 1.9
+      : 1.2; // sedentary
+
+  // 3) Goal adjustment
+  let daily = bmr * mult;
+  if (goal === "lose") daily -= 500;
+  else if (goal === "gain") daily += 500;
+
+  const calories = Math.max(800, Math.round(daily));
+
+  const proteinG = Math.round(1.8 * weight);
+  const proteinK = proteinG * 4;
+
+  const fatByWeight = 0.8 * weight;
+  const fatByPercent = (0.25 * calories) / 9; // 25% of kcal from fat
+  const fatG = Math.round(Math.max(50, fatByWeight, fatByPercent));
+  const fatK = fatG * 9;
+
+  // 6) Carbs = whatever is left
+  const carbsG = Math.round(Math.max(0, calories - proteinK - fatK) / 4);
+
+  return { calories, proteinG, fatG, carbsG };
 };
 
 const SetupProfile: React.FC = () => {
@@ -50,7 +103,11 @@ const SetupProfile: React.FC = () => {
   const [gender, setGender] = useState<Gender>("male");
   const [activity, setActivity] = useState<Activity>("sedentary");
 
-  const [toast, setToast] = useState<{ show: boolean; message: string; color?: string }>({
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    color?: string;
+  }>({
     show: false,
     message: "",
     color: "success",
@@ -65,7 +122,7 @@ const SetupProfile: React.FC = () => {
     color: "success" | "danger" | "warning" = "danger"
   ) => setToast({ show: true, message, color });
 
-  // OPTIONAL but important: prefill from existing profile so you don't overwrite with nulls
+  // prefill from existing profile so you don't overwrite with nulls
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -76,6 +133,11 @@ const SetupProfile: React.FC = () => {
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileData } | undefined;
         const p = data?.profile;
+
+        trackEvent("profile_load_result", {
+          has_profile: !!p,
+        });
+
         if (!p) return;
 
         setAge(p.age ?? null);
@@ -86,6 +148,9 @@ const SetupProfile: React.FC = () => {
         setActivity((p.activity as Activity) || "sedentary");
       } catch (e) {
         console.error("Error loading profile:", e);
+        trackEvent("profile_load_error", {
+          message: e instanceof Error ? e.message : String(e),
+        });
       }
     };
 
@@ -95,20 +160,24 @@ const SetupProfile: React.FC = () => {
   const handleSave = async () => {
     const user = auth.currentUser;
     if (!user) {
+      trackEvent("profile_save_blocked", { reason: "no_user" });
       showToast("You must be logged in.");
       return;
     }
 
     // Strong validation: must have numbers
     if (age === null || age <= 0) {
+      trackEvent("profile_validation_failed", { field: "age" });
       showToast("Please enter a valid age.", "warning");
       return;
     }
     if (weight === null || weight <= 0) {
+      trackEvent("profile_validation_failed", { field: "weight" });
       showToast("Please enter your weight in kg.", "warning");
       return;
     }
     if (height === null || height <= 0) {
+      trackEvent("profile_validation_failed", { field: "height" });
       showToast("Please enter your height in cm.", "warning");
       return;
     }
@@ -117,6 +186,24 @@ const SetupProfile: React.FC = () => {
 
     try {
       const userRef = doc(db, "users", user.uid);
+
+      const targets = computeTargets(age, weight, height, gender, goal, activity);
+
+      if (targets) {
+        trackEvent("profile_targets_computed", {
+          uid: user.uid,
+          calories: targets.calories,
+          proteinG: targets.proteinG,
+          fatG: targets.fatG,
+          carbsG: targets.carbsG,
+          goal,
+          activity,
+        });
+      } else {
+        trackEvent("profile_targets_not_computed", {
+          uid: user.uid,
+        });
+      }
 
       await setDoc(
         userRef,
@@ -128,6 +215,14 @@ const SetupProfile: React.FC = () => {
             goal,
             gender,
             activity,
+            ...(targets && {
+              caloriesTarget: targets.calories,
+              macroTargets: {
+                proteinG: targets.proteinG,
+                fatG: targets.fatG,
+                carbsG: targets.carbsG,
+              },
+            }),
             updatedAt: serverTimestamp(),
           },
           uid: user.uid,
@@ -138,11 +233,22 @@ const SetupProfile: React.FC = () => {
         { merge: true }
       );
 
+      trackEvent("profile_saved", {
+        uid: user.uid,
+        goal,
+        activity,
+        gender,
+      });
+
       showToast("Profile saved.", "success");
       history.push("/app/home");
     } catch (error: any) {
-      showToast("Error saving profile: " + (error?.message || "Unknown error"));
       console.error(error);
+      trackEvent("profile_save_error", {
+        uid: auth.currentUser?.uid || null,
+        message: error?.message || "Unknown error",
+      });
+      showToast("Error saving profile: " + (error?.message || "Unknown error"));
     } finally {
       setLoading(false);
     }

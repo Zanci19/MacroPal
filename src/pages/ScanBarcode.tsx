@@ -1,18 +1,29 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  IonPage, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonText, IonSpinner
+  IonPage,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
+  IonBackButton,
+  IonContent,
+  IonButton,
+  IonText,
+  IonSpinner,
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
+import { trackEvent } from "../firebase";
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
 function useMealFromQuery(location: ReturnType<typeof useLocation>) {
   const p = new URLSearchParams(location.search);
   const m = (p.get("meal") || "breakfast").toLowerCase();
-  return (["breakfast","lunch","dinner","snacks"] as const).includes(m as any) ? (m as any) : "breakfast";
+  return (["breakfast", "lunch", "dinner", "snacks"] as const).includes(m as any)
+    ? (m as any)
+    : "breakfast";
 }
 
 function useDateFromQuery(location: ReturnType<typeof useLocation>) {
@@ -39,38 +50,60 @@ const ScanBarcode: React.FC = () => {
   // 🔔 Shutter flash state
   const [flash, setFlash] = useState(false);
 
+  // Screen view
+  useEffect(() => {
+    trackEvent("barcode_scan_screen_view", { meal, date: dateKey });
+  }, [meal, dateKey]);
+
   const stop = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach(t => t.stop());
+    stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
     readerRef.current = null;
+    trackEvent("barcode_scan_camera_stopped");
   };
 
-  const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const start = async () => {
     setError(null);
     setStarting(true);
+
+    trackEvent("barcode_scan_start", { meal, date: dateKey });
+
     try {
       // Preflight permission (helps Android WebView)
-      const pre = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      pre.getTracks().forEach(t => t.stop());
+      const pre = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      });
+      pre.getTracks().forEach((t) => t.stop());
 
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
 
-      // Prefer back camera if available
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      trackEvent("barcode_scan_devices_listed", {
+        count: devices.length,
+      });
+
       let devId = devices[0]?.deviceId;
-      const back = devices.find(d => /back|rear|environment/i.test(d.label || ""));
+      const back = devices.find((d) =>
+        /back|rear|environment/i.test(d.label || "")
+      );
       if (back) devId = back.deviceId;
 
-      // Decode once
-      const result = await reader.decodeOnceFromVideoDevice(devId, videoRef.current!);
-      const code = (result?.getText() || "").replace(/\D/g, ""); // EAN/UPC numbers only
+      const result = await reader.decodeOnceFromVideoDevice(
+        devId,
+        videoRef.current!
+      );
+      const rawText = result?.getText() || "";
+      const code = rawText.replace(/\D/g, ""); // EAN/UPC numbers only
       stop();
 
-      if (!code) throw new Error("No barcode detected.");
+      if (!code) {
+        trackEvent("barcode_scan_no_code", { rawText });
+        throw new Error("No barcode detected.");
+      }
 
       // 🔔 Shutter flash + haptic tap
       setFlash(true);
@@ -78,12 +111,26 @@ const ScanBarcode: React.FC = () => {
       await sleep(180);
       setFlash(false);
 
-      // Try OFF lookup first; AddFood will show modal if found, else search list
-      // We don't do the fetch here (network/permissions are fine), but redirect and let AddFood handle UX/toasts consistently.
-      history.replace(`/add-food?meal=${meal}&date=${dateKey}&code=${encodeURIComponent(code)}&found=1`);
+      trackEvent("barcode_scan_success", {
+        code,
+        length: code.length,
+        meal,
+        date: dateKey,
+      });
+
+      // Let AddFood handle the actual lookup UX
+      history.replace(
+        `/add-food?meal=${meal}&date=${dateKey}&code=${encodeURIComponent(
+          code
+        )}&found=1`
+      );
     } catch (e: any) {
       console.error(e);
-      setError(e?.message ?? "Failed to start camera");
+      const msg = e?.message ?? "Failed to start camera";
+      setError(msg);
+      trackEvent("barcode_scan_error", {
+        message: msg,
+      });
     } finally {
       setStarting(false);
     }
@@ -91,7 +138,10 @@ const ScanBarcode: React.FC = () => {
 
   useEffect(() => {
     start();
-    return () => stop();
+    return () => {
+      stop();
+      trackEvent("barcode_scan_screen_unmount");
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,34 +150,41 @@ const ScanBarcode: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/add-food?meal=${meal}&date=${dateKey}`} />
+            <IonBackButton
+              defaultHref={`/add-food?meal=${meal}&date=${dateKey}`}
+            />
           </IonButtons>
           <IonTitle>Scan barcode</IonTitle>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <div style={{ display:"grid", gap:12 }}>
+        <div style={{ display: "grid", gap: 12 }}>
           {/* Video container */}
           <div
-            style={{ position:"relative", width:"100%", borderRadius:8, overflow:"hidden" }}
+            style={{
+              position: "relative",
+              width: "100%",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
           >
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              style={{ width:"100%", background:"#000" }}
+              style={{ width: "100%", background: "#000" }}
             />
 
             {/* Frame hint */}
             <div
               style={{
-                position:"absolute",
-                inset:"10% 15%",
-                border:"2px dashed rgba(255,255,255,0.6)",
-                borderRadius:8,
-                pointerEvents:"none",
+                position: "absolute",
+                inset: "10% 15%",
+                border: "2px dashed rgba(255,255,255,0.6)",
+                borderRadius: 8,
+                pointerEvents: "none",
                 zIndex: 1,
               }}
             />
@@ -160,7 +217,7 @@ const ScanBarcode: React.FC = () => {
           </div>
 
           {starting && (
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <IonSpinner name="dots" />
               <IonText color="medium">Starting camera…</IonText>
             </div>
@@ -169,11 +226,27 @@ const ScanBarcode: React.FC = () => {
           {error && (
             <>
               <IonText color="danger">{error}</IonText>
-              <IonButton expand="block" onClick={start}>Try again</IonButton>
+              <IonButton
+                expand="block"
+                onClick={() => {
+                  trackEvent("barcode_scan_retry_click");
+                  start();
+                }}
+              >
+                Try again
+              </IonButton>
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() => history.replace(`/add-food?meal=${meal}&date=${dateKey}`)}
+                onClick={() => {
+                  trackEvent("barcode_scan_back_to_add_food", {
+                    meal,
+                    date: dateKey,
+                  });
+                  history.replace(
+                    `/add-food?meal=${meal}&date=${dateKey}`
+                  );
+                }}
               >
                 Back to Add Food
               </IonButton>

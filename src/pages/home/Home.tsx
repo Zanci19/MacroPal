@@ -40,7 +40,7 @@ import {
   ellipsisVertical,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
-import { db } from "../../firebase";
+import { db, trackEvent } from "../../firebase";
 import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
 import "./Home.css";
 import {
@@ -51,12 +51,7 @@ import {
   todayDateKey,
 } from "../../utils/date";
 
-import type {
-  MealKey,
-  Macros,
-  DiaryEntry,
-  DayDiaryDoc,
-} from "../../types";
+import type { MealKey, Macros, DiaryEntry, DayDiaryDoc } from "../../types";
 
 import { useProfile } from "../../hooks/useProfile";
 
@@ -149,34 +144,40 @@ const Home: React.FC = () => {
     snacks: false,
   });
 
-  const refreshStreak = useCallback(async (userId: string) => {
-    const todayKeyValue = todayDateKey();
-    let s = 0;
-    for (let i = 0; i < 14; i++) {
-      const offset = shiftDateKey(todayKeyValue, -i);
-      const ds = await getDoc(doc(db, "users", userId, "foods", offset));
-      const dd = ds.data();
-      const any = !!(
-        dd?.breakfast?.length ||
-        dd?.lunch?.length ||
-        dd?.dinner?.length ||
-        dd?.snacks?.length
-      );
-      if (any) s++;
-      else break;
-    }
-    setStreak(s);
-  }, []);
+  const refreshStreak = useCallback(
+    async (userId: string) => {
+      const todayKeyValue = todayDateKey();
+      let s = 0;
+      for (let i = 0; i < 14; i++) {
+        const offset = shiftDateKey(todayKeyValue, -i);
+        const ds = await getDoc(doc(db, "users", userId, "foods", offset));
+        const dd = ds.data() as Partial<DayDiaryDoc> | undefined;
+        const any = !!(
+          dd?.breakfast?.length ||
+          dd?.lunch?.length ||
+          dd?.dinner?.length ||
+          dd?.snacks?.length
+        );
+        if (any) s++;
+        else break;
+      }
+      setStreak(s);
+      trackEvent("streak_calculated", { uid: userId, streak: s });
+    },
+    []
+  );
 
   useEffect(() => {
     if (profileLoading) return;
 
     if (!uid) {
+      trackEvent("home_redirect_no_uid");
       history.replace("/login");
       return;
     }
 
     if (!profile || !profile.age) {
+      trackEvent("home_redirect_no_profile", { uid });
       history.replace("/setup-profile");
       return;
     }
@@ -194,14 +195,27 @@ const Home: React.FC = () => {
     const ref = doc(db, "users", uid, "foods", activeDateKey);
     const unsub = onSnapshot(ref, (snap) => {
       const raw = snap.data() as Partial<DayDiaryDoc> | undefined;
-      setDayData({
+      const nextDay: DayDiaryDoc = {
         breakfast: raw?.breakfast ?? [],
         lunch: raw?.lunch ?? [],
         dinner: raw?.dinner ?? [],
         snacks: raw?.snacks ?? [],
-      });
+      };
+      setDayData(nextDay);
       setLoading(false);
       refreshStreak(uid);
+
+      const totalEntries =
+        nextDay.breakfast.length +
+        nextDay.lunch.length +
+        nextDay.dinner.length +
+        nextDay.snacks.length;
+
+      trackEvent("day_diary_snapshot", {
+        uid,
+        date: activeDateKey,
+        total_entries: totalEntries,
+      });
     });
 
     return () => unsub();
@@ -222,9 +236,17 @@ const Home: React.FC = () => {
     day: "numeric",
   });
 
+  // Prefer stored caloriesTarget from profile; fall back to formula if missing
   const caloriesNeeded = useMemo(() => {
     if (!profile) return null;
-    const { age, weight, height, gender, goal, activity } = profile;
+
+    const stored = (profile as any).caloriesTarget as number | undefined;
+    if (typeof stored === "number" && Number.isFinite(stored) && stored > 0) {
+      return stored;
+    }
+
+    const { age, weight, height, gender, goal, activity } = profile as any;
+    if (!age || !weight || !height || !gender) return null;
 
     let bmr =
       gender === "male"
@@ -292,15 +314,42 @@ const Home: React.FC = () => {
     : "Under target";
   const summaryDifferenceValue = isToday ? kcalLeft : Math.abs(kcalDelta);
 
+  // Prefer stored macroTargets; fall back to formula if missing
   const macroTargets = useMemo(() => {
     if (!profile || !caloriesNeeded) return null;
-    const proteinG = Math.round(1.8 * profile.weight);
-    const fatG = Math.max(45, Math.round(0.8 * profile.weight));
+
+    const stored = (profile as any).macroTargets as
+      | { proteinG?: number; fatG?: number; carbsG?: number }
+      | undefined;
+
+    if (
+      stored &&
+      typeof stored.proteinG === "number" &&
+      typeof stored.fatG === "number" &&
+      typeof stored.carbsG === "number"
+    ) {
+      return {
+        proteinG: stored.proteinG,
+        fatG: stored.fatG,
+        carbsG: stored.carbsG,
+      };
+    }
+
+    const weight = (profile as any).weight as number | null;
+    if (!weight) return null;
+
+    const proteinG = Math.round(1.8 * weight);
     const proteinK = proteinG * 4;
+
+    const fatByWeight = 0.8 * weight;
+    const fatByPercent = (0.25 * caloriesNeeded) / 9;
+    const fatG = Math.round(Math.max(50, fatByWeight, fatByPercent));
     const fatK = fatG * 9;
-    const carbsG = Math.round(Math.max(0, kcalGoal - proteinK - fatK) / 4);
+
+    const carbsG = Math.round(Math.max(0, caloriesNeeded - proteinK - fatK) / 4);
+
     return { proteinG, fatG, carbsG };
-  }, [profile, caloriesNeeded, kcalGoal]);
+  }, [profile, caloriesNeeded]);
 
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -317,6 +366,14 @@ const Home: React.FC = () => {
     const current = dayData[meal] || [];
     if (index < 0 || index >= current.length) return;
     const item = current[index];
+
+    trackEvent("food_delete_attempt", {
+      uid,
+      date: dayKey,
+      meal,
+      index,
+      name: item.name,
+    });
 
     const nextMealArr = [...current];
     nextMealArr.splice(index, 1);
@@ -335,12 +392,28 @@ const Home: React.FC = () => {
         else if (index <= arr.length) arr.splice(index, 1);
         tx.set(ref, { [meal]: arr }, { merge: true });
       });
+
+      trackEvent("food_deleted", {
+        uid,
+        date: dayKey,
+        meal,
+        index,
+        name: item.name,
+      });
     } catch {
       const reverted = [...(dayData[meal] || [])];
       reverted.splice(index, 0, item);
       setDayData({ ...dayData, [meal]: reverted });
       setLastDeleted(null);
       setToast({ open: true, message: "Delete failed." });
+
+      trackEvent("food_delete_error", {
+        uid,
+        date: dayKey,
+        meal,
+        index,
+        name: item.name,
+      });
     }
   };
 
@@ -348,6 +421,14 @@ const Home: React.FC = () => {
     if (!uid || !lastDeleted) return;
     const { meal, index, item } = lastDeleted;
     const dayKey = activeDateKey;
+
+    trackEvent("food_undo_delete_attempt", {
+      uid,
+      date: dayKey,
+      meal,
+      index,
+      name: item.name,
+    });
 
     const arr = [...(dayData[meal] || [])];
     const insertAt = Math.min(Math.max(index, 0), arr.length);
@@ -369,6 +450,14 @@ const Home: React.FC = () => {
           tx.set(ref, { [meal]: cur }, { merge: true });
         }
       });
+
+      trackEvent("food_undo_delete_success", {
+        uid,
+        date: dayKey,
+        meal,
+        index,
+        name: item.name,
+      });
     } catch {
       const arr2 = [...(dayData[meal] || [])];
       const i2 = arr2.findIndex((x) => x.addedAt === item.addedAt);
@@ -377,6 +466,14 @@ const Home: React.FC = () => {
         setDayData({ ...dayData, [meal]: arr2 });
       }
       setToast({ open: true, message: "Undo failed." });
+
+      trackEvent("food_undo_delete_error", {
+        uid,
+        date: dayKey,
+        meal,
+        index,
+        name: item.name,
+      });
     }
   };
 
@@ -385,6 +482,13 @@ const Home: React.FC = () => {
     if (!window.confirm(`Remove all foods from ${meal}?`)) return;
 
     const dayKey = activeDateKey;
+
+    trackEvent("meal_clear_confirmed", {
+      uid,
+      date: dayKey,
+      meal,
+      count: (dayData[meal] || []).length,
+    });
 
     const emptyMeal: DiaryEntry[] = [];
     setDayData((prev) => ({
@@ -400,8 +504,12 @@ const Home: React.FC = () => {
         tx.set(ref, { ...data, [meal]: emptyMeal }, { merge: true });
       });
       setToast({ open: true, message: `Removed all foods from ${meal}.` });
+
+      trackEvent("meal_cleared_success", { uid, date: dayKey, meal });
     } catch {
       setToast({ open: true, message: "Could not clear this meal." });
+
+      trackEvent("meal_cleared_error", { uid, date: dayKey, meal });
     }
   };
 
@@ -410,6 +518,13 @@ const Home: React.FC = () => {
 
     const todayKeyValue = activeDateKey;
     const yesterdayKey = shiftDateKey(todayKeyValue, -1);
+
+    trackEvent("meal_copy_from_yesterday_attempt", {
+      uid,
+      today: todayKeyValue,
+      yesterday: yesterdayKey,
+      meal,
+    });
 
     try {
       await runTransaction(db, async (tx) => {
@@ -441,10 +556,25 @@ const Home: React.FC = () => {
       });
 
       setToast({ open: true, message: `Copied ${pretty(meal)} from yesterday.` });
+
+      trackEvent("meal_copy_from_yesterday_success", {
+        uid,
+        today: todayKeyValue,
+        yesterday: yesterdayKey,
+        meal,
+      });
     } catch (e: any) {
       setToast({
         open: true,
         message: e?.message || "Could not copy from yesterday.",
+      });
+
+      trackEvent("meal_copy_from_yesterday_error", {
+        uid,
+        today: todayKeyValue,
+        yesterday: yesterdayKey,
+        meal,
+        error: e?.message || String(e),
       });
     } finally {
       setCopyMenuMeal(null);
@@ -463,6 +593,11 @@ const Home: React.FC = () => {
       dinner: [],
       snacks: [],
     };
+
+    trackEvent("day_clear_confirmed", {
+      uid,
+      date: dayKey,
+    });
 
     setDayData(empty);
 
@@ -484,8 +619,12 @@ const Home: React.FC = () => {
         );
       });
       setToast({ open: true, message: "Cleared all meals for this day." });
+
+      trackEvent("day_clear_success", { uid, date: dayKey });
     } catch {
       setToast({ open: true, message: "Could not clear this day." });
+
+      trackEvent("day_clear_error", { uid, date: dayKey });
     }
   };
 
@@ -494,6 +633,12 @@ const Home: React.FC = () => {
 
     const todayKeyValue = activeDateKey;
     const yesterdayKey = shiftDateKey(todayKeyValue, -1);
+
+    trackEvent("day_copy_from_yesterday_attempt", {
+      uid,
+      today: todayKeyValue,
+      yesterday: yesterdayKey,
+    });
 
     try {
       await runTransaction(db, async (tx) => {
@@ -552,10 +697,23 @@ const Home: React.FC = () => {
       });
 
       setToast({ open: true, message: "Copied entire day from yesterday." });
+
+      trackEvent("day_copy_from_yesterday_success", {
+        uid,
+        today: todayKeyValue,
+        yesterday: yesterdayKey,
+      });
     } catch (e: any) {
       setToast({
         open: true,
         message: e?.message || "Could not copy entire day.",
+      });
+
+      trackEvent("day_copy_from_yesterday_error", {
+        uid,
+        today: todayKeyValue,
+        yesterday: yesterdayKey,
+        error: e?.message || String(e),
       });
     } finally {
       setDayMenuOpen(false);
@@ -569,6 +727,14 @@ const Home: React.FC = () => {
     }
     const from = (ev as any).detail.from as number;
     const to = (ev as any).detail.to as number;
+
+    trackEvent("meal_reorder_attempt", {
+      uid,
+      date: activeDateKey,
+      meal,
+      from,
+      to,
+    });
 
     setDayData((prev) => {
       const current = [...(prev[meal] || [])];
@@ -591,8 +757,24 @@ const Home: React.FC = () => {
         arr.splice(to, 0, moved);
         tx.set(ref, { ...data, [meal]: arr }, { merge: true });
       });
+
+      trackEvent("meal_reorder_success", {
+        uid,
+        date: activeDateKey,
+        meal,
+        from,
+        to,
+      });
     } catch {
       setToast({ open: true, message: "Reorder failed." });
+
+      trackEvent("meal_reorder_error", {
+        uid,
+        date: activeDateKey,
+        meal,
+        from,
+        to,
+      });
     }
   };
 
@@ -604,32 +786,64 @@ const Home: React.FC = () => {
       : "var(--ion-color-danger)";
 
   const goRelativeDay = (delta: number) => {
-    setActiveDateKey((prev) => clampDateKeyToToday(shiftDateKey(prev, delta)));
+    setActiveDateKey((prev) => {
+      const next = clampDateKeyToToday(shiftDateKey(prev, delta));
+      if (next !== prev) {
+        trackEvent("day_navigate_relative", {
+          uid,
+          from: prev,
+          to: next,
+          delta,
+        });
+      }
+      return next;
+    });
   };
 
   const openPicker = () => {
     setPendingDateKey(activeDateKey);
     setShowDatePicker(true);
+    trackEvent("day_picker_open", { uid, date: activeDateKey });
   };
 
   const confirmPicker = () => {
-    setActiveDateKey(clampDateKeyToToday(pendingDateKey));
+    const from = activeDateKey;
+    const to = clampDateKeyToToday(pendingDateKey);
+    setActiveDateKey(to);
     setShowDatePicker(false);
+    if (from !== to) {
+      trackEvent("day_picker_confirm", { uid, from, to });
+    }
   };
 
   const handleDateChange = (value: string | null | undefined) => {
     if (!value) return;
     const key = value.split("T")[0];
     if (isDateKey(key)) {
-      setPendingDateKey(clampDateKeyToToday(key));
+      const clamped = clampDateKeyToToday(key);
+      setPendingDateKey(clamped);
+      trackEvent("day_picker_change_pending", {
+        uid,
+        value: key,
+        pending: clamped,
+      });
     }
   };
 
   const toggleMealCollapsed = (meal: MealKey) => {
-    setCollapsedMeals((prev) => ({
-      ...prev,
-      [meal]: !prev[meal],
-    }));
+    setCollapsedMeals((prev) => {
+      const nextState = !prev[meal];
+      trackEvent("meal_toggle_collapsed", {
+        uid,
+        date: activeDateKey,
+        meal,
+        collapsed: nextState,
+      });
+      return {
+        ...prev,
+        [meal]: nextState,
+      };
+    });
   };
 
   return (
@@ -674,7 +888,10 @@ const Home: React.FC = () => {
           <IonButton
             fill="clear"
             shape="round"
-            onClick={() => setDayMenuOpen(true)}
+            onClick={() => {
+              setDayMenuOpen(true);
+              trackEvent("day_menu_open", { uid, date: activeDateKey });
+            }}
             aria-label="Day options"
           >
             <IonIcon icon={ellipsisVertical} />
@@ -727,8 +944,18 @@ const Home: React.FC = () => {
                     style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
                   >
                     {[
-                      { k: "carbs", g: totals.day.carbs, tg: t.carbsG, l: "Carbohydrates" },
-                      { k: "protein", g: totals.day.protein, tg: t.proteinG, l: "Protein" },
+                      {
+                        k: "carbs",
+                        g: totals.day.carbs,
+                        tg: t.carbsG,
+                        l: "Carbohydrates",
+                      },
+                      {
+                        k: "protein",
+                        g: totals.day.protein,
+                        tg: t.proteinG,
+                        l: "Protein",
+                      },
                       { k: "fat", g: totals.day.fat, tg: t.fatG, l: "Fat" },
                     ].map(({ k, g, tg, l }) => {
                       const pct = Math.min(1, tg ? g / tg : 0);
@@ -807,6 +1034,12 @@ const Home: React.FC = () => {
                       fill="clear"
                       onClick={(e) => {
                         e.stopPropagation();
+                        trackEvent("navigate_add_food", {
+                          uid,
+                          date: activeDateKey,
+                          meal,
+                          has_items: hasItems,
+                        });
                         history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
                       }}
                       aria-label={`Add to ${meal}`}
@@ -819,8 +1052,8 @@ const Home: React.FC = () => {
                 {hasItems && !isCollapsed && (
                   <IonCardContent>
                     <p className="meal-total">
-                      Total: {Math.round(totals.perMeal[meal].calories)} kcal · Carbohydrates{" "}
-                      {totals.perMeal[meal].carbs.toFixed(1)} g · Protein{" "}
+                      Total: {Math.round(totals.perMeal[meal].calories)} kcal ·
+                      Carbohydrates {totals.perMeal[meal].carbs.toFixed(1)} g · Protein{" "}
                       {totals.perMeal[meal].protein.toFixed(1)} g · Fat{" "}
                       {totals.perMeal[meal].fat.toFixed(1)} g
                     </p>
@@ -828,7 +1061,14 @@ const Home: React.FC = () => {
                     <IonButton
                       size="small"
                       fill="outline"
-                      onClick={() => setCopyMenuMeal(meal)}
+                      onClick={() => {
+                        setCopyMenuMeal(meal);
+                        trackEvent("meal_more_options_open", {
+                          uid,
+                          date: activeDateKey,
+                          meal,
+                        });
+                      }}
                       style={{ marginBottom: 8 }}
                     >
                       More options
@@ -882,7 +1122,13 @@ const Home: React.FC = () => {
 
         <IonActionSheet
           isOpen={copyMenuMeal !== null}
-          onDidDismiss={() => setCopyMenuMeal(null)}
+          onDidDismiss={() => {
+            setCopyMenuMeal(null);
+            trackEvent("meal_more_options_close", {
+              uid,
+              date: activeDateKey,
+            });
+          }}
           header={copyMenuMeal ? `Actions for ${pretty(copyMenuMeal)}` : undefined}
           buttons={[
             {
@@ -911,7 +1157,10 @@ const Home: React.FC = () => {
 
         <IonActionSheet
           isOpen={dayMenuOpen}
-          onDidDismiss={() => setDayMenuOpen(false)}
+          onDidDismiss={() => {
+            setDayMenuOpen(false);
+            trackEvent("day_menu_close", { uid, date: activeDateKey });
+          }}
           header="Day actions"
           buttons={[
             {
@@ -950,7 +1199,13 @@ const Home: React.FC = () => {
         />
       </IonContent>
 
-      <IonModal isOpen={showDatePicker} onDidDismiss={() => setShowDatePicker(false)}>
+      <IonModal
+        isOpen={showDatePicker}
+        onDidDismiss={() => {
+          setShowDatePicker(false);
+          trackEvent("day_picker_dismiss", { uid, date: activeDateKey });
+        }}
+      >
         <IonHeader>
           <IonToolbar>
             <IonTitle>Select a day</IonTitle>
@@ -967,7 +1222,14 @@ const Home: React.FC = () => {
             <IonButton
               expand="block"
               fill="outline"
-              onClick={() => setShowDatePicker(false)}
+              onClick={() => {
+                setShowDatePicker(false);
+                trackEvent("day_picker_cancel", {
+                  uid,
+                  active: activeDateKey,
+                  pending: pendingDateKey,
+                });
+              }}
             >
               Cancel
             </IonButton>

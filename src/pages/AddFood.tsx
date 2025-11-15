@@ -31,7 +31,7 @@ import {
 } from "@ionic/react";
 
 import { useLocation, useHistory } from "react-router";
-import { auth, db } from "../firebase";
+import { auth, db, trackEvent } from "../firebase";
 import {
   doc,
   setDoc,
@@ -45,7 +45,6 @@ import {
   increment,
   getDoc,
 } from "firebase/firestore";
-
 
 import { calendarOutline, starOutline, trashOutline } from "ionicons/icons";
 import {
@@ -302,6 +301,11 @@ const AddFood: React.FC = () => {
     [per100g]
   );
 
+  // Screen view
+  useEffect(() => {
+    trackEvent("add_food_screen_view", { meal, date: dateKey });
+  }, [meal, dateKey]);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
@@ -320,6 +324,13 @@ const AddFood: React.FC = () => {
 
     (async () => {
       if (code) {
+        trackEvent("add_food_from_barcode", {
+          meal,
+          date: dateKey,
+          code,
+          found_flag: !!found,
+        });
+
         try {
           const r = await fetch(
             `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
@@ -327,6 +338,12 @@ const AddFood: React.FC = () => {
           if (r.ok) {
             const data: OFFBarcodeResponse = await r.json();
             if ("status" in data && data.status === 1) {
+              trackEvent("barcode_lookup_success", {
+                code,
+                meal,
+                date: dateKey,
+              });
+
               setToast({ show: true, message: "Item found", color: "success" });
 
               const p = data.product;
@@ -341,6 +358,12 @@ const AddFood: React.FC = () => {
               setWeightQty(100);
               setOpen(true);
             } else {
+              trackEvent("barcode_lookup_not_found", {
+                code,
+                meal,
+                date: dateKey,
+              });
+
               setToast({
                 show: true,
                 message: "Item not found — showing search.",
@@ -350,6 +373,10 @@ const AddFood: React.FC = () => {
               await foodsSearch(code, 1);
             }
           } else {
+            trackEvent("barcode_lookup_http_error", {
+              code,
+              status: r.status,
+            });
             setToast({
               show: true,
               message: "Lookup failed — showing search.",
@@ -360,6 +387,10 @@ const AddFood: React.FC = () => {
           }
         } catch (e: any) {
           console.error(e);
+          trackEvent("barcode_lookup_exception", {
+            code,
+            error: e?.message || String(e),
+          });
           setToast({
             show: true,
             message: "Error — showing search.",
@@ -374,6 +405,11 @@ const AddFood: React.FC = () => {
       }
 
       if (q) {
+        trackEvent("add_food_search_prefilled", {
+          query: q,
+          meal,
+          date: dateKey,
+        });
         setQuery(q);
         const count = await foodsSearch(q, 1);
         setToast({
@@ -389,10 +425,11 @@ const AddFood: React.FC = () => {
       }
 
       if (found) {
+        trackEvent("add_food_return_from_scan", { meal, date: dateKey });
         cleanUrl();
       }
     })();
-  }, [location.search, history]);
+  }, [location.search, history, meal, dateKey]);
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -409,6 +446,10 @@ const AddFood: React.FC = () => {
         });
         setFavorites(list);
         setFavoritesLoading(false);
+        trackEvent("favorites_loaded", {
+          uid: user.uid,
+          count: list.length,
+        });
       },
       (err) => {
         console.error(err);
@@ -417,6 +458,10 @@ const AddFood: React.FC = () => {
           show: true,
           message: "Error loading favorites",
           color: "danger",
+        });
+        trackEvent("favorites_load_error", {
+          uid: user.uid,
+          error: err?.message || String(err),
         });
       }
     );
@@ -436,11 +481,14 @@ const AddFood: React.FC = () => {
         return { id: d.id, ...data };
       });
       setRecent(list);
+      trackEvent("recent_off_loaded", {
+        uid: user.uid,
+        count: list.length,
+      });
     });
 
     return () => unsub();
   }, []);
-
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -487,9 +535,20 @@ const AddFood: React.FC = () => {
           if (unique.length >= 10) break;
         }
 
-        if (!cancelled) setRecentFoods(unique);
-      } catch (e) {
+        if (!cancelled) {
+          setRecentFoods(unique);
+          trackEvent("recent_history_loaded", {
+            uid,
+            count: unique.length,
+          });
+        }
+      } catch (e: any) {
         console.error(e);
+        if (!cancelled) {
+          trackEvent("recent_history_load_error", {
+            error: e?.message || String(e),
+          });
+        }
       } finally {
         if (!cancelled) setRecentLoading(false);
       }
@@ -515,6 +574,10 @@ const AddFood: React.FC = () => {
         });
         setMealPresets(list);
         setMealPresetsLoading(false);
+        trackEvent("meal_presets_loaded", {
+          uid: user.uid,
+          count: list.length,
+        });
       },
       (err) => {
         console.error(err);
@@ -524,6 +587,10 @@ const AddFood: React.FC = () => {
           message: "Error loading custom meals",
           color: "danger",
         });
+        trackEvent("meal_presets_load_error", {
+          uid: user.uid,
+          error: err?.message || String(err),
+        });
       }
     );
     return () => unsub();
@@ -532,6 +599,14 @@ const AddFood: React.FC = () => {
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
     if (!q.trim()) return 0;
     setLoading(true);
+
+    trackEvent("food_search_start", {
+      query: q,
+      page: pageNumber,
+      meal,
+      date: dateKey,
+    });
+
     try {
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", q);
@@ -544,6 +619,13 @@ const AddFood: React.FC = () => {
       const foods = Array.isArray(data?.products) ? data.products : [];
       setResults(foods);
       setPage(pageNumber);
+
+      trackEvent("food_search_success", {
+        query: q,
+        page: pageNumber,
+        count: foods.length,
+      });
+
       return foods.length;
     } catch (e: any) {
       console.error(e);
@@ -552,6 +634,13 @@ const AddFood: React.FC = () => {
         message: e?.message ?? "Error fetching foods",
         color: "danger",
       });
+
+      trackEvent("food_search_error", {
+        query: q,
+        page: pageNumber,
+        error: e?.message || String(e),
+      });
+
       return 0;
     } finally {
       setLoading(false);
@@ -559,6 +648,12 @@ const AddFood: React.FC = () => {
   };
 
   const fetchFoodDetailsByCode = async (code: string) => {
+    trackEvent("food_details_by_code_start", {
+      code,
+      meal,
+      date: dateKey,
+    });
+
     try {
       const r = await fetch(
         `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
@@ -576,6 +671,11 @@ const AddFood: React.FC = () => {
         setServingsQty(1);
         setWeightQty(100);
         setOpen(true);
+
+        trackEvent("food_details_by_code_success", {
+          code,
+          hasServing: canServing,
+        });
         return;
       }
 
@@ -586,6 +686,11 @@ const AddFood: React.FC = () => {
         show: true,
         message: e?.message ?? "Error getting food details",
         color: "danger",
+      });
+
+      trackEvent("food_details_by_code_error", {
+        code,
+        error: e?.message || String(e),
       });
     }
   };
@@ -689,6 +794,17 @@ const AddFood: React.FC = () => {
       brand: item.brand,
       code: item.code,
     });
+
+    trackEvent("diary_add_from_off", {
+      uid: auth.currentUser.uid,
+      meal,
+      date: dateKey,
+      code: item.code,
+      name: item.name,
+      mode: item.selection.mode,
+      calories: item.total.calories,
+    });
+
     setOpen(false);
     history.replace(`/app/home?date=${dateKey}`);
   };
@@ -742,12 +858,21 @@ const AddFood: React.FC = () => {
         message: "Saved to favorites",
         color: "success",
       });
+
+      trackEvent("favorite_saved_from_off", {
+        uid: user.uid,
+        code: selectedFood.code,
+        name: favData.name,
+      });
     } catch (e: any) {
       console.error(e);
       setToast({
         show: true,
         message: e?.message ?? "Could not save favorite",
         color: "danger",
+      });
+      trackEvent("favorite_save_error", {
+        error: e?.message || String(e),
       });
     }
   };
@@ -802,12 +927,21 @@ const AddFood: React.FC = () => {
       setCustomCarbs("");
       setCustomProtein("");
       setCustomFat("");
+
+      trackEvent("custom_food_saved", {
+        uid: user.uid,
+        name,
+        calories,
+      });
     } catch (e: any) {
       console.error(e);
       setToast({
         show: true,
         message: e?.message ?? "Could not save custom food",
         color: "danger",
+      });
+      trackEvent("custom_food_save_error", {
+        error: e?.message || String(e),
       });
     }
   };
@@ -836,6 +970,16 @@ const AddFood: React.FC = () => {
       brand: item.brand,
       code: item.code,
     });
+
+    trackEvent("diary_add_from_favorite", {
+      uid: user.uid,
+      meal,
+      date: dateKey,
+      favorite_id: fav.id,
+      source: fav.dataSource,
+      calories: fav.total.calories,
+    });
+
     history.replace(`/app/home?date=${dateKey}`);
   };
 
@@ -864,8 +1008,13 @@ const AddFood: React.FC = () => {
       },
       { merge: true }
     );
-  };
 
+    trackEvent("recent_food_upserted", {
+      uid: user.uid,
+      key,
+      name: payload.name,
+    });
+  };
 
   const addHistoryFoodToMeal = async (src: DiaryEntryDoc) => {
     const user = auth.currentUser;
@@ -894,6 +1043,15 @@ const AddFood: React.FC = () => {
     };
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+
+    trackEvent("diary_add_from_history", {
+      uid: user.uid,
+      meal,
+      date: dateKey,
+      name: item.name,
+      calories: item.total.calories,
+    });
+
     history.replace(`/app/home?date=${dateKey}`);
   };
 
@@ -933,12 +1091,21 @@ const AddFood: React.FC = () => {
       setMealPresetCarbs("");
       setMealPresetProtein("");
       setMealPresetFat("");
+
+      trackEvent("meal_preset_saved", {
+        uid: user.uid,
+        name,
+        calories,
+      });
     } catch (e: any) {
       console.error(e);
       setToast({
         show: true,
         message: e?.message ?? "Could not save meal preset",
         color: "danger",
+      });
+      trackEvent("meal_preset_save_error", {
+        error: e?.message || String(e),
       });
     }
   };
@@ -967,6 +1134,16 @@ const AddFood: React.FC = () => {
     };
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+
+    trackEvent("diary_add_from_meal_preset", {
+      uid: user.uid,
+      meal,
+      date: dateKey,
+      preset_id: preset.id,
+      name: preset.name,
+      calories: preset.total.calories,
+    });
+
     history.replace(`/app/home?date=${dateKey}`);
   };
 
@@ -991,12 +1168,20 @@ const AddFood: React.FC = () => {
         message: "Favorite deleted",
         color: "success",
       });
+
+      trackEvent("favorite_deleted", {
+        uid: user.uid,
+        favorite_id: favoriteToDelete.id,
+      });
     } catch (e: any) {
       console.error(e);
       setToast({
         show: true,
         message: e?.message ?? "Could not delete favorite",
         color: "danger",
+      });
+      trackEvent("favorite_delete_error", {
+        error: e?.message || String(e),
       });
     } finally {
       setFavoriteToDelete(null);
@@ -1055,9 +1240,15 @@ const AddFood: React.FC = () => {
 
         <IonSegment
           value={tab}
-          onIonChange={(e) =>
-            setTab((e.detail.value as "search" | "favorites") || "search")
-          }
+          onIonChange={(e) => {
+            const v = (e.detail.value as "search" | "favorites") || "search";
+            setTab(v);
+            trackEvent("add_food_tab_change", {
+              tab: v,
+              meal,
+              date: dateKey,
+            });
+          }}
           style={{ marginBottom: 12 }}
         >
           <IonSegmentButton value="search">
@@ -1076,7 +1267,14 @@ const AddFood: React.FC = () => {
                 value={query}
                 onIonChange={(e) => setQuery(e.detail.value || "")}
                 onKeyUp={(e) => {
-                  if (e.key === "Enter" && query.trim()) foodsSearch(query.trim(), 1);
+                  if (e.key === "Enter" && query.trim()) {
+                    trackEvent("food_search_enter_key", {
+                      query: query.trim(),
+                      meal,
+                      date: dateKey,
+                    });
+                    foodsSearch(query.trim(), 1);
+                  }
                 }}
               />
             </IonItem>
@@ -1091,7 +1289,15 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 disabled={!query || loading}
-                onClick={() => foodsSearch(query.trim(), 1)}
+                onClick={() => {
+                  if (!query.trim()) return;
+                  trackEvent("food_search_button_click", {
+                    query: query.trim(),
+                    meal,
+                    date: dateKey,
+                  });
+                  foodsSearch(query.trim(), 1);
+                }}
               >
                 {loading ? (
                   <>
@@ -1106,9 +1312,13 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() =>
-                  history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`)
-                }
+                onClick={() => {
+                  trackEvent("navigate_to_scan_barcode", {
+                    meal,
+                    date: dateKey,
+                  });
+                  history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`);
+                }}
               >
                 Barcode scanner
               </IonButton>
@@ -1137,6 +1347,11 @@ const AddFood: React.FC = () => {
                     <IonChip
                       key={r.id}
                       onClick={() => {
+                        trackEvent("recent_off_chip_click", {
+                          id: r.id,
+                          code: r.code,
+                          name: r.name,
+                        });
                         if (r.code) {
                           fetchFoodDetailsByCode(r.code);
                         } else {
@@ -1167,7 +1382,13 @@ const AddFood: React.FC = () => {
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
                     button
-                    onClick={() => fetchFoodDetailsByCode(food.code)}
+                    onClick={() => {
+                      trackEvent("search_result_click", {
+                        code: food.code,
+                        name: food.product_name || "(no name)",
+                      });
+                      fetchFoodDetailsByCode(food.code);
+                    }}
                   >
                     <IonLabel>
                       <h2>
@@ -1203,14 +1424,26 @@ const AddFood: React.FC = () => {
                 <IonButton
                   size="small"
                   disabled={page <= 1 || loading}
-                  onClick={() => foodsSearch(query.trim(), page - 1)}
+                  onClick={() => {
+                    trackEvent("food_search_page_prev", {
+                      page,
+                      query,
+                    });
+                    foodsSearch(query.trim(), page - 1);
+                  }}
                 >
                   Prev
                 </IonButton>
                 <IonButton
                   size="small"
                   disabled={loading}
-                  onClick={() => foodsSearch(query.trim(), page + 1)}
+                  onClick={() => {
+                    trackEvent("food_search_page_next", {
+                      page,
+                      query,
+                    });
+                    foodsSearch(query.trim(), page + 1);
+                  }}
                 >
                   Next
                 </IonButton>
@@ -1218,7 +1451,6 @@ const AddFood: React.FC = () => {
             )}
           </>
         )}
-
 
         {tab === "favorites" && (
           <>
@@ -1232,14 +1464,20 @@ const AddFood: React.FC = () => {
             >
               <IonButton
                 size="small"
-                onClick={() => setShowCreateCustomFood(true)}
+                onClick={() => {
+                  setShowCreateCustomFood(true);
+                  trackEvent("custom_food_modal_open");
+                }}
               >
                 Create custom food
               </IonButton>
               <IonButton
                 size="small"
                 fill="outline"
-                onClick={() => setShowCreateMealPreset(true)}
+                onClick={() => {
+                  setShowCreateMealPreset(true);
+                  trackEvent("meal_preset_modal_open");
+                }}
               >
                 Create custom meal
               </IonButton>
@@ -1356,6 +1594,9 @@ const AddFood: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setFavoriteToDelete(fav);
+                          trackEvent("favorite_delete_prompt_open", {
+                            favorite_id: fav.id,
+                          });
                         }}
                         aria-label={`Delete favorite ${fav.name}`}
                       >
@@ -1420,7 +1661,13 @@ const AddFood: React.FC = () => {
           </>
         )}
 
-        <IonModal isOpen={open} onDidDismiss={() => setOpen(false)}>
+        <IonModal
+          isOpen={open}
+          onDidDismiss={() => {
+            setOpen(false);
+            trackEvent("food_details_modal_dismiss");
+          }}
+        >
           <IonHeader>
             <IonToolbar>
               <IonTitle>
@@ -1457,9 +1704,14 @@ const AddFood: React.FC = () => {
 
                 <IonSegment
                   value={useServing ? "serving" : "weight"}
-                  onIonChange={(e) =>
-                    setUseServing(e.detail.value === "serving")
-                  }
+                  onIonChange={(e) => {
+                    const val = e.detail.value;
+                    const nextServing = val === "serving";
+                    setUseServing(nextServing);
+                    trackEvent("food_details_mode_change", {
+                      mode: nextServing ? "serving" : "weight",
+                    });
+                  }}
                 >
                   <IonSegmentButton
                     value="serving"
@@ -1710,7 +1962,10 @@ const AddFood: React.FC = () => {
                 >
                   <IonButton
                     expand="block"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      trackEvent("food_details_cancel");
+                    }}
                     fill="outline"
                   >
                     Cancel
@@ -1766,7 +2021,10 @@ const AddFood: React.FC = () => {
 
         <IonModal
           isOpen={showCreateCustomFood}
-          onDidDismiss={() => setShowCreateCustomFood(false)}
+          onDidDismiss={() => {
+            setShowCreateCustomFood(false);
+            trackEvent("custom_food_modal_dismiss");
+          }}
         >
           <IonHeader>
             <IonToolbar>
@@ -1841,7 +2099,10 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() => setShowCreateCustomFood(false)}
+                onClick={() => {
+                  setShowCreateCustomFood(false);
+                  trackEvent("custom_food_modal_cancel");
+                }}
               >
                 Cancel
               </IonButton>
@@ -1857,7 +2118,10 @@ const AddFood: React.FC = () => {
 
         <IonModal
           isOpen={showCreateMealPreset}
-          onDidDismiss={() => setShowCreateMealPreset(false)}
+          onDidDismiss={() => {
+            setShowCreateMealPreset(false);
+            trackEvent("meal_preset_modal_dismiss");
+          }}
         >
           <IonHeader>
             <IonToolbar>
@@ -1938,7 +2202,10 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() => setShowCreateMealPreset(false)}
+                onClick={() => {
+                  setShowCreateMealPreset(false);
+                  trackEvent("meal_preset_modal_cancel");
+                }}
               >
                 Cancel
               </IonButton>

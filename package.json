@@ -24,7 +24,7 @@
     "@types/react-router-dom": "^5.3.3",
     "@zxing/browser": "^0.1.5",
     "dotenv": "^17.2.3",
-    "firebase": "^12.4.0",
+    "firebase": "^12.6.0",
     "ionicons": "^7.4.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",

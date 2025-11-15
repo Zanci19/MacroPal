@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -11,6 +11,7 @@ import {
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
+import { useLocation } from "react-router-dom"; // 👈 NEW
 import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
 
 /* Standalone pages (non-tab) */
@@ -22,6 +23,7 @@ import CheckLogin from "./pages/CheckLogin";
 import Start from "./pages/Start";
 import ResetPassword from "./pages/ResetPassword";
 import AuthLoading from "./pages/authentication/AuthLoading";
+import Offline from "./pages/Offline";
 
 /* Tab pages */
 import Home from "./pages/home/Home";
@@ -50,12 +52,26 @@ import "@ionic/react/css/display.css";
 // import '@ionic/react/css/palettes/dark.class.css';
 import "@ionic/react/css/palettes/dark.system.css";
 
-/* Theme variables */
 import "./theme/variables.css";
+
+import { trackEvent } from "./firebase";
 
 setupIonicReact();
 
-/** Tabs are rendered ONLY when route starts with /app */
+const AnalyticsRouteTracker: React.FC = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    const path = location.pathname + (location.search || "");
+    trackEvent("screen_view", {
+      screen_name: path,
+      screen_class: path,
+    });
+  }, [location]);
+
+  return null;
+};
+
 const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
@@ -91,8 +107,9 @@ const TabsShell: React.FC = () => (
 const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
+      <AnalyticsRouteTracker />
+
       <IonRouterOutlet id="root">
-        {/* ---- Non-tab routes (no bottom bar) ---- */}
         <Route exact path="/login" component={Login} />
         <Route exact path="/register" component={Register} />
         <Route exact path="/add-food" component={AddFood} />
@@ -102,11 +119,10 @@ const App: React.FC = () => (
         <Route exact path="/reset-password" component={ResetPassword} />
         <Route exact path="/scan-barcode" component={ScanBarcode} />
         <Route exact path="/auth-loading" component={AuthLoading} />
+        <Route exact path="/offline" component={Offline} />
 
-        {/* ---- Tabs (show bottom bar) ---- */}
         <Route path="/app" component={TabsShell} />
 
-        {/* Initial redirect to your auth gate */}
         <Redirect exact from="/" to="/check-login" />
       </IonRouterOutlet>
     </IonReactRouter>

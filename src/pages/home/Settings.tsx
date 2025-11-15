@@ -1,3 +1,4 @@
+// src/pages/settings/Settings.tsx
 import React from "react";
 import {
   IonPage,
@@ -22,7 +23,7 @@ import {
   mailOutline,
   warningOutline,
   cafeOutline,
-} from "ionicons/icons"; // <-- added cafe icon
+} from "ionicons/icons";
 import { auth } from "../../firebase";
 import {
   sendEmailVerification,
@@ -155,6 +156,15 @@ const Settings: React.FC = () => {
 
         {/* Account actions */}
         <IonList>
+          {/* 🔹 New item: open SetupProfile to edit goals/targets */}
+          <IonItem
+            lines="full"
+            button
+            onClick={() => history.push("/setup-profile")}
+          >
+            <IonLabel>Profile, goals & targets</IonLabel>
+          </IonItem>
+
           <IonItem lines="full">
             <IonLabel>Email verification</IonLabel>
             <IonButton
@@ -207,7 +217,7 @@ const Settings: React.FC = () => {
         </IonList>
       </IonContent>
 
-      {/* Alerts + Toasts (unchanged) */}
+      {/* Alerts + Toasts unchanged */}
       <IonAlert
         isOpen={confirmDelete}
         header="Delete account?"
