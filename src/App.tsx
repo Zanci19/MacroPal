@@ -77,7 +77,7 @@ const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
       {/* Home & Analytics tabs */}
-      <Route exact path="/app/left" component={Analytics} />
+      <Route exact path="/app/analytics" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
 
       {/* Settings index and dynamic sections */}
@@ -88,7 +88,7 @@ const TabsShell: React.FC = () => (
     </IonRouterOutlet>
 
     <IonTabBar slot="bottom">
-      <IonTabButton tab="left" href="/app/left">
+      <IonTabButton tab="analytics" href="/app/analytics">
         <IonIcon aria-hidden="true" icon={analyticsSharp} />
         <IonLabel>Analytics</IonLabel>
       </IonTabButton>
