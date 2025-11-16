@@ -1,33 +1,43 @@
-/* ==========================
-   Home.css — MacroPal Home
-   ========================== */
-
 :root {
-  --mp-surface: var(--ion-card-background, #12161b);
-  --mp-bg: var(--ion-background-color, #0f1115);
-  --mp-text: var(--ion-text-color, #e5e7eb);
-  --mp-text-muted: rgba(229, 231, 235, 0.7);
-  --mp-border: rgba(255, 255, 255, 0.09);
-  --mp-ring-accent: var(--ion-color-primary, #3b82f6);
-  --mp-good: #22c55e;
-  --mp-bad: #ef4444;
-  --mp-chip-bg: rgba(255, 255, 255, 0.06);
-  --mp-shadow: 0 1px 2px rgba(0,0,0,.35), 0 6px 20px rgba(0,0,0,.45);
-  --mp-shadow-strong: 0 10px 30px rgba(0,0,0,.55);
-
+  --mp-surface: #f8f9fb;
+  --mp-bg: var(--ion-background-color, #ffffff);
+  --mp-text: #111827;
+  --mp-text-muted: rgba(55, 65, 81, 0.7);
+  --mp-border: rgba(0, 0, 0, 0.08);
+  --mp-chip-bg: rgba(0, 0, 0, 0.04);
+  --mp-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --mp-shadow-strong: 0 8px 20px rgba(0, 0, 0, 0.15);
   --mp-r-card: 16px;
   --mp-sub: 0.95rem;
 }
 
-/* Base */
+body.dark {
+  --mp-surface: #121212;
+  --mp-bg: #020617;
+  --mp-text: #e5e7eb;
+  --mp-text-muted: rgba(148, 163, 184, 0.9);
+  --mp-border: rgba(255, 255, 255, 0.1);
+  --mp-chip-bg: rgba(255, 255, 255, 0.06);
+  --mp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.45);
+  --mp-shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+body.dark .fs-summary__hdr ion-card-title {
+  color: #ffffff !important;
+}
+
 .home-content {
   background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(59,130,246,0.06), transparent 60%),
-    radial-gradient(1000px 600px at 100% -20%, rgba(99,102,241,0.06), transparent 55%),
+    radial-gradient(1200px 600px at 20% -10%, rgba(59, 130, 246, 0.06), transparent 60%),
+    radial-gradient(1000px 600px at 100% -20%, rgba(99, 102, 241, 0.06), transparent 55%),
     var(--mp-bg);
   min-height: 100%;
 }
-ion-title { font-weight: 800; letter-spacing: .2px; }
+
+ion-title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
 
 .fs-datebar {
   display: flex;
@@ -36,12 +46,14 @@ ion-title { font-weight: 800; letter-spacing: .2px; }
   gap: 12px;
   margin-bottom: 16px;
 }
+
 .fs-datebar ion-button[fill="clear"] {
   --padding-start: 6px;
   --padding-end: 6px;
-  --background-hover: rgba(255,255,255,0.05);
+  --background-hover: rgba(255, 255, 255, 0.05);
   border-radius: 9999px;
 }
+
 .fs-datebtn {
   --border-radius: 9999px;
   --padding-start: 18px;
@@ -52,31 +64,44 @@ ion-title { font-weight: 800; letter-spacing: .2px; }
   align-items: center;
   gap: 8px;
 }
+
 .fs-datebtn__label {
   font-weight: 700;
-  letter-spacing: .2px;
+  letter-spacing: 0.2px;
 }
+
 .fs-datebtn__badge {
   margin-left: 4px;
 }
 
-
-/* Card */
 ion-card {
   border-radius: var(--mp-r-card);
   background: var(--mp-surface);
   box-shadow: var(--mp-shadow);
   border: 1px solid var(--mp-border);
   overflow: hidden;
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
-ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong); border-color: rgba(255,255,255,0.14); }
 
-/* ---------- SUMMARY ---------- */
+ion-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--mp-shadow-strong);
+  border-color: var(--mp-border);
+}
 
-.fs-summary { padding-bottom: 8px; }
-.fs-summary__hdr { padding: 12px 16px; background: transparent; }
-.fs-summary__hdr ion-card-title { font-weight: 800; letter-spacing: .2px; }
+.fs-summary {
+  padding-bottom: 8px;
+}
+
+.fs-summary__hdr {
+  padding: 12px 16px;
+  background: transparent;
+}
+
+.fs-summary__hdr ion-card-title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
 
 .fs-summary__row {
   display: grid;
@@ -91,44 +116,55 @@ ion-card:hover { transform: translateY(-1px); box-shadow: var(--mp-shadow-strong
   align-items: center;
   justify-content: center;
 }
+
 .ring-center {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
 }
+
 .ring-pct {
   font-weight: 800;
-  font-size: .95rem;
+  font-size: 0.95rem;
   color: var(--mp-text);
-  opacity: .9;
+  opacity: 0.9;
 }
 
-.fs-summary__mid { display: grid; gap: 10px; }
-.fs-metric-title { font-size: 0.95rem; color: var(--mp-text-muted); }
+.fs-summary__mid {
+  display: grid;
+  gap: 10px;
+}
+
+.fs-metric-title {
+  font-size: 0.95rem;
+  color: var(--mp-text-muted);
+}
 
 .fs-summary__right {
   display: grid;
   gap: 10px;
   justify-items: end;
 }
+
 .fs-metric-value {
   font-weight: 800;
   font-size: 1.3rem;
 }
 
-/* Macros row under summary */
 .fs-macros {
   display: flex;
   gap: 10px;
   padding: 4px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
 }
+
 .fs-summary__goal {
   padding: 0 16px 6px;
   font-size: 0.85rem;
   color: var(--mp-text-muted);
 }
+
 .fs-macro {
   display: inline-flex;
   align-items: center;
@@ -226,7 +262,7 @@ ion-list { background: transparent !important; width: 100%; }
   --inner-padding-end: 8px;
   --min-height: 56px;
   --background: transparent;
-  --border-color: rgba(255,255,255,0.08);
+  --border-color: var(--mp-border);
   --border-style: solid;
   --border-width: 0 0 1px 0;
 }
@@ -239,7 +275,7 @@ ion-list { background: transparent !important; width: 100%; }
   padding: 6px 10px;
   border-radius: 10px;
   background: var(--mp-chip-bg);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid var(--mp-border);
   min-width: 86px;
   text-align: center;
 }

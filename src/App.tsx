@@ -14,7 +14,6 @@ import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
 import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
 
-/* Standalone pages (non-tab) */
 import Login from "./pages/authentication/Login";
 import Register from "./pages/authentication/Register";
 import AddFood from "./pages/AddFood";
@@ -25,21 +24,15 @@ import ResetPassword from "./pages/ResetPassword";
 import AuthLoading from "./pages/authentication/AuthLoading";
 import Offline from "./pages/Offline";
 
-/* Tab pages */
 import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings";
 import ScanBarcode from "./pages/ScanBarcode";
 
-/* Core CSS required for Ionic components to work properly */
 import "@ionic/react/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
 import "@ionic/react/css/normalize.css";
 import "@ionic/react/css/structure.css";
 import "@ionic/react/css/typography.css";
-
-/* Optional CSS utils */
 import "@ionic/react/css/padding.css";
 import "@ionic/react/css/float-elements.css";
 import "@ionic/react/css/text-alignment.css";
@@ -47,10 +40,7 @@ import "@ionic/react/css/text-transformation.css";
 import "@ionic/react/css/flex-utils.css";
 import "@ionic/react/css/display.css";
 
-/* Dark Mode (optional) */
-// import '@ionic/react/css/palettes/dark.always.css';
-// import '@ionic/react/css/palettes/dark.class.css';
-import "@ionic/react/css/palettes/dark.system.css";
+import "@ionic/react/css/palettes/dark.class.css";
 
 import "./theme/variables.css";
 
@@ -76,14 +66,9 @@ const AnalyticsRouteTracker: React.FC = () => {
 const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
-      {/* Home & Analytics tabs */}
       <Route exact path="/app/analytics" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
-
-      {/* Settings index and dynamic sections */}
       <Route exact path="/app/settings" component={Settings} />
-
-      {/* Fallback inside tabs */}
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
 
@@ -106,31 +91,50 @@ const TabsShell: React.FC = () => (
   </IonTabs>
 );
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <UpdateGate>
-        <AnalyticsRouteTracker />
+const App: React.FC = () => {
+  useEffect(() => {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
-        <IonRouterOutlet id="root">
-          <Route exact path="/login" component={Login} />
-          <Route exact path="/register" component={Register} />
-          <Route exact path="/add-food" component={AddFood} />
-          <Route exact path="/setup-profile" component={SetupProfile} />
-          <Route exact path="/check-login" component={CheckLogin} />
-          <Route exact path="/start" component={Start} />
-          <Route exact path="/reset-password" component={ResetPassword} />
-          <Route exact path="/scan-barcode" component={ScanBarcode} />
-          <Route exact path="/auth-loading" component={AuthLoading} />
-          <Route exact path="/offline" component={Offline} />
+    const applyTheme = (isDark: boolean) => {
+      document.body.classList.toggle("dark", isDark);
+    };
 
-          <Route path="/app" component={TabsShell} />
+    applyTheme(prefersDark.matches);
 
-          <Redirect exact from="/" to="/check-login" />
-        </IonRouterOutlet>
-      </UpdateGate>
-    </IonReactRouter>
-  </IonApp>
-);
+    const listener = (event: MediaQueryListEvent) => {
+      applyTheme(event.matches);
+    };
+
+    prefersDark.addEventListener("change", listener);
+    return () => prefersDark.removeEventListener("change", listener);
+  }, []);
+
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <UpdateGate>
+          <AnalyticsRouteTracker />
+
+          <IonRouterOutlet id="root">
+            <Route exact path="/login" component={Login} />
+            <Route exact path="/register" component={Register} />
+            <Route exact path="/add-food" component={AddFood} />
+            <Route exact path="/setup-profile" component={SetupProfile} />
+            <Route exact path="/check-login" component={CheckLogin} />
+            <Route exact path="/start" component={Start} />
+            <Route exact path="/reset-password" component={ResetPassword} />
+            <Route exact path="/scan-barcode" component={ScanBarcode} />
+            <Route exact path="/auth-loading" component={AuthLoading} />
+            <Route exact path="/offline" component={Offline} />
+
+            <Route path="/app" component={TabsShell} />
+
+            <Redirect exact from="/" to="/check-login" />
+          </IonRouterOutlet>
+        </UpdateGate>
+      </IonReactRouter>
+    </IonApp>
+  );
+};
 
 export default App;

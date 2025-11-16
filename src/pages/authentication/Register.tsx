@@ -51,44 +51,66 @@ const Register: React.FC = () => {
   ) => setToast({ show: true, message, color });
 
   const handleRegister = async () => {
+    // Cleaned values (avoid weird spaces / characters from keyboards)
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+    const cleanPw = (pw ?? "").trim();
+    const cleanPw2 = (pw2 ?? "").trim();
+
+    // Optional debug analytics (no actual password logged)
     trackEvent("register_attempt", {
-      has_name: !!name.trim(),
-      has_email: !!email.trim(),
+      has_name: !!cleanName,
+      has_email: !!cleanEmail,
+      pw_len: cleanPw.length,
+      pw2_len: cleanPw2.length,
+      pw_match: cleanPw === cleanPw2,
     });
 
     // Client-side validation (fail fast with clear messages)
-    if (!name.trim()) {
+    if (!cleanName) {
       trackEvent("register_validation_failed", { reason: "name_empty" });
       return showToast("Please enter your name.");
     }
-    if (!emailOk(email)) {
+    if (!emailOk(cleanEmail)) {
       trackEvent("register_validation_failed", { reason: "invalid_email" });
       return showToast("Please enter a valid email address.");
     }
-    if (!passwordStrongEnough(pw)) {
+    if (!cleanPw) {
+      trackEvent("register_validation_failed", { reason: "password_empty" });
+      return showToast("Please enter a password.");
+    }
+    if (!passwordStrongEnough(cleanPw)) {
       trackEvent("register_validation_failed", { reason: "weak_password" });
       return showToast(
         "Password must be at least 8 characters and include a letter and a number."
       );
     }
-    if (pw !== pw2) {
+    if (!cleanPw2) {
+      trackEvent("register_validation_failed", { reason: "confirm_empty" });
+      return showToast("Please confirm your password.");
+    }
+    if (cleanPw !== cleanPw2) {
       trackEvent("register_validation_failed", { reason: "password_mismatch" });
       return showToast("Passwords do not match.");
     }
 
     try {
-      // Create auth user
-      const cred = await createUserWithEmailAndPassword(auth, email.trim(), pw);
+      // Create auth user with cleaned values
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        cleanEmail,
+        cleanPw
+      );
 
       // Attach display name (safe to do pre-verification)
-      await updateProfile(cred.user, { displayName: name.trim() });
+      await updateProfile(cred.user, { displayName: cleanName });
 
       // Send verification email (ActionCodeSettings optional; keep simple default)
       await sendEmailVerification(cred.user);
 
       trackEvent("register_success", {
         uid: cred.user.uid,
-        has_display_name: !!name.trim(),
+        has_display_name: !!cleanName,
       });
 
       // Immediately sign out so unverified users cannot continue into the app
@@ -96,8 +118,11 @@ const Register: React.FC = () => {
       trackEvent("register_signed_out_unverified", {
         uid: cred.user.uid,
       });
-      
-      showToast("Verification email sent. Please check your inbox.", "success");
+
+      showToast(
+        "Verification email sent. Please check your inbox.",
+        "success"
+      );
 
       // Short delay so the toast is visible, then return to login
       setTimeout(() => history.push("/login"), 900);

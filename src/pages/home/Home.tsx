@@ -976,7 +976,7 @@ const Home: React.FC = () => {
                           <div
                             style={{
                               height: 8,
-                              background: "var(--ion-color-light)",
+                              //background: "var(--ion-color-light)",
                               borderRadius: 9999,
                               overflow: "hidden",
                             }}
@@ -985,7 +985,7 @@ const Home: React.FC = () => {
                               style={{
                                 width: `${pct * 100}%`,
                                 height: "100%",
-                                background: "var(--ion-color-primary)",
+                                //background: "var(--ion-color-primary)",
                               }}
                             />
                           </div>

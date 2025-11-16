@@ -1032,8 +1032,6 @@ const Analytics: React.FC = () => {
                 style={{
                   height: "100%",
                   width: "100%",
-                  background: "#000",
-                  color: "#fff",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",

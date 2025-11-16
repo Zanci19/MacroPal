@@ -51,7 +51,6 @@ const AuthLoading: React.FC = () => {
             targetRoute = "/setup-profile";
           }
         } else {
-          // Create basic doc if missing
           await setDoc(
             userRef,
             {
@@ -68,8 +67,14 @@ const AuthLoading: React.FC = () => {
         history.replace(targetRoute);
       } catch (e) {
         console.error("AuthLoading error:", e);
-        setMessage("Could not load your account. Sending you back to login...");
-        setTimeout(() => history.replace("/login"), 2000);
+
+        if (!navigator.onLine) {
+          setMessage("No internet connection.");
+          setTimeout(() => history.replace("/offline"), 1500);
+        } else {
+          setMessage("Could not load your account. Sending you back to login...");
+          setTimeout(() => history.replace("/login"), 2000);
+        }
       }
     };
 
