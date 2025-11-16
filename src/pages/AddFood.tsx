@@ -807,7 +807,7 @@ const AddFood: React.FC = () => {
 
     setOpen(false);
     history.replace(`/app/home?date=${dateKey}`);
-  };
+  }
 
   const saveCurrentSelectionAsFavorite = async () => {
     const user = auth.currentUser;

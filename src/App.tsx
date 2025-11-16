@@ -11,7 +11,7 @@ import {
 } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
-import { useLocation } from "react-router-dom"; // 👈 NEW
+import { useLocation } from "react-router-dom";
 import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
 
 /* Standalone pages (non-tab) */
@@ -28,7 +28,7 @@ import Offline from "./pages/Offline";
 /* Tab pages */
 import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
-import Settings from "./pages/home/Settings"; // Settings index list
+import Settings from "./pages/home/Settings";
 import ScanBarcode from "./pages/ScanBarcode";
 
 /* Core CSS required for Ionic components to work properly */
@@ -55,6 +55,7 @@ import "@ionic/react/css/palettes/dark.system.css";
 import "./theme/variables.css";
 
 import { trackEvent } from "./firebase";
+import UpdateGate from "./UpdateGate";
 
 setupIonicReact();
 
@@ -75,12 +76,13 @@ const AnalyticsRouteTracker: React.FC = () => {
 const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
-      {/* Home & Left tabs */}
+      {/* Home & Analytics tabs */}
       <Route exact path="/app/left" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
 
       {/* Settings index and dynamic sections */}
       <Route exact path="/app/settings" component={Settings} />
+
       {/* Fallback inside tabs */}
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
@@ -107,24 +109,26 @@ const TabsShell: React.FC = () => (
 const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
-      <AnalyticsRouteTracker />
+      <UpdateGate>
+        <AnalyticsRouteTracker />
 
-      <IonRouterOutlet id="root">
-        <Route exact path="/login" component={Login} />
-        <Route exact path="/register" component={Register} />
-        <Route exact path="/add-food" component={AddFood} />
-        <Route exact path="/setup-profile" component={SetupProfile} />
-        <Route exact path="/check-login" component={CheckLogin} />
-        <Route exact path="/start" component={Start} />
-        <Route exact path="/reset-password" component={ResetPassword} />
-        <Route exact path="/scan-barcode" component={ScanBarcode} />
-        <Route exact path="/auth-loading" component={AuthLoading} />
-        <Route exact path="/offline" component={Offline} />
+        <IonRouterOutlet id="root">
+          <Route exact path="/login" component={Login} />
+          <Route exact path="/register" component={Register} />
+          <Route exact path="/add-food" component={AddFood} />
+          <Route exact path="/setup-profile" component={SetupProfile} />
+          <Route exact path="/check-login" component={CheckLogin} />
+          <Route exact path="/start" component={Start} />
+          <Route exact path="/reset-password" component={ResetPassword} />
+          <Route exact path="/scan-barcode" component={ScanBarcode} />
+          <Route exact path="/auth-loading" component={AuthLoading} />
+          <Route exact path="/offline" component={Offline} />
 
-        <Route path="/app" component={TabsShell} />
+          <Route path="/app" component={TabsShell} />
 
-        <Redirect exact from="/" to="/check-login" />
-      </IonRouterOutlet>
+          <Redirect exact from="/" to="/check-login" />
+        </IonRouterOutlet>
+      </UpdateGate>
     </IonReactRouter>
   </IonApp>
 );
