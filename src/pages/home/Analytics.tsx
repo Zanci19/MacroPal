@@ -237,6 +237,19 @@ const Analytics: React.FC = () => {
     [view]
   );
 
+  // 🔹 Detect if we actually have *any* data (non-zero macros)
+  const hasAnyData = useMemo(
+    () =>
+      dayTable.some(
+        (d) =>
+          d.calories > 0 ||
+          d.carbs > 0 ||
+          d.protein > 0 ||
+          d.fat > 0
+      ),
+    [dayTable]
+  );
+
   // macro totals and averages
   const totals = useMemo(
     () =>
@@ -293,8 +306,8 @@ const Analytics: React.FC = () => {
     () =>
       view.length
         ? [...view].sort(
-            (a, b) => b.roll.macros.calories - a.roll.macros.calories
-          )[0]
+          (a, b) => b.roll.macros.calories - a.roll.macros.calories
+        )[0]
         : null,
     [view]
   );
@@ -302,8 +315,8 @@ const Analytics: React.FC = () => {
     () =>
       view.length
         ? [...view].sort(
-            (a, b) => a.roll.macros.calories - b.roll.macros.calories
-          )[0]
+          (a, b) => a.roll.macros.calories - b.roll.macros.calories
+        )[0]
         : null,
     [view]
   );
@@ -406,7 +419,7 @@ const Analytics: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding" fullscreen>
         {(authLoading || loading) && (
           <div className="ion-text-center" style={{ padding: 24 }}>
             <IonSpinner name="dots" />
@@ -415,597 +428,628 @@ const Analytics: React.FC = () => {
 
         {!authLoading && !loading && (
           <>
-            {/* Controls */}
-            <IonGrid>
-              <IonRow className="ion-align-items-center">
-                <IonCol size="12" sizeMd="7">
-                  <IonSegment
-                    value={tf}
-                    onIonChange={(e) =>
-                      setTf((e.detail.value as TF) ?? "30d")
-                    }
-                  >
-                    <IonSegmentButton value="7d">
-                      <IonLabel>7 days</IonLabel>
-                    </IonSegmentButton>
-                    <IonSegmentButton value="30d">
-                      <IonLabel>30 days</IonLabel>
-                    </IonSegmentButton>
-                    <IonSegmentButton value="60d">
-                      <IonLabel>60 days</IonLabel>
-                    </IonSegmentButton>
-                  </IonSegment>
-                </IonCol>
-                <IonCol
-                  size="12"
-                  sizeMd="5"
-                  className="ion-text-right ion-padding-top"
-                >
-                  <IonButton
-                    fill="outline"
-                    onClick={exportCSV}
-                    style={{ marginRight: 8, marginBottom: 8 }}
-                  >
-                    <IonIcon icon={downloadOutline} slot="start" /> CSV
-                  </IonButton>
-                  <IonButton
-                    fill="outline"
-                    onClick={exportJSON}
-                    style={{ marginBottom: 8 }}
-                  >
-                    <IonIcon icon={downloadOutline} slot="start" /> JSON
-                  </IonButton>
-                </IonCol>
-              </IonRow>
-            </IonGrid>
-
-            {/* Overview cards */}
-            <IonGrid>
-              <IonRow>
-                <IonCol size="12" sizeMd="6">
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle>
-                        Average day
-                        <IonChip color="success" style={{ marginLeft: 8 }}>
-                          <IonIcon icon={trendingUpOutline} />
-                          &nbsp;{avg.calories} kcal
-                        </IonChip>
-                      </IonCardTitle>
-                      <IonCardSubtitle>
-                        Across the selected range
-                      </IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <div>Carbohydrates {avg.carbs.toFixed(0)} g</div>
-                      <div>Protein {avg.protein.toFixed(0)} g</div>
-                      <div>Fat {avg.fat.toFixed(0)} g</div>
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
-
-                <IonCol size="12" sizeMd="6">
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle>Calories by meal</IonCardTitle>
-                      <IonCardSubtitle>Aggregate share</IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <div style={{ width: "100%", height: 260 }}>
-                        <ResponsiveContainer>
-                          <PieChart>
-                            <Pie
-                              data={[
-                                {
-                                  name: "Breakfast",
-                                  value: mealShare.breakfast,
-                                },
-                                { name: "Lunch", value: mealShare.lunch },
-                                { name: "Dinner", value: mealShare.dinner },
-                                { name: "Snacks", value: mealShare.snacks },
-                              ]}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={58}
-                              outerRadius={96}
-                              paddingAngle={2}
-                              cx="50%"
-                              cy="50%"
-                            >
-                              {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
-                                (_, i) => (
-                                  <Cell
-                                    key={i}
-                                    fill={palette[i % palette.length]}
-                                  />
-                                )
-                              )}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* Custom legend below chart */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 12,
-                          justifyContent: "center",
-                          flexWrap: "wrap",
-                          marginTop: 8,
-                          fontSize: 12,
-                        }}
+            {hasAnyData ? (
+              <>
+                {/* Controls */}
+                <IonGrid>
+                  <IonRow className="ion-align-items-center">
+                    <IonCol size="12" sizeMd="7">
+                      <IonSegment
+                        value={tf}
+                        onIonChange={(e) =>
+                          setTf((e.detail.value as TF) ?? "30d")
+                        }
                       >
-                        {[
-                          { label: "Breakfast", color: palette[0] },
-                          { label: "Lunch", color: palette[1] },
-                          { label: "Dinner", color: palette[2] },
-                          { label: "Snacks", color: palette[3] },
-                        ].map((it) => (
+                        <IonSegmentButton value="7d">
+                          <IonLabel>7 days</IonLabel>
+                        </IonSegmentButton>
+                        <IonSegmentButton value="30d">
+                          <IonLabel>30 days</IonLabel>
+                        </IonSegmentButton>
+                        <IonSegmentButton value="60d">
+                          <IonLabel>60 days</IonLabel>
+                        </IonSegmentButton>
+                      </IonSegment>
+                    </IonCol>
+                    <IonCol
+                      size="12"
+                      sizeMd="5"
+                      className="ion-text-right ion-padding-top"
+                    >
+                      <IonButton
+                        fill="outline"
+                        onClick={exportCSV}
+                        style={{ marginRight: 8, marginBottom: 8 }}
+                      >
+                        <IonIcon icon={downloadOutline} slot="start" /> CSV
+                      </IonButton>
+                      <IonButton
+                        fill="outline"
+                        onClick={exportJSON}
+                        style={{ marginBottom: 8 }}
+                      >
+                        <IonIcon icon={downloadOutline} slot="start" /> JSON
+                      </IonButton>
+                    </IonCol>
+                  </IonRow>
+                </IonGrid>
+
+                {/* Overview cards */}
+                <IonGrid>
+                  <IonRow>
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>
+                            Average day
+                            <IonChip color="success" style={{ marginLeft: 8 }}>
+                              <IonIcon icon={trendingUpOutline} />
+                              &nbsp;{avg.calories} kcal
+                            </IonChip>
+                          </IonCardTitle>
+                          <IonCardSubtitle>
+                            Across the selected range
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          <div>Carbohydrates {avg.carbs.toFixed(0)} g</div>
+                          <div>Protein {avg.protein.toFixed(0)} g</div>
+                          <div>Fat {avg.fat.toFixed(0)} g</div>
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
+
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>Calories by meal</IonCardTitle>
+                          <IonCardSubtitle>Aggregate share</IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          <div style={{ width: "100%", height: 260 }}>
+                            <ResponsiveContainer>
+                              <PieChart>
+                                <Pie
+                                  data={[
+                                    {
+                                      name: "Breakfast",
+                                      value: mealShare.breakfast,
+                                    },
+                                    { name: "Lunch", value: mealShare.lunch },
+                                    { name: "Dinner", value: mealShare.dinner },
+                                    { name: "Snacks", value: mealShare.snacks },
+                                  ]}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={58}
+                                  outerRadius={96}
+                                  paddingAngle={2}
+                                  cx="50%"
+                                  cy="50%"
+                                >
+                                  {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
+                                    (_, i) => (
+                                      <Cell
+                                        key={i}
+                                        fill={palette[i % palette.length]}
+                                      />
+                                    )
+                                  )}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Custom legend below chart */}
                           <div
-                            key={it.label}
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
+                              display: "flex",
+                              gap: 12,
+                              justifyContent: "center",
+                              flexWrap: "wrap",
+                              marginTop: 8,
+                              fontSize: 12,
                             }}
                           >
-                            <span
-                              style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: "50%",
-                                background: it.color,
-                              }}
-                            />
-                            <span>{it.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
-              </IonRow>
-            </IonGrid>
-
-            {/* Calories trend + MA7 */}
-            <IonCard>
-              <IonCardHeader>
-                <IonCardTitle>
-                  Calories trend
-                  <IonChip color="medium" style={{ marginLeft: 8 }}>
-                    <IonIcon icon={timeOutline} />
-                    &nbsp;{tf}
-                  </IonChip>
-                </IonCardTitle>
-                <IonCardSubtitle>
-                  Daily calories and 7-day moving average
-                </IonCardSubtitle>
-              </IonCardHeader>
-              <IonCardContent>
-                <div style={{ width: "100%", height: 300 }}>
-                  <ResponsiveContainer>
-                    <ComposedChart
-                      data={view.map((d, i) => ({
-                        date: fmtDate(d.key),
-                        kcal: kcalSeries[i],
-                        ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
-                      }))}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Area
-                        type="monotone"
-                        dataKey="kcal"
-                        name="Calories"
-                        fill={palette[0]}
-                        stroke={palette[0]}
-                        opacity={0.25}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="ma7"
-                        name="MA7"
-                        stroke={palette[1]}
-                        dot={false}
-                        strokeWidth={2}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                </div>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Macro energy stacked bars */}
-            <IonCard>
-              <IonCardHeader>
-                <IonCardTitle>
-                  Macro energy split
-                  <IonChip color="tertiary" style={{ marginLeft: 8 }}>
-                    <IonIcon icon={barChartOutline} />
-                    &nbsp;kcal by day
-                  </IonChip>
-                </IonCardTitle>
-                <IonCardSubtitle>
-                  Carbohydrates, protein, fat as kcal
-                </IonCardSubtitle>
-              </IonCardHeader>
-              <IonCardContent>
-                <div style={{ width: "100%", height: 260 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={macroEnergyByDay}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar
-                        dataKey="carbsK"
-                        stackId="a"
-                        name="Carbohydrates kcal"
-                        fill={palette[0]}
-                      />
-                      <Bar
-                        dataKey="proteinK"
-                        stackId="a"
-                        name="Protein kcal"
-                        fill={palette[1]}
-                      />
-                      <Bar
-                        dataKey="fatK"
-                        stackId="a"
-                        name="Fat kcal"
-                        fill={palette[2]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Macro ratio donut and radar vs averages */}
-            <IonGrid>
-              <IonRow>
-                <IonCol size="12" sizeMd="6">
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle>
-                        Macro energy ratio
-                        <IonChip color="primary" style={{ marginLeft: 8 }}>
-                          <IonIcon icon={pieChartOutline} />
-                          &nbsp;Total mix
-                        </IonChip>
-                      </IonCardTitle>
-                      <IonCardSubtitle>
-                        Share of kcal from macros
-                      </IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <div style={{ width: "100%", height: 260 }}>
-                        <ResponsiveContainer>
-                          <PieChart>
-                            <Pie
-                              data={macroDonut}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={58}
-                              outerRadius={96}
-                              paddingAngle={1}
-                              cx="50%"
-                              cy="50%"
-                            >
-                              {macroDonut.map((_, i) => (
-                                <Cell
-                                  key={i}
-                                  fill={palette[i % palette.length]}
+                            {[
+                              { label: "Breakfast", color: palette[0] },
+                              { label: "Lunch", color: palette[1] },
+                              { label: "Dinner", color: palette[2] },
+                              { label: "Snacks", color: palette[3] },
+                            ].map((it) => (
+                              <div
+                                key={it.label}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: "50%",
+                                    background: it.color,
+                                  }}
                                 />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      </div>
+                                <span>{it.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
+                  </IonRow>
+                </IonGrid>
 
-                      {/* Custom legend below chart */}
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 12,
-                          justifyContent: "center",
-                          flexWrap: "wrap",
-                          marginTop: 8,
-                          fontSize: 12,
-                        }}
-                      >
-                        {[
-                          { label: "Carbohydrates", color: palette[0] },
-                          { label: "Protein", color: palette[1] },
-                          { label: "Fat", color: palette[2] },
-                        ].map((it) => (
+                {/* Calories trend + MA7 */}
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>
+                      Calories trend
+                      <IonChip color="medium" style={{ marginLeft: 8 }}>
+                        <IonIcon icon={timeOutline} />
+                        &nbsp;{tf}
+                      </IonChip>
+                    </IonCardTitle>
+                    <IonCardSubtitle>
+                      Daily calories and 7-day moving average
+                    </IonCardSubtitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ width: "100%", height: 300 }}>
+                      <ResponsiveContainer>
+                        <ComposedChart
+                          data={view.map((d, i) => ({
+                            date: fmtDate(d.key),
+                            kcal: kcalSeries[i],
+                            ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
+                          }))}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Area
+                            type="monotone"
+                            dataKey="kcal"
+                            name="Calories"
+                            fill={palette[0]}
+                            stroke={palette[0]}
+                            opacity={0.25}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="ma7"
+                            name="MA7"
+                            stroke={palette[1]}
+                            dot={false}
+                            strokeWidth={2}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+
+                {/* Macro energy stacked bars */}
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>
+                      Macro energy split
+                      <IonChip color="tertiary" style={{ marginLeft: 8 }}>
+                        <IonIcon icon={barChartOutline} />
+                        &nbsp;kcal by day
+                      </IonChip>
+                    </IonCardTitle>
+                    <IonCardSubtitle>
+                      Carbohydrates, protein, fat as kcal
+                    </IonCardSubtitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ width: "100%", height: 260 }}>
+                      <ResponsiveContainer>
+                        <BarChart data={macroEnergyByDay}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                          <XAxis dataKey="date" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Bar
+                            dataKey="carbsK"
+                            stackId="a"
+                            name="Carbohydrates kcal"
+                            fill={palette[0]}
+                          />
+                          <Bar
+                            dataKey="proteinK"
+                            stackId="a"
+                            name="Protein kcal"
+                            fill={palette[1]}
+                          />
+                          <Bar
+                            dataKey="fatK"
+                            stackId="a"
+                            name="Fat kcal"
+                            fill={palette[2]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+
+                {/* Macro ratio donut and radar vs averages */}
+                <IonGrid>
+                  <IonRow>
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>
+                            Macro energy ratio
+                            <IonChip color="primary" style={{ marginLeft: 8 }}>
+                              <IonIcon icon={pieChartOutline} />
+                              &nbsp;Total mix
+                            </IonChip>
+                          </IonCardTitle>
+                          <IonCardSubtitle>
+                            Share of kcal from macros
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          <div style={{ width: "100%", height: 260 }}>
+                            <ResponsiveContainer>
+                              <PieChart>
+                                <Pie
+                                  data={macroDonut}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={58}
+                                  outerRadius={96}
+                                  paddingAngle={1}
+                                  cx="50%"
+                                  cy="50%"
+                                >
+                                  {macroDonut.map((_, i) => (
+                                    <Cell
+                                      key={i}
+                                      fill={palette[i % palette.length]}
+                                    />
+                                  ))}
+                                </Pie>
+                                <Tooltip />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Custom legend below chart */}
                           <div
-                            key={it.label}
                             style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
+                              display: "flex",
+                              gap: 12,
+                              justifyContent: "center",
+                              flexWrap: "wrap",
+                              marginTop: 8,
+                              fontSize: 12,
                             }}
                           >
-                            <span
-                              style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: "50%",
-                                background: it.color,
-                              }}
-                            />
-                            <span>{it.label}</span>
+                            {[
+                              { label: "Carbohydrates", color: palette[0] },
+                              { label: "Protein", color: palette[1] },
+                              { label: "Fat", color: palette[2] },
+                            ].map((it) => (
+                              <div
+                                key={it.label}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: "50%",
+                                    background: it.color,
+                                  }}
+                                />
+                                <span>{it.label}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
 
-                <IonCol size="12" sizeMd="6">
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>
+                            Macro grams vs average
+                            <IonChip color="success" style={{ marginLeft: 8 }}>
+                              <IonIcon icon={analyticsOutline} />
+                              &nbsp;Radar
+                            </IonChip>
+                          </IonCardTitle>
+                          <IonCardSubtitle>
+                            Average daily grams across timeframe
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          <div style={{ width: "100%", height: 260 }}>
+                            <ResponsiveContainer>
+                              <RadarChart
+                                data={[
+                                  { metric: "Carbohydrates", g: avg.carbs },
+                                  { metric: "Protein", g: avg.protein },
+                                  { metric: "Fat", g: avg.fat },
+                                ]}
+                              >
+                                <PolarGrid />
+                                <PolarAngleAxis dataKey="metric" />
+                                <PolarRadiusAxis />
+                                <Radar
+                                  name="Avg g"
+                                  dataKey="g"
+                                  stroke={palette[0]}
+                                  fill={palette[0]}
+                                  fillOpacity={0.35}
+                                />
+                                <Legend />
+                                <Tooltip />
+                              </RadarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
+                  </IonRow>
+                </IonGrid>
+
+                {/* Micronutrient trend */}
+                {microKeys.length > 0 && (
                   <IonCard>
                     <IonCardHeader>
                       <IonCardTitle>
-                        Macro grams vs average
-                        <IonChip color="success" style={{ marginLeft: 8 }}>
-                          <IonIcon icon={analyticsOutline} />
-                          &nbsp;Radar
+                        Micronutrient trend
+                        <IonChip color="medium" style={{ marginLeft: 8 }}>
+                          <IonIcon icon={timeOutline} />
+                          &nbsp;{microKey}
                         </IonChip>
                       </IonCardTitle>
                       <IonCardSubtitle>
-                        Average daily grams across timeframe
+                        Auto-detected numeric fields in your entries
                       </IonCardSubtitle>
                     </IonCardHeader>
                     <IonCardContent>
-                      <div style={{ width: "100%", height: 260 }}>
+                      <IonGrid>
+                        <IonRow className="ion-align-items-center">
+                          <IonCol size="12" sizeMd="4">
+                            <IonSelect
+                              value={microKey}
+                              onIonChange={(e) =>
+                                setMicroKey(e.detail.value as string)
+                              }
+                              interface="popover"
+                            >
+                              {microKeys.map((k) => (
+                                <IonSelectOption key={k} value={k}>
+                                  {k}
+                                </IonSelectOption>
+                              ))}
+                            </IonSelect>
+                          </IonCol>
+                        </IonRow>
+                      </IonGrid>
+                      <div style={{ width: "100%", height: 240 }}>
                         <ResponsiveContainer>
-                          <RadarChart
-                            data={[
-                              { metric: "Carbohydrates", g: avg.carbs },
-                              { metric: "Protein", g: avg.protein },
-                              { metric: "Fat", g: avg.fat },
-                            ]}
-                          >
-                            <PolarGrid />
-                            <PolarAngleAxis dataKey="metric" />
-                            <PolarRadiusAxis />
-                            <Radar
-                              name="Avg g"
-                              dataKey="g"
-                              stroke={palette[0]}
-                              fill={palette[0]}
-                              fillOpacity={0.35}
-                            />
-                            <Legend />
+                          <LineChart data={microSeries}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" />
+                            <YAxis />
                             <Tooltip />
-                          </RadarChart>
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              name={microKey}
+                              stroke={palette[3]}
+                              dot={false}
+                              strokeWidth={2}
+                            />
+                          </LineChart>
                         </ResponsiveContainer>
                       </div>
                     </IonCardContent>
                   </IonCard>
-                </IonCol>
-              </IonRow>
-            </IonGrid>
+                )}
 
-            {/* Micronutrient trend */}
-            {microKeys.length > 0 && (
-              <IonCard>
-                <IonCardHeader>
-                  <IonCardTitle>
-                    Micronutrient trend
-                    <IonChip color="medium" style={{ marginLeft: 8 }}>
-                      <IonIcon icon={timeOutline} />
-                      &nbsp;{microKey}
-                    </IonChip>
-                  </IonCardTitle>
-                  <IonCardSubtitle>
-                    Auto-detected numeric fields in your entries
-                  </IonCardSubtitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <IonGrid>
-                    <IonRow className="ion-align-items-center">
-                      <IonCol size="12" sizeMd="4">
-                        <IonSelect
-                          value={microKey}
-                          onIonChange={(e) =>
-                            setMicroKey(e.detail.value as string)
-                          }
-                          interface="popover"
+                {/* Best and lowest days */}
+                <IonGrid>
+                  <IonRow>
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>
+                            Highest intake
+                            <IonChip color="warning" style={{ marginLeft: 8 }}>
+                              <IonIcon icon={medalOutline} />
+                              &nbsp;
+                              {bestDay
+                                ? Math.round(bestDay.roll.macros.calories)
+                                : "–"}{" "}
+                              kcal
+                            </IonChip>
+                          </IonCardTitle>
+                          <IonCardSubtitle>
+                            {bestDay?.key || "—"}
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          {bestDay ? (
+                            <ul style={{ margin: 0, paddingLeft: 16 }}>
+                              <li>
+                                Carbohydrates{" "}
+                                {bestDay.roll.macros.carbs.toFixed(0)} g
+                              </li>
+                              <li>
+                                Protein{" "}
+                                {bestDay.roll.macros.protein.toFixed(0)} g
+                              </li>
+                              <li>
+                                Fat {bestDay.roll.macros.fat.toFixed(0)} g
+                              </li>
+                            </ul>
+                          ) : (
+                            "—"
+                          )}
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
+
+                    <IonCol size="12" sizeMd="6">
+                      <IonCard>
+                        <IonCardHeader>
+                          <IonCardTitle>Lowest intake</IonCardTitle>
+                          <IonCardSubtitle>
+                            {lowDay?.key || "—"}
+                          </IonCardSubtitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          {lowDay ? (
+                            <ul style={{ margin: 0, paddingLeft: 16 }}>
+                              <li>
+                                Carbohydrates{" "}
+                                {lowDay.roll.macros.carbs.toFixed(0)} g
+                              </li>
+                              <li>
+                                Protein{" "}
+                                {lowDay.roll.macros.protein.toFixed(0)} g
+                              </li>
+                              <li>
+                                Fat {lowDay.roll.macros.fat.toFixed(0)} g
+                              </li>
+                            </ul>
+                          ) : (
+                            "—"
+                          )}
+                        </IonCardContent>
+                      </IonCard>
+                    </IonCol>
+                  </IonRow>
+                </IonGrid>
+
+                {/* Top foods table */}
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>Top foods by calories</IonCardTitle>
+                    <IonCardSubtitle>
+                      Across the selected timeframe
+                    </IonCardSubtitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ fontSize: 14 }}>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 120px 80px",
+                          fontWeight: 700,
+                          opacity: 0.8,
+                        }}
+                      >
+                        <div>Food</div>
+                        <div className="ion-text-right">Calories</div>
+                        <div className="ion-text-right">Logs</div>
+                      </div>
+                      {topFoods.map((f, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 120px 80px",
+                            padding: "6px 0",
+                            borderBottom: "1px solid rgba(255,255,255,.08)",
+                          }}
                         >
-                          {microKeys.map((k) => (
-                            <IonSelectOption key={k} value={k}>
-                              {k}
-                            </IonSelectOption>
-                          ))}
-                        </IonSelect>
-                      </IonCol>
-                    </IonRow>
-                  </IonGrid>
-                  <div style={{ width: "100%", height: 240 }}>
-                    <ResponsiveContainer>
-                      <LineChart data={microSeries}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                        <XAxis dataKey="date" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line
-                          type="monotone"
-                          dataKey="value"
-                          name={microKey}
-                          stroke={palette[3]}
-                          dot={false}
-                          strokeWidth={2}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </IonCardContent>
-              </IonCard>
+                          <div>
+                            {f.name}
+                            {f.brand ? ` · ${f.brand}` : ""}
+                          </div>
+                          <div className="ion-text-right">
+                            {Math.round(f.calories)}
+                          </div>
+                          <div className="ion-text-right">{f.count}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+
+                {/* Daily rollup list */}
+                <IonCard>
+                  <IonCardHeader>
+                    <IonCardTitle>Daily rollup</IonCardTitle>
+                    <IonCardSubtitle>
+                      Carbohydrates, protein, fat per day
+                    </IonCardSubtitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        lineHeight: 1.6,
+                        opacity: 0.9,
+                      }}
+                    >
+                      {dayTable.map((d) => (
+                        <div
+                          key={d.date}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "110px 1fr",
+                            gap: 10,
+                          }}
+                        >
+                          <div style={{ fontWeight: 700 }}>{d.date}</div>
+                          <div>
+                            {d.calories} kcal · Carbohydrates{" "}
+                            {d.carbs.toFixed(0)} g · Protein{" "}
+                            {d.protein.toFixed(0)} g · Fat{" "}
+                            {d.fat.toFixed(0)} g
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </IonCardContent>
+                </IonCard>
+              </>
+            ) : (
+              <div
+                style={{
+                  height: "100%",
+                  width: "100%",
+                  background: "#000",
+                  color: "#fff",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                <h2 style={{ margin: 0, fontSize: "2rem", fontWeight: 700 }}>
+                  No analytics yet!
+                </h2>
+                <p style={{ marginTop: "10px", fontSize: "1.1rem", opacity: 0.8 }}>
+                  Log some food to unlock your stats 🚀
+                </p>
+              </div>
             )}
-
-            {/* Best and lowest days */}
-            <IonGrid>
-              <IonRow>
-                <IonCol size="12" sizeMd="6">
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle>
-                        Highest intake
-                        <IonChip color="warning" style={{ marginLeft: 8 }}>
-                          <IonIcon icon={medalOutline} />
-                          &nbsp;
-                          {bestDay
-                            ? Math.round(bestDay.roll.macros.calories)
-                            : "–"}{" "}
-                          kcal
-                        </IonChip>
-                      </IonCardTitle>
-                      <IonCardSubtitle>{bestDay?.key || "—"}</IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      {bestDay ? (
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>
-                          <li>
-                            Carbohydrates{" "}
-                            {bestDay.roll.macros.carbs.toFixed(0)} g
-                          </li>
-                          <li>
-                            Protein {bestDay.roll.macros.protein.toFixed(0)} g
-                          </li>
-                          <li>
-                            Fat {bestDay.roll.macros.fat.toFixed(0)} g
-                          </li>
-                        </ul>
-                      ) : (
-                        "—"
-                      )}
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
-
-                <IonCol size="12" sizeMd="6">
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle>Lowest intake</IonCardTitle>
-                      <IonCardSubtitle>{lowDay?.key || "—"}</IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      {lowDay ? (
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>
-                          <li>
-                            Carbohydrates {lowDay.roll.macros.carbs.toFixed(0)}{" "}
-                            g
-                          </li>
-                          <li>
-                            Protein {lowDay.roll.macros.protein.toFixed(0)} g
-                          </li>
-                          <li>
-                            Fat {lowDay.roll.macros.fat.toFixed(0)} g
-                          </li>
-                        </ul>
-                      ) : (
-                        "—"
-                      )}
-                    </IonCardContent>
-                  </IonCard>
-                </IonCol>
-              </IonRow>
-            </IonGrid>
-
-            {/* Top foods table */}
-            <IonCard>
-              <IonCardHeader>
-                <IonCardTitle>Top foods by calories</IonCardTitle>
-                <IonCardSubtitle>
-                  Across the selected timeframe
-                </IonCardSubtitle>
-              </IonCardHeader>
-              <IonCardContent>
-                <div style={{ fontSize: 14 }}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 120px 80px",
-                      fontWeight: 700,
-                      opacity: 0.8,
-                    }}
-                  >
-                    <div>Food</div>
-                    <div className="ion-text-right">Calories</div>
-                    <div className="ion-text-right">Logs</div>
-                  </div>
-                  {topFoods.map((f, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 120px 80px",
-                        padding: "6px 0",
-                        borderBottom:
-                          "1px solid rgba(255,255,255,.08)",
-                      }}
-                    >
-                      <div>
-                        {f.name}
-                        {f.brand ? ` · ${f.brand}` : ""}
-                      </div>
-                      <div className="ion-text-right">
-                        {Math.round(f.calories)}
-                      </div>
-                      <div className="ion-text-right">{f.count}</div>
-                    </div>
-                  ))}
-                </div>
-              </IonCardContent>
-            </IonCard>
-
-            {/* Daily rollup list */}
-            <IonCard>
-              <IonCardHeader>
-                <IonCardTitle>Daily rollup</IonCardTitle>
-                <IonCardSubtitle>
-                  Carbohydrates, protein, fat per day
-                </IonCardSubtitle>
-              </IonCardHeader>
-              <IonCardContent>
-                <div
-                  style={{
-                    fontSize: 13,
-                    lineHeight: 1.6,
-                    opacity: 0.9,
-                  }}
-                >
-                  {dayTable.map((d) => (
-                    <div
-                      key={d.date}
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "110px 1fr",
-                        gap: 10,
-                      }}
-                    >
-                      <div style={{ fontWeight: 700 }}>{d.date}</div>
-                      <div>
-                        {d.calories} kcal · Carbohydrates{" "}
-                        {d.carbs.toFixed(0)} g · Protein{" "}
-                        {d.protein.toFixed(0)} g · Fat{" "}
-                        {d.fat.toFixed(0)} g
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </IonCardContent>
-            </IonCard>
           </>
         )}
       </IonContent>
