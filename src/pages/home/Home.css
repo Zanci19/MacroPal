@@ -14,10 +14,10 @@
 body.dark {
   --mp-surface: #121212;
   --mp-bg: #020617;
-  --mp-text: #e5e7eb;
+  --mp-text: #ffffff;
   --mp-text-muted: rgba(148, 163, 184, 0.9);
-  --mp-border: rgba(255, 255, 255, 0.1);
-  --mp-chip-bg: rgba(255, 255, 255, 0.06);
+  --mp-border: rgba(255, 255, 255, 0.28);
+  --mp-chip-bg: rgba(255, 255, 255, 0.16);
   --mp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.45);
   --mp-shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.55);
 }
@@ -154,33 +154,47 @@ ion-card:hover {
 
 .fs-macros {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
-  padding: 4px 14px 12px 14px;
+  padding: 8px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
 }
 
-.fs-summary__goal {
-  padding: 0 16px 6px;
-  font-size: 0.85rem;
-  color: var(--mp-text-muted);
-}
-
+/* base (light mode) */
 .fs-macro {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 12px;
-  background: var(--mp-chip-bg);
-  border: 1px dashed var(--mp-border);
+  border-radius: 9999px;
+  background-color: var(--mp-chip-bg);
+  border: 1px solid var(--mp-border);
 }
+
 .fs-macro__label {
   font-weight: 800;
-  opacity: .9;
+  opacity: 0.9;
 }
+
 .fs-macro__val {
   color: var(--mp-text);
   font-weight: 600;
+}
+
+/* DARK MODE: make them impossible to miss */
+body.dark .fs-macros {
+  background-color: #050816 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+body.dark .fs-macro {
+  background-color: #1f2937 !important;
+  border-color: rgba(148, 163, 184, 0.95) !important;
+}
+
+body.dark .fs-macro__label,
+body.dark .fs-macro__val {
+  color: #f9fafb !important;
 }
 
 /* ---------- MEALS ---------- */

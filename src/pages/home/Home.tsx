@@ -976,7 +976,7 @@ const Home: React.FC = () => {
                           <div
                             style={{
                               height: 8,
-                              //background: "var(--ion-color-light)",
+                              background: "rgba(148, 163, 184, 0.35)", // visible track in both themes
                               borderRadius: 9999,
                               overflow: "hidden",
                             }}
@@ -985,7 +985,8 @@ const Home: React.FC = () => {
                               style={{
                                 width: `${pct * 100}%`,
                                 height: "100%",
-                                //background: "var(--ion-color-primary)",
+                                background: "var(--ion-color-primary)", // blue fill
+                                transition: "width 0.2s ease-out",
                               }}
                             />
                           </div>
