@@ -1,0 +1,16 @@
+.mp-card-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
+  color: var(--mp-text);          /* uses your light/dark theme vars */
+}
+
+.mp-card-subtitle {
+  font-size: 0.9rem;
+  color: var(--mp-text-muted);    /* softer but still readable */
+}
+
+/* optional: tighten spacing inside cards a bit */
+ion-card-header {
+  padding-bottom: 8px;
+}

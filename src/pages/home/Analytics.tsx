@@ -1,4 +1,3 @@
-// src/pages/left/Analytics.tsx (or Left.tsx, whatever your file is called)
 import React, { useEffect, useMemo, useState } from "react";
 import {
   IonPage,
@@ -64,6 +63,8 @@ import {
 import type { MealKey, Macros, DiaryEntry, DayDiaryDoc } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
 
+import "./Analytics.css";
+
 /* ============================
    Types / constants
    ============================ */
@@ -81,9 +82,15 @@ type DayRoll = {
   };
 };
 
-/* ============================
-   Helpers
-   ============================ */
+/** Keys we now store in AddFood as extra nutrients on total/perBase */
+const EXTRA_NUTRIENT_KEYS = [
+  "sugar",
+  "fiber",
+  "saturatedFat",
+  "salt",
+  "sodium",
+];
+
 const fmtDate = (iso: string) => iso.slice(5); // MM-DD
 const dayKey = (d: Date) => d.toISOString().split("T")[0];
 const addDays = (d: Date, n: number) => {
@@ -92,6 +99,29 @@ const addDays = (d: Date, n: number) => {
   return x;
 };
 
+function microKeyOrder(k: string): number {
+  const idx = EXTRA_NUTRIENT_KEYS.indexOf(k);
+  return idx === -1 ? EXTRA_NUTRIENT_KEYS.length + 1 : idx;
+}
+
+function prettyMicroLabel(k: string): string {
+  switch (k) {
+    case "sugar":
+      return "Sugars (g)";
+    case "fiber":
+      return "Fiber (g)";
+    case "saturatedFat":
+      return "Saturated fat (g)";
+    case "salt":
+      return "Salt (g)";
+    case "sodium":
+      return "Sodium (g)";
+    default:
+      return k;
+  }
+}
+
+/* Sum per-day macros (c/p/f) from all meals */
 function sumDay(doc: DayDiaryDoc) {
   const all: DiaryEntry[] = MEALS.flatMap((m) => doc[m] || []);
   const macros: Macros = all.reduce(
@@ -141,7 +171,14 @@ function collectMicroKeys(items: DiaryEntry[]) {
       if (typeof v === "number" && isFinite(v)) keys.add(k);
     });
   });
-  return [...keys];
+  const arr = [...keys];
+  arr.sort((a, b) => {
+    const oa = microKeyOrder(a);
+    const ob = microKeyOrder(b);
+    if (oa !== ob) return oa - ob;
+    return a.localeCompare(b);
+  });
+  return arr;
 }
 
 /* ============================
@@ -170,9 +207,7 @@ const Analytics: React.FC = () => {
         const keys = Array.from({ length: 60 }, (_, i) =>
           dayKey(addDays(today, -i))
         );
-        const reads = keys.map((k) =>
-          getDoc(doc(db, "users", uid, "foods", k))
-        );
+        const reads = keys.map((k) => getDoc(doc(db, "users", uid, "foods", k)));
         const snaps = await Promise.all(reads);
 
         const list: DayRoll[] = snaps
@@ -207,6 +242,18 @@ const Analytics: React.FC = () => {
     return days.slice(-60);
   }, [days, tf]);
 
+  // Only days with any intake (ignore 0-kcal “empty” days)
+  const nonEmptyView = useMemo(
+    () =>
+      view.filter((d) => {
+        const m = d.roll.macros;
+        return (
+          m.calories > 0 || m.carbs > 0 || m.protein > 0 || m.fat > 0
+        );
+      }),
+    [view]
+  );
+
   // series
   const kcalSeries = useMemo(
     () => view.map((d) => Math.round(d.roll.macros.calories)),
@@ -237,23 +284,25 @@ const Analytics: React.FC = () => {
     [view]
   );
 
-  // 🔹 Detect if we actually have *any* data (non-zero macros)
-  const hasAnyData = useMemo(
+  const nonEmptyDayTable = useMemo(
     () =>
-      dayTable.some(
+      dayTable.filter(
         (d) =>
-          d.calories > 0 ||
-          d.carbs > 0 ||
-          d.protein > 0 ||
-          d.fat > 0
+          d.calories > 0 || d.carbs > 0 || d.protein > 0 || d.fat > 0
       ),
     [dayTable]
   );
 
-  // macro totals and averages
+  // Have any real data?
+  const hasAnyData = useMemo(
+    () => nonEmptyDayTable.length > 0,
+    [nonEmptyDayTable]
+  );
+
+  // macro totals and averages (only on non-empty days)
   const totals = useMemo(
     () =>
-      dayTable.reduce(
+      nonEmptyDayTable.reduce(
         (a, x) => ({
           calories: a.calories + x.calories,
           carbs: a.carbs + x.carbs,
@@ -262,18 +311,18 @@ const Analytics: React.FC = () => {
         }),
         { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
       ),
-    [dayTable]
+    [nonEmptyDayTable]
   );
 
   const avg = useMemo(() => {
-    const n = Math.max(1, dayTable.length);
+    const n = Math.max(1, nonEmptyDayTable.length || 0);
     return {
       calories: Math.round(totals.calories / n),
       carbs: +(totals.carbs / n).toFixed(1),
       protein: +(totals.protein / n).toFixed(1),
       fat: +(totals.fat / n).toFixed(1),
     };
-  }, [totals, dayTable.length]);
+  }, [totals, nonEmptyDayTable.length]);
 
   // macro donut data
   const macroDonut = useMemo(
@@ -301,30 +350,30 @@ const Analytics: React.FC = () => {
     return acc;
   }, [view]);
 
-  // best/worst days
+  // best/worst days (ignore 0-kcal days)
   const bestDay = useMemo(
     () =>
-      view.length
-        ? [...view].sort(
-          (a, b) => b.roll.macros.calories - a.roll.macros.calories
-        )[0]
+      nonEmptyView.length
+        ? [...nonEmptyView].sort(
+            (a, b) => b.roll.macros.calories - a.roll.macros.calories
+          )[0]
         : null,
-    [view]
+    [nonEmptyView]
   );
   const lowDay = useMemo(
     () =>
-      view.length
-        ? [...view].sort(
-          (a, b) => a.roll.macros.calories - b.roll.macros.calories
-        )[0]
+      nonEmptyView.length
+        ? [...nonEmptyView].sort(
+            (a, b) => a.roll.macros.calories - b.roll.macros.calories
+          )[0]
         : null,
-    [view]
+    [nonEmptyView]
   );
 
   // micronutrient keys and series
   const microKeys = useMemo(
-    () => collectMicroKeys(view.flatMap((d) => d.roll.items)),
-    [view]
+    () => collectMicroKeys(nonEmptyView.flatMap((d) => d.roll.items)),
+    [nonEmptyView]
   );
 
   useEffect(() => {
@@ -333,16 +382,18 @@ const Analytics: React.FC = () => {
 
   const microSeries = useMemo(() => {
     if (!microKey) return [];
-    return view.map((d) => {
+    return nonEmptyView.map((d) => {
       const sum = d.roll.items.reduce(
         (s, it) =>
           s +
-          (typeof it.total?.[microKey] === "number" ? it.total[microKey] : 0),
+          (typeof it.total?.[microKey] === "number"
+            ? (it.total[microKey] as number)
+            : 0),
         0
       );
       return { date: fmtDate(d.key), value: +sum.toFixed(1) };
     });
-  }, [view, microKey]);
+  }, [nonEmptyView, microKey]);
 
   // top foods by calories
   const topFoods = useMemo(() => {
@@ -350,7 +401,7 @@ const Analytics: React.FC = () => {
       string,
       { name: string; brand?: string; calories: number; count: number }
     >();
-    view.forEach((d) =>
+    nonEmptyView.forEach((d) =>
       d.roll.items.forEach((it) => {
         const key = `${(it.name || "").toLowerCase()}|${(
           it.brand || ""
@@ -370,7 +421,7 @@ const Analytics: React.FC = () => {
     return [...map.values()]
       .sort((a, b) => b.calories - a.calories)
       .slice(0, 10);
-  }, [view]);
+  }, [nonEmptyView]);
 
   // export
   const exportCSV = () => {
@@ -480,14 +531,14 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>
+                          <IonCardTitle className="mp-card-title">
                             Average day
                             <IonChip color="success" style={{ marginLeft: 8 }}>
                               <IonIcon icon={trendingUpOutline} />
                               &nbsp;{avg.calories} kcal
                             </IonChip>
                           </IonCardTitle>
-                          <IonCardSubtitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
                             Across the selected range
                           </IonCardSubtitle>
                         </IonCardHeader>
@@ -502,8 +553,12 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>Calories by meal</IonCardTitle>
-                          <IonCardSubtitle>Aggregate share</IonCardSubtitle>
+                          <IonCardTitle className="mp-card-title">
+                            Calories by meal
+                          </IonCardTitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
+                            Aggregate share
+                          </IonCardSubtitle>
                         </IonCardHeader>
                         <IonCardContent>
                           <div style={{ width: "100%", height: 260 }}>
@@ -587,14 +642,14 @@ const Analytics: React.FC = () => {
                 {/* Calories trend + MA7 */}
                 <IonCard>
                   <IonCardHeader>
-                    <IonCardTitle>
+                    <IonCardTitle className="mp-card-title">
                       Calories trend
                       <IonChip color="medium" style={{ marginLeft: 8 }}>
                         <IonIcon icon={timeOutline} />
                         &nbsp;{tf}
                       </IonChip>
                     </IonCardTitle>
-                    <IonCardSubtitle>
+                    <IonCardSubtitle className="mp-card-subtitle">
                       Daily calories and 7-day moving average
                     </IonCardSubtitle>
                   </IonCardHeader>
@@ -638,14 +693,14 @@ const Analytics: React.FC = () => {
                 {/* Macro energy stacked bars */}
                 <IonCard>
                   <IonCardHeader>
-                    <IonCardTitle>
+                    <IonCardTitle className="mp-card-title">
                       Macro energy split
                       <IonChip color="tertiary" style={{ marginLeft: 8 }}>
                         <IonIcon icon={barChartOutline} />
                         &nbsp;kcal by day
                       </IonChip>
                     </IonCardTitle>
-                    <IonCardSubtitle>
+                    <IonCardSubtitle className="mp-card-subtitle">
                       Carbohydrates, protein, fat as kcal
                     </IonCardSubtitle>
                   </IonCardHeader>
@@ -688,14 +743,14 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>
+                          <IonCardTitle className="mp-card-title">
                             Macro energy ratio
                             <IonChip color="primary" style={{ marginLeft: 8 }}>
                               <IonIcon icon={pieChartOutline} />
                               &nbsp;Total mix
                             </IonChip>
                           </IonCardTitle>
-                          <IonCardSubtitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
                             Share of kcal from macros
                           </IonCardSubtitle>
                         </IonCardHeader>
@@ -768,14 +823,14 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>
+                          <IonCardTitle className="mp-card-title">
                             Macro grams vs average
                             <IonChip color="success" style={{ marginLeft: 8 }}>
                               <IonIcon icon={analyticsOutline} />
                               &nbsp;Radar
                             </IonChip>
                           </IonCardTitle>
-                          <IonCardSubtitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
                             Average daily grams across timeframe
                           </IonCardSubtitle>
                         </IonCardHeader>
@@ -814,15 +869,17 @@ const Analytics: React.FC = () => {
                 {microKeys.length > 0 && (
                   <IonCard>
                     <IonCardHeader>
-                      <IonCardTitle>
+                      <IonCardTitle className="mp-card-title">
                         Micronutrient trend
                         <IonChip color="medium" style={{ marginLeft: 8 }}>
                           <IonIcon icon={timeOutline} />
-                          &nbsp;{microKey}
+                          &nbsp;
+                          {microKey ? prettyMicroLabel(microKey) : ""}
                         </IonChip>
                       </IonCardTitle>
-                      <IonCardSubtitle>
-                        Auto-detected numeric fields in your entries
+                      <IonCardSubtitle className="mp-card-subtitle">
+                        Auto-detected numeric fields in your entries (e.g.
+                        sugar, fiber, saturated fat, salt, sodium)
                       </IonCardSubtitle>
                     </IonCardHeader>
                     <IonCardContent>
@@ -838,7 +895,7 @@ const Analytics: React.FC = () => {
                             >
                               {microKeys.map((k) => (
                                 <IonSelectOption key={k} value={k}>
-                                  {k}
+                                  {prettyMicroLabel(k)}
                                 </IonSelectOption>
                               ))}
                             </IonSelect>
@@ -848,7 +905,10 @@ const Analytics: React.FC = () => {
                       <div style={{ width: "100%", height: 240 }}>
                         <ResponsiveContainer>
                           <LineChart data={microSeries}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              opacity={0.2}
+                            />
                             <XAxis dataKey="date" />
                             <YAxis />
                             <Tooltip />
@@ -856,7 +916,7 @@ const Analytics: React.FC = () => {
                             <Line
                               type="monotone"
                               dataKey="value"
-                              name={microKey}
+                              name={microKey ? prettyMicroLabel(microKey) : ""}
                               stroke={palette[3]}
                               dot={false}
                               strokeWidth={2}
@@ -874,7 +934,7 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>
+                          <IonCardTitle className="mp-card-title">
                             Highest intake
                             <IonChip color="warning" style={{ marginLeft: 8 }}>
                               <IonIcon icon={medalOutline} />
@@ -885,7 +945,7 @@ const Analytics: React.FC = () => {
                               kcal
                             </IonChip>
                           </IonCardTitle>
-                          <IonCardSubtitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
                             {bestDay?.key || "—"}
                           </IonCardSubtitle>
                         </IonCardHeader>
@@ -914,8 +974,10 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="6">
                       <IonCard>
                         <IonCardHeader>
-                          <IonCardTitle>Lowest intake</IonCardTitle>
-                          <IonCardSubtitle>
+                          <IonCardTitle className="mp-card-title">
+                            Lowest intake
+                          </IonCardTitle>
+                          <IonCardSubtitle className="mp-card-subtitle">
                             {lowDay?.key || "—"}
                           </IonCardSubtitle>
                         </IonCardHeader>
@@ -946,8 +1008,10 @@ const Analytics: React.FC = () => {
                 {/* Top foods table */}
                 <IonCard>
                   <IonCardHeader>
-                    <IonCardTitle>Top foods by calories</IonCardTitle>
-                    <IonCardSubtitle>
+                    <IonCardTitle className="mp-card-title">
+                      Top foods by calories
+                    </IonCardTitle>
+                    <IonCardSubtitle className="mp-card-subtitle">
                       Across the selected timeframe
                     </IonCardSubtitle>
                   </IonCardHeader>
@@ -992,8 +1056,10 @@ const Analytics: React.FC = () => {
                 {/* Daily rollup list */}
                 <IonCard>
                   <IonCardHeader>
-                    <IonCardTitle>Daily rollup</IonCardTitle>
-                    <IonCardSubtitle>
+                    <IonCardTitle className="mp-card-title">
+                      Daily rollup
+                    </IonCardTitle>
+                    <IonCardSubtitle className="mp-card-subtitle">
                       Carbohydrates, protein, fat per day
                     </IonCardSubtitle>
                   </IonCardHeader>
@@ -1005,7 +1071,7 @@ const Analytics: React.FC = () => {
                         opacity: 0.9,
                       }}
                     >
-                      {dayTable.map((d) => (
+                      {nonEmptyDayTable.map((d) => (
                         <div
                           key={d.date}
                           style={{
@@ -1043,7 +1109,13 @@ const Analytics: React.FC = () => {
                 <h2 style={{ margin: 0, fontSize: "2rem", fontWeight: 700 }}>
                   No analytics yet!
                 </h2>
-                <p style={{ marginTop: "10px", fontSize: "1.1rem", opacity: 0.8 }}>
+                <p
+                  style={{
+                    marginTop: "10px",
+                    fontSize: "1.1rem",
+                    opacity: 0.8,
+                  }}
+                >
                   Log some food to unlock your stats 🚀
                 </p>
               </div>

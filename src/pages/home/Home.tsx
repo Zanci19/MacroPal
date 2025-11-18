@@ -1,4 +1,3 @@
-// src/pages/home/Home.tsx
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IonPage,
@@ -25,6 +24,7 @@ import {
   IonActionSheet,
   IonReorderGroup,
   IonReorder,
+  IonAlert,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -38,6 +38,8 @@ import {
   chevronForwardOutline,
   calendarOutline,
   ellipsisVertical,
+  chevronDownOutline,
+  chevronUpOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
@@ -52,16 +54,22 @@ import {
 } from "../../utils/date";
 
 import type { MealKey, Macros, DiaryEntry, DayDiaryDoc } from "../../types";
-
 import { useProfile } from "../../hooks/useProfile";
+
+function safeNum(n: unknown, dp = 2): number {
+  const v = typeof n === "number" ? n : Number(n);
+  if (!Number.isFinite(v)) return 0;
+  const factor = Math.pow(10, dp);
+  return Math.round(v * factor) / factor;
+}
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-const ProgressRing: React.FC<{ size?: number; stroke?: number; progress: number }> = ({
-  size = 64,
-  stroke = 8,
-  progress,
-}) => {
+const ProgressRing: React.FC<{
+  size?: number;
+  stroke?: number;
+  progress: number;
+}> = ({ size = 64, stroke = 8, progress }) => {
   const r = (size - stroke) / 2;
   const C = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress || 0));
@@ -137,35 +145,34 @@ const Home: React.FC = () => {
   const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
 
-  const [collapsedMeals, setCollapsedMeals] = useState<Record<MealKey, boolean>>({
+  const [collapsedMeals, setCollapsedMeals] = useState<
+    Record<MealKey, boolean>
+  >({
     breakfast: false,
     lunch: false,
     dinner: false,
     snacks: false,
   });
 
-  const refreshStreak = useCallback(
-    async (userId: string) => {
-      const todayKeyValue = todayDateKey();
-      let s = 0;
-      for (let i = 0; i < 14; i++) {
-        const offset = shiftDateKey(todayKeyValue, -i);
-        const ds = await getDoc(doc(db, "users", userId, "foods", offset));
-        const dd = ds.data() as Partial<DayDiaryDoc> | undefined;
-        const any = !!(
-          dd?.breakfast?.length ||
-          dd?.lunch?.length ||
-          dd?.dinner?.length ||
-          dd?.snacks?.length
-        );
-        if (any) s++;
-        else break;
-      }
-      setStreak(s);
-      trackEvent("streak_calculated", { uid: userId, streak: s });
-    },
-    []
-  );
+  const refreshStreak = useCallback(async (userId: string) => {
+    const todayKeyValue = todayDateKey();
+    let s = 0;
+    for (let i = 0; i < 14; i++) {
+      const offset = shiftDateKey(todayKeyValue, -i);
+      const ds = await getDoc(doc(db, "users", userId, "foods", offset));
+      const dd = ds.data() as Partial<DayDiaryDoc> | undefined;
+      const any = !!(
+        dd?.breakfast?.length ||
+        dd?.lunch?.length ||
+        dd?.dinner?.length ||
+        dd?.snacks?.length
+      );
+      if (any) s++;
+      else break;
+    }
+    setStreak(s);
+    trackEvent("streak_calculated", { uid: userId, streak: s });
+  }, []);
 
   useEffect(() => {
     if (profileLoading) return;
@@ -225,7 +232,10 @@ const Home: React.FC = () => {
     const params = new URLSearchParams(location.search);
     if (params.get("date") === activeDateKey) return;
     params.set("date", activeDateKey);
-    history.replace({ pathname: location.pathname, search: `?${params.toString()}` });
+    history.replace({
+      pathname: location.pathname,
+      search: `?${params.toString()}`,
+    });
   }, [activeDateKey, history, location.pathname, location.search]);
 
   const todayKey = todayDateKey();
@@ -257,12 +267,12 @@ const Home: React.FC = () => {
       activity === "light"
         ? 1.375
         : activity === "moderate"
-        ? 1.55
-        : activity === "very"
-        ? 1.725
-        : activity === "extra"
-        ? 1.9
-        : 1.2;
+          ? 1.55
+          : activity === "very"
+            ? 1.725
+            : activity === "extra"
+              ? 1.9
+              : 1.2;
 
     let daily = bmr * mult;
     if (goal === "lose") daily -= 500;
@@ -310,8 +320,8 @@ const Home: React.FC = () => {
   const summaryDifferenceLabel = isToday
     ? "Calories Remaining"
     : kcalDelta >= 0
-    ? "Over target"
-    : "Under target";
+      ? "Over target"
+      : "Under target";
   const summaryDifferenceValue = isToday ? kcalLeft : Math.abs(kcalDelta);
 
   // Prefer stored macroTargets; fall back to formula if missing
@@ -346,7 +356,9 @@ const Home: React.FC = () => {
     const fatG = Math.round(Math.max(50, fatByWeight, fatByPercent));
     const fatK = fatG * 9;
 
-    const carbsG = Math.round(Math.max(0, caloriesNeeded - proteinK - fatK) / 4);
+    const carbsG = Math.round(
+      Math.max(0, caloriesNeeded - proteinK - fatK) / 4
+    );
 
     return { proteinG, fatG, carbsG };
   }, [profile, caloriesNeeded]);
@@ -555,7 +567,10 @@ const Home: React.FC = () => {
         );
       });
 
-      setToast({ open: true, message: `Copied ${pretty(meal)} from yesterday.` });
+      setToast({
+        open: true,
+        message: `Copied ${pretty(meal)} from yesterday.`,
+      });
 
       trackEvent("meal_copy_from_yesterday_success", {
         uid,
@@ -696,7 +711,10 @@ const Home: React.FC = () => {
         );
       });
 
-      setToast({ open: true, message: "Copied entire day from yesterday." });
+      setToast({
+        open: true,
+        message: "Copied entire day from yesterday.",
+      });
 
       trackEvent("day_copy_from_yesterday_success", {
         uid,
@@ -782,8 +800,8 @@ const Home: React.FC = () => {
     progress <= 0.9
       ? "var(--ion-color-success)"
       : progress <= 1.1
-      ? "var(--ion-color-warning)"
-      : "var(--ion-color-danger)";
+        ? "var(--ion-color-warning)"
+        : "var(--ion-color-danger)";
 
   const goRelativeDay = (delta: number) => {
     setActiveDateKey((prev) => {
@@ -846,6 +864,13 @@ const Home: React.FC = () => {
     });
   };
 
+  const anyItems =
+    dayData.breakfast.length +
+    dayData.lunch.length +
+    dayData.dinner.length +
+    dayData.snacks.length >
+    0;
+
   return (
     <IonPage>
       <IonHeader>
@@ -901,7 +926,7 @@ const Home: React.FC = () => {
         <IonCard className="fs-summary">
           <IonCardHeader className="fs-summary__hdr">
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <IonCardTitle>Today</IonCardTitle>
+              <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
               {streak > 1 && (
                 <IonChip color="success" style={{ marginInlineStart: 8 }}>
                   <IonIcon icon={flameOutline} />
@@ -922,81 +947,82 @@ const Home: React.FC = () => {
                   <ProgressRing size={64} stroke={8} progress={progress} />
                 </div>
                 <div className="fs-summary__mid">
-                  <div className="fs-metric-title">{summaryDifferenceLabel}</div>
+                  <div className="fs-metric-title">
+                    {summaryDifferenceLabel}
+                  </div>
                   <div className="fs-metric-title">Calories Consumed</div>
                 </div>
                 <div className="fs-summary__right">
-                  <div className="fs-metric-value">{summaryDifferenceValue}</div>
+                  <div className="fs-metric-value">
+                    {summaryDifferenceValue}
+                  </div>
                   <div className="fs-metric-value">{kcalConsumed}</div>
                 </div>
               </>
             )}
           </IonCardContent>
 
-          {profile && caloriesNeeded != null && (
-            <>
-              {(() => {
-                const t = macroTargets;
-                if (!t) return null;
+          {profile && caloriesNeeded != null && macroTargets && (
+            <div
+              className="fs-macro-bars"
+              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
+            >
+              {[
+                {
+                  k: "carbs",
+                  g: totals.day.carbs,
+                  tg: macroTargets.carbsG,
+                  l: "Carbohydrates",
+                },
+                {
+                  k: "protein",
+                  g: totals.day.protein,
+                  tg: macroTargets.proteinG,
+                  l: "Protein",
+                },
+                {
+                  k: "fat",
+                  g: totals.day.fat,
+                  tg: macroTargets.fatG,
+                  l: "Fat",
+                },
+              ].map(({ k, g, tg, l }) => {
+                const pct = tg ? Math.min(1, g / tg) : 0;
                 return (
-                  <div
-                    className="fs-macro-bars"
-                    style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-                  >
-                    {[
-                      {
-                        k: "carbs",
-                        g: totals.day.carbs,
-                        tg: t.carbsG,
-                        l: "Carbohydrates",
-                      },
-                      {
-                        k: "protein",
-                        g: totals.day.protein,
-                        tg: t.proteinG,
-                        l: "Protein",
-                      },
-                      { k: "fat", g: totals.day.fat, tg: t.fatG, l: "Fat" },
-                    ].map(({ k, g, tg, l }) => {
-                      const pct = Math.min(1, tg ? g / tg : 0);
-                      return (
-                        <div key={k} style={{ display: "grid", gap: 4 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              fontSize: 12,
-                            }}
-                          >
-                            <span>{l}</span>
-                            <span>
-                              {g.toFixed(0)} / {tg} g
-                            </span>
-                          </div>
-                          <div
-                            style={{
-                              height: 8,
-                              background: "rgba(148, 163, 184, 0.35)", // visible track in both themes
-                              borderRadius: 9999,
-                              overflow: "hidden",
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: `${pct * 100}%`,
-                                height: "100%",
-                                background: "var(--ion-color-primary)", // blue fill
-                                transition: "width 0.2s ease-out",
-                              }}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div key={k} style={{ display: "grid", gap: 4 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: 12,
+                      }}
+                    >
+                      <span>{l}</span>
+                      <span>
+                        {g.toFixed(0)} / {tg} g
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        height: 8,
+                        background: "rgba(148, 163, 184, 0.35)",
+                        borderRadius: 9999,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${pct * 100}%`,
+                          height: "100%",
+                          background: "var(--ion-color-primary)",
+                          transition: "width 0.2s ease-out",
+                        }}
+                      />
+                    </div>
                   </div>
                 );
-              })()}
-            </>
+              })}
+            </div>
           )}
         </IonCard>
 
@@ -1006,14 +1032,56 @@ const Home: React.FC = () => {
           </div>
         )}
 
+        {!loading && !anyItems && (
+          <div
+            style={{
+              marginTop: 24,
+              padding: 24,
+              textAlign: "center",
+              opacity: 0.9,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>
+              No foods logged yet
+            </h2>
+            <p style={{ marginTop: 8, fontSize: "0.95rem" }}>
+              Tap any meal below to start adding foods and see your stats
+              update.
+            </p>
+            <IonButton
+              style={{ marginTop: 12 }}
+              onClick={() => {
+                trackEvent("home_empty_state_add_food_tap", {
+                  uid,
+                  date: activeDateKey,
+                });
+                history.push(`/add-food?meal=breakfast&date=${activeDateKey}`);
+              }}
+            >
+              Add your first food
+            </IonButton>
+          </div>
+        )}
+
         {!loading &&
           MEALS.map((meal) => {
             const items = dayData[meal] || [];
             const hasItems = items.length > 0;
             const isCollapsed = collapsedMeals[meal];
 
+            const mealTotals = totals.perMeal[meal];
+            const hasMealTotals =
+              mealTotals &&
+              (mealTotals.calories > 0 ||
+                mealTotals.carbs > 0 ||
+                mealTotals.protein > 0 ||
+                mealTotals.fat > 0);
+
             return (
-              <IonCard key={meal} className={`fs-meal ${hasItems ? "is-open" : ""}`}>
+              <IonCard
+                key={meal}
+                className={`fs-meal ${hasItems ? "is-open" : ""}`}
+              >
                 <IonCardHeader className="fs-meal__hdr">
                   <IonItem
                     lines="none"
@@ -1028,7 +1096,28 @@ const Home: React.FC = () => {
                       icon={mealIcon[meal]}
                       aria-hidden="true"
                     />
-                    <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+
+                    {/* TITLE + TOTALS STACK */}
+                    <div className="fs-meal__title">
+                      <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+
+                      {hasMealTotals && !isCollapsed && (
+                        <div className="fs-meal__totals">
+                          {Math.round(mealTotals.calories)} kcal · Carbs{" "}
+                          {mealTotals.carbs.toFixed(0)} g · Protein{" "}
+                          {mealTotals.protein.toFixed(0)} g · Fat{" "}
+                          {mealTotals.fat.toFixed(0)} g
+                        </div>
+                      )}
+                    </div>
+
+                    <IonIcon
+                      slot="end"
+                      className="fs-meal__chevron"
+                      icon={isCollapsed ? chevronDownOutline : chevronUpOutline}
+                      aria-hidden="true"
+                    />
+
                     <IonButton
                       slot="end"
                       className="fs-meal__add"
@@ -1052,13 +1141,6 @@ const Home: React.FC = () => {
 
                 {hasItems && !isCollapsed && (
                   <IonCardContent>
-                    <p className="meal-total">
-                      Total: {Math.round(totals.perMeal[meal].calories)} kcal ·
-                      Carbohydrates {totals.perMeal[meal].carbs.toFixed(1)} g · Protein{" "}
-                      {totals.perMeal[meal].protein.toFixed(1)} g · Fat{" "}
-                      {totals.perMeal[meal].fat.toFixed(1)} g
-                    </p>
-
                     <IonButton
                       size="small"
                       fill="outline"
@@ -1081,27 +1163,111 @@ const Home: React.FC = () => {
                         onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
                       >
                         {items.map((it, idx) => {
-                          const kcal = Math.round(it.total.calories);
+                          const t: any = it.total || {
+                            calories: 0,
+                            carbs: 0,
+                            protein: 0,
+                            fat: 0,
+                          };
+                          const kcal = Math.round(t.calories || 0);
+                          const carbs =
+                            typeof t.carbs === "number" ? t.carbs : 0;
+                          const protein =
+                            typeof t.protein === "number" ? t.protein : 0;
+                          const fat =
+                            typeof t.fat === "number" ? t.fat : 0;
+
+                          const sugar =
+                            typeof t.sugar === "number" ? t.sugar : null;
+                          const fiber =
+                            typeof t.fiber === "number" ? t.fiber : null;
+                          const satFat =
+                            typeof t.saturatedFat === "number"
+                              ? t.saturatedFat
+                              : null;
+                          const salt =
+                            typeof t.salt === "number" ? t.salt : null;
+
+                          const hasMicros =
+                            sugar !== null ||
+                            fiber !== null ||
+                            satFat !== null ||
+                            salt !== null;
+
                           return (
-                            <IonItem key={`${it.addedAt}-${idx}`} className="meal-item">
+                            <IonItem
+                              key={`${it.addedAt}-${idx}`}
+                              className="meal-item"
+                              button
+                              detail={false}
+                              onClick={() => {
+                                trackEvent("meal_item_edit_via_add_food", {
+                                  uid,
+                                  date: activeDateKey,
+                                  meal,
+                                  index: idx,
+                                  name: it.name,
+                                });
+
+                                history.push({
+                                  pathname: "/add-food",
+                                  search: `?meal=${meal}&date=${activeDateKey}`,
+                                  state: {
+                                    editEntry: {
+                                      meal,
+                                      index: idx,
+                                      item: it,
+                                    },
+                                  },
+                                });
+                              }}
+                            >
                               <IonReorder slot="start" />
                               <IonLabel>
                                 <h2>
                                   {it.name}
                                   {it.brand ? ` · ${it.brand}` : ""}
                                 </h2>
-                                <p>
-                                  Carbohydrates {it.total.carbs.toFixed(1)} g · Protein{" "}
-                                  {it.total.protein.toFixed(1)} g · Fat{" "}
-                                  {it.total.fat.toFixed(1)} g
+                                <p className="meal-item-macros">
+                                  Carbs {carbs.toFixed(1)} g · Protein{" "}
+                                  {protein.toFixed(1)} g · Fat{" "}
+                                  {fat.toFixed(1)} g
                                 </p>
+                                {hasMicros && (
+                                  <p className="meal-item-micros">
+                                    {sugar !== null && (
+                                      <span>Sugar {sugar.toFixed(1)} g</span>
+                                    )}
+                                    {fiber !== null && (
+                                      <span>
+                                        {" "}
+                                        · Fiber {fiber.toFixed(1)} g
+                                      </span>
+                                    )}
+                                    {satFat !== null && (
+                                      <span>
+                                        {" "}
+                                        · Sat. fat {satFat.toFixed(1)} g
+                                      </span>
+                                    )}
+                                    {salt !== null && (
+                                      <span>
+                                        {" "}
+                                        · Salt {salt.toFixed(1)} g
+                                      </span>
+                                    )}
+                                  </p>
+                                )}
                               </IonLabel>
 
                               <IonButton
                                 slot="end"
                                 fill="clear"
                                 aria-label={`Remove ${it.name}`}
-                                onClick={() => deleteFood(meal, idx)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteFood(meal, idx);
+                                }}
                                 className="del-btn"
                               >
                                 <IonIcon icon={trashOutline} />
@@ -1130,7 +1296,9 @@ const Home: React.FC = () => {
               date: activeDateKey,
             });
           }}
-          header={copyMenuMeal ? `Actions for ${pretty(copyMenuMeal)}` : undefined}
+          header={
+            copyMenuMeal ? `Actions for ${pretty(copyMenuMeal)}` : undefined
+          }
           buttons={[
             {
               text: "Copy from yesterday",
@@ -1212,8 +1380,9 @@ const Home: React.FC = () => {
             <IonTitle>Select a day</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="ion-padding">
+        <IonContent className="ion-padding home-content">
           <IonDatetime
+            className="fs-datepicker"
             presentation="date"
             value={`${pendingDateKey}T00:00:00`}
             max={`${todayKey}T23:59:59`}

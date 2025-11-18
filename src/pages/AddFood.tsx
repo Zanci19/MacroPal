@@ -28,6 +28,7 @@ import {
   IonChip,
   IonIcon,
   IonAlert,
+  IonActionSheet,
 } from "@ionic/react";
 
 import { useLocation, useHistory } from "react-router";
@@ -44,6 +45,7 @@ import {
   limit,
   increment,
   getDoc,
+  runTransaction,
 } from "firebase/firestore";
 
 import { calendarOutline, starOutline, trashOutline } from "ionicons/icons";
@@ -55,6 +57,12 @@ import {
   shiftDateKey,
 } from "../utils/date";
 
+/**
+ * ==============
+ * Types
+ * ==============
+ */
+
 type OFFNutriments = {
   ["energy-kcal_100g"]?: number;
   ["energy-kcal_serving"]?: number;
@@ -64,6 +72,18 @@ type OFFNutriments = {
   ["fat_serving"]?: number;
   ["carbohydrates_100g"]?: number;
   ["carbohydrates_serving"]?: number;
+
+  // Extra nutrients
+  ["sugars_100g"]?: number;
+  ["sugars_serving"]?: number;
+  ["fiber_100g"]?: number;
+  ["fiber_serving"]?: number;
+  ["saturated-fat_100g"]?: number;
+  ["saturated-fat_serving"]?: number;
+  ["salt_100g"]?: number;
+  ["salt_serving"]?: number;
+  ["sodium_100g"]?: number;
+  ["sodium_serving"]?: number;
 };
 
 type OFFSearchHit = {
@@ -89,7 +109,19 @@ type OFFSearchResponse = {
   page_size?: number;
 };
 
-type MacroSet = { calories: number; carbs: number; protein: number; fat: number };
+type MacroSet = {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  // optional extra nutrients (per base)
+  sugar?: number;
+  fiber?: number;
+  saturatedFat?: number;
+  salt?: number;
+  sodium?: number;
+};
+
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 
 type FavoriteFood = {
@@ -147,7 +179,33 @@ type CustomMealPreset = {
   note?: string;
 };
 
+type Goal = "lose" | "maintain" | "gain";
+
+/**
+ * Profile shape subset used here
+ */
+type ProfileFromFirestore = {
+  age?: number | null;
+  weight?: number | null;
+  height?: number | null;
+  goal?: Goal;
+  gender?: "male" | "female";
+  activity?: "sedentary" | "light" | "moderate" | "very" | "extra";
+  caloriesTarget?: number;
+  macroTargets?: {
+    proteinG: number;
+    fatG: number;
+    carbsG: number;
+  };
+};
+
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
+
+/**
+ * ============
+ * Helpers
+ * ============
+ */
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -155,7 +213,9 @@ function safeNum(n: unknown, dp = 2): number {
   return Number(v.toFixed(dp));
 }
 
-function parseServingSize(servingSize?: string): { grams?: number; ml?: number; label: string } {
+function parseServingSize(
+  servingSize?: string
+): { grams?: number; ml?: number; label: string } {
   const label = (servingSize || "").trim();
   if (!label) return { label: "100 g", grams: 100 };
   const m = label.match(/(\d+(?:\.\d+)?)\s*(g|ml)\b/i);
@@ -174,6 +234,27 @@ function macrosPer100g(nutri?: OFFNutriments): MacroSet {
     carbs: safeNum(nutri?.["carbohydrates_100g"], 2),
     protein: safeNum(nutri?.["proteins_100g"], 2),
     fat: safeNum(nutri?.["fat_100g"], 2),
+
+    sugar:
+      nutri?.["sugars_100g"] !== undefined
+        ? safeNum(nutri["sugars_100g"], 2)
+        : undefined,
+    fiber:
+      nutri?.["fiber_100g"] !== undefined
+        ? safeNum(nutri["fiber_100g"], 2)
+        : undefined,
+    saturatedFat:
+      nutri?.["saturated-fat_100g"] !== undefined
+        ? safeNum(nutri["saturated-fat_100g"], 2)
+        : undefined,
+    salt:
+      nutri?.["salt_100g"] !== undefined
+        ? safeNum(nutri["salt_100g"], 2)
+        : undefined,
+    sodium:
+      nutri?.["sodium_100g"] !== undefined
+        ? safeNum(nutri["sodium_100g"], 2)
+        : undefined,
   };
 }
 
@@ -183,6 +264,27 @@ function macrosPerServing(nutri?: OFFNutriments): MacroSet {
     carbs: safeNum(nutri?.["carbohydrates_serving"], 2),
     protein: safeNum(nutri?.["proteins_serving"], 2),
     fat: safeNum(nutri?.["fat_serving"], 2),
+
+    sugar:
+      nutri?.["sugars_serving"] !== undefined
+        ? safeNum(nutri["sugars_serving"], 2)
+        : undefined,
+    fiber:
+      nutri?.["fiber_serving"] !== undefined
+        ? safeNum(nutri["fiber_serving"], 2)
+        : undefined,
+    saturatedFat:
+      nutri?.["saturated-fat_serving"] !== undefined
+        ? safeNum(nutri["saturated-fat_serving"], 2)
+        : undefined,
+    salt:
+      nutri?.["salt_serving"] !== undefined
+        ? safeNum(nutri["salt_serving"], 2)
+        : undefined,
+    sodium:
+      nutri?.["sodium_serving"] !== undefined
+        ? safeNum(nutri["sodium_serving"], 2)
+        : undefined,
   };
 }
 
@@ -192,13 +294,30 @@ function scale(base: MacroSet, qty: number): MacroSet {
     carbs: safeNum(base.carbs * qty, 1),
     protein: safeNum(base.protein * qty, 1),
     fat: safeNum(base.fat * qty, 1),
+
+    sugar:
+      base.sugar !== undefined ? safeNum(base.sugar * qty, 1) : undefined,
+    fiber:
+      base.fiber !== undefined ? safeNum(base.fiber * qty, 1) : undefined,
+    saturatedFat:
+      base.saturatedFat !== undefined
+        ? safeNum(base.saturatedFat * qty, 1)
+        : undefined,
+    salt:
+      base.salt !== undefined ? safeNum(base.salt * qty, 2) : undefined,
+    sodium:
+      base.sodium !== undefined
+        ? safeNum(base.sodium * qty, 2)
+        : undefined,
   };
 }
 
 function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
   const params = new URLSearchParams(location.search);
   const m = (params.get("meal") || "breakfast").toLowerCase();
-  return (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).includes(m as MealKey)
+  return (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).includes(
+    m as MealKey
+  )
     ? (m as MealKey)
     : "breakfast";
 }
@@ -212,11 +331,91 @@ function useDateFromQuery(location: ReturnType<typeof useLocation>): string {
   return todayDateKey();
 }
 
+/**
+ * ===========================
+ * Recommendation presets
+ * ===========================
+ */
+
+const PROTEIN_SUGGESTIONS: Record<Goal, string[]> = {
+  lose: [
+    "Greek yogurt (0–2% fat) with some berries",
+    "Tuna with cucumber or salad",
+    "Low-fat cottage cheese",
+    "Egg whites omelette with veggies",
+  ],
+  maintain: [
+    "Skyr or Greek yogurt with fruit",
+    "Chicken breast with rice cakes",
+    "Cottage cheese + piece of fruit",
+    "Protein shake with a banana",
+  ],
+  gain: [
+    "Chicken and rice bowl",
+    "Protein shake with oats and banana",
+    "Cottage cheese with honey and granola",
+    "Tuna sandwich on whole-grain bread",
+  ],
+};
+
+const CARB_SUGGESTIONS: Record<Goal, string[]> = {
+  lose: [
+    "Fruit (banana, apple, berries)",
+    "Oatmeal with a bit of honey",
+    "Whole-grain toast with some jam",
+    "Rice cakes with banana slices",
+  ],
+  maintain: [
+    "Oatmeal with milk and fruit",
+    "Rice or pasta with a light sauce",
+    "Whole-grain bread with toppings",
+    "Potatoes with veggies",
+  ],
+  gain: [
+    "Big bowl of oatmeal with milk and toppings",
+    "Rice / pasta with sauce and some cheese",
+    "Bagel with peanut butter and banana",
+    "Granola with yogurt and fruit",
+  ],
+};
+
+const FAT_SUGGESTIONS: Record<Goal, string[]> = {
+  lose: [
+    "Handful of nuts (almonds, walnuts)",
+    "Avocado on whole-grain toast",
+    "Olives with salad",
+  ],
+  maintain: [
+    "Nuts & seeds mix",
+    "Avocado + eggs on toast",
+    "Cheese with whole-grain crackers",
+  ],
+  gain: [
+    "Peanut butter sandwich",
+    "Trail mix (nuts + dried fruit + chocolate)",
+    "Cheese and salami with bread",
+  ],
+};
+
+function pickRandom(list: string[]): string {
+  if (!list.length) return "";
+  const idx = Math.floor(Math.random() * list.length);
+  return list[idx];
+}
+
+/**
+ * ==================
+ * Component
+ * ==================
+ */
+
 const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
-  const meal = useMealFromQuery(location);
+  const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
+
+  const [showMealPicker, setShowMealPicker] = useState(false);
 
   const [tab, setTab] = useState<"search" | "favorites">("search");
 
@@ -242,13 +441,20 @@ const AddFood: React.FC = () => {
 
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
-  const [favoriteToDelete, setFavoriteToDelete] = useState<FavoriteFood | null>(null);
+  const [favoriteToDelete, setFavoriteToDelete] =
+    useState<FavoriteFood | null>(null);
 
   const [recentFoods, setRecentFoods] = useState<DiaryEntryDoc[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
 
   const [mealPresets, setMealPresets] = useState<CustomMealPreset[]>([]);
   const [mealPresetsLoading, setMealPresetsLoading] = useState(false);
+
+  const [editEntry, setEditEntry] = useState<{
+    meal: MealKey;
+    index: number;
+    item: DiaryEntryDoc;
+  } | null>(null);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -266,7 +472,26 @@ const AddFood: React.FC = () => {
   const [mealPresetProtein, setMealPresetProtein] = useState("");
   const [mealPresetFat, setMealPresetFat] = useState("");
 
-  const per100g = useMemo(() => macrosPer100g(selectedFood?.nutriments), [selectedFood]);
+  // 🔥 New: profile targets + today's totals
+  const [targets, setTargets] = useState<{
+    calories: number;
+    proteinG: number;
+    fatG: number;
+    carbsG: number;
+    goal: Goal;
+  } | null>(null);
+
+  const [dayTotals, setDayTotals] = useState<{
+    calories: number;
+    protein: number;
+    fat: number;
+    carbs: number;
+  } | null>(null);
+
+  const per100g = useMemo(
+    () => macrosPer100g(selectedFood?.nutriments),
+    [selectedFood]
+  );
   const perServing = useMemo(
     () => macrosPerServing(selectedFood?.nutriments),
     [selectedFood]
@@ -306,6 +531,101 @@ const AddFood: React.FC = () => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
 
+  /**
+   * 🔥 Load profile targets (caloriesTarget + macroTargets) once
+   */
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    (async () => {
+      try {
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        const data = snap.data() as { profile?: ProfileFromFirestore } | undefined;
+        const p = data?.profile;
+
+        if (!p || !p.caloriesTarget || !p.macroTargets) {
+          return;
+        }
+
+        setTargets({
+          calories: p.caloriesTarget,
+          proteinG: p.macroTargets.proteinG,
+          fatG: p.macroTargets.fatG,
+          carbsG: p.macroTargets.carbsG,
+          goal: (p.goal as Goal) || "maintain",
+        });
+
+        trackEvent("add_food_profile_targets_loaded", {
+          uid: user.uid,
+          calories: p.caloriesTarget,
+        });
+      } catch (e: any) {
+        console.error("Error loading profile targets:", e);
+        trackEvent("add_food_profile_targets_error", {
+          message: e?.message || String(e),
+        });
+      }
+    })();
+  }, []);
+
+  /**
+   * 🔥 Subscribe to today's diary to compute totals (kcal, C, P, F)
+   */
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const ref = doc(db, "users", user.uid, "foods", dateKey);
+
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (!snap.exists()) {
+          setDayTotals({
+            calories: 0,
+            protein: 0,
+            fat: 0,
+            carbs: 0,
+          });
+          return;
+        }
+
+        const data = snap.data() as DayDoc;
+        let calories = 0;
+        let protein = 0;
+        let fat = 0;
+        let carbs = 0;
+
+        (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).forEach(
+          (mealKey) => {
+            const arr = data[mealKey] || [];
+            arr.forEach((item) => {
+              const t = item.total;
+              if (!t) return;
+              calories += Number(t.calories || 0);
+              carbs += Number(t.carbs || 0);
+              protein += Number(t.protein || 0);
+              fat += Number(t.fat || 0);
+            });
+          }
+        );
+
+        setDayTotals({ calories, protein, fat, carbs });
+      },
+      (err) => {
+        console.error("Error loading day totals:", err);
+        trackEvent("add_food_day_totals_error", {
+          message: err?.message || String(err),
+        });
+      }
+    );
+
+    return () => unsub();
+  }, [dateKey]);
+
+  // Handle code/q from URL (barcode / prefilled search)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const code = params.get("code");
@@ -344,7 +664,11 @@ const AddFood: React.FC = () => {
                 date: dateKey,
               });
 
-              setToast({ show: true, message: "Item found", color: "success" });
+              setToast({
+                show: true,
+                message: "Item found",
+                color: "success",
+              });
 
               const p = data.product;
               const ps = macrosPerServing(p.nutriments);
@@ -431,6 +755,53 @@ const AddFood: React.FC = () => {
     })();
   }, [location.search, history, meal, dateKey]);
 
+  // EDIT MODE – preload entry from location.state
+  useEffect(() => {
+    const state = (location as any).state as
+      | {
+          editEntry?: {
+            meal: MealKey;
+            index: number;
+            item: DiaryEntryDoc;
+          };
+        }
+      | undefined;
+
+    if (!state || !state.editEntry) return;
+
+    const { meal, index, item } = state.editEntry;
+
+    setEditEntry({ meal, index, item });
+
+    const sel: any = item.selection || {};
+    const mode: "serving" | "weight" =
+      sel.mode === "serving" || sel.mode === "weight" ? sel.mode : "weight";
+
+    if (mode === "serving") {
+      const q =
+        typeof sel.servingsQty === "number" && sel.servingsQty > 0
+          ? sel.servingsQty
+          : 1;
+      setUseServing(true);
+      setServingsQty(q);
+    } else {
+      const grams =
+        typeof sel.weightQty === "number" && sel.weightQty > 0
+          ? sel.weightQty
+          : 100;
+      setUseServing(false);
+      setWeightQty(grams);
+    }
+
+    setOpen(true);
+
+    history.replace({
+      pathname: "/add-food",
+      search: location.search,
+    });
+  }, [location, history]);
+
+  // Favorites
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -468,6 +839,7 @@ const AddFood: React.FC = () => {
     return () => unsub();
   }, []);
 
+  // Recent OFF
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -490,6 +862,7 @@ const AddFood: React.FC = () => {
     return () => unsub();
   }, []);
 
+  // Recent history (last 14 days)
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -560,6 +933,7 @@ const AddFood: React.FC = () => {
     };
   }, []);
 
+  // Meal presets
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -749,7 +1123,131 @@ const AddFood: React.FC = () => {
   };
 
   const addFoodToMeal = async () => {
-    if (!auth.currentUser || !selectedFood) return;
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // ✏️ EDIT MODE – update existing entry
+    if (editEntry) {
+      const { meal: mealKey, index, item } = editEntry;
+      const anyItem: any = item;
+      const sel: any = anyItem.selection || {};
+      const base = anyItem.base || null;
+
+      const mode: "serving" | "weight" =
+        sel.mode === "serving" || sel.mode === "weight"
+          ? sel.mode
+          : useServing
+          ? "serving"
+          : "weight";
+
+      let oldValue: number;
+      let newValue: number;
+
+      if (mode === "serving") {
+        oldValue =
+          typeof sel.servingsQty === "number" && sel.servingsQty > 0
+            ? sel.servingsQty
+            : 1;
+        newValue = Math.max(0.1, servingsQty);
+      } else {
+        oldValue =
+          typeof sel.weightQty === "number" && sel.weightQty > 0
+            ? sel.weightQty
+            : typeof anyItem.amount === "number" && anyItem.amount > 0
+            ? anyItem.amount
+            : 100;
+        newValue = Math.max(1, weightQty);
+      }
+
+      if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
+      const ratio = newValue / oldValue;
+
+      const oldTotal: any = item.total || {};
+      const newTotal: MacroSet = {
+        calories: safeNum((oldTotal.calories || 0) * ratio, 0),
+        carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
+        protein: safeNum((oldTotal.protein || 0) * ratio, 2),
+        fat: safeNum((oldTotal.fat || 0) * ratio, 2),
+        sugar:
+          oldTotal.sugar !== undefined
+            ? safeNum((oldTotal.sugar || 0) * ratio, 2)
+            : undefined,
+        fiber:
+          oldTotal.fiber !== undefined
+            ? safeNum((oldTotal.fiber || 0) * ratio, 2)
+            : undefined,
+        saturatedFat:
+          oldTotal.saturatedFat !== undefined
+            ? safeNum((oldTotal.saturatedFat || 0) * ratio, 2)
+            : undefined,
+        salt:
+          oldTotal.salt !== undefined
+            ? safeNum((oldTotal.salt || 0) * ratio, 2)
+            : undefined,
+        sodium:
+          oldTotal.sodium !== undefined
+            ? safeNum((oldTotal.sodium || 0) * ratio, 2)
+            : undefined,
+      };
+
+      const newSel: any = {
+        ...(sel || {}),
+        mode,
+      };
+
+      if (mode === "serving") {
+        newSel.servingsQty = newValue;
+        if (newSel.weightQty === undefined) newSel.weightQty = null;
+
+        const baseLabel = base?.label || sel.note || "1 serving";
+
+        newSel.note = `${safeNum(newValue, 2)} × ${baseLabel}`;
+      } else {
+        newSel.weightQty = newValue;
+        if (newSel.servingsQty === undefined) newSel.servingsQty = null;
+        newSel.note = `${safeNum(newValue, 0)} g`;
+      }
+
+      const updated: DiaryEntryDoc = {
+        ...item,
+        total: newTotal,
+        selection: newSel,
+      };
+
+      const userRef = doc(db, "users", user.uid, "foods", dateKey);
+
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(userRef);
+        const data = (snap.data() || {}) as DayDoc;
+        const arr: DiaryEntryDoc[] = Array.isArray(data[mealKey])
+          ? [...(data[mealKey] as DiaryEntryDoc[])]
+          : [];
+
+        let idx = index;
+        if (idx < 0 || idx >= arr.length) {
+          idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+        }
+        if (idx < 0) return;
+
+        arr[idx] = updated;
+        tx.set(userRef, { ...data, [mealKey]: arr }, { merge: true });
+      });
+
+      trackEvent("diary_entry_edited_in_add_food", {
+        uid: user.uid,
+        meal: mealKey,
+        date: dateKey,
+        index,
+        name: item.name,
+      });
+
+      setOpen(false);
+      history.replace(`/app/home?date=${dateKey}`);
+      return;
+    }
+
+    // 🧃 NORMAL ADD FROM OFF
+    if (!selectedFood) return;
 
     const payload = computeCurrentSelection();
     if (!payload) return;
@@ -764,7 +1262,7 @@ const AddFood: React.FC = () => {
       weightQtyForSel,
     } = payload;
 
-    const userRef = doc(db, "users", auth.currentUser.uid, "foods", dateKey);
+    const userRef = doc(db, "users", user.uid, "foods", dateKey);
 
     const item = {
       code: selectedFood.code,
@@ -783,7 +1281,27 @@ const AddFood: React.FC = () => {
         carbs: safeNum(perBase.carbs, 2),
         protein: safeNum(perBase.protein, 2),
         fat: safeNum(perBase.fat, 2),
-      },
+        sugar:
+          perBase.sugar !== undefined
+            ? safeNum(perBase.sugar, 2)
+            : undefined,
+        fiber:
+          perBase.fiber !== undefined
+            ? safeNum(perBase.fiber, 2)
+            : undefined,
+        saturatedFat:
+          perBase.saturatedFat !== undefined
+            ? safeNum(perBase.saturatedFat, 2)
+            : undefined,
+        salt:
+          perBase.salt !== undefined
+            ? safeNum(perBase.salt, 2)
+            : undefined,
+        sodium:
+          perBase.sodium !== undefined
+            ? safeNum(perBase.sodium, 2)
+            : undefined,
+      } as MacroSet,
       total,
       addedAt: new Date().toISOString(),
     };
@@ -796,7 +1314,7 @@ const AddFood: React.FC = () => {
     });
 
     trackEvent("diary_add_from_off", {
-      uid: auth.currentUser.uid,
+      uid: user.uid,
       meal,
       date: dateKey,
       code: item.code,
@@ -807,7 +1325,7 @@ const AddFood: React.FC = () => {
 
     setOpen(false);
     history.replace(`/app/home?date=${dateKey}`);
-  }
+  };
 
   const saveCurrentSelectionAsFavorite = async () => {
     const user = auth.currentUser;
@@ -845,7 +1363,27 @@ const AddFood: React.FC = () => {
           carbs: safeNum(perBase.carbs, 2),
           protein: safeNum(perBase.protein, 2),
           fat: safeNum(perBase.fat, 2),
-        },
+          sugar:
+            perBase.sugar !== undefined
+              ? safeNum(perBase.sugar, 2)
+              : undefined,
+          fiber:
+            perBase.fiber !== undefined
+              ? safeNum(perBase.fiber, 2)
+              : undefined,
+          saturatedFat:
+            perBase.saturatedFat !== undefined
+              ? safeNum(perBase.saturatedFat, 2)
+              : undefined,
+          salt:
+            perBase.salt !== undefined
+              ? safeNum(perBase.salt, 2)
+              : undefined,
+          sodium:
+            perBase.sodium !== undefined
+              ? safeNum(perBase.sodium, 2)
+              : undefined,
+        } as MacroSet,
         total,
         dataSource: "openfoodfacts",
         code: selectedFood.code,
@@ -1022,7 +1560,8 @@ const AddFood: React.FC = () => {
 
     const userRef = doc(db, "users", user.uid, "foods", dateKey);
     const total: MacroSet =
-      src.total || ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
+      src.total ||
+      ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
     const item = {
       code: src.code,
       name: src.name || "(no name)",
@@ -1189,13 +1728,24 @@ const AddFood: React.FC = () => {
   };
 
   const previewPerBaseLabel = useMemo(() => {
+    if (editEntry) {
+      const src: any = editEntry.item;
+      const sel: any = src.selection || {};
+      const base = src.base || null;
+
+      if (useServing) {
+        return base?.label || sel.note || "1 serving";
+      }
+      return "100 g";
+    }
+
     if (!selectedFood) return "100 g";
     const useServingMode =
       useServing && selectedFood.serving_size && hasServingMacros;
     return useServingMode
       ? parsedServing.label || selectedFood.serving_size || "1 serving"
       : "100 g";
-  }, [selectedFood, useServing, hasServingMacros, parsedServing.label]);
+  }, [editEntry, useServing, selectedFood, hasServingMacros, parsedServing]);
 
   const previewPerBaseMacros = useMemo<MacroSet>(() => {
     const useServingMode =
@@ -1204,6 +1754,45 @@ const AddFood: React.FC = () => {
   }, [useServing, selectedFood, hasServingMacros, perServing, per100g]);
 
   const previewTotal = useMemo(() => {
+    if (editEntry) {
+      const src: any = editEntry.item;
+      const total: MacroSet =
+        src.total ||
+        ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
+      const sel: any = src.selection || {};
+
+      const mode: "serving" | "weight" =
+        sel.mode === "serving" || sel.mode === "weight"
+          ? sel.mode
+          : useServing
+          ? "serving"
+          : "weight";
+
+      let oldVal: number;
+      let newVal: number;
+
+      if (mode === "serving") {
+        oldVal =
+          typeof sel.servingsQty === "number" && sel.servingsQty > 0
+            ? sel.servingsQty
+            : 1;
+        newVal = Math.max(0.1, servingsQty);
+      } else {
+        oldVal =
+          typeof sel.weightQty === "number" && sel.weightQty > 0
+            ? sel.weightQty
+            : typeof src.amount === "number" && src.amount > 0
+            ? src.amount
+            : 100;
+        newVal = Math.max(1, weightQty);
+      }
+
+      if (!oldVal || oldVal <= 0) oldVal = mode === "serving" ? 1 : 100;
+      const ratio = newVal / oldVal;
+
+      return scale(total, ratio);
+    }
+
     const useServingMode =
       useServing && selectedFood?.serving_size && hasServingMacros;
     if (useServingMode) {
@@ -1211,13 +1800,165 @@ const AddFood: React.FC = () => {
     }
     return scale(previewPerBaseMacros, Math.max(1, weightQty) / 100);
   }, [
+    editEntry,
     useServing,
+    servingsQty,
+    weightQty,
     selectedFood,
     hasServingMacros,
     previewPerBaseMacros,
-    servingsQty,
-    weightQty,
   ]);
+
+  const hasExtraNutrients =
+    previewTotal.sugar !== undefined ||
+    previewTotal.fiber !== undefined ||
+    previewTotal.saturatedFat !== undefined ||
+    previewTotal.salt !== undefined;
+
+  // serving vs weight card in UI
+  const isEditServingMode =
+    !!editEntry &&
+    (() => {
+      const src: any = editEntry.item;
+      const sel: any = src.selection || {};
+      const mode: "serving" | "weight" =
+        sel.mode === "serving" || sel.mode === "weight"
+          ? sel.mode
+          : useServing
+          ? "serving"
+          : "weight";
+      return mode === "serving";
+    })();
+
+  const showServingCard = editEntry
+    ? isEditServingMode
+    : !!(useServing && selectedFood?.serving_size && hasServingMacros);
+
+  const disableAddButton =
+    editEntry != null
+      ? safeNum(previewTotal.calories, 0) === 0 &&
+        safeNum(previewTotal.protein, 2) === 0 &&
+        safeNum(previewTotal.carbs, 2) === 0 &&
+        safeNum(previewTotal.fat, 2) === 0
+      : safeNum(previewPerBaseMacros.calories, 0) === 0 &&
+        safeNum(previewPerBaseMacros.protein, 2) === 0 &&
+        safeNum(previewPerBaseMacros.carbs, 2) === 0 &&
+        safeNum(previewPerBaseMacros.fat, 2) === 0;
+
+  const modalTitle =
+    editEntry?.item?.name || selectedFood?.product_name || "(no name)";
+
+  const handleChangeMeal = (next: MealKey) => {
+    if (next === meal) return;
+
+    trackEvent("add_food_meal_change", {
+      from: meal,
+      to: next,
+      date: dateKey,
+    });
+
+    setMeal(next);
+
+    const params = new URLSearchParams(location.search);
+    params.set("meal", next);
+    history.replace({
+      pathname: "/add-food",
+      search: `?${params.toString()}`,
+    });
+
+    setShowMealPicker(false);
+  };
+
+  /**
+   * 🔥 Smart recommendation based on remaining macros
+   */
+  const recommendation = useMemo(() => {
+    if (!targets || !dayTotals) return null;
+
+    const remainingProtein = Math.max(0, targets.proteinG - dayTotals.protein);
+    const remainingCarbs = Math.max(0, targets.carbsG - dayTotals.carbs);
+    const remainingFat = Math.max(0, targets.fatG - dayTotals.fat);
+    const remainingCalories = Math.max(0, targets.calories - dayTotals.calories);
+
+    const goal: Goal = targets.goal || "maintain";
+
+    const entries = [
+      {
+        key: "protein" as const,
+        remaining: remainingProtein,
+        target: targets.proteinG || 1,
+      },
+      {
+        key: "carbs" as const,
+        remaining: remainingCarbs,
+        target: targets.carbsG || 1,
+      },
+      {
+        key: "fat" as const,
+        remaining: remainingFat,
+        target: targets.fatG || 1,
+      },
+    ];
+
+    // If you're basically done, don't push food
+    if (
+      remainingCalories <= 80 &&
+      remainingProtein <= 5 &&
+      remainingCarbs <= 10 &&
+      remainingFat <= 5
+    ) {
+      return {
+        isClose: true,
+        message: "You’re very close to today’s targets 🎉",
+        remaining: {
+          calories: remainingCalories,
+          protein: remainingProtein,
+          carbs: remainingCarbs,
+          fat: remainingFat,
+        },
+        goal,
+      };
+    }
+
+    // sort by relative gap (remaining / target)
+    const sorted = entries
+      .filter((e) => e.target > 0)
+      .sort(
+        (a, b) =>
+          b.remaining / Math.max(1, b.target) -
+          a.remaining / Math.max(1, a.target)
+      );
+
+    const focus = sorted[0];
+    if (!focus || focus.remaining < 3) {
+      // fallback – no strong missing macro
+      return null;
+    }
+
+    let suggestionList: string[] = [];
+    if (focus.key === "protein") {
+      suggestionList = PROTEIN_SUGGESTIONS[goal];
+    } else if (focus.key === "carbs") {
+      suggestionList = CARB_SUGGESTIONS[goal];
+    } else {
+      suggestionList = FAT_SUGGESTIONS[goal];
+    }
+
+    const suggestion = pickRandom(suggestionList);
+
+    return {
+      isClose: false,
+      focusMacro: focus.key,
+      suggestion,
+      remaining: {
+        calories: remainingCalories,
+        protein: remainingProtein,
+        carbs: remainingCarbs,
+        fat: remainingFat,
+      },
+      goal,
+    };
+  }, [targets, dayTotals]);
 
   return (
     <IonPage>
@@ -1231,12 +1972,65 @@ const AddFood: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        <IonChip color="primary" style={{ marginBottom: 12 }}>
+        <IonChip
+          color="primary"
+          style={{ marginBottom: 12 }}
+          onClick={() => setShowMealPicker(true)}
+        >
           <IonIcon icon={calendarOutline} />
           <span style={{ marginLeft: 6 }}>
             {friendlyDate} · {meal}
           </span>
         </IonChip>
+
+        {/* 🔥 Smart recommendation card */}
+        {targets && dayTotals && recommendation && (
+          <IonCard style={{ marginBottom: 12 }}>
+            <IonCardHeader>
+              <IonCardTitle style={{ fontSize: 16 }}>
+                Smart recommendation
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              {recommendation.isClose ? (
+                <>
+                  <p style={{ marginTop: 0, marginBottom: 6 }}>
+                    {recommendation.message}
+                  </p>
+                  <IonText color="medium" style={{ fontSize: 13 }}>
+                    Remaining today:{" "}
+                    {Math.round(recommendation.remaining.calories)} kcal · Carbohydrates{" "}
+                    {Math.round(recommendation.remaining.carbs)} g · Protein{" "}
+                    {Math.round(recommendation.remaining.protein)} g · Fat{" "}
+                    {Math.round(recommendation.remaining.fat)} g
+                  </IonText>
+                </>
+              ) : (
+                <>
+                  <p style={{ marginTop: 0, marginBottom: 6 }}>
+                    Based on your goal{" "}
+                    <strong>{recommendation.goal}</strong> and what you’ve
+                    already eaten today, you’re still missing some{" "}
+                    <strong>{recommendation.focusMacro}</strong>.
+                  </p>
+                  {recommendation.suggestion && (
+                    <p style={{ marginTop: 0, marginBottom: 6 }}>
+                      For <strong>{meal}</strong> (or a snack) you could try:{" "}
+                      <strong>{recommendation.suggestion}</strong>.
+                    </p>
+                  )}
+                  <IonText color="medium" style={{ fontSize: 13 }}>
+                    Remaining today:{" "}
+                    {Math.round(recommendation.remaining.calories)} kcal · Carbohydrates{" "}
+                    {Math.round(recommendation.remaining.carbs)} g · Protein{" "}
+                    {Math.round(recommendation.remaining.protein)} g · Fat{" "}
+                    {Math.round(recommendation.remaining.fat)} g
+                  </IonText>
+                </>
+              )}
+            </IonCardContent>
+          </IonCard>
+        )}
 
         <IonSegment
           value={tab}
@@ -1265,7 +2059,8 @@ const AddFood: React.FC = () => {
               <IonInput
                 placeholder={`Search food to add to ${meal}...`}
                 value={query}
-                onIonChange={(e) => setQuery(e.detail.value || "")}
+                debounce={0}
+                onIonInput={(e) => setQuery(e.detail.value ?? "")}
                 onKeyUp={(e) => {
                   if (e.key === "Enter" && query.trim()) {
                     trackEvent("food_search_enter_key", {
@@ -1278,7 +2073,6 @@ const AddFood: React.FC = () => {
                 }}
               />
             </IonItem>
-
             <div
               style={{
                 display: "grid",
@@ -1400,9 +2194,9 @@ const AddFood: React.FC = () => {
                           ? `Serving: ${food.serving_size} · `
                           : "") +
                           (hasPreview
-                            ? `${preview.calories || 0} kcal/100g · C ${
+                            ? `${preview.calories || 0} kcal/100g · Carbohydrates ${
                                 preview.carbs || 0
-                              } g · P ${preview.protein || 0} g · F ${
+                              } g · Protein ${preview.protein || 0} g · Fat ${
                                 preview.fat || 0
                               } g`
                             : "—")}
@@ -1541,8 +2335,8 @@ const AddFood: React.FC = () => {
                 }}
               >
                 No favorites yet. When adding a food, tap{" "}
-                <strong>“Save this portion as a favorite”</strong> in the details
-                dialog to store it here.
+                <strong>“Save this portion as a favorite”</strong> in the
+                details dialog to store it here.
               </p>
             )}
 
@@ -1661,6 +2455,7 @@ const AddFood: React.FC = () => {
           </>
         )}
 
+        {/* DETAILS MODAL – works for ADD + EDIT */}
         <IonModal
           isOpen={open}
           onDidDismiss={() => {
@@ -1670,68 +2465,68 @@ const AddFood: React.FC = () => {
         >
           <IonHeader>
             <IonToolbar>
-              <IonTitle>
-                {selectedFood?.product_name || "(no name)"}
-              </IonTitle>
+              <IonTitle>{modalTitle}</IonTitle>
             </IonToolbar>
           </IonHeader>
 
           <IonContent className="ion-padding">
-            {selectedFood && (
+            {editEntry || selectedFood ? (
               <>
                 <div style={{ marginBottom: 12 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      opacity: 0.7,
-                    }}
-                  >
-                    {selectedFood.brands ? `${selectedFood.brands}` : ""}
-                    {selectedFood.brands && selectedFood.nutriscore_grade ? " · " : ""}
-                    {selectedFood.nutriscore_grade
-                      ? `Nutri-Score ${selectedFood.nutriscore_grade.toUpperCase()}`
-                      : ""}
-                  </p>
+                  {selectedFood && (
+                    <p
+                      style={{
+                        margin: 0,
+                        opacity: 0.7,
+                      }}
+                    >
+                      {selectedFood.brands ? `${selectedFood.brands}` : ""}
+                      {selectedFood.brands && selectedFood.nutriscore_grade
+                        ? " · "
+                        : ""}
+                      {selectedFood.nutriscore_grade
+                        ? `Nutri-Score ${selectedFood.nutriscore_grade.toUpperCase()}`
+                        : ""}
+                    </p>
+                  )}
                   <p
                     style={{
                       margin: "4px 0 0",
                       opacity: 0.8,
                     }}
                   >
-                    Adding to: <strong>{meal}</strong> · {friendlyDate}
+                    {editEntry ? "Editing in" : "Adding to"}:{" "}
+                    <strong>{meal}</strong> · {friendlyDate}
                   </p>
                 </div>
 
-                <IonSegment
-                  value={useServing ? "serving" : "weight"}
-                  onIonChange={(e) => {
-                    const val = e.detail.value;
-                    const nextServing = val === "serving";
-                    setUseServing(nextServing);
-                    trackEvent("food_details_mode_change", {
-                      mode: nextServing ? "serving" : "weight",
-                    });
-                  }}
-                >
-                  <IonSegmentButton
-                    value="serving"
-                    disabled={
-                      !selectedFood.serving_size || !hasServingMacros
-                    }
+                {!editEntry && selectedFood && (
+                  <IonSegment
+                    value={useServing ? "serving" : "weight"}
+                    onIonChange={(e) => {
+                      const val = e.detail.value;
+                      const nextServing = val === "serving";
+                      setUseServing(nextServing);
+                      trackEvent("food_details_mode_change", {
+                        mode: nextServing ? "serving" : "weight",
+                      });
+                    }}
                   >
-                    <IonLabel>Serving</IonLabel>
-                  </IonSegmentButton>
-                  <IonSegmentButton
-                    value="weight"
-                    disabled={!has100gMacros}
-                  >
-                    <IonLabel>Weight</IonLabel>
-                  </IonSegmentButton>
-                </IonSegment>
+                    <IonSegmentButton
+                      value="serving"
+                      disabled={
+                        !selectedFood.serving_size || !hasServingMacros
+                      }
+                    >
+                      <IonLabel>Serving</IonLabel>
+                    </IonSegmentButton>
+                    <IonSegmentButton value="weight" disabled={!has100gMacros}>
+                      <IonLabel>Weight</IonLabel>
+                    </IonSegmentButton>
+                  </IonSegment>
+                )}
 
-                {useServing &&
-                selectedFood.serving_size &&
-                hasServingMacros ? (
+                {showServingCard ? (
                   <IonCard style={{ marginTop: 12 }}>
                     <IonCardHeader>
                       <IonCardTitle style={{ fontSize: 16 }}>
@@ -1847,12 +2642,12 @@ const AddFood: React.FC = () => {
                       }}
                     >
                       <span>Nutrition total</span>
-                      <IonText
-                        color="medium"
-                        style={{ fontSize: 12 }}
-                      >
-                        {useServing
-                          ? `${safeNum(servingsQty, 1)} × ${previewPerBaseLabel}`
+                      <IonText color="medium" style={{ fontSize: 12 }}>
+                        {showServingCard
+                          ? `${safeNum(
+                              servingsQty,
+                              1
+                            )} × ${previewPerBaseLabel}`
                           : `${Math.max(
                               1,
                               weightQty
@@ -1936,22 +2731,113 @@ const AddFood: React.FC = () => {
                         </IonCol>
                       </IonRow>
                     </IonGrid>
+
+                    {hasExtraNutrients && (
+                      <IonGrid style={{ marginTop: 8 }}>
+                        <IonRow>
+                          {previewTotal.sugar !== undefined && (
+                            <IonCol className="ion-text-center">
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                Sugars
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 16,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {safeNum(previewTotal.sugar, 1)} g
+                              </div>
+                            </IonCol>
+                          )}
+                          {previewTotal.fiber !== undefined && (
+                            <IonCol className="ion-text-center">
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                Fiber
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 16,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {safeNum(previewTotal.fiber, 1)} g
+                              </div>
+                            </IonCol>
+                          )}
+                          {previewTotal.saturatedFat !== undefined && (
+                            <IonCol className="ion-text-center">
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                Sat. fat
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 16,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {safeNum(previewTotal.saturatedFat, 1)} g
+                              </div>
+                            </IonCol>
+                          )}
+                        </IonRow>
+                        {previewTotal.salt !== undefined && (
+                          <IonRow>
+                            <IonCol className="ion-text-center">
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                Salt
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 16,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {safeNum(previewTotal.salt, 2)} g
+                              </div>
+                            </IonCol>
+                          </IonRow>
+                        )}
+                      </IonGrid>
+                    )}
                   </IonCardContent>
                 </IonCard>
 
-                <IonText
-                  color="medium"
-                  style={{
-                    display: "block",
-                    textAlign: "center",
-                    marginTop: 8,
-                    textDecoration: "underline",
-                    cursor: "pointer",
-                  }}
-                  onClick={saveCurrentSelectionAsFavorite}
-                >
-                  Save this portion as a favorite
-                </IonText>
+                {!editEntry && selectedFood && (
+                  <IonText
+                    color="medium"
+                    style={{
+                      display: "block",
+                      textAlign: "center",
+                      marginTop: 8,
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                    }}
+                    onClick={saveCurrentSelectionAsFavorite}
+                  >
+                    Save this portion as a favorite
+                  </IonText>
+                )}
 
                 <div
                   style={{
@@ -1973,17 +2859,14 @@ const AddFood: React.FC = () => {
                   <IonButton
                     expand="block"
                     onClick={addFoodToMeal}
-                    disabled={
-                      safeNum(previewPerBaseMacros.calories, 0) === 0 &&
-                      safeNum(previewPerBaseMacros.protein, 2) === 0 &&
-                      safeNum(previewPerBaseMacros.carbs, 2) === 0 &&
-                      safeNum(previewPerBaseMacros.fat, 2) === 0
-                    }
+                    disabled={disableAddButton}
                   >
-                    Add to {meal}
+                    {editEntry ? "Save changes" : `Add to ${meal}`}
                   </IonButton>
                 </div>
               </>
+            ) : (
+              <IonText color="medium">No food selected.</IonText>
             )}
           </IonContent>
         </IonModal>
@@ -2106,10 +2989,7 @@ const AddFood: React.FC = () => {
               >
                 Cancel
               </IonButton>
-              <IonButton
-                expand="block"
-                onClick={createCustomFood}
-              >
+              <IonButton expand="block" onClick={createCustomFood}>
                 Save custom food
               </IonButton>
             </div>
@@ -2209,15 +3089,39 @@ const AddFood: React.FC = () => {
               >
                 Cancel
               </IonButton>
-              <IonButton
-                expand="block"
-                onClick={createMealPreset}
-              >
+              <IonButton expand="block" onClick={createMealPreset}>
                 Save custom meal
               </IonButton>
             </div>
           </IonContent>
         </IonModal>
+        <IonActionSheet
+          isOpen={showMealPicker}
+          onDidDismiss={() => setShowMealPicker(false)}
+          header="Select meal"
+          buttons={[
+            {
+              text: "Breakfast",
+              handler: () => handleChangeMeal("breakfast"),
+            },
+            {
+              text: "Lunch",
+              handler: () => handleChangeMeal("lunch"),
+            },
+            {
+              text: "Dinner",
+              handler: () => handleChangeMeal("dinner"),
+            },
+            {
+              text: "Snacks",
+              handler: () => handleChangeMeal("snacks"),
+            },
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
       </IonContent>
     </IonPage>
   );

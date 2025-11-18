@@ -81,6 +81,12 @@ const ScanBarcode: React.FC = () => {
       const reader = new BrowserMultiFormatReader();
       readerRef.current = reader;
 
+      if (videoRef.current) {
+        videoRef.current.onloadedmetadata = () => {
+          setStarting(false);
+        };
+      }
+
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
       trackEvent("barcode_scan_devices_listed", {
         count: devices.length,
