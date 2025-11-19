@@ -5,7 +5,7 @@ import {
   getAnalytics,
   isSupported,
   logEvent,
-  Analytics,        // 👈 new import for the type
+  Analytics,
 } from "firebase/analytics";
 
 const firebaseConfig = {
@@ -25,12 +25,10 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
 
-// 🔹 Analytics instance (null until it's ready)
 export let analytics: Analytics | null = null;
 
-// 🔹 Small helper so you can just call trackEvent("event_name", {...})
 export const trackEvent = (name: string, params?: Record<string, any>) => {
-  if (!analytics) return; // no crash on SSR / unsupported environments
+  if (!analytics) return;
   logEvent(analytics, name, params);
 };
 

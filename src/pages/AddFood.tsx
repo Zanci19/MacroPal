@@ -439,6 +439,8 @@ const AddFood: React.FC = () => {
     color?: string;
   }>({ show: false, message: "", color: "success" });
 
+  const [hasSearched, setHasSearched] = useState(false);
+
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [favoriteToDelete, setFavoriteToDelete] =
@@ -472,7 +474,6 @@ const AddFood: React.FC = () => {
   const [mealPresetProtein, setMealPresetProtein] = useState("");
   const [mealPresetFat, setMealPresetFat] = useState("");
 
-  // 🔥 New: profile targets + today's totals
   const [targets, setTargets] = useState<{
     calories: number;
     proteinG: number;
@@ -526,14 +527,20 @@ const AddFood: React.FC = () => {
     [per100g]
   );
 
-  // Screen view
+  const showRecent = useMemo(() => {
+    const q = query.trim();
+
+    if (!q) return true;
+    if (!loading && results.length === 0) return true;
+
+    return false;
+  }, [query, loading, results.length]);
+
+
   useEffect(() => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
 
-  /**
-   * 🔥 Load profile targets (caloriesTarget + macroTargets) once
-   */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -570,9 +577,6 @@ const AddFood: React.FC = () => {
     })();
   }, []);
 
-  /**
-   * 🔥 Subscribe to today's diary to compute totals (kcal, C, P, F)
-   */
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -755,16 +759,15 @@ const AddFood: React.FC = () => {
     })();
   }, [location.search, history, meal, dateKey]);
 
-  // EDIT MODE – preload entry from location.state
   useEffect(() => {
     const state = (location as any).state as
       | {
-          editEntry?: {
-            meal: MealKey;
-            index: number;
-            item: DiaryEntryDoc;
-          };
-        }
+        editEntry?: {
+          meal: MealKey;
+          index: number;
+          item: DiaryEntryDoc;
+        };
+      }
       | undefined;
 
     if (!state || !state.editEntry) return;
@@ -973,6 +976,8 @@ const AddFood: React.FC = () => {
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
     if (!q.trim()) return 0;
     setLoading(true);
+    setHasSearched(true);
+
 
     trackEvent("food_search_start", {
       query: q,
@@ -1084,10 +1089,10 @@ const AddFood: React.FC = () => {
     const baseMeta =
       useServingMode && (parsedServing.grams || parsedServing.ml)
         ? {
-            amount: parsedServing.grams ?? parsedServing.ml ?? 0,
-            unit: parsedServing.grams ? "g" : "ml",
-            label: baseLabel,
-          }
+          amount: parsedServing.grams ?? parsedServing.ml ?? 0,
+          unit: parsedServing.grams ? "g" : "ml",
+          label: baseLabel,
+        }
         : { amount: 100, unit: "g", label: "100 g" };
 
     let factor = 1;
@@ -1137,8 +1142,8 @@ const AddFood: React.FC = () => {
         sel.mode === "serving" || sel.mode === "weight"
           ? sel.mode
           : useServing
-          ? "serving"
-          : "weight";
+            ? "serving"
+            : "weight";
 
       let oldValue: number;
       let newValue: number;
@@ -1154,8 +1159,8 @@ const AddFood: React.FC = () => {
           typeof sel.weightQty === "number" && sel.weightQty > 0
             ? sel.weightQty
             : typeof anyItem.amount === "number" && anyItem.amount > 0
-            ? anyItem.amount
-            : 100;
+              ? anyItem.amount
+              : 100;
         newValue = Math.max(1, weightQty);
       }
 
@@ -1765,8 +1770,8 @@ const AddFood: React.FC = () => {
         sel.mode === "serving" || sel.mode === "weight"
           ? sel.mode
           : useServing
-          ? "serving"
-          : "weight";
+            ? "serving"
+            : "weight";
 
       let oldVal: number;
       let newVal: number;
@@ -1782,8 +1787,8 @@ const AddFood: React.FC = () => {
           typeof sel.weightQty === "number" && sel.weightQty > 0
             ? sel.weightQty
             : typeof src.amount === "number" && src.amount > 0
-            ? src.amount
-            : 100;
+              ? src.amount
+              : 100;
         newVal = Math.max(1, weightQty);
       }
 
@@ -1825,8 +1830,8 @@ const AddFood: React.FC = () => {
         sel.mode === "serving" || sel.mode === "weight"
           ? sel.mode
           : useServing
-          ? "serving"
-          : "weight";
+            ? "serving"
+            : "weight";
       return mode === "serving";
     })();
 
@@ -1837,13 +1842,13 @@ const AddFood: React.FC = () => {
   const disableAddButton =
     editEntry != null
       ? safeNum(previewTotal.calories, 0) === 0 &&
-        safeNum(previewTotal.protein, 2) === 0 &&
-        safeNum(previewTotal.carbs, 2) === 0 &&
-        safeNum(previewTotal.fat, 2) === 0
+      safeNum(previewTotal.protein, 2) === 0 &&
+      safeNum(previewTotal.carbs, 2) === 0 &&
+      safeNum(previewTotal.fat, 2) === 0
       : safeNum(previewPerBaseMacros.calories, 0) === 0 &&
-        safeNum(previewPerBaseMacros.protein, 2) === 0 &&
-        safeNum(previewPerBaseMacros.carbs, 2) === 0 &&
-        safeNum(previewPerBaseMacros.fat, 2) === 0;
+      safeNum(previewPerBaseMacros.protein, 2) === 0 &&
+      safeNum(previewPerBaseMacros.carbs, 2) === 0 &&
+      safeNum(previewPerBaseMacros.fat, 2) === 0;
 
   const modalTitle =
     editEntry?.item?.name || selectedFood?.product_name || "(no name)";
@@ -2118,7 +2123,7 @@ const AddFood: React.FC = () => {
               </IonButton>
             </div>
 
-            {recent.length > 0 && (
+            {recent.length > 0 && showRecent && (
               <div style={{ marginTop: 12 }}>
                 <IonText
                   color="medium"
@@ -2164,6 +2169,7 @@ const AddFood: React.FC = () => {
               </div>
             )}
 
+
             <IonList style={{ marginTop: 8 }}>
               {results.map((food) => {
                 const preview = macrosPer100g(food.nutriments);
@@ -2194,11 +2200,9 @@ const AddFood: React.FC = () => {
                           ? `Serving: ${food.serving_size} · `
                           : "") +
                           (hasPreview
-                            ? `${preview.calories || 0} kcal/100g · Carbohydrates ${
-                                preview.carbs || 0
-                              } g · Protein ${preview.protein || 0} g · Fat ${
-                                preview.fat || 0
-                              } g`
+                            ? `${preview.calories || 0} kcal/100g · Carbohydrates ${preview.carbs || 0
+                            } g · Protein ${preview.protein || 0} g · Fat ${preview.fat || 0
+                            } g`
                             : "—")}
                       </p>
                     </IonLabel>
@@ -2645,13 +2649,13 @@ const AddFood: React.FC = () => {
                       <IonText color="medium" style={{ fontSize: 12 }}>
                         {showServingCard
                           ? `${safeNum(
-                              servingsQty,
-                              1
-                            )} × ${previewPerBaseLabel}`
+                            servingsQty,
+                            1
+                          )} × ${previewPerBaseLabel}`
                           : `${Math.max(
-                              1,
-                              weightQty
-                            )} g (base: ${previewPerBaseLabel})`}
+                            1,
+                            weightQty
+                          )} g (base: ${previewPerBaseLabel})`}
                       </IonText>
                     </IonCardTitle>
                   </IonCardHeader>

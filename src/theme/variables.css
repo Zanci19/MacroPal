@@ -34,3 +34,12 @@ body.dark {
   --ion-border-color: rgba(148, 163, 184, 0.3);
   --ion-text-color-step-400: #9ca3af;
 }
+
+body.dark ion-action-sheet .action-sheet-button,
+body.dark ion-action-sheet .action-sheet-option {
+  color: white !important;
+}
+
+body.dark ion-action-sheet .action-sheet-title {
+  color: white !important;
+}

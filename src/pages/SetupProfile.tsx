@@ -40,12 +40,10 @@ type ProfileData = {
   goal: Goal;
   gender: Gender;
   activity: Activity;
-  // new fields:
   caloriesTarget?: number;
   macroTargets?: MacroTargets;
 };
 
-// moved formula here – this will be the single source of truth
 const computeTargets = (
   age: number,
   weight: number,
@@ -67,14 +65,13 @@ const computeTargets = (
     activity === "light"
       ? 1.375
       : activity === "moderate"
-      ? 1.55
-      : activity === "very"
-      ? 1.725
-      : activity === "extra"
-      ? 1.9
-      : 1.2; // sedentary
+        ? 1.55
+        : activity === "very"
+          ? 1.725
+          : activity === "extra"
+            ? 1.9
+            : 1.2; // sedentary
 
-  // 3) Goal adjustment
   let daily = bmr * mult;
   if (goal === "lose") daily -= 500;
   else if (goal === "gain") daily += 500;
@@ -122,7 +119,6 @@ const SetupProfile: React.FC = () => {
     color: "success" | "danger" | "warning" = "danger"
   ) => setToast({ show: true, message, color });
 
-  // prefill from existing profile so you don't overwrite with nulls
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
