@@ -22,6 +22,7 @@ import {
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
+import { handleError } from "../../utils/handleError";
 import "./Login.css";
 
 const Login: React.FC = () => {
@@ -143,22 +144,25 @@ const Login: React.FC = () => {
       showToast("Welcome back!", "success");
       history.replace("/auth-loading");
     } catch (err: any) {
-      const baseMsg =
+      let message = "";
+
+      if (
         err?.code === "auth/invalid-credential" ||
         err?.code === "auth/wrong-password"
-          ? "Incorrect email or password."
-          : err?.code === "auth/user-not-found"
-          ? "No account found with that email."
-          : err?.message || "Login failed.";
+      ) {
+        message = "Incorrect email or password.";
+      } else if (err?.code === "auth/user-not-found") {
+        message = "No account found with that email.";
+      } else {
+        // fallback for unexpected Firebase/JS errors
+        message = handleError("login", err);
+      }
 
-      trackEvent("login_error", {
-        code: err?.code || "unknown",
-      });
+      trackEvent("login_error", { code: err?.code || "unknown" });
 
       setFailedAttempts((prev) => {
         const next = prev + 1;
 
-        // lock after 5th failure
         if (next >= 5) {
           const lockMs = 30 * 1000; // 30 seconds
           setLockUntil(Date.now() + lockMs);
@@ -168,13 +172,11 @@ const Login: React.FC = () => {
             "warning"
           );
         } else {
-          showToast(baseMsg);
+          showToast(message);
         }
 
         return next;
       });
-
-      console.error(err);
     } finally {
       setBusy(false);
     }

@@ -41,7 +41,6 @@ body.dark .fs-datepicker {
   --ion-color-step-200: #121212;
 }
 
-
 .home-content {
   background:
     radial-gradient(1200px 600px at 20% -10%, rgba(59, 130, 246, 0.06), transparent 60%),
@@ -49,6 +48,7 @@ body.dark .fs-datepicker {
     var(--mp-bg);
   min-height: 100%;
   --padding-bottom: 250px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 ion-title {
@@ -215,7 +215,8 @@ body.dark .fs-macro__val {
 }
 
 body.dark ion-tab-bar {
-  --background: #121212; /* same as your dark bg */
+  --background: #121212;
+  /* same as your dark bg */
   --color: rgba(148, 163, 184, 0.8);
   --color-selected: #357be4;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -229,10 +230,14 @@ body.dark ion-tab-bar {
   border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
   background: var(--mp-surface);
-  box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
 }
 
-.fs-meal__hdr { padding: 0 !important; } /* IonItem renders full width */
+.fs-meal__hdr {
+  padding: 0 !important;
+}
+
+/* IonItem renders full width */
 
 .fs-meal__row {
   --padding-start: 14px;
@@ -244,7 +249,12 @@ body.dark ion-tab-bar {
   background: transparent;
   align-items: center;
 }
-.fs-meal__icon { font-size: 20px; opacity: .95; }
+
+.fs-meal__icon {
+  font-size: 20px;
+  opacity: .95;
+}
+
 .fs-meal__title-text {
   font-size: 1.06rem;
   font-weight: 800;
@@ -267,12 +277,16 @@ body.dark ion-tab-bar {
   background: transparent !important;
   border: none !important;
 }
+
 .fs-meal__add ion-icon {
   font-size: 20px;
   opacity: 0.95;
   color: var(--mp-ring-accent);
 }
-.fs-meal__add:hover { transform: scale(1.05); }
+
+.fs-meal__add:hover {
+  transform: scale(1.05);
+}
 
 /* Content area – stretch left */
 .fs-meal ion-card-content {
@@ -335,7 +349,11 @@ body.dark ion-tab-bar {
   border: 1px dashed var(--mp-border);
 }
 
-ion-list { background: transparent !important; width: 100%; }
+ion-list {
+  background: transparent !important;
+  width: 100%;
+}
+
 .meal-item {
   --padding-start: 12px;
   --inner-padding-end: 8px;
@@ -345,9 +363,22 @@ ion-list { background: transparent !important; width: 100%; }
   --border-style: solid;
   --border-width: 0 0 1px 0;
 }
-.meal-item:last-child { --border-width: 0; }
-.meal-item h2 { font-weight: 600; margin: 0 0 2px 0; color: var(--mp-text); }
-.meal-item p { color: var(--mp-text-muted); margin: 0; font-size: var(--mp-sub); }
+
+.meal-item:last-child {
+  --border-width: 0;
+}
+
+.meal-item h2 {
+  font-weight: 600;
+  margin: 0 0 2px 0;
+  color: var(--mp-text);
+}
+
+.meal-item p {
+  color: var(--mp-text-muted);
+  margin: 0;
+  font-size: var(--mp-sub);
+}
 
 .kcal-badge {
   font-weight: 700;
@@ -360,43 +391,86 @@ ion-list { background: transparent !important; width: 100%; }
 }
 
 /* Misc */
-.ion-text-center ion-spinner { transform: translateZ(0); filter: drop-shadow(0 1px 8px rgba(0,0,0,0.25)); }
-@keyframes mp-fade-in-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-ion-card, ion-item { animation: mp-fade-in-up .24s ease both; }
+.ion-text-center ion-spinner {
+  transform: translateZ(0);
+  filter: drop-shadow(0 1px 8px rgba(0, 0, 0, 0.25));
+}
 
-html, body, ion-content {
+@keyframes mp-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+ion-card,
+ion-item {
+  animation: mp-fade-in-up .24s ease both;
+}
+
+html,
+body,
+ion-content {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* Small phones */
 @media (max-width: 420px) {
-  .fs-summary__row { grid-template-columns: 56px 1fr auto; gap: 10px; }
-  .fs-metric-value { font-size: 1.15rem; }
+  .fs-summary__row {
+    grid-template-columns: 56px 1fr auto;
+    gap: 10px;
+  }
+
+  .fs-metric-value {
+    font-size: 1.15rem;
+  }
+
   .fs-meal__row {
     --padding-start: 12px;
     --inner-padding-end: 8px;
     --min-height: 54px;
   }
-  .fs-meal__add { width: 28px; height: 28px; }
+
+  .fs-meal__add {
+    width: 28px;
+    height: 28px;
+  }
 }
+
 /* Make the swipe options cover the row content while dragging */
 .overlay-options {
   position: relative;
 }
+
 .overlay-options ion-item-options {
   position: absolute !important;
-  inset: 0 !important;             /* cover the whole row */
+  inset: 0 !important;
+  /* cover the whole row */
   display: flex;
-  z-index: 2;                       /* above the item */
+  z-index: 2;
+  /* above the item */
   pointer-events: auto;
 }
+
 .overlay-options ion-item {
   position: relative;
-  z-index: 1;                       /* below the options layer */
+  z-index: 1;
+  /* below the options layer */
 }
-.overlay-options ion-item-options[side="start"] { justify-content: flex-start; }
-.overlay-options ion-item-options[side="end"]   { justify-content: flex-end;  }
+
+.overlay-options ion-item-options[side="start"] {
+  justify-content: flex-start;
+}
+
+.overlay-options ion-item-options[side="end"] {
+  justify-content: flex-end;
+}
 
 /* Home.css additions */
 .del-btn {
@@ -404,4 +478,8 @@ html, body, ion-content {
   --padding-end: 6px;
   margin-right: 6px;
 }
-.del-btn ion-icon { font-size: 20px; opacity: .95; }
+
+.del-btn ion-icon {
+  font-size: 20px;
+  opacity: .95;
+}

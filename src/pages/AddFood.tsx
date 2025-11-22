@@ -46,6 +46,7 @@ import {
   increment,
   getDoc,
   runTransaction,
+  getDocs
 } from "firebase/firestore";
 
 import { calendarOutline, starOutline, trashOutline } from "ionicons/icons";
@@ -56,6 +57,7 @@ import {
   todayDateKey,
   shiftDateKey,
 } from "../utils/date";
+import { handleError } from "../utils/handleError";
 
 /**
  * ==============
@@ -138,7 +140,7 @@ type FavoriteFood = {
   perBase: MacroSet;
   total: MacroSet;
   dataSource?: string;
-  code?: string;
+  code?: string | null;
   createdAt: string;
 };
 
@@ -445,6 +447,8 @@ const AddFood: React.FC = () => {
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [favoriteToDelete, setFavoriteToDelete] =
     useState<FavoriteFood | null>(null);
+  const [mealPresetToDelete, setMealPresetToDelete] =
+    useState<CustomMealPreset | null>(null);
 
   const [recentFoods, setRecentFoods] = useState<DiaryEntryDoc[]>([]);
   const [recentLoading, setRecentLoading] = useState(false);
@@ -569,11 +573,17 @@ const AddFood: React.FC = () => {
           calories: p.caloriesTarget,
         });
       } catch (e: any) {
-        console.error("Error loading profile targets:", e);
+        const msg = handleError("add_food_profile_targets", e);
         trackEvent("add_food_profile_targets_error", {
           message: e?.message || String(e),
         });
+        setToast({
+          show: true,
+          message: msg,
+          color: "danger",
+        });
       }
+
     })();
   }, []);
 
@@ -619,9 +629,14 @@ const AddFood: React.FC = () => {
         setDayTotals({ calories, protein, fat, carbs });
       },
       (err) => {
-        console.error("Error loading day totals:", err);
+        const msg = handleError("add_food_day_totals", err);
         trackEvent("add_food_day_totals_error", {
           message: err?.message || String(err),
+        });
+        setToast({
+          show: true,
+          message: msg,
+          color: "danger",
         });
       }
     );
@@ -848,7 +863,7 @@ const AddFood: React.FC = () => {
     if (!user) return;
 
     const ref = collection(db, "users", user.uid, "recentFoods");
-    const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(20));
+    const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
 
     const unsub = onSnapshot(q, (snap) => {
       const list: RecentFood[] = snap.docs.map((d) => {
@@ -1007,10 +1022,10 @@ const AddFood: React.FC = () => {
 
       return foods.length;
     } catch (e: any) {
-      console.error(e);
+      const msg = handleError("food_search", e);
       setToast({
         show: true,
-        message: e?.message ?? "Error fetching foods",
+        message: msg,
         color: "danger",
       });
 
@@ -1453,11 +1468,11 @@ const AddFood: React.FC = () => {
         perBase,
         total,
         dataSource: "custom",
-        code: undefined,
+        code: null,
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(favDoc, favData as any);
+      await setDoc(favDoc, favData);
       setToast({
         show: true,
         message: "Custom food saved",
@@ -1529,7 +1544,7 @@ const AddFood: React.FC = () => {
   const upsertRecentFood = async (payload: {
     name: string;
     brand?: string | null;
-    code?: string;
+    code?: string | null;
   }) => {
     const user = auth.currentUser;
     if (!user) return;
@@ -1551,6 +1566,28 @@ const AddFood: React.FC = () => {
       },
       { merge: true }
     );
+
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const ref = collection(db, "users", user.uid, "recentFoods");
+
+      const q = fsQuery(ref, orderBy("lastUsedAt", "desc"));
+      const snap = await getDocs(q);
+
+      // keep only the newest 10
+      const docs = snap.docs;
+      if (docs.length > 10) {
+        const oldOnes = docs.slice(10);
+
+        for (const d of oldOnes) {
+          await deleteDoc(d.ref);
+        }
+      }
+    } catch (err) {
+      console.error("recentFoods cleanup error:", err);
+    }
 
     trackEvent("recent_food_upserted", {
       uid: user.uid,
@@ -1732,6 +1769,47 @@ const AddFood: React.FC = () => {
     }
   };
 
+  const confirmDeleteMealPreset = async () => {
+    const user = auth.currentUser;
+    if (!user || !mealPresetToDelete) {
+      setMealPresetToDelete(null);
+      return;
+    }
+
+    try {
+      const ref = doc(
+        db,
+        "users",
+        user.uid,
+        "mealPresets",
+        mealPresetToDelete.id
+      );
+      await deleteDoc(ref);
+      setToast({
+        show: true,
+        message: "Custom meal deleted",
+        color: "success",
+      });
+
+      trackEvent("meal_preset_deleted", {
+        uid: user.uid,
+        preset_id: mealPresetToDelete.id,
+      });
+    } catch (e: any) {
+      console.error(e);
+      setToast({
+        show: true,
+        message: e?.message ?? "Could not delete custom meal",
+        color: "danger",
+      });
+      trackEvent("meal_preset_delete_error", {
+        error: e?.message || String(e),
+      });
+    } finally {
+      setMealPresetToDelete(null);
+    }
+  };
+
   const previewPerBaseLabel = useMemo(() => {
     if (editEntry) {
       const src: any = editEntry.item;
@@ -1874,9 +1952,6 @@ const AddFood: React.FC = () => {
     setShowMealPicker(false);
   };
 
-  /**
-   * 🔥 Smart recommendation based on remaining macros
-   */
   const recommendation = useMemo(() => {
     if (!targets || !dayTotals) return null;
 
@@ -1905,7 +1980,6 @@ const AddFood: React.FC = () => {
       },
     ];
 
-    // If you're basically done, don't push food
     if (
       remainingCalories <= 80 &&
       remainingProtein <= 5 &&
@@ -1925,7 +1999,6 @@ const AddFood: React.FC = () => {
       };
     }
 
-    // sort by relative gap (remaining / target)
     const sorted = entries
       .filter((e) => e.target > 0)
       .sort(
@@ -1951,6 +2024,7 @@ const AddFood: React.FC = () => {
 
     const suggestion = pickRandom(suggestionList);
 
+    
     return {
       isClose: false,
       focusMacro: focus.key,
@@ -1976,7 +2050,7 @@ const AddFood: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding" fullscreen>
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}
@@ -2451,9 +2525,26 @@ const AddFood: React.FC = () => {
                           </p>
                         )}
                       </IonLabel>
+
+                      <IonButton
+                        slot="end"
+                        fill="clear"
+                        color="danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMealPresetToDelete(preset);
+                          trackEvent("meal_preset_delete_prompt_open", {
+                            preset_id: preset.id,
+                          });
+                        }}
+                        aria-label={`Delete custom meal ${preset.name}`}
+                      >
+                        <IonIcon icon={trashOutline} />
+                      </IonButton>
                     </IonItem>
                   ))}
                 </IonList>
+
               </>
             )}
           </>
@@ -2473,7 +2564,7 @@ const AddFood: React.FC = () => {
             </IonToolbar>
           </IonHeader>
 
-          <IonContent className="ion-padding">
+          <IonContent className="ion-padding" fullscreen>
             {editEntry || selectedFood ? (
               <>
                 <div style={{ marginBottom: 12 }}>
@@ -2906,6 +2997,52 @@ const AddFood: React.FC = () => {
           onDidDismiss={() => setFavoriteToDelete(null)}
         />
 
+        <IonList style={{ marginTop: 4 }}>
+          {mealPresets.map((preset) => (
+            <IonItem
+              key={preset.id}
+              button
+              onClick={() => addMealPresetToMeal(preset)}
+            >
+              <IonLabel>
+                <h2>{preset.name}</h2>
+                <p>
+                  {Math.round(preset.total.calories)} kcal · Carbohydrates{" "}
+                  {preset.total.carbs.toFixed(1)} g · Protein{" "}
+                  {preset.total.protein.toFixed(1)} g · Fat{" "}
+                  {preset.total.fat.toFixed(1)} g
+                </p>
+                {preset.note && (
+                  <p
+                    style={{
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {preset.note}
+                  </p>
+                )}
+              </IonLabel>
+
+              <IonButton
+                slot="end"
+                fill="clear"
+                color="danger"
+                onClick={(e) => {
+                  e.stopPropagation(); // don't trigger addMealPresetToMeal
+                  setMealPresetToDelete(preset);
+                  trackEvent("meal_preset_delete_prompt_open", {
+                    preset_id: preset.id,
+                  });
+                }}
+                aria-label={`Delete custom meal ${preset.name}`}
+              >
+                <IonIcon icon={trashOutline} />
+              </IonButton>
+            </IonItem>
+          ))}
+        </IonList>
+
         <IonModal
           isOpen={showCreateCustomFood}
           onDidDismiss={() => {
@@ -2918,7 +3055,7 @@ const AddFood: React.FC = () => {
               <IonTitle>Create custom food</IonTitle>
             </IonToolbar>
           </IonHeader>
-          <IonContent className="ion-padding">
+          <IonContent className="ion-padding" fullscreen>
             <IonItem>
               <IonLabel position="stacked">Name</IonLabel>
               <IonInput
@@ -3012,7 +3149,7 @@ const AddFood: React.FC = () => {
               <IonTitle>Create custom meal</IonTitle>
             </IonToolbar>
           </IonHeader>
-          <IonContent className="ion-padding">
+          <IonContent className="ion-padding" fullscreen>
             <IonItem>
               <IonLabel position="stacked">Meal name</IonLabel>
               <IonInput

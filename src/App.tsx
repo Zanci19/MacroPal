@@ -13,6 +13,7 @@ import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
 import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 import Login from "./pages/authentication/Login";
 import Register from "./pages/authentication/Register";
@@ -111,28 +112,30 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
-      <IonReactRouter>
-        <UpdateGate>
-          <AnalyticsRouteTracker />
+      <ErrorBoundary>
+        <IonReactRouter>
+          <UpdateGate>
+            <AnalyticsRouteTracker />
 
-          <IonRouterOutlet id="root">
-            <Route exact path="/login" component={Login} />
-            <Route exact path="/register" component={Register} />
-            <Route exact path="/add-food" component={AddFood} />
-            <Route exact path="/setup-profile" component={SetupProfile} />
-            <Route exact path="/check-login" component={CheckLogin} />
-            <Route exact path="/start" component={Start} />
-            <Route exact path="/reset-password" component={ResetPassword} />
-            <Route exact path="/scan-barcode" component={ScanBarcode} />
-            <Route exact path="/auth-loading" component={AuthLoading} />
-            <Route exact path="/offline" component={Offline} />
+            <IonRouterOutlet id="root">
+              <Route exact path="/login" component={Login} />
+              <Route exact path="/register" component={Register} />
+              <Route exact path="/add-food" component={AddFood} />
+              <Route exact path="/setup-profile" component={SetupProfile} />
+              <Route exact path="/check-login" component={CheckLogin} />
+              <Route exact path="/start" component={Start} />
+              <Route exact path="/reset-password" component={ResetPassword} />
+              <Route exact path="/scan-barcode" component={ScanBarcode} />
+              <Route exact path="/auth-loading" component={AuthLoading} />
+              <Route exact path="/offline" component={Offline} />
 
-            <Route path="/app" component={TabsShell} />
+              <Route path="/app" component={TabsShell} />
 
-            <Redirect exact from="/" to="/check-login" />
-          </IonRouterOutlet>
-        </UpdateGate>
-      </IonReactRouter>
+              <Redirect exact from="/" to="/check-login" />
+            </IonRouterOutlet>
+          </UpdateGate>
+        </IonReactRouter>
+      </ErrorBoundary>
     </IonApp>
   );
 };

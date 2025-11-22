@@ -879,7 +879,7 @@ const Home: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="home-content ion-padding">
+      <IonContent className="home-content ion-padding" fullscreen>
         <div className="fs-datebar" role="group" aria-label="Select day">
           <IonButton
             fill="clear"
@@ -1380,7 +1380,7 @@ const Home: React.FC = () => {
             <IonTitle>Select a day</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="ion-padding home-content">
+        <IonContent className="ion-padding home-content" fullscreen>
           <IonDatetime
             className="fs-datepicker"
             presentation="date"

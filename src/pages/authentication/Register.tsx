@@ -20,6 +20,7 @@ import {
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
+import { handleError } from "../../utils/handleError";
 
 // Small helpers
 const emailOk = (s: string) =>
@@ -130,104 +131,108 @@ const Register: React.FC = () => {
       const code = err?.code || "unknown";
       trackEvent("register_error", { code });
 
-      // Friendly error mapping
-      const msg =
-        code === "auth/email-already-in-use"
-          ? "This email is already registered."
-          : code === "auth/invalid-email"
-          ? "Invalid email address."
-          : code === "auth/weak-password"
-          ? "Password is too weak."
-          : err?.message || "Registration failed.";
+      let msg: string;
+
+      // Known, user-facing Firebase errors first
+      if (code === "auth/email-already-in-use") {
+        msg = "This email is already registered.";
+      } else if (code === "auth/invalid-email") {
+        msg = "Invalid email address.";
+      } else if (code === "auth/weak-password") {
+        msg = "Password is too weak.";
+      } else {
+        // Everything else goes through the shared handler
+        msg = handleError("register", err);
+      }
+
       showToast(msg);
-      console.error(err);
-    }
+    }};
+
+
+    return (
+      <IonPage>
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Create account</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+
+        <IonContent className="ion-padding">
+          <IonItem>
+            <IonLabel position="stacked">Name</IonLabel>
+            <IonInput
+              placeholder="Your name"
+              value={name}
+              onIonChange={(e: any) => setName(e?.detail?.value ?? "")}
+            />
+          </IonItem>
+
+          <IonItem>
+            <IonLabel position="stacked">Email</IonLabel>
+            <IonInput
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onIonChange={(e: any) => setEmail(e?.detail?.value ?? "")}
+              inputmode="email"
+              autocomplete="email"
+            />
+          </IonItem>
+
+          <IonItem>
+            <IonLabel position="stacked">Password</IonLabel>
+            <IonInput
+              type="password"
+              placeholder="At least 8 characters, include a number!"
+              value={pw}
+              onIonChange={(e: any) => setPw(e?.detail?.value ?? "")}
+              autocomplete="new-password"
+            />
+          </IonItem>
+
+          <IonItem>
+            <IonLabel position="stacked">Confirm password</IonLabel>
+            <IonInput
+              type="password"
+              placeholder="Repeat your password"
+              value={pw2}
+              onIonChange={(e: any) => setPw2(e?.detail?.value ?? "")}
+              autocomplete="new-password"
+            />
+          </IonItem>
+
+          <IonButton
+            expand="block"
+            className="ion-margin-top"
+            onClick={handleRegister}
+          >
+            Sign Up
+          </IonButton>
+
+          <IonText className="ion-text-center" color="medium">
+            <p className="ion-margin-top">Already have an account?</p>
+          </IonText>
+          <IonButton
+            fill="clear"
+            expand="block"
+            onClick={() => {
+              trackEvent("navigate_to_login_from_register");
+              history.push("/login");
+            }}
+          >
+            Log In
+          </IonButton>
+
+          <IonToast
+            isOpen={toast.show}
+            onDidDismiss={() => setToast((s) => ({ ...s, show: false }))}
+            message={toast.message}
+            color={toast.color}
+            duration={2800}
+          />
+        </IonContent>
+      </IonPage>
+    );
   };
 
-  return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Create account</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent className="ion-padding">
-        <IonItem>
-          <IonLabel position="stacked">Name</IonLabel>
-          <IonInput
-            placeholder="Your name"
-            value={name}
-            onIonChange={(e: any) => setName(e?.detail?.value ?? "")}
-          />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Email</IonLabel>
-          <IonInput
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onIonChange={(e: any) => setEmail(e?.detail?.value ?? "")}
-            inputmode="email"
-            autocomplete="email"
-          />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Password</IonLabel>
-          <IonInput
-            type="password"
-            placeholder="At least 8 characters, include a number!"
-            value={pw}
-            onIonChange={(e: any) => setPw(e?.detail?.value ?? "")}
-            autocomplete="new-password"
-          />
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Confirm password</IonLabel>
-          <IonInput
-            type="password"
-            placeholder="Repeat your password"
-            value={pw2}
-            onIonChange={(e: any) => setPw2(e?.detail?.value ?? "")}
-            autocomplete="new-password"
-          />
-        </IonItem>
-
-        <IonButton
-          expand="block"
-          className="ion-margin-top"
-          onClick={handleRegister}
-        >
-          Sign Up
-        </IonButton>
-
-        <IonText className="ion-text-center" color="medium">
-          <p className="ion-margin-top">Already have an account?</p>
-        </IonText>
-        <IonButton
-          fill="clear"
-          expand="block"
-          onClick={() => {
-            trackEvent("navigate_to_login_from_register");
-            history.push("/login");
-          }}
-        >
-          Log In
-        </IonButton>
-
-        <IonToast
-          isOpen={toast.show}
-          onDidDismiss={() => setToast((s) => ({ ...s, show: false }))}
-          message={toast.message}
-          color={toast.color}
-          duration={2800}
-        />
-      </IonContent>
-    </IonPage>
-  );
-};
-
-export default Register;
+  export default Register;
