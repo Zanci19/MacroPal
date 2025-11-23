@@ -350,13 +350,12 @@ const Analytics: React.FC = () => {
     return acc;
   }, [view]);
 
-  // best/worst days (ignore 0-kcal days)
   const bestDay = useMemo(
     () =>
       nonEmptyView.length
         ? [...nonEmptyView].sort(
-            (a, b) => b.roll.macros.calories - a.roll.macros.calories
-          )[0]
+          (a, b) => b.roll.macros.calories - a.roll.macros.calories
+        )[0]
         : null,
     [nonEmptyView]
   );
@@ -364,17 +363,29 @@ const Analytics: React.FC = () => {
     () =>
       nonEmptyView.length
         ? [...nonEmptyView].sort(
-            (a, b) => a.roll.macros.calories - b.roll.macros.calories
-          )[0]
+          (a, b) => a.roll.macros.calories - b.roll.macros.calories
+        )[0]
         : null,
     [nonEmptyView]
   );
 
-  // micronutrient keys and series
-  const microKeys = useMemo(
-    () => collectMicroKeys(nonEmptyView.flatMap((d) => d.roll.items)),
-    [nonEmptyView]
-  );
+  const microKeys = useMemo(() => {
+    const present = new Set<string>();
+
+    nonEmptyView.forEach((d) => {
+      d.roll.items.forEach((it) => {
+        const t = it.total || {};
+        EXTRA_NUTRIENT_KEYS.forEach((k) => {
+          const val = (t as any)[k];
+          if (typeof val === "number" && isFinite(val)) {
+            present.add(k);
+          }
+        });
+      });
+    });
+
+    return EXTRA_NUTRIENT_KEYS;
+  }, [nonEmptyView]);
 
   useEffect(() => {
     if (!microKey && microKeys.length) setMicroKey(microKeys[0]);
@@ -395,7 +406,6 @@ const Analytics: React.FC = () => {
     });
   }, [nonEmptyView, microKey]);
 
-  // top foods by calories
   const topFoods = useMemo(() => {
     const map = new Map<
       string,

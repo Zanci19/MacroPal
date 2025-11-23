@@ -43,7 +43,7 @@ import {
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
-import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, runTransaction, updateDoc } from "firebase/firestore";
 import "./Home.css";
 import {
   clampDateKeyToToday,
@@ -871,6 +871,27 @@ const Home: React.FC = () => {
     dayData.snacks.length >
     0;
 
+  const hasEverLoggedFood = !!(profile as any)?.hasEverLoggedFood;
+
+  useEffect(() => {
+    if (!uid) return;
+    if (!anyItems) return;
+    if ((profile as any)?.hasEverLoggedFood === true) return;
+
+    const ref = doc(db, "users", uid);
+    updateDoc(ref, { "profile.hasEverLoggedFood": true })
+      .then(() => {
+        trackEvent("profile_has_ever_logged_food_set", {
+          uid,
+          date: activeDateKey,
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to set hasEverLoggedFood:", err);
+      });
+  }, [uid, anyItems, profile, activeDateKey]);
+
+
   return (
     <IonPage>
       <IonHeader>
@@ -1032,7 +1053,7 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {!loading && !anyItems && (
+        {!loading && !anyItems && !hasEverLoggedFood && (
           <div
             style={{
               marginTop: 24,

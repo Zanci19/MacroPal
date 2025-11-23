@@ -1,4 +1,3 @@
-// src/pages/settings/Settings.tsx
 import React from "react";
 import {
   IonPage,
@@ -15,6 +14,7 @@ import {
   IonAlert,
   IonToast,
   IonText,
+  IonToggle,
 } from "@ionic/react";
 import {
   personCircleOutline,
@@ -23,8 +23,9 @@ import {
   mailOutline,
   warningOutline,
   cafeOutline,
+  trashOutline,
 } from "ionicons/icons";
-import { auth } from "../../firebase";
+import { auth, db, trackEvent } from "../../firebase";
 import {
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -32,6 +33,8 @@ import {
   deleteUser,
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
+import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -45,6 +48,11 @@ const Settings: React.FC = () => {
 
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [confirmDeleteName, setConfirmDeleteName] = React.useState(false);
+
+  const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
+  const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
+  const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
+  const [clearingRecent, setClearingRecent] = React.useState(false);
 
   const handleVerifyEmail = async () => {
     if (!auth.currentUser) return;
@@ -107,6 +115,74 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleClearRecentFoods = async () => {
+    if (!auth.currentUser) return;
+    try {
+      setClearingRecent(true);
+      const recentRef = collection(
+        db,
+        "users",
+        auth.currentUser.uid,
+        "recentFoods"
+      );
+      const snap = await getDocs(recentRef);
+
+      const deletions = snap.docs.map((d) => deleteDoc(d.ref));
+      await Promise.all(deletions);
+
+      setToast({
+        show: true,
+        message: "Recent foods history cleared.",
+        color: "success",
+      });
+    } catch (e: any) {
+      setToast({
+        show: true,
+        message: e?.message || "Could not clear recent foods.",
+        color: "danger",
+      });
+    } finally {
+      setClearingRecent(false);
+    }
+  };
+
+  React.useEffect(() => {
+    const load = async () => {
+      const current = auth.currentUser;
+      if (!current) return;
+
+      try {
+        const ref = doc(db, "users", current.uid);
+        const snap = await getDoc(ref);
+        const data = snap.data() as any | undefined;
+        const profile = data?.profile;
+
+        const enabled =
+          profile && typeof profile.smartRecommendationEnabled === "boolean"
+            ? profile.smartRecommendationEnabled
+            : true;
+
+        setSmartRecommendationEnabled(
+          typeof (profile as any).smartRecommendationEnabled === "boolean"
+            ? (profile as any).smartRecommendationEnabled
+            : true
+        );
+
+        setShowRecentItemsEnabled(
+          typeof (profile as any).showRecentItems === "boolean"
+            ? (profile as any).showRecentItems
+            : true
+        );
+
+        setSmartRecommendationEnabled(enabled);
+      } catch (e) {
+        console.error("Failed to load smartRecommendationEnabled:", e);
+      }
+    };
+
+    load();
+  }, []);
+
   if (!user) {
     return (
       <IonPage>
@@ -140,7 +216,6 @@ const Settings: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding">
-        {/* Profile summary */}
         <IonList>
           <IonItem lines="full">
             <IonIcon slot="start" icon={personCircleOutline} />
@@ -154,15 +229,87 @@ const Settings: React.FC = () => {
           </IonItem>
         </IonList>
 
-        {/* Account actions */}
         <IonList>
-          {/* 🔹 New item: open SetupProfile to edit goals/targets */}
           <IonItem
             lines="full"
             button
             onClick={() => history.push("/setup-profile")}
           >
             <IonLabel>Profile, goals & targets</IonLabel>
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Show smart recommendation</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={smartRecommendationEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setSmartRecommendationEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.smartRecommendationEnabled": checked,
+                  });
+
+                  trackEvent("settings_smart_recommendation_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save smartRecommendationEnabled:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message ||
+                      "Could not update smart recommendation setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Show recently added items</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={showRecentItemsEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setShowRecentItemsEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.showRecentItems": checked,
+                  });
+
+                  trackEvent("settings_show_recent_items_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save showRecentItems:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message ||
+                      "Could not update recent items setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
           </IonItem>
 
           <IonItem lines="full">
@@ -185,7 +332,6 @@ const Settings: React.FC = () => {
             </IonButton>
           </IonItem>
 
-          {/* ❤️ Buy me a coffee button */}
           <IonItem
             lines="full"
             button
@@ -195,6 +341,21 @@ const Settings: React.FC = () => {
           >
             <IonIcon slot="start" icon={cafeOutline} />
             <IonLabel>Buy me a coffee ☕</IonLabel>
+          </IonItem>
+
+          <IonItem
+            lines="full"
+            button
+            disabled={clearingRecent}
+            onClick={() => setConfirmClearRecent(true)}
+          >
+            <IonIcon slot="start" icon={trashOutline} />
+            <IonLabel>Clear recent foods history</IonLabel>
+            {clearingRecent && (
+              <IonNote slot="end" color="medium">
+                Clearing…
+              </IonNote>
+            )}
           </IonItem>
 
           <IonItem
@@ -240,6 +401,28 @@ const Settings: React.FC = () => {
         onDidDismiss={() => setConfirmDelete(false)}
       />
 
+      <IonAlert
+        isOpen={confirmClearRecent}
+        header="Clear recent foods?"
+        message="This will remove your recent foods history. Favorites and diary entries will stay."
+        buttons={[
+          {
+            text: "Cancel",
+            role: "cancel",
+            handler: () => setConfirmClearRecent(false),
+          },
+          {
+            text: "Clear",
+            role: "destructive",
+            handler: () => {
+              setConfirmClearRecent(false);
+              void handleClearRecentFoods();
+            },
+          },
+        ]}
+        onDidDismiss={() => setConfirmClearRecent(false)}
+      />
+      
       <IonAlert
         isOpen={confirmDeleteName}
         header="Type your name to confirm"

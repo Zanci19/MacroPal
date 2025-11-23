@@ -199,7 +199,10 @@ type ProfileFromFirestore = {
     fatG: number;
     carbsG: number;
   };
+  smartRecommendationEnabled?: boolean;
+  showRecentItems?: boolean;
 };
+
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
@@ -313,6 +316,15 @@ function scale(base: MacroSet, qty: number): MacroSet {
         : undefined,
   };
 }
+
+function stripUndefined<T extends Record<string, any>>(obj: T): T {
+  const out: any = {};
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v !== undefined) out[k] = v;
+  });
+  return out as T;
+}
+
 
 function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
   const params = new URLSearchParams(location.search);
@@ -493,6 +505,9 @@ const AddFood: React.FC = () => {
     carbs: number;
   } | null>(null);
 
+  const [showSmartRecommendation, setShowSmartRecommendation] = useState(true);
+  const [showRecentItemsEnabled, setShowRecentItemsEnabled] = useState(true);
+
   const per100g = useMemo(
     () => macrosPer100g(selectedFood?.nutriments),
     [selectedFood]
@@ -568,6 +583,23 @@ const AddFood: React.FC = () => {
           goal: (p.goal as Goal) || "maintain",
         });
 
+        setShowSmartRecommendation(
+          p.smartRecommendationEnabled !== false
+        );
+
+        setShowSmartRecommendation(
+          typeof p.smartRecommendationEnabled === "boolean"
+            ? p.smartRecommendationEnabled
+            : true
+        );
+
+        setShowRecentItemsEnabled(
+          typeof p.showRecentItems === "boolean"
+            ? p.showRecentItems
+            : true
+        );
+
+
         trackEvent("add_food_profile_targets_loaded", {
           uid: user.uid,
           calories: p.caloriesTarget,
@@ -583,9 +615,9 @@ const AddFood: React.FC = () => {
           color: "danger",
         });
       }
-
     })();
   }, []);
+
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -989,13 +1021,23 @@ const AddFood: React.FC = () => {
   }, []);
 
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
-    if (!q.trim()) return 0;
+    const raw = q.trim();
+    if (!raw) return 0;
+
+    if (raw.length < 2) {
+      setToast({
+        show: true,
+        message: "Type at least 2 characters to search.",
+        color: "medium",
+      });
+      return 0;
+    }
+
     setLoading(true);
     setHasSearched(true);
 
-
     trackEvent("food_search_start", {
-      query: q,
+      query: raw,
       page: pageNumber,
       meal,
       date: dateKey,
@@ -1003,7 +1045,7 @@ const AddFood: React.FC = () => {
 
     try {
       const url = new URL(`${FN_BASE}/offSearch`);
-      url.searchParams.set("q", q);
+      url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
       url.searchParams.set("page_size", "20");
 
@@ -1011,16 +1053,75 @@ const AddFood: React.FC = () => {
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
       const data: OFFSearchResponse = await res.json();
       const foods = Array.isArray(data?.products) ? data.products : [];
-      setResults(foods);
+
+      const filteredByMacros = foods.filter((food) => {
+        const preview = macrosPer100g(food.nutriments);
+        return (
+          (preview.calories ?? 0) > 0 ||
+          (preview.carbs ?? 0) > 0 ||
+          (preview.protein ?? 0) > 0 ||
+          (preview.fat ?? 0) > 0
+        );
+      });
+
+      const lowerQ = raw.toLowerCase();
+
+      const primary = filteredByMacros.filter((food) => {
+        const name = (food.product_name || "").toLowerCase();
+        const brand = (food.brands || "").toLowerCase();
+        return name.includes(lowerQ) || brand.includes(lowerQ);
+      });
+
+      const baseList = primary.length > 0 ? primary : filteredByMacros;
+
+      const scored = baseList.map((food) => {
+        const name = (food.product_name || "").toLowerCase();
+        const brand = (food.brands || "").toLowerCase();
+        let score = 0;
+
+        if (name === lowerQ) {
+          score += 100;
+        } else if (name.startsWith(lowerQ)) {
+          score += 80;
+        } else {
+          const words = name.split(/[\s,.\-]+/).filter(Boolean);
+          if (words.includes(lowerQ)) {
+            score += 60;
+          } else if (name.includes(lowerQ)) {
+            score += 40;
+          }
+        }
+
+        if (brand === lowerQ) {
+          score += 20;
+        } else if (brand.startsWith(lowerQ)) {
+          score += 15;
+        } else if (brand.includes(lowerQ)) {
+          score += 10;
+        }
+
+        return { food, score };
+      });
+
+      scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const an = (a.food.product_name || "").toLowerCase();
+        const bn = (b.food.product_name || "").toLowerCase();
+        return an.localeCompare(bn);
+      });
+
+      const finalFoods = scored.map((x) => x.food);
+
+      setResults(finalFoods);
       setPage(pageNumber);
 
       trackEvent("food_search_success", {
-        query: q,
+        query: raw,
         page: pageNumber,
-        count: foods.length,
+        count: finalFoods.length,
       });
 
-      return foods.length;
+      return finalFoods.length;
     } catch (e: any) {
       const msg = handleError("food_search", e);
       setToast({
@@ -1030,7 +1131,7 @@ const AddFood: React.FC = () => {
       });
 
       trackEvent("food_search_error", {
-        query: q,
+        query: raw,
         page: pageNumber,
         error: e?.message || String(e),
       });
@@ -1129,7 +1230,7 @@ const AddFood: React.FC = () => {
       weightQtyForSel = grams;
     }
 
-    const total = scale(perBase, factor);
+    const total = stripUndefined(scale(perBase, factor));
 
     return {
       useServingMode,
@@ -1183,7 +1284,7 @@ const AddFood: React.FC = () => {
       const ratio = newValue / oldValue;
 
       const oldTotal: any = item.total || {};
-      const newTotal: MacroSet = {
+      const newTotalRaw: MacroSet = {
         calories: safeNum((oldTotal.calories || 0) * ratio, 0),
         carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
         protein: safeNum((oldTotal.protein || 0) * ratio, 2),
@@ -1209,6 +1310,8 @@ const AddFood: React.FC = () => {
             ? safeNum((oldTotal.sodium || 0) * ratio, 2)
             : undefined,
       };
+
+      const newTotal = stripUndefined(newTotalRaw);
 
       const newSel: any = {
         ...(sel || {}),
@@ -1284,6 +1387,35 @@ const AddFood: React.FC = () => {
 
     const userRef = doc(db, "users", user.uid, "foods", dateKey);
 
+    const perBaseClean = stripUndefined({
+      calories: safeNum(perBase.calories, 0),
+      carbs: safeNum(perBase.carbs, 2),
+      protein: safeNum(perBase.protein, 2),
+      fat: safeNum(perBase.fat, 2),
+      sugar:
+        perBase.sugar !== undefined
+          ? safeNum(perBase.sugar, 2)
+          : undefined,
+      fiber:
+        perBase.fiber !== undefined
+          ? safeNum(perBase.fiber, 2)
+          : undefined,
+      saturatedFat:
+        perBase.saturatedFat !== undefined
+          ? safeNum(perBase.saturatedFat, 2)
+          : undefined,
+      salt:
+        perBase.salt !== undefined
+          ? safeNum(perBase.salt, 2)
+          : undefined,
+      sodium:
+        perBase.sodium !== undefined
+          ? safeNum(perBase.sodium, 2)
+          : undefined,
+    } as MacroSet);
+
+    const totalClean = stripUndefined(total);
+
     const item = {
       code: selectedFood.code,
       name: selectedFood.product_name || "(no name)",
@@ -1296,35 +1428,11 @@ const AddFood: React.FC = () => {
         servingsQty: useServingMode ? servingsQtyForSel : null,
         weightQty: useServingMode ? null : weightQtyForSel,
       },
-      perBase: {
-        calories: safeNum(perBase.calories, 0),
-        carbs: safeNum(perBase.carbs, 2),
-        protein: safeNum(perBase.protein, 2),
-        fat: safeNum(perBase.fat, 2),
-        sugar:
-          perBase.sugar !== undefined
-            ? safeNum(perBase.sugar, 2)
-            : undefined,
-        fiber:
-          perBase.fiber !== undefined
-            ? safeNum(perBase.fiber, 2)
-            : undefined,
-        saturatedFat:
-          perBase.saturatedFat !== undefined
-            ? safeNum(perBase.saturatedFat, 2)
-            : undefined,
-        salt:
-          perBase.salt !== undefined
-            ? safeNum(perBase.salt, 2)
-            : undefined,
-        sodium:
-          perBase.sodium !== undefined
-            ? safeNum(perBase.sodium, 2)
-            : undefined,
-      } as MacroSet,
-      total,
+      perBase: perBaseClean,
+      total: totalClean,
       addedAt: new Date().toISOString(),
     };
+
 
     await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
     await upsertRecentFood({
@@ -1368,6 +1476,36 @@ const AddFood: React.FC = () => {
       const colRef = collection(db, "users", user.uid, "favorites");
       const favDoc = doc(colRef);
 
+      // ✅ NEW: clean perBase + total
+      const perBaseClean = stripUndefined({
+        calories: safeNum(perBase.calories, 0),
+        carbs: safeNum(perBase.carbs, 2),
+        protein: safeNum(perBase.protein, 2),
+        fat: safeNum(perBase.fat, 2),
+        sugar:
+          perBase.sugar !== undefined
+            ? safeNum(perBase.sugar, 2)
+            : undefined,
+        fiber:
+          perBase.fiber !== undefined
+            ? safeNum(perBase.fiber, 2)
+            : undefined,
+        saturatedFat:
+          perBase.saturatedFat !== undefined
+            ? safeNum(perBase.saturatedFat, 2)
+            : undefined,
+        salt:
+          perBase.salt !== undefined
+            ? safeNum(perBase.salt, 2)
+            : undefined,
+        sodium:
+          perBase.sodium !== undefined
+            ? safeNum(perBase.sodium, 2)
+            : undefined,
+      } as MacroSet);
+
+      const totalClean = stripUndefined(total);
+
       const favData: Omit<FavoriteFood, "id"> = {
         name: selectedFood.product_name || "(no name)",
         brand: selectedFood.brands || null,
@@ -1378,33 +1516,8 @@ const AddFood: React.FC = () => {
           servingsQty: useServingMode ? servingsQtyForSel : null,
           weightQty: useServingMode ? null : weightQtyForSel,
         },
-        perBase: {
-          calories: safeNum(perBase.calories, 0),
-          carbs: safeNum(perBase.carbs, 2),
-          protein: safeNum(perBase.protein, 2),
-          fat: safeNum(perBase.fat, 2),
-          sugar:
-            perBase.sugar !== undefined
-              ? safeNum(perBase.sugar, 2)
-              : undefined,
-          fiber:
-            perBase.fiber !== undefined
-              ? safeNum(perBase.fiber, 2)
-              : undefined,
-          saturatedFat:
-            perBase.saturatedFat !== undefined
-              ? safeNum(perBase.saturatedFat, 2)
-              : undefined,
-          salt:
-            perBase.salt !== undefined
-              ? safeNum(perBase.salt, 2)
-              : undefined,
-          sodium:
-            perBase.sodium !== undefined
-              ? safeNum(perBase.sodium, 2)
-              : undefined,
-        } as MacroSet,
-        total,
+        perBase: perBaseClean,
+        total: totalClean,
         dataSource: "openfoodfacts",
         code: selectedFood.code,
         createdAt: new Date().toISOString(),
@@ -1601,9 +1714,13 @@ const AddFood: React.FC = () => {
     if (!user) return;
 
     const userRef = doc(db, "users", user.uid, "foods", dateKey);
-    const total: MacroSet =
+
+    const totalRaw: MacroSet =
       src.total ||
       ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
+
+    const total = stripUndefined(totalRaw);
+
     const item = {
       code: src.code,
       name: src.name || "(no name)",
@@ -1618,8 +1735,8 @@ const AddFood: React.FC = () => {
           servingsQty: null,
           weightQty: null,
         } as any),
-      perBase: src.perBase ?? total,
-      total,
+      perBase: src.perBase ? stripUndefined(src.perBase as any) : total,
+      total, // ✅ use cleaned total
       addedAt: new Date().toISOString(),
     };
 
@@ -2024,7 +2141,7 @@ const AddFood: React.FC = () => {
 
     const suggestion = pickRandom(suggestionList);
 
-    
+
     return {
       isClose: false,
       focusMacro: focus.key,
@@ -2062,8 +2179,7 @@ const AddFood: React.FC = () => {
           </span>
         </IonChip>
 
-        {/* 🔥 Smart recommendation card */}
-        {targets && dayTotals && recommendation && (
+        {showSmartRecommendation && targets && dayTotals && recommendation && (
           <IonCard style={{ marginBottom: 12 }}>
             <IonCardHeader>
               <IonCardTitle style={{ fontSize: 16 }}>
@@ -2197,7 +2313,7 @@ const AddFood: React.FC = () => {
               </IonButton>
             </div>
 
-            {recent.length > 0 && showRecent && (
+            {showRecentItemsEnabled && recent.length > 0 && showRecent && (
               <div style={{ marginTop: 12 }}>
                 <IonText
                   color="medium"
@@ -2243,15 +2359,10 @@ const AddFood: React.FC = () => {
               </div>
             )}
 
-
             <IonList style={{ marginTop: 8 }}>
               {results.map((food) => {
                 const preview = macrosPer100g(food.nutriments);
-                const hasPreview =
-                  preview.calories ||
-                  preview.protein ||
-                  preview.carbs ||
-                  preview.fat;
+
                 return (
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
@@ -2273,11 +2384,9 @@ const AddFood: React.FC = () => {
                         {(food.serving_size
                           ? `Serving: ${food.serving_size} · `
                           : "") +
-                          (hasPreview
-                            ? `${preview.calories || 0} kcal/100g · Carbohydrates ${preview.carbs || 0
-                            } g · Protein ${preview.protein || 0} g · Fat ${preview.fat || 0
-                            } g`
-                            : "—")}
+                          `${preview.calories || 0} kcal/100g · Carbohydrates ${preview.carbs || 0
+                          } g · Protein ${preview.protein || 0} g · Fat ${preview.fat || 0
+                          } g`}
                       </p>
                     </IonLabel>
                   </IonItem>
@@ -2304,7 +2413,7 @@ const AddFood: React.FC = () => {
                     foodsSearch(query.trim(), page - 1);
                   }}
                 >
-                  Prev
+                  Previous
                 </IonButton>
                 <IonButton
                   size="small"
