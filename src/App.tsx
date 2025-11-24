@@ -110,6 +110,33 @@ const App: React.FC = () => {
     return () => prefersDark.removeEventListener("change", listener);
   }, []);
 
+  useEffect(() => {
+    const isAndroid = /Android/i.test(window.navigator.userAgent || "");
+    if (!isAndroid) return;
+
+    const updateSoftkeyPadding = () => {
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const screenHeight = window.screen?.height ?? viewportHeight;
+      const heightGap = screenHeight - viewportHeight;
+
+      const hasSoftkeys = heightGap > 60 || screenHeight - window.innerHeight > 60;
+      document.body.classList.toggle("has-softkeys", hasSoftkeys);
+    };
+
+    updateSoftkeyPadding();
+
+    const resizeSource = window.visualViewport;
+    resizeSource?.addEventListener("resize", updateSoftkeyPadding);
+    window.addEventListener("resize", updateSoftkeyPadding);
+    window.addEventListener("orientationchange", updateSoftkeyPadding);
+
+    return () => {
+      resizeSource?.removeEventListener("resize", updateSoftkeyPadding);
+      window.removeEventListener("resize", updateSoftkeyPadding);
+      window.removeEventListener("orientationchange", updateSoftkeyPadding);
+    };
+  }, []);
+
   return (
     <IonApp>
       <ErrorBoundary>
