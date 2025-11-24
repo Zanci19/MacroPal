@@ -47,8 +47,6 @@ body.dark .fs-datepicker {
     radial-gradient(1000px 600px at 100% -20%, rgba(99, 102, 241, 0.06), transparent 55%),
     var(--mp-bg);
   min-height: 100%;
-  --padding-bottom: 250px;
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 ion-title {
@@ -131,6 +129,7 @@ ion-card:hover {
 .fs-tip-card__hdr ion-card-title {
   font-weight: 800;
   letter-spacing: 0.2px;
+  color: var(--mp-text) !important;
 }
 
 .fs-summary__row {

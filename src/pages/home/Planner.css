@@ -1,0 +1,55 @@
+.planner-hero {
+  margin: 12px;
+}
+
+.planner-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 0;
+}
+
+.planner-accordion {
+  margin: 0 8px 24px;
+}
+
+.planner-day {
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  box-shadow: var(--ion-box-shadow, 0 4px 16px rgba(0, 0, 0, 0.08));
+}
+
+.planner-day-content {
+  padding: 12px 0;
+}
+
+.planner-date {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.planner-meal {
+  --inner-padding-end: 12px;
+}
+
+.planner-meal-header {
+  font-weight: 600;
+  margin-bottom: 6px;
+  text-transform: capitalize;
+}
+
+.planner-meal-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.planner-chip-title {
+  font-weight: 600;
+}
+
+.planner-chip-note {
+  font-size: 12px;
+  opacity: 0.8;
+}

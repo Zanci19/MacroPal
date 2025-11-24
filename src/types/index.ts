@@ -100,6 +100,21 @@ export interface DayDiaryDoc {
   snacks: DiaryEntry[];
   [k: string]: any;
 }
+
+export interface MealPlanEntry {
+  title: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface MealPlanDoc {
+  breakfast: MealPlanEntry[];
+  lunch: MealPlanEntry[];
+  dinner: MealPlanEntry[];
+  snacks: MealPlanEntry[];
+  [k: string]: any;
+}
+
 /** =========================
  *  Open Food Facts (subset)
  *  ========================= */

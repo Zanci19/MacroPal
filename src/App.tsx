@@ -12,7 +12,12 @@ import {
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
-import { homeOutline, settingsOutline, analyticsSharp } from "ionicons/icons";
+import {
+  homeOutline,
+  settingsOutline,
+  analyticsSharp,
+  calendarOutline,
+} from "ionicons/icons";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 import Login from "./pages/authentication/Login";
@@ -28,6 +33,7 @@ import Offline from "./pages/Offline";
 import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings";
+import Planner from "./pages/home/Planner";
 import ScanBarcode from "./pages/ScanBarcode";
 
 import "@ionic/react/css/core.css";
@@ -69,6 +75,7 @@ const TabsShell: React.FC = () => (
     <IonRouterOutlet id="tabs">
       <Route exact path="/app/analytics" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
+      <Route exact path="/app/planner" component={Planner} />
       <Route exact path="/app/settings" component={Settings} />
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
@@ -82,6 +89,11 @@ const TabsShell: React.FC = () => (
       <IonTabButton tab="home" href="/app/home">
         <IonIcon aria-hidden="true" icon={homeOutline} />
         <IonLabel>Home</IonLabel>
+      </IonTabButton>
+
+      <IonTabButton tab="planner" href="/app/planner">
+        <IonIcon aria-hidden="true" icon={calendarOutline} />
+        <IonLabel>Planner</IonLabel>
       </IonTabButton>
 
       <IonTabButton tab="settings" href="/app/settings">
@@ -114,13 +126,30 @@ const App: React.FC = () => {
     const isAndroid = /Android/i.test(window.navigator.userAgent || "");
     if (!isAndroid) return;
 
+    const getCssScreenHeight = () => {
+      const screen = window.screen || {};
+      const dpr = window.devicePixelRatio || 1;
+      const rawHeight = Math.max(screen.height || 0, screen.availHeight || 0);
+
+      return rawHeight ? rawHeight / dpr : window.innerHeight;
+    };
+
     const updateSoftkeyPadding = () => {
       const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-      const screenHeight = window.screen?.height ?? viewportHeight;
-      const heightGap = screenHeight - viewportHeight;
+      const layoutViewportHeight = window.innerHeight;
+      const cssScreenHeight = getCssScreenHeight();
 
-      const hasSoftkeys = heightGap > 60 || screenHeight - window.innerHeight > 60;
-      document.body.classList.toggle("has-softkeys", hasSoftkeys);
+      const gapEstimates = [
+        cssScreenHeight - viewportHeight,
+        cssScreenHeight - layoutViewportHeight,
+        layoutViewportHeight - viewportHeight,
+      ].filter((value) => Number.isFinite(value));
+
+      const softkeyHeight = gapEstimates.length
+        ? Math.max(0, ...gapEstimates)
+        : 0;
+
+      document.body.classList.toggle("has-softkeys", softkeyHeight > 24);
     };
 
     updateSoftkeyPadding();

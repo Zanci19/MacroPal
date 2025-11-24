@@ -50,6 +50,7 @@ const Settings: React.FC = () => {
   const [confirmDeleteName, setConfirmDeleteName] = React.useState(false);
 
   const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
+  const [showWellnessTipEnabled, setShowWellnessTipEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
@@ -169,12 +170,19 @@ const Settings: React.FC = () => {
             : true
         );
 
+        setShowWellnessTipEnabled(
+          typeof (profile as any).showWellnessTip === "boolean"
+            ? (profile as any).showWellnessTip
+            : true
+        );
+
+
         setShowRecentItemsEnabled(
           typeof (profile as any).showRecentItems === "boolean"
             ? (profile as any).showRecentItems
             : true
         );
-        
+
         setShowRecentSearchesEnabled(
           typeof (profile as any).showRecentSearches === "boolean"
             ? (profile as any).showRecentSearches
@@ -259,7 +267,7 @@ const Settings: React.FC = () => {
 
                 const ref = doc(db, "users", current.uid);
 
-                
+
                 try {
                   await updateDoc(ref, {
                     "profile.smartRecommendationEnabled": checked,
@@ -276,6 +284,43 @@ const Settings: React.FC = () => {
                     message:
                       err?.message ||
                       "Could not update smart recommendation setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Show wellness tip</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={showWellnessTipEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setShowWellnessTipEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.showWellnessTip": checked,
+                  });
+
+                  trackEvent("settings_show_wellness_tip_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save showWellnessTip:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message ||
+                      "Could not update wellness tip setting.",
                     color: "danger",
                   });
                 }
@@ -467,7 +512,7 @@ const Settings: React.FC = () => {
         ]}
         onDidDismiss={() => setConfirmClearRecent(false)}
       />
-      
+
       <IonAlert
         isOpen={confirmDeleteName}
         header="Type your name to confirm"
