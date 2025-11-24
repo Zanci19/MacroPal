@@ -41,6 +41,7 @@ import {
   ellipsisVertical,
   chevronDownOutline,
   chevronUpOutline,
+  copyOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
@@ -1061,10 +1062,19 @@ const Home: React.FC = () => {
           </IonCardContent>
 
           {profile && caloriesNeeded != null && macroTargets && (
-            <div
-              className="fs-macro-bars"
-              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-            >
+            <div className="fs-summary__actions">
+              <IonButton size="small" fill="clear" onClick={copyDaySummary}>
+                <IonIcon slot="start" icon={copyOutline} />
+                Copy summary
+              </IonButton>
+            </div>
+          )}
+
+        {profile && caloriesNeeded != null && macroTargets && (
+          <div
+            className="fs-macro-bars"
+            style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
+          >
               {[
                 {
                   k: "carbs",
