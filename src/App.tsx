@@ -73,7 +73,7 @@ const TabsShell: React.FC = () => (
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
 
-    <IonTabBar slot="bottom">
+    <IonTabBar slot="bottom" className="mp-tabbar">
       <IonTabButton tab="analytics" href="/app/analytics">
         <IonIcon aria-hidden="true" icon={analyticsSharp} />
         <IonLabel>Analytics</IonLabel>

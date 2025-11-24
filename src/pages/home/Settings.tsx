@@ -191,7 +191,7 @@ const Settings: React.FC = () => {
             <IonTitle>Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="ion-padding">
+        <IonContent className="ion-padding tabbed-content">
           <IonText color="medium">Please log in.</IonText>
           <IonButton
             className="ion-margin-top"
@@ -215,7 +215,7 @@ const Settings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding tabbed-content">
         <IonList>
           <IonItem lines="full">
             <IonIcon slot="start" icon={personCircleOutline} />
