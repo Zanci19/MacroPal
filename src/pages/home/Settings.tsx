@@ -51,6 +51,7 @@ const Settings: React.FC = () => {
 
   const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
+  const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
 
@@ -173,6 +174,12 @@ const Settings: React.FC = () => {
             ? (profile as any).showRecentItems
             : true
         );
+        
+        setShowRecentSearchesEnabled(
+          typeof (profile as any).showRecentSearches === "boolean"
+            ? (profile as any).showRecentSearches
+            : true
+        );
 
         setSmartRecommendationEnabled(enabled);
       } catch (e) {
@@ -191,7 +198,7 @@ const Settings: React.FC = () => {
             <IonTitle>Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="ion-padding">
+        <IonContent className="ion-padding tabbed-content">
           <IonText color="medium">Please log in.</IonText>
           <IonButton
             className="ion-margin-top"
@@ -215,7 +222,7 @@ const Settings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding tabbed-content">
         <IonList>
           <IonItem lines="full">
             <IonIcon slot="start" icon={personCircleOutline} />
@@ -252,6 +259,7 @@ const Settings: React.FC = () => {
 
                 const ref = doc(db, "users", current.uid);
 
+                
                 try {
                   await updateDoc(ref, {
                     "profile.smartRecommendationEnabled": checked,
@@ -276,7 +284,7 @@ const Settings: React.FC = () => {
           </IonItem>
 
           <IonItem lines="full">
-            <IonLabel>Show recently added items</IonLabel>
+            <IonLabel>Show recently added foods</IonLabel>
             <IonToggle
               slot="end"
               checked={showRecentItemsEnabled}
@@ -305,6 +313,43 @@ const Settings: React.FC = () => {
                     message:
                       err?.message ||
                       "Could not update recent items setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Show recently searched items</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={showRecentSearchesEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setShowRecentSearchesEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.showRecentSearches": checked,
+                  });
+
+                  trackEvent("settings_show_recent_searches_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save showRecentSearches:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message ||
+                      "Could not update recent searches setting.",
                     color: "danger",
                   });
                 }

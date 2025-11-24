@@ -480,7 +480,7 @@ const Analytics: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding" fullscreen>
+      <IonContent className="ion-padding tabbed-content" fullscreen>
         {(authLoading || loading) && (
           <div className="ion-text-center" style={{ padding: 24 }}>
             <IonSpinner name="dots" />

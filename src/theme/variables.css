@@ -52,3 +52,7 @@ body.dark ion-action-sheet .action-sheet-title {
 body.has-softkeys .mp-tabbar {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
 }
+
+.tabbed-content {
+  --padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
