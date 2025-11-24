@@ -33,6 +33,7 @@ import {
   cafeOutline,
   fastFoodOutline,
   flameOutline,
+  bulbOutline,
   trashOutline,
   chevronBackOutline,
   chevronForwardOutline,
@@ -40,6 +41,7 @@ import {
   ellipsisVertical,
   chevronDownOutline,
   chevronUpOutline,
+  copyOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
@@ -64,6 +66,15 @@ function safeNum(n: unknown, dp = 2): number {
 }
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
+
+const WELLNESS_TIPS: string[] = [
+  "Plan tomorrow's breakfast tonight so you start with a win.",
+  "Pair carbs with protein to stay fuller for longer.",
+  "Keep a reusable bottle nearby as a gentle hydration reminder.",
+  "Aim for a colorful plate—variety brings micronutrients.",
+  "Log a meal right after eating to keep your streak effortless.",
+  "Add a fiber-rich veggie to at least one meal today.",
+];
 
 const ProgressRing: React.FC<{
   size?: number;
@@ -153,6 +164,10 @@ const Home: React.FC = () => {
     dinner: false,
     snacks: false,
   });
+
+  const [tipIndex, setTipIndex] = useState(() =>
+    Math.floor(Math.random() * WELLNESS_TIPS.length)
+  );
 
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
@@ -873,6 +888,69 @@ const Home: React.FC = () => {
 
   const hasEverLoggedFood = !!(profile as any)?.hasEverLoggedFood;
 
+  const shuffleTip = () => {
+    setTipIndex((prev) => {
+      if (WELLNESS_TIPS.length <= 1) return prev;
+      const next =
+        (prev + 1 + Math.floor(Math.random() * (WELLNESS_TIPS.length - 1))) %
+        WELLNESS_TIPS.length;
+
+      trackEvent("wellness_tip_shuffled", {
+        uid,
+        date: activeDateKey,
+        next_tip_index: next,
+      });
+
+      return next;
+    });
+  };
+
+  const copyDaySummary = async () => {
+    if (!profile || caloriesNeeded == null || !macroTargets) return;
+
+    const lines = [
+      `${activeDateLabel} — ${kcalConsumed} kcal consumed`,
+      `Goal: ${kcalGoal} kcal (${summaryDifferenceLabel}: ${summaryDifferenceValue} kcal)`,
+      `Carbs: ${Math.round(totals.day.carbs)} / ${macroTargets.carbsG} g`,
+      `Protein: ${Math.round(totals.day.protein)} / ${macroTargets.proteinG} g`,
+      `Fat: ${Math.round(totals.day.fat)} / ${macroTargets.fatG} g`,
+      streak > 1 ? `Streak: ${streak} days` : null,
+    ].filter(Boolean);
+
+    const summaryText = lines.join("\n");
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(summaryText);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = summaryText;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
+      setToast({ open: true, message: "Summary copied to clipboard." });
+      trackEvent("day_summary_copied", {
+        uid,
+        date: activeDateKey,
+        kcalConsumed,
+        kcalGoal,
+      });
+    } catch (err: any) {
+      console.error("Failed to copy summary", err);
+      setToast({ open: true, message: "Could not copy summary." });
+      trackEvent("day_summary_copy_failed", {
+        uid,
+        date: activeDateKey,
+        error: err?.message || String(err),
+      });
+    }
+  };
+
   useEffect(() => {
     if (!uid) return;
     if (!anyItems) return;
@@ -984,10 +1062,19 @@ const Home: React.FC = () => {
           </IonCardContent>
 
           {profile && caloriesNeeded != null && macroTargets && (
-            <div
-              className="fs-macro-bars"
-              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-            >
+            <div className="fs-summary__actions">
+              <IonButton size="small" fill="clear" onClick={copyDaySummary}>
+                <IonIcon slot="start" icon={copyOutline} />
+                Copy summary
+              </IonButton>
+            </div>
+          )}
+
+        {profile && caloriesNeeded != null && macroTargets && (
+          <div
+            className="fs-macro-bars"
+            style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
+          >
               {[
                 {
                   k: "carbs",
@@ -1045,6 +1132,21 @@ const Home: React.FC = () => {
               })}
             </div>
           )}
+        </IonCard>
+
+        <IonCard className="fs-tip-card">
+          <IonCardHeader className="fs-tip-card__hdr">
+            <div className="fs-tip-card__title">
+              <IonIcon icon={bulbOutline} aria-hidden="true" />
+              <IonCardTitle>Wellness tip</IonCardTitle>
+            </div>
+          </IonCardHeader>
+          <IonCardContent className="fs-tip-card__content">
+            <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
+            <IonButton size="small" fill="outline" onClick={shuffleTip}>
+              New tip
+            </IonButton>
+          </IonCardContent>
         </IonCard>
 
         {loading && (
