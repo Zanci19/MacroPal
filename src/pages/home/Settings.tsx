@@ -51,6 +51,7 @@ const Settings: React.FC = () => {
 
   const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
+  const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
 
@@ -157,24 +158,38 @@ const Settings: React.FC = () => {
         const data = snap.data() as any | undefined;
         const profile = data?.profile;
 
-        const enabled =
-          profile && typeof profile.smartRecommendationEnabled === "boolean"
+        const updates: Record<string, boolean> = {};
+
+        const smartRecommendationValue =
+          typeof profile?.smartRecommendationEnabled === "boolean"
             ? profile.smartRecommendationEnabled
             : true;
+        if (typeof profile?.smartRecommendationEnabled !== "boolean") {
+          updates["profile.smartRecommendationEnabled"] = true;
+        }
+        setSmartRecommendationEnabled(smartRecommendationValue);
 
-        setSmartRecommendationEnabled(
-          typeof (profile as any).smartRecommendationEnabled === "boolean"
-            ? (profile as any).smartRecommendationEnabled
-            : true
-        );
+        const showRecentItemsValue =
+          typeof profile?.showRecentItems === "boolean"
+            ? profile.showRecentItems
+            : true;
+        if (typeof profile?.showRecentItems !== "boolean") {
+          updates["profile.showRecentItems"] = true;
+        }
+        setShowRecentItemsEnabled(showRecentItemsValue);
 
-        setShowRecentItemsEnabled(
-          typeof (profile as any).showRecentItems === "boolean"
-            ? (profile as any).showRecentItems
-            : true
-        );
+        const showRecentSearchesValue =
+          typeof profile?.showRecentSearches === "boolean"
+            ? profile.showRecentSearches
+            : true;
+        if (typeof profile?.showRecentSearches !== "boolean") {
+          updates["profile.showRecentSearches"] = true;
+        }
+        setShowRecentSearchesEnabled(showRecentSearchesValue);
 
-        setSmartRecommendationEnabled(enabled);
+        if (Object.keys(updates).length > 0) {
+          await setDoc(ref, updates, { merge: true });
+        }
       } catch (e) {
         console.error("Failed to load smartRecommendationEnabled:", e);
       }
@@ -276,7 +291,7 @@ const Settings: React.FC = () => {
           </IonItem>
 
           <IonItem lines="full">
-            <IonLabel>Show recently added items</IonLabel>
+            <IonLabel>Show recently added foods</IonLabel>
             <IonToggle
               slot="end"
               checked={showRecentItemsEnabled}
@@ -305,6 +320,43 @@ const Settings: React.FC = () => {
                     message:
                       err?.message ||
                       "Could not update recent items setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Show recently searched items</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={showRecentSearchesEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setShowRecentSearchesEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.showRecentSearches": checked,
+                  });
+
+                  trackEvent("settings_show_recent_searches_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save showRecentSearches:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message ||
+                      "Could not update recent searches setting.",
                     color: "danger",
                   });
                 }

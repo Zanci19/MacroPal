@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -201,6 +201,7 @@ type ProfileFromFirestore = {
   };
   smartRecommendationEnabled?: boolean;
   showRecentItems?: boolean;
+  showRecentSearches?: boolean;
 };
 
 
@@ -429,6 +430,9 @@ const AddFood: React.FC = () => {
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
 
+  const RECENT_QUERY_KEY = "mp_add_food_recent_queries";
+  const RECENT_QUERY_LIMIT = 10;
+
   const [showMealPicker, setShowMealPicker] = useState(false);
 
   const [tab, setTab] = useState<"search" | "favorites">("search");
@@ -507,6 +511,11 @@ const AddFood: React.FC = () => {
 
   const [showSmartRecommendation, setShowSmartRecommendation] = useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = useState(true);
+  const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = useState(true);
+
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const lastSearchRef = useRef<string>("");
+  const [recentQueries, setRecentQueries] = useState<string[]>([]);
 
   const per100g = useMemo(
     () => macrosPer100g(selectedFood?.nutriments),
@@ -596,6 +605,12 @@ const AddFood: React.FC = () => {
         setShowRecentItemsEnabled(
           typeof p.showRecentItems === "boolean"
             ? p.showRecentItems
+            : true
+        );
+
+        setShowRecentSearchesEnabled(
+          typeof p.showRecentSearches === "boolean"
+            ? p.showRecentSearches
             : true
         );
 
@@ -1020,6 +1035,52 @@ const AddFood: React.FC = () => {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(RECENT_QUERY_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed
+            .filter((q) => typeof q === "string")
+            .slice(0, RECENT_QUERY_LIMIT);
+          setRecentQueries(cleaned);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load recent queries", e);
+    }
+  }, []);
+
+  const normalizeText = (text: string) =>
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/gi, " ")
+      .trim();
+
+  const recordRecentQuery = (text: string) => {
+    const normalized = normalizeText(text);
+    if (!normalized) return;
+    setRecentQueries((prev) => {
+      const next = [normalized, ...prev.filter((q) => q !== normalized)].slice(
+        0,
+        RECENT_QUERY_LIMIT
+      );
+      try {
+        localStorage.setItem(RECENT_QUERY_KEY, JSON.stringify(next));
+      } catch (e) {
+        console.warn("Failed to persist recent queries", e);
+      }
+      return next;
+    });
+  };
+
+  const clearRecentQueries = () => {
+    setRecentQueries([]);
+    localStorage.removeItem(RECENT_QUERY_KEY);
+    trackEvent("recent_queries_cleared");
+  };
+
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
     const raw = q.trim();
     if (!raw) return 0;
@@ -1033,6 +1094,18 @@ const AddFood: React.FC = () => {
       return 0;
     }
 
+    const normalizedQuery = normalizeText(raw);
+    const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+
+    const searchKey = `${normalizedQuery}|${pageNumber}`;
+    if (lastSearchRef.current === searchKey) {
+      return results.length;
+    }
+
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
     setLoading(true);
     setHasSearched(true);
 
@@ -1043,13 +1116,42 @@ const AddFood: React.FC = () => {
       date: dateKey,
     });
 
+    const scoreFood = (food: OFFSearchHit) => {
+      const nameNorm = normalizeText(food.product_name || "");
+      const brandNorm = normalizeText(food.brands || "");
+      const combined = `${nameNorm} ${brandNorm}`.trim();
+
+      let score = 0;
+      const hasAllTokens =
+        queryTokens.length === 0
+          ? true
+          : queryTokens.every((token) => combined.includes(token));
+      const matchedTokens = queryTokens.filter((token) => combined.includes(token)).length;
+
+      if (nameNorm === normalizedQuery) score += 1200;
+      else if (nameNorm.startsWith(normalizedQuery)) score += 1000;
+      else if (combined.includes(normalizedQuery)) score += 850;
+
+      // Reward foods that satisfy every token (handles "carrot cake" style queries)
+      if (hasAllTokens) {
+        score += 400 + matchedTokens * 20;
+      } else {
+        score += matchedTokens * 15;
+      }
+
+      // Prefer shorter, cleaner names when scores tie
+      score -= nameNorm.split(" ").length;
+
+      return { food, score, hasAllTokens };
+    };
+
     try {
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
       url.searchParams.set("page_size", "20");
 
-      const res = await fetch(url.toString());
+      const res = await fetch(url.toString(), { signal: controller.signal });
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
       const data: OFFSearchResponse = await res.json();
       const foods = Array.isArray(data?.products) ? data.products : [];
@@ -1064,65 +1166,52 @@ const AddFood: React.FC = () => {
         );
       });
 
-      const lowerQ = raw.toLowerCase();
-
-      const primary = filteredByMacros.filter((food) => {
-        const name = (food.product_name || "").toLowerCase();
-        const brand = (food.brands || "").toLowerCase();
-        return name.includes(lowerQ) || brand.includes(lowerQ);
-      });
-
-      const baseList = primary.length > 0 ? primary : filteredByMacros;
-
-      const scored = baseList.map((food) => {
-        const name = (food.product_name || "").toLowerCase();
-        const brand = (food.brands || "").toLowerCase();
-        let score = 0;
-
-        if (name === lowerQ) {
-          score += 100;
-        } else if (name.startsWith(lowerQ)) {
-          score += 80;
-        } else {
-          const words = name.split(/[\s,.\-]+/).filter(Boolean);
-          if (words.includes(lowerQ)) {
-            score += 60;
-          } else if (name.includes(lowerQ)) {
-            score += 40;
-          }
-        }
-
-        if (brand === lowerQ) {
-          score += 20;
-        } else if (brand.startsWith(lowerQ)) {
-          score += 15;
-        } else if (brand.includes(lowerQ)) {
-          score += 10;
-        }
-
-        return { food, score };
-      });
-
+      const scored = filteredByMacros.map(scoreFood);
       scored.sort((a, b) => {
+        if (a.hasAllTokens !== b.hasAllTokens) {
+          return a.hasAllTokens ? -1 : 1;
+        }
         if (b.score !== a.score) return b.score - a.score;
         const an = (a.food.product_name || "").toLowerCase();
         const bn = (b.food.product_name || "").toLowerCase();
         return an.localeCompare(bn);
       });
 
-      const finalFoods = scored.map((x) => x.food);
+      const deduped: OFFSearchHit[] = [];
+      const seen = new Set<string>();
+      for (const item of scored) {
+        const key = item.food.code || `${item.food.product_name}|${item.food.brands}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(item.food);
+      }
 
-      setResults(finalFoods);
+      setResults(deduped);
       setPage(pageNumber);
+      lastSearchRef.current = searchKey;
+
+      recordRecentQuery(raw);
+
+      if (deduped.length === 0) {
+        setToast({
+          show: true,
+          message: "No results found. Try refining your search.",
+          color: "medium",
+        });
+      }
 
       trackEvent("food_search_success", {
         query: raw,
         page: pageNumber,
-        count: finalFoods.length,
+        count: deduped.length,
       });
 
-      return finalFoods.length;
+      return deduped.length;
     } catch (e: any) {
+      if (e?.name === "AbortError") {
+        return 0;
+      }
+
       const msg = handleError("food_search", e);
       setToast({
         show: true,
@@ -1138,6 +1227,9 @@ const AddFood: React.FC = () => {
 
       return 0;
     } finally {
+      if (searchAbortRef.current === controller) {
+        searchAbortRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -2312,6 +2404,52 @@ const AddFood: React.FC = () => {
                 Barcode scanner
               </IonButton>
             </div>
+
+            {showRecentSearchesEnabled && recentQueries.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  <IonText color="medium" style={{ fontSize: 13 }}>
+                    Recent searches
+                  </IonText>
+                  <IonButton
+                    size="small"
+                    fill="clear"
+                    onClick={clearRecentQueries}
+                    style={{ marginRight: -8 }}
+                  >
+                    Clear
+                  </IonButton>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                  }}
+                >
+                  {recentQueries.map((rq) => (
+                    <IonChip
+                      key={rq}
+                      onClick={() => {
+                        setQuery(rq);
+                        trackEvent("recent_query_click", { query: rq });
+                        foodsSearch(rq, 1);
+                      }}
+                    >
+                      <IonLabel>{rq}</IonLabel>
+                    </IonChip>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {showRecentItemsEnabled && recent.length > 0 && showRecent && (
               <div style={{ marginTop: 12 }}>
