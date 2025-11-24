@@ -17,6 +17,7 @@ import {
   settingsOutline,
   analyticsSharp,
   calendarOutline,
+  fitnessOutline,
 } from "ionicons/icons";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -34,6 +35,7 @@ import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings";
 import Planner from "./pages/home/Planner";
+import Workout from "./pages/home/Workout";
 import ScanBarcode from "./pages/ScanBarcode";
 
 import "@ionic/react/css/core.css";
@@ -76,6 +78,7 @@ const TabsShell: React.FC = () => (
       <Route exact path="/app/analytics" component={Analytics} />
       <Route exact path="/app/home" component={Home} />
       <Route exact path="/app/planner" component={Planner} />
+      <Route exact path="/app/workout" component={Workout} />
       <Route exact path="/app/settings" component={Settings} />
       <Redirect exact from="/app" to="/app/home" />
     </IonRouterOutlet>
@@ -94,6 +97,11 @@ const TabsShell: React.FC = () => (
       <IonTabButton tab="planner" href="/app/planner">
         <IonIcon aria-hidden="true" icon={calendarOutline} />
         <IonLabel>Planner</IonLabel>
+      </IonTabButton>
+
+      <IonTabButton tab="workout" href="/app/workout">
+        <IonIcon aria-hidden="true" icon={fitnessOutline} />
+        <IonLabel>Workout</IonLabel>
       </IonTabButton>
 
       <IonTabButton tab="settings" href="/app/settings">

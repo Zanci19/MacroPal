@@ -53,8 +53,14 @@ import {
   shiftDateKey,
   todayDateKey,
 } from "../../utils/date";
-
-import type { MealKey, Macros, DiaryEntry, DayDiaryDoc } from "../../types";
+import type {
+  MealKey,
+  Macros,
+  DiaryEntry,
+  DayDiaryDoc,
+  WorkoutDayDoc,
+  WorkoutEntry,
+} from "../../types";
 import { useProfile } from "../../hooks/useProfile";
 
 function safeNum(n: unknown, dp = 2): number {
@@ -234,6 +240,9 @@ const Home: React.FC = () => {
     snacks: [],
   });
 
+  const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
+  const [workoutCalories, setWorkoutCalories] = useState<number>(0);
+
   const [streak, setStreak] = useState<number>(0);
 
   const [lastDeleted, setLastDeleted] = useState<{
@@ -338,6 +347,38 @@ const Home: React.FC = () => {
   }, [uid, activeDateKey, refreshStreak]);
 
   useEffect(() => {
+    if (!uid) return;
+    setWorkouts([]);
+    setWorkoutCalories(0);
+
+    const ref = doc(db, "users", uid, "workouts", activeDateKey);
+    const unsub = onSnapshot(ref, (snap) => {
+      const raw = snap.data() as WorkoutDayDoc | undefined;
+      const activities = raw?.activities ?? [];
+      setWorkouts(activities);
+
+      const totalBonus = activities.reduce((sum, activity) => {
+        const calories =
+          typeof activity?.calories === "number"
+            ? activity.calories
+            : (activity as any)?.caloriesBurned ?? 0;
+        return sum + safeNum(calories);
+      }, 0);
+
+      setWorkoutCalories(Math.max(0, Math.round(totalBonus)));
+
+      trackEvent("workout_snapshot", {
+        uid,
+        date: activeDateKey,
+        total_activities: activities.length,
+        calories_bonus: Math.round(totalBonus),
+      });
+    });
+
+    return () => unsub();
+  }, [uid, activeDateKey]);
+
+  useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get("date") === activeDateKey) return;
     params.set("date", activeDateKey);
@@ -424,7 +465,8 @@ const Home: React.FC = () => {
   }, [dayData]);
 
   const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
-  const kcalGoal = caloriesNeeded ?? 0;
+  const baseKcalGoal = caloriesNeeded ?? 0;
+  const kcalGoal = baseKcalGoal + workoutCalories;
   const kcalLeft = Math.max(0, Math.round(kcalGoal - kcalConsumed));
   const progress = kcalGoal > 0 ? Math.min(1, kcalConsumed / kcalGoal) : 0;
   const kcalDelta = kcalConsumed - kcalGoal;
@@ -1157,6 +1199,25 @@ const Home: React.FC = () => {
             )}
           </IonCardContent>
 
+          {profile && caloriesNeeded != null && (
+            <div className="fs-summary__meta">
+              <div>
+                <div className="fs-summary__meta-label">Base goal</div>
+                <div className="fs-summary__meta-value">{baseKcalGoal}</div>
+              </div>
+              <div>
+                <div className="fs-summary__meta-label">Activity bonus</div>
+                <div className="fs-summary__meta-value">
+                  +{workoutCalories} kcal
+                </div>
+              </div>
+              <div>
+                <div className="fs-summary__meta-label">Adjusted goal</div>
+                <div className="fs-summary__meta-value">{kcalGoal}</div>
+              </div>
+            </div>
+          )}
+
           {profile && caloriesNeeded != null && macroTargets && (
             <div
               className="fs-macro-bars"
@@ -1315,7 +1376,7 @@ const Home: React.FC = () => {
 
                       {hasMealTotals && !isCollapsed && (
                         <div className="fs-meal__totals">
-                          {Math.round(mealTotals.calories)} kcal · Carbs{" "}
+                          {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
                           {mealTotals.carbs.toFixed(0)} g · Protein{" "}
                           {mealTotals.protein.toFixed(0)} g · Fat{" "}
                           {mealTotals.fat.toFixed(0)} g

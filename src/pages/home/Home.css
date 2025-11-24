@@ -182,6 +182,25 @@ ion-card:hover {
   padding: 0 12px 10px;
 }
 
+.fs-summary__meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  padding: 0 16px 14px;
+  border-top: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+}
+
+.fs-summary__meta-label {
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-summary__meta-value {
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
 .fs-metric-value {
   font-weight: 800;
   font-size: 1.3rem;

@@ -101,6 +101,21 @@ export interface DayDiaryDoc {
   [k: string]: any;
 }
 
+export interface WorkoutEntry {
+  title: string;
+  calories: number;
+  durationMinutes?: number;
+  intensity?: "easy" | "moderate" | "hard" | string;
+  addedAt: string;
+  note?: string;
+  [k: string]: any;
+}
+
+export interface WorkoutDayDoc {
+  activities: WorkoutEntry[];
+  [k: string]: any;
+}
+
 export interface MealPlanEntry {
   title: string;
   note?: string;
