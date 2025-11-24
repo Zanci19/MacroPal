@@ -14,25 +14,29 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const AuthLoading: React.FC = () => {
   const history = useHistory();
-  const [message, setMessage] = useState("Checking your account...");
+  const [message, setMessage] = useState("Checking your account…");
 
   useEffect(() => {
     const run = async () => {
       const user = auth.currentUser;
 
       if (!user) {
-        setMessage("Not logged in. Redirecting...");
+        setMessage("You’re not logged in. Sending you to login…");
         setTimeout(() => history.replace("/login"), 1500);
         return;
       }
 
       try {
+        setMessage("Loading your MacroPal profile…");
+
         const userRef = doc(db, "users", user.uid);
         const snap = await getDoc(userRef);
 
         let targetRoute = "/setup-profile";
 
         if (snap.exists()) {
+          setMessage("Checking your profile details…");
+
           const data: any = snap.data();
           const p = data.profile;
 
@@ -47,10 +51,14 @@ const AuthLoading: React.FC = () => {
 
           if (hasFullProfile) {
             targetRoute = "/app/home";
+            setMessage("All set! Opening your diary…");
           } else {
             targetRoute = "/setup-profile";
+            setMessage("We need a few details. Opening setup…");
           }
         } else {
+          setMessage("Creating your MacroPal profile…");
+
           await setDoc(
             userRef,
             {
@@ -61,7 +69,9 @@ const AuthLoading: React.FC = () => {
             },
             { merge: true }
           );
+
           targetRoute = "/setup-profile";
+          setMessage("Profile created. Opening setup…");
         }
 
         history.replace(targetRoute);
@@ -69,10 +79,10 @@ const AuthLoading: React.FC = () => {
         console.error("AuthLoading error:", e);
 
         if (!navigator.onLine) {
-          setMessage("No internet connection.");
+          setMessage("No internet connection. Sending you to offline screen…");
           setTimeout(() => history.replace("/offline"), 1500);
         } else {
-          setMessage("Could not load your account. Sending you back to login...");
+          setMessage("Could not load your account. Sending you back to login…");
           setTimeout(() => history.replace("/login"), 2000);
         }
       }

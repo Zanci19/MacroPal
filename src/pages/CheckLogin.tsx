@@ -1,4 +1,3 @@
-// src/pages/CheckLogin.tsx
 import React, { useEffect, useState } from "react";
 import {
   IonPage,
