@@ -45,3 +45,12 @@ body.dark ion-action-sheet .action-sheet-option {
 body.dark ion-action-sheet .action-sheet-title {
   color: white !important;
 }
+
+.mp-tab-btn ion-label {
+  opacity: 0.8;
+}
+
+.mp-tab-btn--active ion-label {
+  font-weight: 1000;
+  opacity: 1;
+}

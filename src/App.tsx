@@ -14,10 +14,15 @@ import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
 import {
   homeOutline,
+  home,
   settingsOutline,
-  analyticsSharp,
+  settings,
+  analytics,
   calendarOutline,
+  calendar,
   fitnessOutline,
+  fitness,
+  analyticsSharp,
 } from "ionicons/icons";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -71,45 +76,102 @@ const AnalyticsRouteTracker: React.FC = () => {
   return null;
 };
 
-const TabsShell: React.FC = () => (
-  <IonTabs>
-    <IonRouterOutlet id="tabs">
-      <Route exact path="/app/analytics" component={Analytics} />
-      <Route exact path="/app/planner" component={Planner} />
-      <Route exact path="/app/home" component={Home} />
-      <Route exact path="/app/workout" component={Workout} />
-      <Route exact path="/app/settings" component={Settings} />
-      <Redirect exact from="/app" to="/app/home" />
-    </IonRouterOutlet>
+const TabsShell: React.FC = () => {
+  const location = useLocation();
 
-    <IonTabBar slot="bottom" className="mp-tabbar">
-      <IonTabButton tab="analytics" href="/app/analytics">
-        <IonIcon aria-hidden="true" icon={analyticsSharp} />
-        <IonLabel>Analytics</IonLabel>
-      </IonTabButton>
+  const getActiveTab = () => {
+    const path = location.pathname || "";
 
-      <IonTabButton tab="planner" href="/app/planner">
-        <IonIcon aria-hidden="true" icon={calendarOutline} />
-        <IonLabel>Planner</IonLabel>
-      </IonTabButton>
+    if (path.startsWith("/app/analytics")) return "analytics";
+    if (path.startsWith("/app/planner")) return "planner";
+    if (path.startsWith("/app/home")) return "home";
+    if (path.startsWith("/app/workout")) return "workout";
+    if (path.startsWith("/app/settings")) return "settings";
 
-      <IonTabButton tab="home" href="/app/home">
-        <IonIcon aria-hidden="true" icon={homeOutline} />
-        <IonLabel>Home</IonLabel>
-      </IonTabButton>
+    return "home";
+  };
 
-      <IonTabButton tab="workout" href="/app/workout">
-        <IonIcon aria-hidden="true" icon={fitnessOutline} />
-        <IonLabel>Workout</IonLabel>
-      </IonTabButton>
+  const activeTab = getActiveTab();
 
-      <IonTabButton tab="settings" href="/app/settings">
-        <IonIcon aria-hidden="true" icon={settingsOutline} />
-        <IonLabel>Settings</IonLabel>
-      </IonTabButton>
-    </IonTabBar>
-  </IonTabs>
-);
+  const tabClass = (tabName: string) =>
+    activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
+
+  return (
+    <IonTabs>
+      <IonRouterOutlet id="tabs">
+        <Route exact path="/app/analytics" component={Analytics} />
+        <Route exact path="/app/planner" component={Planner} />
+        <Route exact path="/app/home" component={Home} />
+        <Route exact path="/app/workout" component={Workout} />
+        <Route exact path="/app/settings" component={Settings} />
+        <Redirect exact from="/app" to="/app/home" />
+      </IonRouterOutlet>
+
+      <IonTabBar slot="bottom" className="mp-tabbar">
+        <IonTabButton
+          tab="analytics"
+          href="/app/analytics"
+          className={tabClass("analytics")}
+        >
+          <IonIcon
+            aria-hidden="true"
+            icon={activeTab === "analytics" ? analyticsSharp : analytics}
+          />
+          <IonLabel>Analytics</IonLabel>
+        </IonTabButton>
+
+        <IonTabButton
+          tab="planner"
+          href="/app/planner"
+          className={tabClass("planner")}
+        >
+          <IonIcon
+            aria-hidden="true"
+            icon={activeTab === "planner" ? calendar : calendarOutline}
+          />
+          <IonLabel>Planner</IonLabel>
+        </IonTabButton>
+
+        <IonTabButton
+          tab="home"
+          href="/app/home"
+          className={tabClass("home")}
+        >
+          <IonIcon
+            aria-hidden="true"
+            icon={activeTab === "home" ? home : homeOutline}
+          />
+          <IonLabel>Home</IonLabel>
+        </IonTabButton>
+
+        <IonTabButton
+          tab="workout"
+          href="/app/workout"
+          className={tabClass("workout")}
+        >
+          <IonIcon
+            aria-hidden="true"
+            icon={activeTab === "workout" ? fitness : fitnessOutline}
+          />
+          <IonLabel>Workout</IonLabel>
+        </IonTabButton>
+
+        <IonTabButton
+          tab="settings"
+          href="/app/settings"
+          className={tabClass("settings")}
+        >
+          <IonIcon
+            aria-hidden="true"
+            icon={activeTab === "settings" ? settings : settingsOutline}
+          />
+          <IonLabel>Settings</IonLabel>
+        </IonTabButton>
+      </IonTabBar>
+    </IonTabs>
+  );
+};
+
 
 const App: React.FC = () => {
   useEffect(() => {
