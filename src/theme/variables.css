@@ -45,20 +45,3 @@ body.dark ion-action-sheet .action-sheet-option {
 body.dark ion-action-sheet .action-sheet-title {
   color: white !important;
 }
-
-ion-tab-bar.mp-tabbar {
-  border-top: 1px solid var(--ion-border-color);
-  padding-top: 6px;
-  padding-bottom: calc(env(safe-area-inset-bottom) + var(--softkey-inset));
-  bottom: var(--softkey-inset);
-}
-
-body.has-softkeys ion-tab-bar.mp-tabbar {
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
-}
-
-body.has-softkeys ion-content {
-  --padding-bottom: calc(
-    env(safe-area-inset-bottom) + var(--softkey-inset) + 8px
-  );
-}
