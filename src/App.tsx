@@ -30,7 +30,6 @@ import Start from "./pages/Start";
 import ResetPassword from "./pages/ResetPassword";
 import AuthLoading from "./pages/authentication/AuthLoading";
 import Offline from "./pages/Offline";
-
 import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings";
@@ -76,8 +75,8 @@ const TabsShell: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet id="tabs">
       <Route exact path="/app/analytics" component={Analytics} />
-      <Route exact path="/app/home" component={Home} />
       <Route exact path="/app/planner" component={Planner} />
+      <Route exact path="/app/home" component={Home} />
       <Route exact path="/app/workout" component={Workout} />
       <Route exact path="/app/settings" component={Settings} />
       <Redirect exact from="/app" to="/app/home" />
@@ -89,14 +88,14 @@ const TabsShell: React.FC = () => (
         <IonLabel>Analytics</IonLabel>
       </IonTabButton>
 
-      <IonTabButton tab="home" href="/app/home">
-        <IonIcon aria-hidden="true" icon={homeOutline} />
-        <IonLabel>Home</IonLabel>
-      </IonTabButton>
-
       <IonTabButton tab="planner" href="/app/planner">
         <IonIcon aria-hidden="true" icon={calendarOutline} />
         <IonLabel>Planner</IonLabel>
+      </IonTabButton>
+
+      <IonTabButton tab="home" href="/app/home">
+        <IonIcon aria-hidden="true" icon={homeOutline} />
+        <IonLabel>Home</IonLabel>
       </IonTabButton>
 
       <IonTabButton tab="workout" href="/app/workout">
