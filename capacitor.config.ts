@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'MacroPal',
   webDir: 'dist',
   android: {
-    adjustMarginsForEdgeToEdge: 'auto', // or 'force'
+    adjustMarginsForEdgeToEdge: 'force', // or 'force'
   },
 };
 
