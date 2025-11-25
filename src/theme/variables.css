@@ -45,16 +45,3 @@ body.dark ion-action-sheet .action-sheet-option {
 body.dark ion-action-sheet .action-sheet-title {
   color: white !important;
 }
-
-.mp-tabbar {
-  padding-top: 4px;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset) + 8px);
-}
-
-body.has-softkeys .mp-tabbar {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset) + 32px);
-}
-
-.tabbed-content {
-  --padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + var(--softkey-inset));
-}
