@@ -133,6 +133,10 @@ const App: React.FC = () => {
     const isAndroid = /Android/i.test(window.navigator.userAgent || "");
     if (!isAndroid) return;
 
+    const setSoftkeyInset = (value: number) => {
+      document.documentElement.style.setProperty("--softkey-inset", `${value}px`);
+    };
+
     const getCssScreenHeight = () => {
       const screen = window.screen || {};
       const dpr = window.devicePixelRatio || 1;
@@ -156,7 +160,13 @@ const App: React.FC = () => {
         ? Math.max(0, ...gapEstimates)
         : 0;
 
-      document.body.classList.toggle("has-softkeys", softkeyHeight > 24);
+      // Cap the value to avoid runaway values on devices that report
+      // unrealistic viewport sizes.
+      const clampedSoftkeyHeight = Math.min(softkeyHeight, 120);
+
+      setSoftkeyInset(clampedSoftkeyHeight);
+
+      document.body.classList.toggle("has-softkeys", clampedSoftkeyHeight > 16);
     };
 
     updateSoftkeyPadding();
@@ -167,6 +177,7 @@ const App: React.FC = () => {
     window.addEventListener("orientationchange", updateSoftkeyPadding);
 
     return () => {
+      setSoftkeyInset(0);
       resizeSource?.removeEventListener("resize", updateSoftkeyPadding);
       window.removeEventListener("resize", updateSoftkeyPadding);
       window.removeEventListener("orientationchange", updateSoftkeyPadding);

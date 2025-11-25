@@ -6,6 +6,8 @@
   --ion-color-primary-shade: #2f6bc9;
   --ion-color-primary-tint: #4f8cf8;
 
+  --softkey-inset: 0px;
+
   --ion-background-color: #ffffff;
   --ion-background-color-rgb: 255, 255, 255;
 
@@ -46,13 +48,13 @@ body.dark ion-action-sheet .action-sheet-title {
 
 .mp-tabbar {
   padding-top: 4px;
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset) + 8px);
 }
 
 body.has-softkeys .mp-tabbar {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset) + 32px);
 }
 
 .tabbed-content {
-  --padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  --padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + var(--softkey-inset));
 }
