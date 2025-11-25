@@ -1,9 +1,12 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
+  appId: 'com.zanci19.macropal',
   appName: 'MacroPal',
-  webDir: 'dist'
+  webDir: 'dist',
+  android: {
+    adjustMarginsForEdgeToEdge: 'auto', // or 'force'
+  },
 };
 
 export default config;
