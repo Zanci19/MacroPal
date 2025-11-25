@@ -14,6 +14,7 @@ import {
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useHistory } from 'react-router-dom';
 import { auth } from '../firebase';
+import './ResetPassword.css';
 
 const COOLDOWN_MS_DEFAULT = 60_000; // 60s after a successful send
 const COOLDOWN_MS_RATE_LIMIT = 5 * 60_000; // 5min if Firebase returns auth/too-many-requests
@@ -125,7 +126,7 @@ const ResetPassword: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding reset-password-page">
         <h2 className="start-subtitle">
           Please enter the email associated with your account:
         </h2>

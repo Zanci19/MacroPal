@@ -21,6 +21,7 @@ import {
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
 import { handleError } from "../../utils/handleError";
+import "./Register.css";
 
 // Small helpers
 const emailOk = (s: string) =>
@@ -157,7 +158,7 @@ const Register: React.FC = () => {
           </IonToolbar>
         </IonHeader>
 
-        <IonContent className="ion-padding">
+        <IonContent className="ion-padding register-page">
           <IonItem>
             <IonLabel position="stacked">Name</IonLabel>
             <IonInput

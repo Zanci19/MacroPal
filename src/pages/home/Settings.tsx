@@ -34,6 +34,7 @@ import {
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import "./Settings.css";
 
 
 const Settings: React.FC = () => {
@@ -206,7 +207,7 @@ const Settings: React.FC = () => {
             <IonTitle>Settings</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent className="ion-padding tabbed-content">
+        <IonContent className="ion-padding tabbed-content settings-page">
           <IonText color="medium">Please log in.</IonText>
           <IonButton
             className="ion-margin-top"
@@ -230,7 +231,7 @@ const Settings: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding tabbed-content">
+      <IonContent className="ion-padding tabbed-content settings-page">
         <IonList>
           <IonItem lines="full">
             <IonIcon slot="start" icon={personCircleOutline} />

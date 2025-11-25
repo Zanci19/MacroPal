@@ -12,6 +12,7 @@ import {
 import { useHistory } from "react-router";
 import { auth } from "../firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import "./CheckLogin.css";
 
 type Phase = "checking" | "offline" | "error";
 
@@ -192,7 +193,7 @@ const CheckLogin: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding check-login__container">
         <div
           style={{
             height: "100%",

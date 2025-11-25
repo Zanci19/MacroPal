@@ -58,6 +58,7 @@ import {
   shiftDateKey,
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
+import './AddFood.css'
 
 /**
  * ==============
@@ -2259,7 +2260,7 @@ const AddFood: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding" fullscreen>
+      <IonContent className="ion-padding add-food-page" fullscreen>
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}

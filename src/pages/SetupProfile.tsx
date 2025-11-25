@@ -16,6 +16,7 @@ import {
 import { auth, db, trackEvent } from "../firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useHistory } from "react-router";
+import "./SetupProfile.css";
 
 const toNumOrNull = (v: any) => {
   if (v === null || v === undefined || v === "") return null;
@@ -258,7 +259,7 @@ const SetupProfile: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding setup-profile-page">
         <IonItem>
           <IonLabel position="stacked">Age</IonLabel>
           <IonInput

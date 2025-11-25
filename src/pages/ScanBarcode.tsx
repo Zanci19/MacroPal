@@ -15,6 +15,7 @@ import { useHistory, useLocation } from "react-router";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import { trackEvent } from "../firebase";
+import "./ScanBarcode.css";
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
@@ -111,7 +112,6 @@ const ScanBarcode: React.FC = () => {
         throw new Error("No barcode detected.");
       }
 
-      // 🔔 Shutter flash + haptic tap
       setFlash(true);
       if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
       await sleep(180);
@@ -164,7 +164,7 @@ const ScanBarcode: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
+      <IonContent className="ion-padding scan-barcode-page">
         <div style={{ display: "grid", gap: 12 }}>
           {/* Video container */}
           <div

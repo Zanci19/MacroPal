@@ -1,0 +1,7 @@
+.auth-loading-page {
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+  gap: 0.75rem;
+}

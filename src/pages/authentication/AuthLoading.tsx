@@ -11,6 +11,7 @@ import {
 import { useHistory } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import "./AuthLoading.css";
 
 const AuthLoading: React.FC = () => {
   const history = useHistory();
@@ -98,7 +99,7 @@ const AuthLoading: React.FC = () => {
           <IonTitle>Loading</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding ion-text-center">
+      <IonContent className="ion-padding ion-text-center auth-loading-page">
         <div style={{ marginTop: "30vh" }}>
           <IonSpinner name="crescent" />
           <IonText color="medium">

@@ -1,0 +1,10 @@
+.setup-profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.setup-profile-page ion-item {
+  --padding-start: 0;
+}

@@ -11,6 +11,7 @@ import {
 } from "@ionic/react";
 import { wifiOutline, refreshOutline } from "ionicons/icons";
 import { useHistory } from "react-router";
+import "./Offline.css";
 
 const Offline: React.FC = () => {
   const history = useHistory();
@@ -44,7 +45,7 @@ const Offline: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding ion-text-center">
+      <IonContent className="ion-padding ion-text-center offline-page">
         <div style={{ marginTop: "20vh" }}>
           <IonIcon icon={wifiOutline} style={{ fontSize: 64, opacity: 0.7 }} />
           <h2 style={{ marginTop: 12 }}>You’re offline</h2>

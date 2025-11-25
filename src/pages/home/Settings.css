@@ -1,0 +1,7 @@
+.settings-page {
+  padding: 1rem;
+}
+
+.settings-page ion-item {
+  --inner-padding-end: 12px;
+}
