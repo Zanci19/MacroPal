@@ -384,10 +384,6 @@ const Workout: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="fs-summary__meta-label">Quick tip</div>
-              <div className="fs-summary__meta-value">Move how you like</div>
-            </div>
-            <div>
               <div className="fs-summary__meta-label">When</div>
               <div className="fs-summary__meta-value">{activeDateLabel}</div>
             </div>

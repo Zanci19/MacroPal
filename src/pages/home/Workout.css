@@ -38,3 +38,26 @@
   margin-right: 10px;
   white-space: nowrap;
 }
+
+.fs-summary__meta {
+  display: flex;
+  flex-wrap: nowrap;            /* ❗ don't allow wrap */
+  gap: 12px;
+  padding: 12px 16px 16px;
+  overflow-x: auto;             /* allow scrolling if it's too tight */
+  -webkit-overflow-scrolling: touch;
+}
+
+.fs-summary__meta > div {
+  flex: 0 0 auto;               /* keep each block its natural size */
+  min-width: 0;
+}
+
+/* Optional: slightly smaller text so they fit nicer */
+.fs-summary__meta-label {
+  font-size: 0.8rem;
+}
+
+.fs-summary__meta-value {
+  font-size: 0.9rem;
+}

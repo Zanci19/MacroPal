@@ -442,16 +442,13 @@ const AddFood: React.FC = () => {
   const [results, setResults] = useState<OFFSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-
   const [open, setOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<OFFProduct | null>(null);
-
   const [useServing, setUseServing] = useState<boolean>(false);
   const [servingsQty, setServingsQty] = useState<number>(1);
   const [weightQty, setWeightQty] = useState<number>(100);
-
+  const [addingFood, setAddingFood] = useState(false);
   const [recent, setRecent] = useState<RecentFood[]>([]);
-
   const [toast, setToast] = React.useState<{
     show: boolean;
     message: string;
@@ -905,7 +902,6 @@ const AddFood: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Recent OFF
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -928,7 +924,6 @@ const AddFood: React.FC = () => {
     return () => unsub();
   }, []);
 
-  // Recent history (last 14 days)
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -999,7 +994,6 @@ const AddFood: React.FC = () => {
     };
   }, []);
 
-  // Meal presets
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -1133,14 +1127,12 @@ const AddFood: React.FC = () => {
       else if (nameNorm.startsWith(normalizedQuery)) score += 1000;
       else if (combined.includes(normalizedQuery)) score += 850;
 
-      // Reward foods that satisfy every token (handles "carrot cake" style queries)
       if (hasAllTokens) {
         score += 400 + matchedTokens * 20;
       } else {
         score += matchedTokens * 15;
       }
 
-      // Prefer shorter, cleaner names when scores tie
       score -= nameNorm.split(" ").length;
 
       return { food, score, hasAllTokens };
@@ -1340,212 +1332,227 @@ const AddFood: React.FC = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    // ✏️ EDIT MODE – update existing entry
-    if (editEntry) {
-      const { meal: mealKey, index, item } = editEntry;
-      const anyItem: any = item;
-      const sel: any = anyItem.selection || {};
-      const base = anyItem.base || null;
+    if (addingFood) return;
+    setAddingFood(true);
 
-      const mode: "serving" | "weight" =
-        sel.mode === "serving" || sel.mode === "weight"
-          ? sel.mode
-          : useServing
-            ? "serving"
-            : "weight";
+    try {
+      if (editEntry) {
+        const { meal: mealKey, index, item } = editEntry;
+        const anyItem: any = item;
+        const sel: any = anyItem.selection || {};
+        const base = anyItem.base || null;
 
-      let oldValue: number;
-      let newValue: number;
+        const mode: "serving" | "weight" =
+          sel.mode === "serving" || sel.mode === "weight"
+            ? sel.mode
+            : useServing
+              ? "serving"
+              : "weight";
 
-      if (mode === "serving") {
-        oldValue =
-          typeof sel.servingsQty === "number" && sel.servingsQty > 0
-            ? sel.servingsQty
-            : 1;
-        newValue = Math.max(0.1, servingsQty);
-      } else {
-        oldValue =
-          typeof sel.weightQty === "number" && sel.weightQty > 0
-            ? sel.weightQty
-            : typeof anyItem.amount === "number" && anyItem.amount > 0
-              ? anyItem.amount
-              : 100;
-        newValue = Math.max(1, weightQty);
+        let oldValue: number;
+        let newValue: number;
+
+        if (mode === "serving") {
+          oldValue =
+            typeof sel.servingsQty === "number" && sel.servingsQty > 0
+              ? sel.servingsQty
+              : 1;
+          newValue = Math.max(0.1, servingsQty);
+        } else {
+          oldValue =
+            typeof sel.weightQty === "number" && sel.weightQty > 0
+              ? sel.weightQty
+              : typeof anyItem.amount === "number" && anyItem.amount > 0
+                ? anyItem.amount
+                : 100;
+          newValue = Math.max(1, weightQty);
+        }
+
+        if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
+        const ratio = newValue / oldValue;
+
+        const oldTotal: any = item.total || {};
+        const newTotalRaw: MacroSet = {
+          calories: safeNum((oldTotal.calories || 0) * ratio, 0),
+          carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
+          protein: safeNum((oldTotal.protein || 0) * ratio, 2),
+          fat: safeNum((oldTotal.fat || 0) * ratio, 2),
+          sugar:
+            oldTotal.sugar !== undefined
+              ? safeNum((oldTotal.sugar || 0) * ratio, 2)
+              : undefined,
+          fiber:
+            oldTotal.fiber !== undefined
+              ? safeNum((oldTotal.fiber || 0) * ratio, 2)
+              : undefined,
+          saturatedFat:
+            oldTotal.saturatedFat !== undefined
+              ? safeNum((oldTotal.saturatedFat || 0) * ratio, 2)
+              : undefined,
+          salt:
+            oldTotal.salt !== undefined
+              ? safeNum((oldTotal.salt || 0) * ratio, 2)
+              : undefined,
+          sodium:
+            oldTotal.sodium !== undefined
+              ? safeNum((oldTotal.sodium || 0) * ratio, 2)
+              : undefined,
+        };
+
+        const newTotal = stripUndefined(newTotalRaw);
+
+        const newSel: any = {
+          ...(sel || {}),
+          mode,
+        };
+
+        if (mode === "serving") {
+          newSel.servingsQty = newValue;
+          if (newSel.weightQty === undefined) newSel.weightQty = null;
+
+          const baseLabel = base?.label || sel.note || "1 serving";
+
+          newSel.note = `${safeNum(newValue, 2)} × ${baseLabel}`;
+        } else {
+          newSel.weightQty = newValue;
+          if (newSel.servingsQty === undefined) newSel.servingsQty = null;
+          newSel.note = `${safeNum(newValue, 0)} g`;
+        }
+
+        const updated: DiaryEntryDoc = {
+          ...item,
+          total: newTotal,
+          selection: newSel,
+        };
+
+        const userRef = doc(db, "users", user.uid, "foods", dateKey);
+
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(userRef);
+          const data = (snap.data() || {}) as DayDoc;
+          const arr: DiaryEntryDoc[] = Array.isArray(data[mealKey])
+            ? [...(data[mealKey] as DiaryEntryDoc[])]
+            : [];
+
+          let idx = index;
+          if (idx < 0 || idx >= arr.length) {
+            idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+          }
+          if (idx < 0) return;
+
+          arr[idx] = updated;
+          tx.set(userRef, { ...data, [mealKey]: arr }, { merge: true });
+        });
+
+        trackEvent("diary_entry_edited_in_add_food", {
+          uid: user.uid,
+          meal: mealKey,
+          date: dateKey,
+          index,
+          name: item.name,
+        });
+
+        setOpen(false);
+        history.replace(`/app/home?date=${dateKey}`);
+        return;
       }
 
-      if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
-      const ratio = newValue / oldValue;
+      if (!selectedFood) return;
 
-      const oldTotal: any = item.total || {};
-      const newTotalRaw: MacroSet = {
-        calories: safeNum((oldTotal.calories || 0) * ratio, 0),
-        carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
-        protein: safeNum((oldTotal.protein || 0) * ratio, 2),
-        fat: safeNum((oldTotal.fat || 0) * ratio, 2),
-        sugar:
-          oldTotal.sugar !== undefined
-            ? safeNum((oldTotal.sugar || 0) * ratio, 2)
-            : undefined,
-        fiber:
-          oldTotal.fiber !== undefined
-            ? safeNum((oldTotal.fiber || 0) * ratio, 2)
-            : undefined,
-        saturatedFat:
-          oldTotal.saturatedFat !== undefined
-            ? safeNum((oldTotal.saturatedFat || 0) * ratio, 2)
-            : undefined,
-        salt:
-          oldTotal.salt !== undefined
-            ? safeNum((oldTotal.salt || 0) * ratio, 2)
-            : undefined,
-        sodium:
-          oldTotal.sodium !== undefined
-            ? safeNum((oldTotal.sodium || 0) * ratio, 2)
-            : undefined,
-      };
+      const payload = computeCurrentSelection();
+      if (!payload) return;
 
-      const newTotal = stripUndefined(newTotalRaw);
-
-      const newSel: any = {
-        ...(sel || {}),
-        mode,
-      };
-
-      if (mode === "serving") {
-        newSel.servingsQty = newValue;
-        if (newSel.weightQty === undefined) newSel.weightQty = null;
-
-        const baseLabel = base?.label || sel.note || "1 serving";
-
-        newSel.note = `${safeNum(newValue, 2)} × ${baseLabel}`;
-      } else {
-        newSel.weightQty = newValue;
-        if (newSel.servingsQty === undefined) newSel.servingsQty = null;
-        newSel.note = `${safeNum(newValue, 0)} g`;
-      }
-
-      const updated: DiaryEntryDoc = {
-        ...item,
-        total: newTotal,
-        selection: newSel,
-      };
+      const {
+        useServingMode,
+        perBase,
+        baseMeta,
+        quantityDesc,
+        total,
+        servingsQtyForSel,
+        weightQtyForSel,
+      } = payload;
 
       const userRef = doc(db, "users", user.uid, "foods", dateKey);
 
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(userRef);
-        const data = (snap.data() || {}) as DayDoc;
-        const arr: DiaryEntryDoc[] = Array.isArray(data[mealKey])
-          ? [...(data[mealKey] as DiaryEntryDoc[])]
-          : [];
+      const perBaseClean = stripUndefined({
+        calories: safeNum(perBase.calories, 0),
+        carbs: safeNum(perBase.carbs, 2),
+        protein: safeNum(perBase.protein, 2),
+        fat: safeNum(perBase.fat, 2),
+        sugar:
+          perBase.sugar !== undefined
+            ? safeNum(perBase.sugar, 2)
+            : undefined,
+        fiber:
+          perBase.fiber !== undefined
+            ? safeNum(perBase.fiber, 2)
+            : undefined,
+        saturatedFat:
+          perBase.saturatedFat !== undefined
+            ? safeNum(perBase.saturatedFat, 2)
+            : undefined,
+        salt:
+          perBase.salt !== undefined
+            ? safeNum(perBase.salt, 2)
+            : undefined,
+        sodium:
+          perBase.sodium !== undefined
+            ? safeNum(perBase.sodium, 2)
+            : undefined,
+      } as MacroSet);
 
-        let idx = index;
-        if (idx < 0 || idx >= arr.length) {
-          idx = arr.findIndex((x) => x.addedAt === item.addedAt);
-        }
-        if (idx < 0) return;
+      const totalClean = stripUndefined(total);
 
-        arr[idx] = updated;
-        tx.set(userRef, { ...data, [mealKey]: arr }, { merge: true });
+      const item = {
+        code: selectedFood.code,
+        name: selectedFood.product_name || "(no name)",
+        brand: selectedFood.brands || null,
+        dataSource: "openfoodfacts",
+        base: baseMeta,
+        selection: {
+          mode: useServingMode ? "serving" : "weight",
+          note: quantityDesc,
+          servingsQty: useServingMode ? servingsQtyForSel : null,
+          weightQty: useServingMode ? null : weightQtyForSel,
+        },
+        perBase: perBaseClean,
+        total: totalClean,
+        addedAt: new Date().toISOString(),
+      };
+
+      await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+      await upsertRecentFood({
+        name: item.name,
+        brand: item.brand,
+        code: item.code,
       });
 
-      trackEvent("diary_entry_edited_in_add_food", {
+      trackEvent("diary_add_from_off", {
         uid: user.uid,
-        meal: mealKey,
+        meal,
         date: dateKey,
-        index,
+        code: item.code,
         name: item.name,
+        mode: item.selection.mode,
+        calories: item.total.calories,
       });
 
       setOpen(false);
       history.replace(`/app/home?date=${dateKey}`);
-      return;
+    } catch (e: any) {
+      console.error(e);
+      const msg = handleError("add_food_to_meal", e);
+      setToast({
+        show: true,
+        message: msg,
+        color: "danger",
+      });
+      trackEvent("diary_add_to_meal_error", {
+        error: e?.message || String(e),
+      });
+    } finally {
+      setAddingFood(false);
     }
-
-    // 🧃 NORMAL ADD FROM OFF
-    if (!selectedFood) return;
-
-    const payload = computeCurrentSelection();
-    if (!payload) return;
-
-    const {
-      useServingMode,
-      perBase,
-      baseMeta,
-      quantityDesc,
-      total,
-      servingsQtyForSel,
-      weightQtyForSel,
-    } = payload;
-
-    const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
-    const perBaseClean = stripUndefined({
-      calories: safeNum(perBase.calories, 0),
-      carbs: safeNum(perBase.carbs, 2),
-      protein: safeNum(perBase.protein, 2),
-      fat: safeNum(perBase.fat, 2),
-      sugar:
-        perBase.sugar !== undefined
-          ? safeNum(perBase.sugar, 2)
-          : undefined,
-      fiber:
-        perBase.fiber !== undefined
-          ? safeNum(perBase.fiber, 2)
-          : undefined,
-      saturatedFat:
-        perBase.saturatedFat !== undefined
-          ? safeNum(perBase.saturatedFat, 2)
-          : undefined,
-      salt:
-        perBase.salt !== undefined
-          ? safeNum(perBase.salt, 2)
-          : undefined,
-      sodium:
-        perBase.sodium !== undefined
-          ? safeNum(perBase.sodium, 2)
-          : undefined,
-    } as MacroSet);
-
-    const totalClean = stripUndefined(total);
-
-    const item = {
-      code: selectedFood.code,
-      name: selectedFood.product_name || "(no name)",
-      brand: selectedFood.brands || null,
-      dataSource: "openfoodfacts",
-      base: baseMeta,
-      selection: {
-        mode: useServingMode ? "serving" : "weight",
-        note: quantityDesc,
-        servingsQty: useServingMode ? servingsQtyForSel : null,
-        weightQty: useServingMode ? null : weightQtyForSel,
-      },
-      perBase: perBaseClean,
-      total: totalClean,
-      addedAt: new Date().toISOString(),
-    };
-
-
-    await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
-    await upsertRecentFood({
-      name: item.name,
-      brand: item.brand,
-      code: item.code,
-    });
-
-    trackEvent("diary_add_from_off", {
-      uid: user.uid,
-      meal,
-      date: dateKey,
-      code: item.code,
-      name: item.name,
-      mode: item.selection.mode,
-      calories: item.total.calories,
-    });
-
-    setOpen(false);
-    history.replace(`/app/home?date=${dateKey}`);
   };
 
   const saveCurrentSelectionAsFavorite = async () => {
@@ -3202,9 +3209,16 @@ const AddFood: React.FC = () => {
                   <IonButton
                     expand="block"
                     onClick={addFoodToMeal}
-                    disabled={disableAddButton}
+                    disabled={disableAddButton || addingFood}
                   >
-                    {editEntry ? "Save changes" : `Add to ${meal}`}
+                    {addingFood ? (
+                      <>
+                        <IonSpinner name="dots" />
+                        &nbsp;{editEntry ? "Saving..." : `Adding to ${meal}...`}
+                      </>
+                    ) : (
+                      editEntry ? "Save changes" : `Add to ${meal}`
+                    )}
                   </IonButton>
                 </div>
               </>
