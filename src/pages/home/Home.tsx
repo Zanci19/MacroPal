@@ -25,6 +25,8 @@ import {
   IonReorderGroup,
   IonReorder,
   IonAlert,
+  IonProgressBar,
+  IonText,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -272,6 +274,8 @@ const Home: React.FC = () => {
     Math.floor(Math.random() * WELLNESS_TIPS.length)
   );
 
+  const [quickAddMeal, setQuickAddMeal] = useState<MealKey | null>(null);
+
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
     let s = 0;
@@ -515,6 +519,39 @@ const Home: React.FC = () => {
 
     return { proteinG, fatG, carbsG };
   }, [profile, caloriesNeeded]);
+
+  const macroProgress = useMemo(() => {
+    if (!macroTargets) return null;
+    const day = totals.day;
+
+    return [
+      {
+        key: "protein",
+        label: "Protein",
+        used: safeNum(day.protein),
+        target: macroTargets.proteinG,
+        color: "primary" as const,
+      },
+      {
+        key: "carbs",
+        label: "Carbs",
+        used: safeNum(day.carbs),
+        target: macroTargets.carbsG,
+        color: "tertiary" as const,
+      },
+      {
+        key: "fat",
+        label: "Fat",
+        used: safeNum(day.fat),
+        target: macroTargets.fatG,
+        color: "warning" as const,
+      },
+    ].map((m) => ({
+      ...m,
+      pct: m.target > 0 ? Math.min(1, m.used / m.target) : 0,
+      remaining: Math.max(0, Math.round(m.target - m.used)),
+    }));
+  }, [macroTargets, totals.day]);
 
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
 
@@ -949,6 +986,77 @@ const Home: React.FC = () => {
     }
   };
 
+  const addQuickCalories = async (
+    meal: MealKey,
+    form: { calories?: string; protein?: string; carbs?: string; fat?: string; note?: string }
+  ) => {
+    if (!uid) return false;
+
+    const calories = safeNum(form.calories, 0);
+    const protein = safeNum(form.protein, 1);
+    const carbs = safeNum(form.carbs, 1);
+    const fat = safeNum(form.fat, 1);
+
+    if (calories <= 0) {
+      setToast({ open: true, message: "Enter calories to quick add." });
+      trackEvent("quick_add_invalid", { uid, meal, reason: "no_calories" });
+      return false;
+    }
+
+    const entry: DiaryEntry = {
+      fdcId: Date.now(),
+      name: "Quick add",
+      brand: form.note || "Manual entry",
+      total: {
+        calories,
+        protein,
+        carbs,
+        fat,
+      },
+      addedAt: new Date().toISOString(),
+      note: form.note,
+      dataType: "quick_add",
+    };
+
+    setDayData((prev) => {
+      const nextMeal = [...(prev[meal] || []), entry];
+      return { ...prev, [meal]: nextMeal };
+    });
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", activeDateKey);
+        const snap = await tx.get(ref);
+        const data = (snap.data() as DayDiaryDoc | undefined) || {
+          breakfast: [],
+          lunch: [],
+          dinner: [],
+          snacks: [],
+        };
+
+        const updated = { ...data } as DayDiaryDoc;
+        const current = Array.isArray(updated[meal]) ? updated[meal] : [];
+        updated[meal] = [...current, entry];
+
+        tx.set(ref, updated, { merge: true });
+      });
+
+      setToast({ open: true, message: "Quick add logged." });
+      trackEvent("quick_add_success", { uid, meal, date: activeDateKey });
+    } catch (err: any) {
+      console.error("quick add failed", err);
+      setToast({ open: true, message: "Could not save quick add." });
+      trackEvent("quick_add_error", {
+        uid,
+        meal,
+        date: activeDateKey,
+        error: err?.message || String(err),
+      });
+    }
+
+    return true;
+  };
+
   const ringColor =
     progress <= 0.9
       ? "var(--ion-color-success)"
@@ -1112,7 +1220,7 @@ const Home: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Home</IonTitle>
+          <IonTitle>Daily dashboard</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -1180,23 +1288,25 @@ const Home: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="fs-summary__left" style={{ color: ringColor }}>
-                  <ProgressRing size={64} stroke={8} progress={progress} />
+              <div className="fs-summary__left" style={{ color: ringColor }}>
+                <ProgressRing size={64} stroke={8} progress={progress} />
+              </div>
+              <div className="fs-summary__mid">
+                <div className="fs-metric-title">
+                  {summaryDifferenceLabel}
                 </div>
-                <div className="fs-summary__mid">
-                  <div className="fs-metric-title">
-                    {summaryDifferenceLabel}
-                  </div>
-                  <div className="fs-metric-title">Calories Consumed</div>
+                <div className="fs-metric-subtitle">
+                  Goal {kcalGoal} kcal · {workoutCalories} from activity
                 </div>
-                <div className="fs-summary__right">
-                  <div className="fs-metric-value">
-                    {summaryDifferenceValue}
-                  </div>
-                  <div className="fs-metric-value">{kcalConsumed}</div>
+              </div>
+              <div className="fs-summary__right">
+                <div className="fs-metric-value">
+                  {summaryDifferenceValue}
                 </div>
-              </>
-            )}
+                <div className="fs-metric-subvalue">{kcalConsumed} eaten</div>
+              </div>
+            </>
+          )}
           </IonCardContent>
 
           {profile && caloriesNeeded != null && (
@@ -1218,66 +1328,36 @@ const Home: React.FC = () => {
             </div>
           )}
 
-          {profile && caloriesNeeded != null && macroTargets && (
-            <div
-              className="fs-macro-bars"
-              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-            >
-              {[
-                {
-                  k: "carbs",
-                  g: totals.day.carbs,
-                  tg: macroTargets.carbsG,
-                  l: "Carbohydrates",
-                },
-                {
-                  k: "protein",
-                  g: totals.day.protein,
-                  tg: macroTargets.proteinG,
-                  l: "Protein",
-                },
-                {
-                  k: "fat",
-                  g: totals.day.fat,
-                  tg: macroTargets.fatG,
-                  l: "Fat",
-                },
-              ].map(({ k, g, tg, l }) => {
-                const pct = tg ? Math.min(1, g / tg) : 0;
-                return (
-                  <div key={k} style={{ display: "grid", gap: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 12,
-                      }}
-                    >
-                      <span>{l}</span>
+          {profile && caloriesNeeded != null && macroProgress && (
+            <div className="fs-macro-progress">
+              <div className="fs-macro-progress__hdr">
+                <IonText className="fs-macro-progress__title">
+                  Macro targets
+                </IonText>
+                <IonText color="medium" className="fs-macro-progress__caption">
+                  Watch grams left in real time
+                </IonText>
+              </div>
+              <div className="fs-macro-progress__grid">
+                {macroProgress.map((macro) => (
+                  <div key={macro.key} className="fs-macro-progress__item">
+                    <div className="fs-macro-progress__top">
+                      <span>{macro.label}</span>
                       <span>
-                        {g.toFixed(0)} / {tg} g
+                        {Math.round(macro.used)} / {macro.target} g
                       </span>
                     </div>
-                    <div
-                      style={{
-                        height: 8,
-                        background: "rgba(148, 163, 184, 0.35)",
-                        borderRadius: 9999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${pct * 100}%`,
-                          height: "100%",
-                          background: "var(--ion-color-primary)",
-                          transition: "width 0.2s ease-out",
-                        }}
-                      />
+                    <IonProgressBar
+                      value={macro.pct}
+                      color={macro.color}
+                      className="fs-macro-progress__bar"
+                    />
+                    <div className="fs-macro-progress__foot">
+                      <span>{macro.remaining} g left</span>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
         </IonCard>
@@ -1412,30 +1492,55 @@ const Home: React.FC = () => {
                   </IonItem>
                 </IonCardHeader>
 
-                {hasItems && !isCollapsed && (
+                {!isCollapsed && (
                   <IonCardContent>
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={() => {
-                        setCopyMenuMeal(meal);
-                        trackEvent("meal_more_options_open", {
-                          uid,
-                          date: activeDateKey,
-                          meal,
-                        });
-                      }}
-                      style={{ marginBottom: 8 }}
-                    >
-                      More options
-                    </IonButton>
-
-                    <IonList>
-                      <IonReorderGroup
-                        disabled={false}
-                        onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
+                    <div className="fs-meal__actions">
+                      <IonButton
+                        size="small"
+                        fill="solid"
+                        color="dark"
+                        onClick={() => {
+                          setQuickAddMeal(meal);
+                          trackEvent("quick_add_open", {
+                            uid,
+                            date: activeDateKey,
+                            meal,
+                          });
+                        }}
                       >
-                        {items.map((it, idx) => {
+                        Quick add
+                      </IonButton>
+
+                      <IonButton
+                        size="small"
+                        fill="outline"
+                        onClick={() => {
+                          setCopyMenuMeal(meal);
+                          trackEvent("meal_more_options_open", {
+                            uid,
+                            date: activeDateKey,
+                            meal,
+                          });
+                        }}
+                      >
+                        More options
+                      </IonButton>
+                    </div>
+
+                    {!hasItems && (
+                      <IonText color="medium" className="fs-meal__hint">
+                        Start with a quick add or tap the plus button to search
+                        foods.
+                      </IonText>
+                    )}
+
+                    {hasItems && (
+                      <IonList>
+                        <IonReorderGroup
+                          disabled={false}
+                          onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
+                        >
+                          {items.map((it, idx) => {
                           const t: any = it.total || {
                             calories: 0,
                             carbs: 0,
@@ -1630,6 +1735,61 @@ const Home: React.FC = () => {
             {
               text: "Cancel",
               role: "cancel",
+            },
+          ]}
+        />
+
+        <IonAlert
+          isOpen={!!quickAddMeal}
+          onDidDismiss={() => setQuickAddMeal(null)}
+          header="Quick add entry"
+          subHeader="Drop in calories without searching"
+          inputs={[
+            {
+              name: "calories",
+              type: "number",
+              placeholder: "Calories",
+              attributes: { inputmode: "decimal", min: 0 },
+            },
+            {
+              name: "protein",
+              type: "number",
+              placeholder: "Protein (g)",
+              attributes: { inputmode: "decimal", min: 0 },
+            },
+            {
+              name: "carbs",
+              type: "number",
+              placeholder: "Carbs (g)",
+              attributes: { inputmode: "decimal", min: 0 },
+            },
+            {
+              name: "fat",
+              type: "number",
+              placeholder: "Fat (g)",
+              attributes: { inputmode: "decimal", min: 0 },
+            },
+            {
+              name: "note",
+              type: "text",
+              placeholder: "Optional label (e.g. latte)",
+            },
+          ]}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => setQuickAddMeal(null),
+            },
+            {
+              text: "Add",
+              handler: (data) => {
+                if (quickAddMeal) {
+                  addQuickCalories(quickAddMeal, data);
+                }
+                setQuickAddMeal(null);
+                return true;
+              },
             },
           ]}
         />
