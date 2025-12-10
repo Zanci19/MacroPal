@@ -1,55 +1,121 @@
-/* Container so fields aren't full-bleed on wide screens */
-.login-form {
-  max-width: 100%;
+.login-page {
+  --background: #121212;
+  background: #121212;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
-/* Label */
-.login-label {
-  display: block;
-  font-size: 0.8rem;
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 20px 20px;
+  border-radius: 18px;
+  background: #121212;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  color: var(--ion-text-color, #f9fafb);
+}
+
+@media (prefers-color-scheme: light) {
+  .login-card {
+    background: rgba(255, 255, 255, 0.95);
+    color: #121212;
+  }
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.login-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.login-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-item {
+  --background: transparent;
+  --border-color: rgba(148, 163, 184, 0.45);
+  --border-radius: 12px;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --highlight-color-focused: var(--ion-color-primary);
+}
+
+.login-item.ion-item {
+  border-radius: 12px;
+}
+
+.login-item ion-label {
+  font-size: 0.85rem;
   margin-bottom: 4px;
 }
 
-/* Email + password inputs */
-.login-input {
+.password-item {
+  --inner-padding-top: 4px;
+  --inner-padding-bottom: 4px;
+}
+
+.pw-wrapper {
   width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 4px;
-  border: none;
-  background: var(--ion-color-step-150, #222);
-  color: var(--ion-color-light, #fff);
-  font-size: 0.95rem;
-}
-
-/* Remove default outline but keep focus ring style if you want */
-.login-input:focus {
-  outline: 2px solid var(--ion-color-primary);
-}
-
-/* Field spacing */
-.login-field {
-  margin-bottom: 12px;
-}
-
-/* Password row: input + SHOW button */
-.login-password-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Make the input take all the space, button only as wide as text */
-.login-password-row .login-input {
+.pw-input {
   flex: 1;
 }
 
-/* SHOW/HIDE button */
-.login-toggle-btn {
-  background: none;
+.pw-toggle-btn {
   border: none;
-  color: var(--ion-color-primary);
-  font-size: 0.85rem;
-  padding: 0 4px;
+  background: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 4px 6px;
   cursor: pointer;
+  color: var(--ion-color-primary);
+}
+
+.pw-toggle-btn:active {
+  transform: scale(0.97);
+}
+
+.login-button {
+  margin-top: 8px;
+  border-radius: 999px;
+  height: 44px;
+  font-weight: 600;
+}
+
+.login-footer {
+  margin-top: 18px;
+  text-align: center;
+}
+
+.login-footer p {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+}
+
+.login-footer-button {
+  font-size: 0.9rem;
 }

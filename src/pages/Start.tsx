@@ -10,8 +10,7 @@ const Start: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="start-content ion-padding">
-        {/* Background video (fixed, behind everything) */}
+      <IonContent className="start-content ion-padding" fullscreen>
         <div
           className={`bg-video ${videoReady ? "is-ready" : ""}`}
           aria-hidden="true"
@@ -29,17 +28,10 @@ const Start: React.FC = () => {
           >
             <source src={bgVideo} type="video/mp4" />
           </video>
-
-          {/* optional dark overlay for contrast */}
           <div className="bg-video__scrim" />
         </div>
 
-        {/* Foreground content (fixed, centered) */}
-        <div
-          className="fixed-center"
-          role="main"
-          aria-label="MacroPal Start"
-        >
+        <div className="fixed-center" role="main" aria-label="MacroPal Start">
           <img src={logo} alt="MacroPal logo" className="start-logo" />
           <h1 className="start-title">MacroPal</h1>
           <h2 className="start-subtitle">Your macros. Simplified.</h2>
@@ -47,18 +39,18 @@ const Start: React.FC = () => {
           <div className="start-actions">
             <IonButton
               size="large"
-              className="start-btn"
+              className="start-btn start-btn-primary"
               onClick={() => router.push("/login")}
             >
-              Login
+              Log In
             </IonButton>
             <IonButton
               size="large"
               fill="outline"
-              className="start-btn"
+              className="start-btn start-btn-secondary"
               onClick={() => router.push("/register")}
             >
-              Register
+              Create account
             </IonButton>
           </div>
         </div>

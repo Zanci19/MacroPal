@@ -55,23 +55,21 @@ const computeTargets = (
 ): { calories: number; proteinG: number; fatG: number; carbsG: number } | null => {
   if (!age || !weight || !height) return null;
 
-  // 1) BMR (Mifflin–St Jeor)
   let bmr =
     gender === "male"
       ? 10 * weight + 6.25 * height - 5 * age + 5
       : 10 * weight + 6.25 * height - 5 * age - 161;
 
-  // 2) Activity factor
   const mult =
     activity === "light"
       ? 1.375
       : activity === "moderate"
-        ? 1.55
-        : activity === "very"
-          ? 1.725
-          : activity === "extra"
-            ? 1.9
-            : 1.2; // sedentary
+      ? 1.55
+      : activity === "very"
+      ? 1.725
+      : activity === "extra"
+      ? 1.9
+      : 1.2;
 
   let daily = bmr * mult;
   if (goal === "lose") daily -= 500;
@@ -83,11 +81,10 @@ const computeTargets = (
   const proteinK = proteinG * 4;
 
   const fatByWeight = 0.8 * weight;
-  const fatByPercent = (0.25 * calories) / 9; // 25% of kcal from fat
+  const fatByPercent = (0.25 * calories) / 9;
   const fatG = Math.round(Math.max(50, fatByWeight, fatByPercent));
   const fatK = fatG * 9;
 
-  // 6) Carbs = whatever is left
   const carbsG = Math.round(Math.max(0, calories - proteinK - fatK) / 4);
 
   return { calories, proteinG, fatG, carbsG };
@@ -162,7 +159,6 @@ const SetupProfile: React.FC = () => {
       return;
     }
 
-    // Strong validation: must have numbers
     if (age === null || age <= 0) {
       trackEvent("profile_validation_failed", { field: "age" });
       showToast("Please enter a valid age.", "warning");
@@ -259,104 +255,115 @@ const SetupProfile: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding setup-profile-page">
-        <IonItem>
-          <IonLabel position="stacked">Age</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={age ?? ""}
-            onIonChange={(e) => setAge(toNumOrNull(e.detail.value))}
-          />
-        </IonItem>
+      <IonContent className="setup-profile-page" fullscreen>
+        <div className="setup-card">
+          <div className="setup-header">
+            <h1 className="setup-title">Tell us about you</h1>
+            <p className="setup-subtitle">
+              We’ll use this to calculate your daily goals.
+            </p>
+          </div>
 
-        <IonItem>
-          <IonLabel position="stacked">Weight (kg)</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="decimal"
-            value={weight ?? ""}
-            onIonChange={(e) => setWeight(toNumOrNull(e.detail.value))}
-          />
-        </IonItem>
+          <div className="setup-form">
+            <IonItem lines="full" className="setup-item">
+              <IonLabel position="stacked">Age</IonLabel>
+              <IonInput
+                type="number"
+                inputMode="numeric"
+                value={age ?? ""}
+                onIonChange={(e) => setAge(toNumOrNull(e.detail.value))}
+              />
+            </IonItem>
 
-        <IonItem>
-          <IonLabel position="stacked">Height (cm)</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={height ?? ""}
-            onIonChange={(e) => setHeight(toNumOrNull(e.detail.value))}
-          />
-        </IonItem>
+            <IonItem lines="full" className="setup-item">
+              <IonLabel position="stacked">Weight (kg)</IonLabel>
+              <IonInput
+                type="number"
+                inputMode="decimal"
+                value={weight ?? ""}
+                onIonChange={(e) => setWeight(toNumOrNull(e.detail.value))}
+              />
+            </IonItem>
 
-        <IonItem>
-          <IonLabel position="stacked">Gender</IonLabel>
-          <IonSelect
-            value={gender}
-            onIonChange={(e) => setGender(e.detail.value as Gender)}
-          >
-            <IonSelectOption value="male">Male</IonSelectOption>
-            <IonSelectOption value="female">Female</IonSelectOption>
-          </IonSelect>
-        </IonItem>
+            <IonItem lines="full" className="setup-item">
+              <IonLabel position="stacked">Height (cm)</IonLabel>
+              <IonInput
+                type="number"
+                inputMode="numeric"
+                value={height ?? ""}
+                onIonChange={(e) => setHeight(toNumOrNull(e.detail.value))}
+              />
+            </IonItem>
 
-        <IonItem>
-          <IonLabel position="stacked">Goal</IonLabel>
-          <div className="ion-margin-top" style={{ display: "flex", gap: 8 }}>
+            <IonItem lines="full" className="setup-item">
+              <IonLabel position="stacked">Gender</IonLabel>
+              <IonSelect
+                value={gender}
+                onIonChange={(e) => setGender(e.detail.value as Gender)}
+              >
+                <IonSelectOption value="male">Male</IonSelectOption>
+                <IonSelectOption value="female">Female</IonSelectOption>
+              </IonSelect>
+            </IonItem>
+
+            <IonItem lines="none" className="setup-item setup-goal-row">
+              <IonLabel position="stacked">Goal</IonLabel>
+              <div className="setup-goal-buttons">
+                <IonButton
+                  fill={goal === "lose" ? "solid" : "outline"}
+                  onClick={() => setGoal("lose")}
+                >
+                  Lose
+                </IonButton>
+                <IonButton
+                  fill={goal === "maintain" ? "solid" : "outline"}
+                  onClick={() => setGoal("maintain")}
+                >
+                  Maintain
+                </IonButton>
+                <IonButton
+                  fill={goal === "gain" ? "solid" : "outline"}
+                  onClick={() => setGoal("gain")}
+                >
+                  Gain
+                </IonButton>
+              </div>
+            </IonItem>
+
+            <IonItem lines="none" className="setup-item">
+              <IonLabel position="stacked">Activity level</IonLabel>
+              <IonSelect
+                value={activity}
+                onIonChange={(e) => setActivity(e.detail.value as Activity)}
+              >
+                <IonSelectOption value="sedentary">
+                  Sedentary (little/no exercise)
+                </IonSelectOption>
+                <IonSelectOption value="light">
+                  Lightly active (1–3 days/week)
+                </IonSelectOption>
+                <IonSelectOption value="moderate">
+                  Moderately active (3–5 days/week)
+                </IonSelectOption>
+                <IonSelectOption value="very">
+                  Very active (6–7 days/week)
+                </IonSelectOption>
+                <IonSelectOption value="extra">
+                  Extra active (very hard exercise/job)
+                </IonSelectOption>
+              </IonSelect>
+            </IonItem>
+
             <IonButton
-              fill={goal === "lose" ? "solid" : "outline"}
-              onClick={() => setGoal("lose")}
+              expand="block"
+              className="setup-save-button"
+              onClick={handleSave}
+              disabled={loading}
             >
-              Lose
-            </IonButton>
-            <IonButton
-              fill={goal === "maintain" ? "solid" : "outline"}
-              onClick={() => setGoal("maintain")}
-            >
-              Maintain
-            </IonButton>
-            <IonButton
-              fill={goal === "gain" ? "solid" : "outline"}
-              onClick={() => setGoal("gain")}
-            >
-              Gain
+              {loading ? "Saving..." : "Save profile"}
             </IonButton>
           </div>
-        </IonItem>
-
-        <IonItem>
-          <IonLabel position="stacked">Activity Level</IonLabel>
-          <IonSelect
-            value={activity}
-            onIonChange={(e) => setActivity(e.detail.value as Activity)}
-          >
-            <IonSelectOption value="sedentary">
-              Sedentary (little/no exercise)
-            </IonSelectOption>
-            <IonSelectOption value="light">
-              Lightly active (1–3 days/week)
-            </IonSelectOption>
-            <IonSelectOption value="moderate">
-              Moderately active (3–5 days/week)
-            </IonSelectOption>
-            <IonSelectOption value="very">
-              Very active (6–7 days/week)
-            </IonSelectOption>
-            <IonSelectOption value="extra">
-              Extra active (very hard exercise/job)
-            </IonSelectOption>
-          </IonSelect>
-        </IonItem>
-
-        <IonButton
-          expand="full"
-          className="ion-margin-top"
-          onClick={handleSave}
-          disabled={loading}
-        >
-          {loading ? "Saving..." : "Save Profile"}
-        </IonButton>
+        </div>
 
         <IonToast
           isOpen={toast.show}

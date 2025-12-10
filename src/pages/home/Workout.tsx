@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -33,6 +33,7 @@ import {
   chevronForwardOutline,
   fitnessOutline,
   flameOutline,
+  logoGoogle,
   timerOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
@@ -41,6 +42,7 @@ import { db, trackEvent } from "../../firebase";
 import {
   clampDateKeyToToday,
   formatDateKey,
+  fromDateKey,
   isDateKey,
   shiftDateKey,
   todayDateKey,
@@ -55,6 +57,10 @@ import {
   estimateCaloriesBurned,
   getActivityPreset,
 } from "../../utils/activityCatalog";
+import {
+  fetchGoogleFitCalories,
+  isGoogleFitSupported,
+} from "../../utils/googleFit";
 
 const Workout: React.FC = () => {
   const history = useHistory();
@@ -89,9 +95,12 @@ const Workout: React.FC = () => {
     ACTIVITY_PRESETS[0].id
   );
   const [useEstimate, setUseEstimate] = useState(true);
+  const [syncingGoogleFit, setSyncingGoogleFit] = useState(false);
+  const autoImportDatesRef = useRef<Set<string>>(new Set());
 
   const weightKg = profile?.weight ?? 70;
   const heightCm = profile?.height ?? 170;
+  const googleFitAutoImport = profile?.googleFitAutoImport === true;
 
   const activeDateLabel = formatDateKey(activeDateKey, {
     weekday: "short",
@@ -281,6 +290,144 @@ const Workout: React.FC = () => {
     }
   };
 
+  const importGoogleFitCalories = useCallback(async ({
+    silent,
+    targetDateKey,
+  }: {
+    silent?: boolean;
+    targetDateKey?: string;
+  } = {}) => {
+    if (!uid || syncingGoogleFit) return false;
+
+    const dateKey = targetDateKey || activeDateKey;
+
+    setSyncingGoogleFit(true);
+    const start = fromDateKey(dateKey);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+
+    try {
+      const result = await fetchGoogleFitCalories(start.toISOString(), end.toISOString());
+
+      if (result.reason === "unavailable") {
+        if (!silent) {
+          setToast({
+            open: true,
+            message:
+              "Google Fit is only available on Android devices with the plugin installed.",
+          });
+        }
+        return false;
+      }
+
+      if (result.reason === "not_installed") {
+        setToast({
+          open: true,
+          message: "Google Fit isn't installed on this device.",
+        });
+        return false;
+      }
+
+      if (result.reason === "denied") {
+        setToast({
+          open: true,
+          message: "Permission denied. Please allow Google Fit access to activity data.",
+        });
+        return false;
+      }
+
+      if (result.calories <= 0) {
+        if (!silent) {
+          setToast({
+            open: true,
+            message: "No calories found for this day in Google Fit.",
+          });
+        }
+        return false;
+      }
+
+      const entry: WorkoutEntry = {
+        title: "Google Fit",
+        calories: result.calories,
+        addedAt: new Date().toISOString(),
+        note: "Imported from Google Fit",
+        source: "google_fit",
+      };
+
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "workouts", dateKey);
+        const snap = await tx.get(ref);
+        const existing = (snap.data() as WorkoutDayDoc | undefined)?.activities || [];
+        const withoutOldImports = existing.filter((act) => act.source !== "google_fit");
+        tx.set(ref, { activities: [...withoutOldImports, entry] }, { merge: true });
+      });
+
+      trackEvent("workout_google_fit_import", {
+        uid,
+        date: dateKey,
+        calories: result.calories,
+      });
+
+      if (!silent) {
+        setToast({
+          open: true,
+          message: `Imported ${result.calories} kcal from Google Fit for this day.`,
+        });
+      }
+
+      autoImportDatesRef.current.add(dateKey);
+      return true;
+    } catch (err) {
+      console.error(err);
+      setToast({ open: true, message: "Couldn't import from Google Fit." });
+      autoImportDatesRef.current.delete(dateKey);
+      return false;
+    } finally {
+      setSyncingGoogleFit(false);
+    }
+  }, [uid, syncingGoogleFit, activeDateKey]);
+
+  const goToGoogleFitSettings = () => history.push("/app/settings#google-fit");
+
+  const handleGoogleFitTap = () => {
+    if (!isGoogleFitSupported()) {
+      setToast({
+        open: true,
+        message:
+          "Google Fit works on Android native builds. Open Settings to manage the connection.",
+      });
+      goToGoogleFitSettings();
+      return;
+    }
+
+    if (!googleFitAutoImport) {
+      setToast({
+        open: true,
+        message: "Turn on Google Fit auto-import in Settings to keep workouts updated.",
+      });
+      goToGoogleFitSettings();
+      return;
+    }
+
+    void importGoogleFitCalories();
+  };
+
+  useEffect(() => {
+    if (!googleFitAutoImport) return;
+    if (!isGoogleFitSupported()) return;
+    if (autoImportDatesRef.current.has(activeDateKey)) return;
+    if (activities.some((act) => act.source === "google_fit")) {
+      autoImportDatesRef.current.add(activeDateKey);
+      return;
+    }
+
+    autoImportDatesRef.current.add(activeDateKey);
+    void importGoogleFitCalories({ silent: true }).then((ok) => {
+      if (!ok) autoImportDatesRef.current.delete(activeDateKey);
+    });
+  }, [googleFitAutoImport, activeDateKey, activities, importGoogleFitCalories]);
+
   const isToday = activeDateKey === todayDateKey();
 
   return (
@@ -340,18 +487,36 @@ const Workout: React.FC = () => {
               </IonChip>
             </IonCardTitle>
 
-            <IonButton
-              fill="outline"
-              size="small"
-              onClick={() => {
-                setShowForm(true);
-                syncCaloriesFromPreset(selectedPresetId, draft.durationMinutes, true);
-              }}
-              aria-label="Add activity"
-            >
-              <IonIcon icon={addCircleOutline} slot="start" />
-              Add
-            </IonButton>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <IonButton
+                fill="clear"
+                size="small"
+                color="medium"
+                onClick={handleGoogleFitTap}
+                disabled={syncingGoogleFit}
+                aria-label="Manage Google Fit calories"
+              >
+                <IonIcon icon={logoGoogle} slot="start" />
+                {googleFitAutoImport
+                  ? syncingGoogleFit
+                    ? "Syncing..."
+                    : "Google Fit"
+                  : "Connect Google Fit"}
+              </IonButton>
+
+              <IonButton
+                fill="outline"
+                size="small"
+                onClick={() => {
+                  setShowForm(true);
+                  syncCaloriesFromPreset(selectedPresetId, draft.durationMinutes, true);
+                }}
+                aria-label="Add activity"
+              >
+                <IonIcon icon={addCircleOutline} slot="start" />
+                Add
+              </IonButton>
+            </div>
           </IonCardHeader>
 
           <IonCardContent className="fs-summary__row">

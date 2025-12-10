@@ -17,8 +17,6 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
@@ -33,7 +31,6 @@ const Login: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
-  // simple rate limiting
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
 
@@ -63,19 +60,16 @@ const Login: React.FC = () => {
   ) => setToast({ show: true, message, color, buttons });
 
   const handleLogin = async () => {
-    // extra guard: if already processing, ignore further taps
     if (busy) return;
 
     const trimmedEmail = email.trim();
     const trimmedPw = pw.trim();
 
-    // track button press
     trackEvent("login_attempt", {
       email_present: !!trimmedEmail,
       pw_present: !!trimmedPw,
     });
 
-    // rate limit check
     const now = Date.now();
     if (lockUntil && now < lockUntil) {
       const remainingSec = Math.ceil((lockUntil - now) / 1000);
@@ -99,11 +93,9 @@ const Login: React.FC = () => {
     try {
       const cred = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPw);
 
-      // reset rate limit on successful credential use
       setFailedAttempts(0);
       setLockUntil(null);
 
-      // credentials valid
       trackEvent("login_credentials_valid", {
         uid: cred.user.uid,
         email_verified: cred.user.emailVerified,
@@ -154,7 +146,6 @@ const Login: React.FC = () => {
       } else if (err?.code === "auth/user-not-found") {
         message = "No account found with that email.";
       } else {
-        // fallback for unexpected Firebase/JS errors
         message = handleError("login", err);
       }
 
@@ -164,7 +155,7 @@ const Login: React.FC = () => {
         const next = prev + 1;
 
         if (next >= 5) {
-          const lockMs = 30 * 1000; // 30 seconds
+          const lockMs = 30 * 1000;
           setLockUntil(Date.now() + lockMs);
           trackEvent("login_rate_limited", { attempts: next, lockMs });
           showToast(
@@ -190,73 +181,85 @@ const Login: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
-        <IonItem>
-          <IonLabel position="stacked">Email</IonLabel>
-          <IonInput
-            type="email"
-            inputmode="email"
-            autocomplete="email"
-            autocapitalize="off"
-            autocorrect="off"
-            placeholder="you@example.com"
-            value={email}
-            onIonInput={(e: any) => setEmail(e.detail.value ?? "")}
-          />
-        </IonItem>
+      <IonContent className="login-page" fullscreen>
+        <div className="login-card">
+          <div className="login-header">
+            <h1 className="login-title">Welcome back</h1>
+            <p className="login-subtitle">
+              Log in to continue tracking your day.
+            </p>
+          </div>
 
-        <IonItem lines="none" className="password-item">
-          <IonLabel position="stacked">Password</IonLabel>
+          <div className="login-form">
+            <IonItem lines="full" className="login-item">
+              <IonLabel position="stacked">Email</IonLabel>
+              <IonInput
+                type="email"
+                inputmode="email"
+                autocomplete="email"
+                autocapitalize="off"
+                autocorrect="off"
+                placeholder="you@example.com"
+                value={email}
+                onIonInput={(e: any) => setEmail(e.detail.value ?? "")}
+              />
+            </IonItem>
 
-          <div className="pw-wrapper">
-            <IonInput
-              type={showPw ? "text" : "password"}
-              autocomplete="current-password"
-              autocapitalize="off"
-              autocorrect="off"
-              placeholder="Your password"
-              value={pw}
-              onIonInput={(e: any) => setPw(e.detail.value ?? "")}
-              className="pw-input"
-            />
+            <IonItem lines="none" className="login-item password-item">
+              <IonLabel position="stacked">Password</IonLabel>
+              <div className="pw-wrapper">
+                <IonInput
+                  type={showPw ? "text" : "password"}
+                  autocomplete="current-password"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  placeholder="Your password"
+                  value={pw}
+                  onIonInput={(e: any) => setPw(e.detail.value ?? "")}
+                  className="pw-input"
+                />
+                <button
+                  type="button"
+                  className="pw-toggle-btn"
+                  onClick={() => {
+                    setShowPw((v) => !v);
+                    trackEvent("login_toggle_password_visibility", {
+                      new_state: !showPw,
+                    });
+                  }}
+                >
+                  {showPw ? "HIDE" : "SHOW"}
+                </button>
+              </div>
+            </IonItem>
 
-            <button
-              type="button"
-              className="pw-toggle-btn"
+            <IonButton
+              expand="block"
+              className="login-button"
+              onClick={handleLogin}
+              disabled={busy}
+            >
+              {busy ? <IonSpinner name="dots" /> : "Log In"}
+            </IonButton>
+          </div>
+
+          <div className="login-footer">
+            <IonText color="medium">
+              <p>No account?</p>
+            </IonText>
+            <IonButton
+              fill="clear"
+              expand="block"
+              className="login-footer-button"
               onClick={() => {
-                setShowPw((v) => !v);
-                trackEvent("login_toggle_password_visibility", {
-                  new_state: !showPw,
-                });
+                trackEvent("navigate_to_register_from_login");
+                history.push("/register");
               }}
             >
-              {showPw ? "HIDE" : "SHOW"}
-            </button>
+              Create one
+            </IonButton>
           </div>
-        </IonItem>
-
-        <IonButton
-          expand="block"
-          className="ion-margin-top"
-          onClick={handleLogin}
-          disabled={busy}
-        >
-          {busy ? <IonSpinner name="dots" /> : "Log In"}
-        </IonButton>
-
-        <IonText className="ion-text-center" color="medium">
-          <p className="ion-margin-top">No account?</p>
-        </IonText>
-        <IonButton
-          fill="clear"
-          expand="block"
-          onClick={() => {
-            trackEvent("navigate_to_register_from_login");
-            history.push("/register");
-          }}
-        >
-          Create one
-        </IonButton>
+        </div>
 
         <IonToast
           isOpen={toast.show}

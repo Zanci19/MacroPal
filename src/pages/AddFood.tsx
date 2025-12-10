@@ -1092,6 +1092,45 @@ const AddFood: React.FC = () => {
     const normalizedQuery = normalizeText(raw);
     const queryTokens = normalizedQuery.split(" ").filter(Boolean);
 
+    const computeGenericBoost = (food: OFFSearchHit) => {
+      const nameNorm = normalizeText(food.product_name || "");
+      const brandNorm = normalizeText(food.brands || "");
+
+      let boost = 0;
+
+      // Strong boost: exact generic match (no brand)
+      if (nameNorm === normalizedQuery && !brandNorm) {
+        boost += 400;
+      }
+
+      // No brand at all → likely generic
+      if (!brandNorm) {
+        boost += 120;
+      }
+
+      // Short, simple name → likely generic (e.g. "greek yogurt")
+      const nameTokens = nameNorm.split(" ").filter(Boolean);
+      const tokenCount = nameTokens.length;
+      if (tokenCount <= 3) {
+        boost += 60;
+      } else if (tokenCount <= 5) {
+        boost += 20;
+      }
+
+      // Penalize "very specific" names: sizes, %, etc.
+      if (/\d/.test(nameNorm)) {
+        boost -= 40; // 0.1%, 150g, etc.
+      }
+      if (/(g|kg|ml|l|x)\b/.test(nameNorm)) {
+        boost -= 30; // packaging sizes
+      }
+      if (/(%|fat|light|zero|0\.|1\.5|2\.5)/.test(nameNorm)) {
+        boost -= 20; // "0% fat", "light", etc.
+      }
+
+      return boost;
+    };
+
     const searchKey = `${normalizedQuery}|${pageNumber}`;
     if (lastSearchRef.current === searchKey) {
       return results.length;
@@ -1134,6 +1173,8 @@ const AddFood: React.FC = () => {
       }
 
       score -= nameNorm.split(" ").length;
+
+      score += computeGenericBoost(food);
 
       return { food, score, hasAllTokens };
     };

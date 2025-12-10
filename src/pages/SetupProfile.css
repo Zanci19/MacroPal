@@ -1,10 +1,87 @@
 .setup-profile-page {
+  --background: #121212;
+  background: #121212;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
 }
 
-.setup-profile-page ion-item {
+.setup-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 24px 20px 20px;
+  border-radius: 18px;
+  background: #121212;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  color: var(--ion-text-color, #f9fafb);
+}
+
+@media (prefers-color-scheme: light) {
+  .setup-card {
+    background: rgba(255, 255, 255, 0.95);
+    color: #121212;
+  }
+}
+
+.setup-header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.setup-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.setup-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-item {
+  --background: transparent;
+  --border-color: rgba(148, 163, 184, 0.45);
+  --border-radius: 12px;
   --padding-start: 0;
+  --inner-padding-end: 0;
+  --highlight-color-focused: var(--ion-color-primary);
+}
+
+.setup-item.ion-item {
+  border-radius: 12px;
+}
+
+.setup-item ion-label {
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.setup-goal-row {
+  --inner-padding-top: 4px;
+  --inner-padding-bottom: 4px;
+}
+
+.setup-goal-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.setup-save-button {
+  margin-top: 8px;
+  border-radius: 999px;
+  height: 44px;
+  font-weight: 600;
 }

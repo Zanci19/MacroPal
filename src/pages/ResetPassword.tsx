@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   IonButton,
   IonContent,
@@ -10,44 +10,46 @@ import {
   IonTitle,
   IonToolbar,
   IonToast,
-} from '@ionic/react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { useHistory } from 'react-router-dom';
-import { auth } from '../firebase';
-import './ResetPassword.css';
+  IonLabel,
+} from "@ionic/react";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { useHistory } from "react-router-dom";
+import { auth } from "../firebase";
+import "./ResetPassword.css";
 
-const COOLDOWN_MS_DEFAULT = 60_000; // 60s after a successful send
-const COOLDOWN_MS_RATE_LIMIT = 5 * 60_000; // 5min if Firebase returns auth/too-many-requests
-const LS_KEY = 'resetPasswordCooldownUntil';
+const COOLDOWN_MS_DEFAULT = 60_000;
+const COOLDOWN_MS_RATE_LIMIT = 5 * 60_000;
+const LS_KEY = "resetPasswordCooldownUntil";
 
 const ResetPassword: React.FC = () => {
-  const [email, setEmail] = React.useState<string>('');
-  const [toast, setToast] = React.useState<{ show: boolean; message: string; color?: string }>({
+  const [email, setEmail] = React.useState<string>("");
+  const [toast, setToast] = React.useState<{
+    show: boolean;
+    message: string;
+    color?: string;
+  }>({
     show: false,
-    message: '',
-    color: 'success',
+    message: "",
+    color: "success",
   });
   const [cooldownMsLeft, setCooldownMsLeft] = React.useState<number>(0);
   const [sending, setSending] = React.useState<boolean>(false);
   const history = useHistory();
 
-  // Load any existing cooldown from localStorage on mount
   React.useEffect(() => {
-    const until = Number(localStorage.getItem(LS_KEY) || '0');
+    const until = Number(localStorage.getItem(LS_KEY) || "0");
     const now = Date.now();
     if (until > now) {
       setCooldownMsLeft(until - now);
     }
   }, []);
 
-  // Tick the countdown once per second while there's time left
   React.useEffect(() => {
     if (cooldownMsLeft <= 0) return;
     const id = setInterval(() => {
       setCooldownMsLeft((prev) => {
         const next = Math.max(0, prev - 1000);
         if (next === 0) {
-          // clear persisted cooldown when it ends
           localStorage.removeItem(LS_KEY);
         }
         return next;
@@ -66,14 +68,20 @@ const ResetPassword: React.FC = () => {
 
   const handleRecoverPassword = async () => {
     if (!email.trim()) {
-      setToast({ show: true, message: 'Please enter your email address.', color: 'danger' });
+      setToast({
+        show: true,
+        message: "Please enter your email address.",
+        color: "danger",
+      });
       return;
     }
     if (cooldownMsLeft > 0) {
       setToast({
         show: true,
-        message: `Please wait ${formatSeconds(cooldownMsLeft)}s before requesting again.`,
-        color: 'warning',
+        message: `Please wait ${formatSeconds(
+          cooldownMsLeft
+        )}s before requesting again.`,
+        color: "warning",
       });
       return;
     }
@@ -83,26 +91,25 @@ const ResetPassword: React.FC = () => {
       await sendPasswordResetEmail(auth, email.trim());
       setToast({
         show: true,
-        message: 'Password reset email sent. Check your inbox.',
-        color: 'success',
+        message: "Password reset email sent. Check your inbox.",
+        color: "success",
       });
       startCooldown(COOLDOWN_MS_DEFAULT);
     } catch (error: any) {
-      console.error('Error sending password reset email:', error);
+      console.error("Error sending password reset email:", error);
       const code = error?.code as string | undefined;
 
-      if (code === 'auth/too-many-requests') {
-        // Back off more aggressively if Firebase is rate limiting
+      if (code === "auth/too-many-requests") {
         startCooldown(COOLDOWN_MS_RATE_LIMIT);
         setToast({
           show: true,
-          message:
-            'Too many attempts. Please try again in a few minutes.',
-          color: 'danger',
+          message: "Too many attempts. Please try again in a few minutes.",
+          color: "danger",
         });
       } else {
-        const message = error?.message ?? 'Failed to send password reset email.';
-        setToast({ show: true, message, color: 'danger' });
+        const message =
+          error?.message ?? "Failed to send password reset email.";
+        setToast({ show: true, message, color: "danger" });
       }
     } finally {
       setSending(false);
@@ -111,12 +118,11 @@ const ResetPassword: React.FC = () => {
 
   const secondsLeft = formatSeconds(cooldownMsLeft);
   const buttonDisabled = sending || cooldownMsLeft > 0;
-  const buttonLabel =
-    sending
-      ? 'Sending…'
-      : cooldownMsLeft > 0
-        ? `Resend in ${secondsLeft}s`
-        : 'Recover Password';
+  const buttonLabel = sending
+    ? "Sending…"
+    : cooldownMsLeft > 0
+    ? `Resend in ${secondsLeft}s`
+    : "Recover Password";
 
   return (
     <IonPage>
@@ -126,44 +132,74 @@ const ResetPassword: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding reset-password-page">
-        <h2 className="start-subtitle">
-          Please enter the email associated with your account:
-        </h2>
-
-        <IonItem>
-          <IonInput
-            value={email}
-            placeholder="Email"
-            type="email"
-            onIonChange={(e: any) => setEmail(e?.detail?.value ?? '')}
-            disabled={sending}
-          />
-        </IonItem>
-
-        <IonButton expand="full" onClick={handleRecoverPassword} disabled={buttonDisabled}>
-          {buttonLabel}
-        </IonButton>
-
-        {cooldownMsLeft > 0 && (
-          <IonText color="medium">
-            <p className="ion-text-center" style={{ marginTop: 8 }}>
-              You can request another reset email in {secondsLeft}s.
+      <IonContent className="reset-password-page" fullscreen>
+        <div className="reset-card">
+          <div className="reset-header">
+            <h1 className="reset-title">Forgot your password?</h1>
+            <p className="reset-subtitle">
+              Enter the email linked to your account and we&apos;ll send you a
+              reset link.
             </p>
-          </IonText>
-        )}
+          </div>
 
-        <IonText className="ion-text-center" color="medium">
-          <p>Already have an account?</p>
-        </IonText>
+          <div className="reset-form">
+            <IonItem lines="full" className="reset-item">
+              <IonLabel position="stacked">Email</IonLabel>
+              <IonInput
+                value={email}
+                placeholder="you@example.com"
+                type="email"
+                inputMode="email"
+                autocomplete="email"
+                onIonChange={(e: any) =>
+                  setEmail(e?.detail?.value ?? "")
+                }
+                disabled={sending}
+              />
+            </IonItem>
 
-        <IonButton fill="clear" expand="block" onClick={() => history.push('/login')} disabled={sending}>
-          Log In
-        </IonButton>
+            <IonButton
+              expand="block"
+              className="reset-button"
+              onClick={handleRecoverPassword}
+              disabled={buttonDisabled}
+            >
+              {buttonLabel}
+            </IonButton>
+
+            {cooldownMsLeft > 0 && (
+              <IonText color="medium">
+                <p className="reset-cooldown-text">
+                  You can request another reset email in {secondsLeft}s.
+                </p>
+              </IonText>
+            )}
+
+            <div className="reset-footer">
+              <IonText color="medium">
+                <p className="reset-footer-text">Remember your password?</p>
+              </IonText>
+              <IonButton
+                fill="clear"
+                expand="block"
+                onClick={() => history.push("/login")}
+                disabled={sending}
+                className="reset-footer-button"
+              >
+                Log In
+              </IonButton>
+            </div>
+          </div>
+        </div>
 
         <IonToast
           isOpen={toast.show}
-          onDidDismiss={() => setToast((s) => ({ ...s, show: false }))}
+          onDidDismiss={() =>
+            setToast((s) => ({
+              ...s,
+              show: false,
+            }))
+          }
           message={toast.message}
           color={toast.color}
           duration={3000}

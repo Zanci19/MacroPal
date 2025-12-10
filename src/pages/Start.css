@@ -1,49 +1,37 @@
-/* Ensure the page has a solid fallback color behind the video */
 .start-content {
-  --background: #000; /* Ionic var */
-  background: #000;   /* fallback */
+  --background: #000000;
+  background: #000000;
+  position: relative;
+  padding: 0;
 }
 
-/* Background video container fills viewport, sits behind content */
 .bg-video {
   position: absolute;
   inset: 0;
   overflow: hidden;
   z-index: 0;
-  pointer-events: none; /* let taps/clicks pass through */
+  pointer-events: none;
 }
 
-/* <video> scales to cover */
 .bg-video__media {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-
-  /* 🔥 hide until ready */
   opacity: 0;
   transition: opacity 180ms ease-out;
 }
 
-/* Once React sets videoReady=true */
 .bg-video.is-ready .bg-video__media {
   opacity: 1;
 }
 
-/* Optional dark scrim for text contrast (tune the opacity as needed) */
 .bg-video__scrim {
   position: absolute;
   inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(0, 0, 0, 0.25),
-    rgba(0, 0, 0, 0.6) 70%
-  );
 }
 
-/* Foreground stack (your existing code) */
-/* Fill the viewport and center everything */
 .fixed-center {
   position: absolute;
   inset: 0;
@@ -53,10 +41,9 @@
   align-items: center;
   text-align: center;
   padding: env(safe-area-inset-top) 1.5rem env(safe-area-inset-bottom);
-  z-index: 1; /* sits above the video */
+  z-index: 1;
 }
 
-/* Stack styling */
 .start-logo {
   width: 140px;
   height: 140px;
@@ -69,17 +56,16 @@
   font-weight: 800;
   margin: 0;
   line-height: 1.1;
-  color: #fff;
+  color: #ffffff;
 }
 
 .start-subtitle {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #d1d5db; /* slightly brighter for readability */
+  color: #d1d5db;
   margin: 0 0 0.75rem 0;
 }
 
-/* Buttons */
 .start-actions {
   display: flex;
   flex-direction: column;
@@ -90,23 +76,33 @@
 
 .start-btn {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 999px;
+  height: 46px;
+  font-weight: 600;
 }
 
-/* Try to nuke any browser controls if they appear */
+.start-btn-primary {
+  --background: var(--ion-color-primary);
+  --background-hover: var(--ion-color-primary-shade);
+}
+
+.start-btn-secondary {
+  --border-color: rgba(148, 163, 184, 0.65);
+}
+
 .bg-video__media::-webkit-media-controls {
   display: none !important;
 }
+
 .bg-video__media::-webkit-media-controls-enclosure {
   display: none !important;
 }
 
-/* Respect reduced motion preferences: pause background video */
 @media (prefers-reduced-motion: reduce) {
   .bg-video__media {
     display: none;
   }
   .bg-video__scrim {
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.75);
   }
 }
