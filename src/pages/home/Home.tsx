@@ -1541,124 +1541,125 @@ const Home: React.FC = () => {
                           onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
                         >
                           {items.map((it, idx) => {
-                          const t: any = it.total || {
-                            calories: 0,
-                            carbs: 0,
-                            protein: 0,
-                            fat: 0,
-                          };
-                          const kcal = Math.round(t.calories || 0);
-                          const carbs =
-                            typeof t.carbs === "number" ? t.carbs : 0;
-                          const protein =
-                            typeof t.protein === "number" ? t.protein : 0;
-                          const fat =
-                            typeof t.fat === "number" ? t.fat : 0;
+                            const t: any = it.total || {
+                              calories: 0,
+                              carbs: 0,
+                              protein: 0,
+                              fat: 0,
+                            };
+                            const kcal = Math.round(t.calories || 0);
+                            const carbs =
+                              typeof t.carbs === "number" ? t.carbs : 0;
+                            const protein =
+                              typeof t.protein === "number" ? t.protein : 0;
+                            const fat =
+                              typeof t.fat === "number" ? t.fat : 0;
 
-                          const sugar =
-                            typeof t.sugar === "number" ? t.sugar : null;
-                          const fiber =
-                            typeof t.fiber === "number" ? t.fiber : null;
-                          const satFat =
-                            typeof t.saturatedFat === "number"
-                              ? t.saturatedFat
-                              : null;
-                          const salt =
-                            typeof t.salt === "number" ? t.salt : null;
+                            const sugar =
+                              typeof t.sugar === "number" ? t.sugar : null;
+                            const fiber =
+                              typeof t.fiber === "number" ? t.fiber : null;
+                            const satFat =
+                              typeof t.saturatedFat === "number"
+                                ? t.saturatedFat
+                                : null;
+                            const salt =
+                              typeof t.salt === "number" ? t.salt : null;
 
-                          const hasMicros =
-                            sugar !== null ||
-                            fiber !== null ||
-                            satFat !== null ||
-                            salt !== null;
+                            const hasMicros =
+                              sugar !== null ||
+                              fiber !== null ||
+                              satFat !== null ||
+                              salt !== null;
 
-                          return (
-                            <IonItem
-                              key={`${it.addedAt}-${idx}`}
-                              className="meal-item"
-                              button
-                              detail={false}
-                              onClick={() => {
-                                trackEvent("meal_item_edit_via_add_food", {
-                                  uid,
-                                  date: activeDateKey,
-                                  meal,
-                                  index: idx,
-                                  name: it.name,
-                                });
+                            return (
+                              <IonItem
+                                key={`${it.addedAt}-${idx}`}
+                                className="meal-item"
+                                button
+                                detail={false}
+                                onClick={() => {
+                                  trackEvent("meal_item_edit_via_add_food", {
+                                    uid,
+                                    date: activeDateKey,
+                                    meal,
+                                    index: idx,
+                                    name: it.name,
+                                  });
 
-                                history.push({
-                                  pathname: "/add-food",
-                                  search: `?meal=${meal}&date=${activeDateKey}`,
-                                  state: {
-                                    editEntry: {
-                                      meal,
-                                      index: idx,
-                                      item: it,
+                                  history.push({
+                                    pathname: "/add-food",
+                                    search: `?meal=${meal}&date=${activeDateKey}`,
+                                    state: {
+                                      editEntry: {
+                                        meal,
+                                        index: idx,
+                                        item: it,
+                                      },
                                     },
-                                  },
-                                });
-                              }}
-                            >
-                              <IonReorder slot="start" />
-                              <IonLabel>
-                                <h2>
-                                  {it.name}
-                                  {it.brand ? ` · ${it.brand}` : ""}
-                                </h2>
-                                <p className="meal-item-macros">
-                                  Carbs {carbs.toFixed(1)} g · Protein{" "}
-                                  {protein.toFixed(1)} g · Fat{" "}
-                                  {fat.toFixed(1)} g
-                                </p>
-                                {hasMicros && (
-                                  <p className="meal-item-micros">
-                                    {sugar !== null && (
-                                      <span>Sugar {sugar.toFixed(1)} g</span>
-                                    )}
-                                    {fiber !== null && (
-                                      <span>
-                                        {" "}
-                                        · Fiber {fiber.toFixed(1)} g
-                                      </span>
-                                    )}
-                                    {satFat !== null && (
-                                      <span>
-                                        {" "}
-                                        · Sat. fat {satFat.toFixed(1)} g
-                                      </span>
-                                    )}
-                                    {salt !== null && (
-                                      <span>
-                                        {" "}
-                                        · Salt {salt.toFixed(1)} g
-                                      </span>
-                                    )}
-                                  </p>
-                                )}
-                              </IonLabel>
-
-                              <IonButton
-                                slot="end"
-                                fill="clear"
-                                aria-label={`Remove ${it.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteFood(meal, idx);
+                                  });
                                 }}
-                                className="del-btn"
                               >
-                                <IonIcon icon={trashOutline} />
-                              </IonButton>
+                                <IonReorder slot="start" />
+                                <IonLabel>
+                                  <h2>
+                                    {it.name}
+                                    {it.brand ? ` · ${it.brand}` : ""}
+                                  </h2>
+                                  <p className="meal-item-macros">
+                                    Carbs {carbs.toFixed(1)} g · Protein{" "}
+                                    {protein.toFixed(1)} g · Fat{" "}
+                                    {fat.toFixed(1)} g
+                                  </p>
+                                  {hasMicros && (
+                                    <p className="meal-item-micros">
+                                      {sugar !== null && (
+                                        <span>Sugar {sugar.toFixed(1)} g</span>
+                                      )}
+                                      {fiber !== null && (
+                                        <span>
+                                          {" "}
+                                          · Fiber {fiber.toFixed(1)} g
+                                        </span>
+                                      )}
+                                      {satFat !== null && (
+                                        <span>
+                                          {" "}
+                                          · Sat. fat {satFat.toFixed(1)} g
+                                        </span>
+                                      )}
+                                      {salt !== null && (
+                                        <span>
+                                          {" "}
+                                          · Salt {salt.toFixed(1)} g
+                                        </span>
+                                      )}
+                                    </p>
+                                  )}
+                                </IonLabel>
 
-                              <div className="kcal-badge" slot="end">
-                                {kcal} kcal
-                              </div>
-                            </IonItem>
-                          );
-                        })}
+                                <IonButton
+                                  slot="end"
+                                  fill="clear"
+                                  aria-label={`Remove ${it.name}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteFood(meal, idx);
+                                  }}
+                                  className="del-btn"
+                                >
+                                  <IonIcon icon={trashOutline} />
+                                </IonButton>
+
+                                <div className="kcal-badge" slot="end">
+                                  {kcal} kcal
+                                </div>
+                              </IonItem>
+                            );
+                          })}
                       </IonReorderGroup>
                     </IonList>
+                  )}
                   </IonCardContent>
                 )}
               </IonCard>
