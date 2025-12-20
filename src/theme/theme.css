@@ -1,0 +1,186 @@
+:root {
+  --mp-primary: #357be4;
+  --mp-primary-strong: #1f63cc;
+  --mp-primary-soft: rgba(53, 123, 228, 0.12);
+  --mp-primary-gradient: linear-gradient(120deg, #357be4 0%, #4f8cf8 45%, #7bb2ff 100%);
+
+  --mp-bg: #f4f7fb;
+  --mp-surface: #ffffff;
+  --mp-surface-muted: #ecf0f7;
+  --mp-surface-glow: radial-gradient(circle at 20% 20%, rgba(79, 140, 248, 0.12), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(31, 99, 204, 0.1), transparent 35%);
+  --mp-text: #0b1b33;
+  --mp-text-muted: #4b5563;
+  --mp-border: rgba(15, 23, 42, 0.08);
+  --mp-shadow-soft: 0 10px 40px rgba(15, 23, 42, 0.08);
+  --mp-shadow-strong: 0 24px 70px rgba(15, 23, 42, 0.14);
+
+  color-scheme: light;
+}
+
+body.dark {
+  --mp-bg: #080c14;
+  --mp-surface: rgba(12, 16, 26, 0.8);
+  --mp-surface-muted: #0f1520;
+  --mp-surface-glow: radial-gradient(circle at 15% 15%, rgba(79, 140, 248, 0.18), transparent 36%),
+    radial-gradient(circle at 95% 5%, rgba(31, 99, 204, 0.16), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(124, 147, 255, 0.08), transparent 30%);
+  --mp-text: #e7edf6;
+  --mp-text-muted: #9fb1c9;
+  --mp-border: rgba(255, 255, 255, 0.08);
+  --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.35);
+  --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
+}
+
+html,
+body,
+ion-app,
+ion-content {
+  background: var(--mp-bg);
+  color: var(--mp-text);
+}
+
+body {
+  background: var(--mp-surface-glow), var(--mp-bg);
+  min-height: 100vh;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+ion-content::part(background) {
+  background: var(--mp-surface-glow), var(--mp-bg);
+}
+
+ion-toolbar {
+  --background: rgba(255, 255, 255, 0.6);
+  --backdrop-filter: blur(18px);
+  --color: var(--mp-text);
+  border-bottom: 1px solid var(--mp-border);
+}
+
+body.dark ion-toolbar {
+  --background: rgba(8, 12, 20, 0.7);
+  border-color: var(--mp-border);
+}
+
+ion-card {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  border-radius: 18px;
+  border: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow-soft);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+ion-card-header {
+  padding: 16px 18px 10px 18px;
+}
+
+ion-card-content {
+  padding: 0 18px 18px 18px;
+}
+
+ion-button {
+  --background: var(--mp-primary-gradient);
+  --background-hover: linear-gradient(120deg, #2f6bc9 0%, #4f8cf8 70%);
+  --border-radius: 14px;
+  --box-shadow: 0 10px 30px rgba(53, 123, 228, 0.35);
+  --color: #ffffff;
+  font-weight: 700;
+}
+
+ion-button.button-outline,
+ion-button[fill="outline"] {
+  --color: var(--mp-text);
+  --background: transparent;
+  --background-hover: var(--mp-primary-soft);
+  --border-color: var(--mp-border);
+  --border-radius: 14px;
+  --border-style: solid;
+  --border-width: 1px;
+  --box-shadow: none;
+}
+
+ion-input,
+ion-select,
+ion-textarea {
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --background: var(--mp-surface-muted);
+  --border-radius: 14px;
+  --highlight-color-focused: var(--ion-color-primary);
+  border: 1px solid var(--mp-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+ion-item {
+  --background: transparent;
+  --border-color: var(--mp-border);
+  --color: var(--mp-text);
+  border-radius: 14px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+ion-item:hover {
+  --background: var(--mp-primary-soft);
+}
+
+ion-tab-bar {
+  --background: rgba(255, 255, 255, 0.75);
+  --color: var(--mp-text-muted);
+  --color-selected: var(--mp-text);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--mp-border);
+  box-shadow: 0 -6px 40px rgba(15, 23, 42, 0.08);
+}
+
+body.dark ion-tab-bar {
+  --background: rgba(8, 12, 20, 0.75);
+  box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.45);
+}
+
+.mp-tab-btn ion-label {
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.mp-tab-btn--active ion-label {
+  font-weight: 800;
+  opacity: 1;
+}
+
+ion-modal {
+  --background: var(--mp-surface);
+  --box-shadow: var(--mp-shadow-strong);
+  --border-radius: 18px;
+  --border-color: var(--mp-border);
+}
+
+ion-chip {
+  --background: var(--mp-surface-muted);
+  --color: var(--mp-text);
+  --border-color: var(--mp-border);
+  border-radius: 999px;
+}
+
+ion-badge {
+  --background: var(--mp-primary);
+  --color: #ffffff;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+ion-refresher-content .refresher-pulling-icon,
+ion-refresher-content .refresher-refreshing-icon {
+  color: var(--mp-primary);
+}
+
+:root body.has-softkeys .mp-tabbar {
+  padding-bottom: var(--softkey-inset);
+}

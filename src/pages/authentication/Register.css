@@ -1,6 +1,6 @@
 .register-page {
-  --background: #121212;
-  background: #121212;
+  --background: transparent;
+  background: var(--mp-surface-glow), var(--mp-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,37 +11,31 @@
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
-  padding: 24px 20px 20px;
-  border-radius: 18px;
-  background: #121212;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
-  color: var(--ion-text-color, #f9fafb);
-}
-
-@media (prefers-color-scheme: light) {
-  .register-card {
-    background: rgba(255, 255, 255, 0.95);
-    color: #121212;
-  }
+  padding: 28px 22px 22px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--mp-surface) 92%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--mp-shadow-soft);
+  border: 1px solid var(--mp-border);
+  color: var(--mp-text);
 }
 
 .register-header {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .register-title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
 
 .register-subtitle {
   margin: 6px 0 0;
-  font-size: 0.9rem;
-  opacity: 0.7;
+  font-size: 0.95rem;
+  color: var(--mp-text-muted);
 }
 
 .register-form {
@@ -51,28 +45,33 @@
 }
 
 .register-item {
-  --background: transparent;
-  --border-color: rgba(148, 163, 184, 0.45);
-  --border-radius: 12px;
+  --background: color-mix(in srgb, var(--mp-surface-muted) 92%, transparent);
+  --border-color: var(--mp-border);
+  --border-radius: 14px;
   --padding-start: 0;
   --inner-padding-end: 0;
   --highlight-color-focused: var(--ion-color-primary);
+  --padding-top: 6px;
+  --padding-bottom: 6px;
+  border: 1px solid var(--mp-border);
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .register-item.ion-item {
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .register-item ion-label {
   font-size: 0.85rem;
   margin-bottom: 4px;
+  color: var(--mp-text-muted);
 }
 
 .register-button {
   margin-top: 8px;
   border-radius: 999px;
-  height: 44px;
-  font-weight: 600;
+  height: 48px;
+  font-weight: 700;
 }
 
 .register-footer {
@@ -87,4 +86,5 @@
 
 .register-footer-button {
   font-size: 0.9rem;
+  color: var(--mp-primary);
 }
