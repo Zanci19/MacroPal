@@ -1,10 +1,10 @@
 :root {
-  --mp-surface: rgba(255, 255, 255, 0.08);
-  --mp-bg: var(--brand-surface-strong);
+  --mp-surface: rgba(11, 16, 28, 0.86);
+  --mp-bg: linear-gradient(165deg, #0b1326 0%, #0c162e 55%, #0b1224 100%);
   --mp-text: var(--brand-foil);
-  --mp-text-muted: var(--brand-muted-strong);
-  --mp-border: rgba(255, 255, 255, 0.18);
-  --mp-chip-bg: rgba(255, 255, 255, 0.12);
+  --mp-text-muted: var(--brand-muted);
+  --mp-border: rgba(255, 255, 255, 0.14);
+  --mp-chip-bg: rgba(255, 255, 255, 0.08);
   --mp-shadow: var(--shadow-soft);
   --mp-shadow-strong: var(--shadow-strong);
   --mp-r-card: var(--card-radius-md);
@@ -100,7 +100,7 @@ ion-title {
 
 ion-card {
   border-radius: var(--card-radius-lg);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(160deg, rgba(11, 16, 28, 0.9), rgba(11, 16, 28, 0.78));
   box-shadow: var(--mp-shadow);
   border: 1px solid var(--mp-border);
   overflow: hidden;
@@ -109,9 +109,9 @@ ion-card {
 }
 
 ion-card:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: var(--mp-shadow-strong);
-  border-color: var(--mp-border);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .fs-summary {
@@ -197,9 +197,10 @@ ion-card:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
-  padding: 0 16px 14px;
+  padding: 6px 16px 14px;
   border-top: 1px solid var(--mp-border);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  backdrop-filter: blur(10px);
 }
 
 .fs-summary__meta-label {

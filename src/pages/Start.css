@@ -61,12 +61,12 @@
 
 .start-card {
   width: min(520px, 92vw);
-  padding: 32px 26px 26px;
+  padding: 30px 24px 24px;
   border-radius: var(--card-radius-lg);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  border: var(--glass-border-strong);
-  box-shadow: var(--brand-glow);
-  backdrop-filter: var(--glass-blur-strong);
+  background: linear-gradient(160deg, rgba(11, 17, 32, 0.85), rgba(11, 17, 32, 0.72));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 28px 54px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
 }
 
 .start-logo-wrap {
@@ -105,35 +105,14 @@
 }
 
 .start-subtitle {
-  margin: 6px 0 16px;
+  margin: 10px 0 8px;
   color: var(--brand-muted);
 }
 
-.start-highlights {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin: 14px 0 16px;
-}
-
-.start-highlight {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--card-radius-md);
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
-  border: var(--glass-border);
+.start-tagline {
+  margin: 0 0 16px;
   color: var(--brand-foil);
-  font: var(--text-body);
-}
-
-.start-highlight__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-strong));
-  box-shadow: 0 0 0 6px rgba(53, 123, 228, 0.15), 0 0 0 10px rgba(124, 231, 255, 0.08);
+  opacity: 0.88;
 }
 
 .start-actions {

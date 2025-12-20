@@ -40,23 +40,11 @@ const Start: React.FC = () => {
 
             <h1 className="start-title app-typography-hero">MacroPal</h1>
             <h2 className="start-subtitle app-typography-subheading">
-              Calm, focused tracking built around your day.
+              Your macros. Simplified.
             </h2>
-
-            <div className="start-highlights" aria-hidden>
-              <div className="start-highlight">
-                <div className="start-highlight__dot" />
-                Adaptive calorie targets
-              </div>
-              <div className="start-highlight">
-                <div className="start-highlight__dot" />
-                Scanner-first logging
-              </div>
-              <div className="start-highlight">
-                <div className="start-highlight__dot" />
-                Personalized streaks
-              </div>
-            </div>
+            <p className="start-tagline app-typography-body">
+              A calm, focused space to log, balance, and stay on pace.
+            </p>
 
             <div className="start-actions">
               <IonButton
