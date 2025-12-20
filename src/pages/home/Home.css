@@ -1,25 +1,27 @@
 :root {
-  --mp-surface: rgba(11, 16, 28, 0.86);
-  --mp-bg: linear-gradient(165deg, #0b1326 0%, #0c162e 55%, #0b1224 100%);
-  --mp-text: var(--brand-foil);
-  --mp-text-muted: var(--brand-muted);
-  --mp-border: rgba(255, 255, 255, 0.14);
-  --mp-chip-bg: rgba(255, 255, 255, 0.08);
-  --mp-shadow: var(--shadow-soft);
-  --mp-shadow-strong: var(--shadow-strong);
-  --mp-r-card: var(--card-radius-md);
+  --mp-surface: #ffffff;
+  --mp-bg: radial-gradient(circle at 10% 20%, rgba(37, 99, 235, 0.06), transparent 35%),
+    radial-gradient(circle at 90% 10%, rgba(124, 58, 237, 0.05), transparent 32%),
+    #f6f8fb;
+  --mp-text: #0f172a;
+  --mp-text-muted: #475569;
+  --mp-border: #e2e8f0;
+  --mp-chip-bg: #f1f5f9;
+  --mp-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --mp-shadow-strong: 0 14px 40px rgba(15, 23, 42, 0.12);
+  --mp-r-card: var(--card-radius-lg);
   --mp-sub: 0.95rem;
-  --mp-ring-accent: var(--brand-primary);
+  --mp-ring-accent: #2563eb;
   --mp-grid: var(--brand-grid);
 }
 
 body.dark {
-  --mp-surface: rgba(11, 17, 32, 0.88);
-  --mp-bg: var(--brand-surface);
+  --mp-surface: #0b172a;
+  --mp-bg: linear-gradient(165deg, #0b1326 0%, #0c162e 55%, #0b1224 100%);
   --mp-text: #e8f0ff;
-  --mp-text-muted: var(--brand-muted);
-  --mp-border: rgba(255, 255, 255, 0.22);
-  --mp-chip-bg: rgba(255, 255, 255, 0.1);
+  --mp-text-muted: #cbd5e1;
+  --mp-border: rgba(255, 255, 255, 0.16);
+  --mp-chip-bg: rgba(255, 255, 255, 0.06);
   --mp-shadow: var(--shadow-soft);
   --mp-shadow-strong: var(--shadow-strong);
   --mp-ring-accent: var(--brand-primary);
@@ -47,15 +49,23 @@ body.dark .fs-datepicker {
 
 .home-content {
   background: var(--mp-bg);
-  background-image: var(--mp-grid);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.6), transparent 38%),
+    var(--mp-grid);
   min-height: 100%;
   padding-bottom: 32px;
+}
+
+.home-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  gap: 12px;
 }
 
 ion-title {
   font: var(--text-heading);
   letter-spacing: 0.2px;
-  color: var(--brand-foil);
+  color: var(--mp-text);
 }
 
 .fs-datebar {
@@ -74,7 +84,7 @@ ion-title {
 }
 
 .fs-datebtn {
-  --border-radius: 9999px;
+  --border-radius: 14px;
   --padding-start: 18px;
   --padding-end: 18px;
   --padding-top: 10px;
@@ -82,15 +92,15 @@ ion-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
-  border: var(--glass-border);
-  box-shadow: var(--shadow-soft);
+  background: #ffffff;
+  border: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow);
 }
 
 .fs-datebtn__label {
   font: var(--text-body-strong);
   letter-spacing: 0.2px;
-  color: var(--brand-foil);
+  color: var(--mp-text);
 }
 
 .fs-datebtn__badge {
@@ -100,18 +110,17 @@ ion-title {
 
 ion-card {
   border-radius: var(--card-radius-lg);
-  background: linear-gradient(160deg, rgba(11, 16, 28, 0.9), rgba(11, 16, 28, 0.78));
+  background: var(--mp-surface);
   box-shadow: var(--mp-shadow);
   border: 1px solid var(--mp-border);
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  backdrop-filter: var(--glass-blur);
 }
 
 ion-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--mp-shadow-strong);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: #cbd5e1;
 }
 
 .fs-summary {
@@ -126,7 +135,7 @@ ion-card:hover {
 .fs-summary__hdr ion-card-title {
   font: var(--text-heading);
   letter-spacing: 0.2px;
-  color: var(--brand-foil) !important;
+  color: var(--mp-text) !important;
 }
 
 .fs-tip-card {
@@ -148,7 +157,7 @@ ion-card:hover {
   grid-template-columns: 64px 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 10px 14px 8px 14px;
+  padding: 12px 18px 10px 18px;
 }
 
 .fs-summary__left {
@@ -196,11 +205,10 @@ ion-card:hover {
 .fs-summary__meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  padding: 6px 16px 14px;
+  gap: 12px;
+  padding: 12px 18px 16px;
   border-top: 1px solid var(--mp-border);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  backdrop-filter: blur(10px);
+  background: #f8fafc;
 }
 
 .fs-summary__meta-label {
@@ -222,18 +230,18 @@ ion-card:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  padding: 8px 14px 12px 14px;
+  padding: 10px 18px 14px 18px;
   border-top: 1px solid var(--mp-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: #f8fafc;
 }
 
 .fs-tip-card {
-  margin-top: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  margin-top: 12px;
+  border: 1px solid var(--mp-border);
 }
 
 .fs-tip-card__hdr {
-  padding: 12px 16px 6px;
+  padding: 12px 18px 6px;
 }
 
 .fs-tip-card__title {
@@ -252,8 +260,8 @@ ion-card:hover {
   align-items: center;
   gap: 12px;
   padding: 12px 16px 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: #ffffff;
+  border-top: 1px solid var(--mp-border);
 }
 
 .fs-tip-card__text {
@@ -278,19 +286,19 @@ ion-card:hover {
   gap: 8px;
   padding: 6px 10px;
   border-radius: 9999px;
-  background: linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  border: var(--glass-border-strong);
-  box-shadow: var(--shadow-soft);
+  background: #ffffff;
+  border: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow);
 }
 
 .fs-macro__label {
   font: var(--text-label);
   opacity: 0.9;
-  color: var(--brand-foil);
+  color: var(--mp-text-muted);
 }
 
 .fs-macro__val {
-  color: var(--brand-foil);
+  color: var(--mp-text);
   font: var(--text-body-strong);
 }
 
@@ -325,9 +333,8 @@ body.dark ion-tab-bar {
   position: relative;
   border-radius: var(--card-radius-lg);
   border: 1px solid var(--mp-border);
-  background: linear-gradient(175deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
-  box-shadow: var(--mp-shadow-strong);
-  backdrop-filter: var(--glass-blur);
+  background: #ffffff;
+  box-shadow: var(--mp-shadow);
 }
 
 .fs-meal__hdr {
@@ -425,7 +432,7 @@ body.dark ion-tab-bar {
 
 .fs-meal__totals {
   font-size: 0.8rem;
-  opacity: 0.8;
+  opacity: 0.9;
   line-height: 1.3;
   white-space: normal;
   word-break: break-word;
@@ -440,7 +447,7 @@ body.dark ion-tab-bar {
   color: var(--mp-text);
   padding: 8px 12px;
   border-radius: 12px;
-  background: var(--mp-chip-bg);
+  background: #f8fafc;
   border: 1px dashed var(--mp-border);
 }
 

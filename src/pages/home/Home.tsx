@@ -1117,309 +1117,310 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="home-content ion-padding tabbed-content" fullscreen>
-        <div className="fs-datebar" role="group" aria-label="Select day">
-          <IonButton
-            fill="clear"
-            shape="round"
-            onClick={() => goRelativeDay(-1)}
-            aria-label="Previous day"
-          >
-            <IonIcon icon={chevronBackOutline} />
-          </IonButton>
-
-          <IonButton className="fs-datebtn" fill="outline" onClick={openPicker}>
-            <IonIcon slot="start" icon={calendarOutline} />
-            <span className="fs-datebtn__label">{activeDateLabel}</span>
-            {isToday && (
-              <IonBadge color="success" className="fs-datebtn__badge">
-                Today
-              </IonBadge>
-            )}
-          </IonButton>
-
-          <IonButton
-            fill="clear"
-            shape="round"
-            onClick={() => goRelativeDay(1)}
-            aria-label="Next day"
-            disabled={isToday}
-          >
-            <IonIcon icon={chevronForwardOutline} />
-          </IonButton>
-
-          <IonButton
-            fill="clear"
-            shape="round"
-            onClick={() => {
-              setDayMenuOpen(true);
-              trackEvent("day_menu_open", { uid, date: activeDateKey });
-            }}
-            aria-label="Day options"
-          >
-            <IonIcon icon={ellipsisVertical} />
-          </IonButton>
-        </div>
-
-        <IonCard className="fs-summary">
-          <IonCardHeader className="fs-summary__hdr">
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
-              {streak > 1 && (
-                <IonChip color="success" style={{ marginInlineStart: 8 }}>
-                  <IonIcon icon={flameOutline} />
-                  <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
-                </IonChip>
-              )}
-            </div>
-          </IonCardHeader>
-
-          <IonCardContent className="fs-summary__row">
-            {!profile || caloriesNeeded == null ? (
-              <div className="ion-text-center" style={{ padding: 24 }}>
-                <IonSpinner name="dots" />
-              </div>
-            ) : (
-              <>
-                <div className="fs-summary__left" style={{ color: ringColor }}>
-                  <ProgressRing size={64} stroke={8} progress={progress} />
-                </div>
-                <div className="fs-summary__mid">
-                  <div className="fs-metric-title">
-                    {summaryDifferenceLabel}
-                  </div>
-                  <div className="fs-metric-title">Calories Consumed</div>
-                </div>
-                <div className="fs-summary__right">
-                  <div className="fs-metric-value">
-                    {summaryDifferenceValue}
-                  </div>
-                  <div className="fs-metric-value">{kcalConsumed}</div>
-                </div>
-              </>
-            )}
-          </IonCardContent>
-
-          {profile && caloriesNeeded != null && (
-            <div className="fs-summary__meta">
-              <div>
-                <div className="fs-summary__meta-label">Base goal</div>
-                <div className="fs-summary__meta-value">{baseKcalGoal}</div>
-              </div>
-              <div>
-                <div className="fs-summary__meta-label">Activity bonus</div>
-                <div className="fs-summary__meta-value">
-                  +{workoutCalories} kcal
-                </div>
-              </div>
-              <div>
-                <div className="fs-summary__meta-label">Adjusted goal</div>
-                <div className="fs-summary__meta-value">{kcalGoal}</div>
-              </div>
-            </div>
-          )}
-
-          {profile && caloriesNeeded != null && macroTargets && (
-            <div
-              className="fs-macro-bars"
-              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-            >
-              {[
-                {
-                  k: "carbs",
-                  g: totals.day.carbs,
-                  tg: macroTargets.carbsG,
-                  l: "Carbohydrates",
-                },
-                {
-                  k: "protein",
-                  g: totals.day.protein,
-                  tg: macroTargets.proteinG,
-                  l: "Protein",
-                },
-                {
-                  k: "fat",
-                  g: totals.day.fat,
-                  tg: macroTargets.fatG,
-                  l: "Fat",
-                },
-              ].map(({ k, g, tg, l }) => {
-                const pct = tg ? Math.min(1, g / tg) : 0;
-                return (
-                  <div key={k} style={{ display: "grid", gap: 4 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 12,
-                      }}
-                    >
-                      <span>{l}</span>
-                      <span>
-                        {g.toFixed(0)} / {tg} g
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        height: 8,
-                        background: "rgba(148, 163, 184, 0.35)",
-                        borderRadius: 9999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${pct * 100}%`,
-                          height: "100%",
-                          background: "var(--ion-color-primary)",
-                          transition: "width 0.2s ease-out",
-                        }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </IonCard>
-
-        {showWellnessTip && (
-          <IonCard className="fs-tip-card">
-            <IonCardHeader className="fs-tip-card__hdr">
-              <div className="fs-tip-card__title">
-                <IonIcon icon={bulbOutline} aria-hidden="true" />
-                <IonCardTitle>Wellness tip</IonCardTitle>
-              </div>
-            </IonCardHeader>
-            <IonCardContent className="fs-tip-card__content">
-              <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
-              <IonButton size="small" fill="outline" onClick={shuffleTip}>
-                New tip
-              </IonButton>
-            </IonCardContent>
-          </IonCard>
-        )}
-
-        {loading && (
-          <div className="ion-text-center" style={{ padding: 24 }}>
-            <IonSpinner name="dots" />
-          </div>
-        )}
-
-        {!loading && !anyItems && !hasEverLoggedFood && (
-          <div
-            style={{
-              marginTop: 24,
-              padding: 24,
-              textAlign: "center",
-              opacity: 0.9,
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>
-              No foods logged yet
-            </h2>
-            <p style={{ marginTop: 8, fontSize: "0.95rem" }}>
-              Tap any meal below to start adding foods and see your stats
-              update.
-            </p>
+        <div className="home-shell">
+          <div className="fs-datebar" role="group" aria-label="Select day">
             <IonButton
-              style={{ marginTop: 12 }}
-              onClick={() => {
-                trackEvent("home_empty_state_add_food_tap", {
-                  uid,
-                  date: activeDateKey,
-                });
-                history.push(`/add-food?meal=breakfast&date=${activeDateKey}`);
-              }}
+              fill="clear"
+              shape="round"
+              onClick={() => goRelativeDay(-1)}
+              aria-label="Previous day"
             >
-              Add your first food
+              <IonIcon icon={chevronBackOutline} />
+            </IonButton>
+
+            <IonButton className="fs-datebtn" fill="outline" onClick={openPicker}>
+              <IonIcon slot="start" icon={calendarOutline} />
+              <span className="fs-datebtn__label">{activeDateLabel}</span>
+              {isToday && (
+                <IonBadge color="success" className="fs-datebtn__badge">
+                  Today
+                </IonBadge>
+              )}
+            </IonButton>
+
+            <IonButton
+              fill="clear"
+              shape="round"
+              onClick={() => goRelativeDay(1)}
+              aria-label="Next day"
+              disabled={isToday}
+            >
+              <IonIcon icon={chevronForwardOutline} />
+            </IonButton>
+
+            <IonButton
+              fill="clear"
+              shape="round"
+              onClick={() => {
+                setDayMenuOpen(true);
+                trackEvent("day_menu_open", { uid, date: activeDateKey });
+              }}
+              aria-label="Day options"
+            >
+              <IonIcon icon={ellipsisVertical} />
             </IonButton>
           </div>
-        )}
 
-        {!loading &&
-          MEALS.map((meal) => {
-            const items = dayData[meal] || [];
-            const hasItems = items.length > 0;
-            const isCollapsed = collapsedMeals[meal];
+          <IonCard className="fs-summary">
+            <IonCardHeader className="fs-summary__hdr">
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
+                {streak > 1 && (
+                  <IonChip color="success" style={{ marginInlineStart: 8 }}>
+                    <IonIcon icon={flameOutline} />
+                    <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+                  </IonChip>
+                )}
+              </div>
+            </IonCardHeader>
 
-            const mealTotals = totals.perMeal[meal];
-            const hasMealTotals =
-              mealTotals &&
-              (mealTotals.calories > 0 ||
-                mealTotals.carbs > 0 ||
-                mealTotals.protein > 0 ||
-                mealTotals.fat > 0);
-
-            return (
-              <IonCard
-                key={meal}
-                className={`fs-meal ${hasItems ? "is-open" : ""}`}
-              >
-                <IonCardHeader className="fs-meal__hdr">
-                  <IonItem
-                    lines="none"
-                    className="fs-meal__row"
-                    detail={false}
-                    button
-                    onClick={() => toggleMealCollapsed(meal)}
-                  >
-                    <IonIcon
-                      slot="start"
-                      className="fs-meal__icon"
-                      icon={mealIcon[meal]}
-                      aria-hidden="true"
-                    />
-
-                    {/* TITLE + TOTALS STACK */}
-                    <div className="fs-meal__title">
-                      <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
-
-                      {hasMealTotals && !isCollapsed && (
-                        <div className="fs-meal__totals">
-                          {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
-                          {mealTotals.carbs.toFixed(0)} g · Protein{" "}
-                          {mealTotals.protein.toFixed(0)} g · Fat{" "}
-                          {mealTotals.fat.toFixed(0)} g
-                        </div>
-                      )}
+            <IonCardContent className="fs-summary__row">
+              {!profile || caloriesNeeded == null ? (
+                <div className="ion-text-center" style={{ padding: 24 }}>
+                  <IonSpinner name="dots" />
+                </div>
+              ) : (
+                <>
+                  <div className="fs-summary__left" style={{ color: ringColor }}>
+                    <ProgressRing size={64} stroke={8} progress={progress} />
+                  </div>
+                  <div className="fs-summary__mid">
+                    <div className="fs-metric-title">
+                      {summaryDifferenceLabel}
                     </div>
+                    <div className="fs-metric-title">Calories Consumed</div>
+                  </div>
+                  <div className="fs-summary__right">
+                    <div className="fs-metric-value">
+                      {summaryDifferenceValue}
+                    </div>
+                    <div className="fs-metric-value">{kcalConsumed}</div>
+                  </div>
+                </>
+              )}
+            </IonCardContent>
 
-                    <IonIcon
-                      slot="end"
-                      className="fs-meal__chevron"
-                      icon={isCollapsed ? chevronDownOutline : chevronUpOutline}
-                      aria-hidden="true"
-                    />
+            {profile && caloriesNeeded != null && (
+              <div className="fs-summary__meta">
+                <div>
+                  <div className="fs-summary__meta-label">Base goal</div>
+                  <div className="fs-summary__meta-value">{baseKcalGoal}</div>
+                </div>
+                <div>
+                  <div className="fs-summary__meta-label">Activity bonus</div>
+                  <div className="fs-summary__meta-value">
+                    +{workoutCalories} kcal
+                  </div>
+                </div>
+                <div>
+                  <div className="fs-summary__meta-label">Adjusted goal</div>
+                  <div className="fs-summary__meta-value">{kcalGoal}</div>
+                </div>
+              </div>
+            )}
 
-                    <IonButton
-                      slot="end"
-                      className="fs-meal__add"
-                      fill="clear"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        trackEvent("navigate_add_food", {
-                          uid,
-                          date: activeDateKey,
-                          meal,
-                          has_items: hasItems,
-                        });
-                        history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
-                      }}
-                      aria-label={`Add to ${meal}`}
+            {profile && caloriesNeeded != null && macroTargets && (
+              <div
+                className="fs-macro-bars"
+                style={{ display: "grid", gap: 8, padding: "8px 18px 14px" }}
+              >
+                {[
+                  {
+                    k: "carbs",
+                    g: totals.day.carbs,
+                    tg: macroTargets.carbsG,
+                    l: "Carbohydrates",
+                  },
+                  {
+                    k: "protein",
+                    g: totals.day.protein,
+                    tg: macroTargets.proteinG,
+                    l: "Protein",
+                  },
+                  {
+                    k: "fat",
+                    g: totals.day.fat,
+                    tg: macroTargets.fatG,
+                    l: "Fat",
+                  },
+                ].map(({ k, g, tg, l }) => {
+                  const pct = tg ? Math.min(1, g / tg) : 0;
+                  return (
+                    <div key={k} style={{ display: "grid", gap: 4 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          fontSize: 12,
+                        }}
+                      >
+                        <span>{l}</span>
+                        <span>
+                          {g.toFixed(0)} / {tg} g
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          height: 8,
+                          background: "#e2e8f0",
+                          borderRadius: 9999,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${pct * 100}%`,
+                            height: "100%",
+                            background: "var(--ion-color-primary)",
+                            transition: "width 0.2s ease-out",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </IonCard>
+
+          {showWellnessTip && (
+            <IonCard className="fs-tip-card">
+              <IonCardHeader className="fs-tip-card__hdr">
+                <div className="fs-tip-card__title">
+                  <IonIcon icon={bulbOutline} aria-hidden="true" />
+                  <IonCardTitle>Wellness tip</IonCardTitle>
+                </div>
+              </IonCardHeader>
+              <IonCardContent className="fs-tip-card__content">
+                <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
+                <IonButton size="small" fill="outline" onClick={shuffleTip}>
+                  New tip
+                </IonButton>
+              </IonCardContent>
+            </IonCard>
+          )}
+
+          {loading && (
+            <div className="ion-text-center" style={{ padding: 24 }}>
+              <IonSpinner name="dots" />
+            </div>
+          )}
+
+          {!loading && !anyItems && !hasEverLoggedFood && (
+            <div
+              style={{
+                marginTop: 24,
+                padding: 24,
+                textAlign: "center",
+                opacity: 0.9,
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>
+                No foods logged yet
+              </h2>
+              <p style={{ marginTop: 8, fontSize: "0.95rem" }}>
+                Tap any meal below to start adding foods and see your stats
+                update.
+              </p>
+              <IonButton
+                style={{ marginTop: 12 }}
+                onClick={() => {
+                  trackEvent("home_empty_state_add_food_tap", {
+                    uid,
+                    date: activeDateKey,
+                  });
+                  history.push(`/add-food?meal=breakfast&date=${activeDateKey}`);
+                }}
+              >
+                Add your first food
+              </IonButton>
+            </div>
+          )}
+
+          {!loading &&
+            MEALS.map((meal) => {
+              const items = dayData[meal] || [];
+              const hasItems = items.length > 0;
+              const isCollapsed = collapsedMeals[meal];
+
+              const mealTotals = totals.perMeal[meal];
+              const hasMealTotals =
+                mealTotals &&
+                (mealTotals.calories > 0 ||
+                  mealTotals.carbs > 0 ||
+                  mealTotals.protein > 0 ||
+                  mealTotals.fat > 0);
+
+              return (
+                <IonCard
+                  key={meal}
+                  className={`fs-meal ${hasItems ? "is-open" : ""}`}
+                >
+                  <IonCardHeader className="fs-meal__hdr">
+                    <IonItem
+                      lines="none"
+                      className="fs-meal__row"
+                      detail={false}
+                      button
+                      onClick={() => toggleMealCollapsed(meal)}
                     >
-                      <IonIcon icon={addCircleOutline} />
-                    </IonButton>
-                  </IonItem>
-                </IonCardHeader>
+                      <IonIcon
+                        slot="start"
+                        className="fs-meal__icon"
+                        icon={mealIcon[meal]}
+                        aria-hidden="true"
+                      />
 
-                {hasItems && !isCollapsed && (
-                  <IonCardContent>
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={() => {
-                        setCopyMenuMeal(meal);
-                        trackEvent("meal_more_options_open", {
+                      {/* TITLE + TOTALS STACK */}
+                      <div className="fs-meal__title">
+                        <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+
+                        {hasMealTotals && !isCollapsed && (
+                          <div className="fs-meal__totals">
+                            {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
+                            {mealTotals.carbs.toFixed(0)} g · Protein{" "}
+                            {mealTotals.protein.toFixed(0)} g · Fat{" "}
+                            {mealTotals.fat.toFixed(0)} g
+                          </div>
+                        )}
+                      </div>
+
+                      <IonIcon
+                        slot="end"
+                        className="fs-meal__chevron"
+                        icon={isCollapsed ? chevronDownOutline : chevronUpOutline}
+                        aria-hidden="true"
+                      />
+
+                      <IonButton
+                        slot="end"
+                        className="fs-meal__add"
+                        fill="clear"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          trackEvent("navigate_add_food", {
+                            uid,
+                            date: activeDateKey,
+                            meal,
+                            has_items: hasItems,
+                          });
+                          history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
+                        }}
+                        aria-label={`Add to ${meal}`}
+                      >
+                        <IonIcon icon={addCircleOutline} />
+                      </IonButton>
+                    </IonItem>
+                  </IonCardHeader>
+
+                  {hasItems && !isCollapsed && (
+                    <IonCardContent>
+                      <IonButton
+                        size="small"
+                        fill="outline"
+                        onClick={() => {
+                          setCopyMenuMeal(meal);
+                          trackEvent("meal_more_options_open", {
                           uid,
                           date: activeDateKey,
                           meal,
@@ -1559,6 +1560,8 @@ const Home: React.FC = () => {
               </IonCard>
             );
           })}
+
+        </div>
 
         <IonActionSheet
           isOpen={copyMenuMeal !== null}
