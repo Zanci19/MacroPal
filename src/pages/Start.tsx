@@ -32,27 +32,51 @@ const Start: React.FC = () => {
         </div>
 
         <div className="fixed-center" role="main" aria-label="MacroPal Start">
-          <img src={logo} alt="MacroPal logo" className="start-logo" />
-          <h1 className="start-title">MacroPal</h1>
-          <h2 className="start-subtitle">Your macros. Simplified.</h2>
+          <div className="start-card">
+            <div className="start-logo-wrap">
+              <img src={logo} alt="MacroPal logo" className="start-logo" />
+              <span className="start-pill">Powered by habit stacking</span>
+            </div>
 
-          <div className="start-actions">
-            <IonButton
-              size="large"
-              className="start-btn start-btn-primary"
-              onClick={() => router.push("/login")}
-            >
-              Log In
-            </IonButton>
-            <IonButton
-              size="large"
-              fill="outline"
-              className="start-btn start-btn-secondary"
-              onClick={() => router.push("/register")}
-            >
-              Create account
-            </IonButton>
+            <h1 className="start-title app-typography-hero">MacroPal</h1>
+            <h2 className="start-subtitle app-typography-subheading">
+              Calm, focused tracking built around your day.
+            </h2>
+
+            <div className="start-highlights" aria-hidden>
+              <div className="start-highlight">
+                <div className="start-highlight__dot" />
+                Adaptive calorie targets
+              </div>
+              <div className="start-highlight">
+                <div className="start-highlight__dot" />
+                Scanner-first logging
+              </div>
+              <div className="start-highlight">
+                <div className="start-highlight__dot" />
+                Personalized streaks
+              </div>
+            </div>
+
+            <div className="start-actions">
+              <IonButton
+                size="large"
+                className="start-btn start-btn-primary"
+                onClick={() => router.push("/login")}
+              >
+                Log In
+              </IonButton>
+              <IonButton
+                size="large"
+                fill="outline"
+                className="start-btn start-btn-secondary"
+                onClick={() => router.push("/register")}
+              >
+                Create account
+              </IonButton>
+            </div>
           </div>
+
         </div>
       </IonContent>
     </IonPage>

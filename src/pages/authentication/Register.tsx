@@ -158,8 +158,8 @@ const Register: React.FC = () => {
       <IonContent className="register-page" fullscreen>
         <div className="register-card">
           <div className="register-header">
-            <h1 className="register-title">Get started</h1>
-            <p className="register-subtitle">
+            <h1 className="register-title app-typography-title">Get started</h1>
+            <p className="register-subtitle app-typography-subheading">
               Create an account to start logging your meals.
             </p>
           </div>

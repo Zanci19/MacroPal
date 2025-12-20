@@ -184,8 +184,8 @@ const Login: React.FC = () => {
       <IonContent className="login-page" fullscreen>
         <div className="login-card">
           <div className="login-header">
-            <h1 className="login-title">Welcome back</h1>
-            <p className="login-subtitle">
+            <h1 className="login-title app-typography-title">Welcome back</h1>
+            <p className="login-subtitle app-typography-subheading">
               Log in to continue tracking your day.
             </p>
           </div>

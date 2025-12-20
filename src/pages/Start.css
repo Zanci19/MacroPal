@@ -1,8 +1,9 @@
 .start-content {
-  --background: #000000;
-  background: #000000;
+  --background: var(--brand-surface);
+  background: var(--brand-surface);
   position: relative;
   padding: 0;
+  color: var(--ion-text-color);
 }
 
 .bg-video {
@@ -11,6 +12,7 @@
   overflow: hidden;
   z-index: 0;
   pointer-events: none;
+  mask-image: radial-gradient(90% 90% at 50% 50%, #fff, transparent);
 }
 
 .bg-video__media {
@@ -20,16 +22,25 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 180ms ease-out;
+  transition: opacity 200ms ease-out;
+  filter: saturate(0.9) brightness(0.8);
 }
 
 .bg-video.is-ready .bg-video__media {
-  opacity: 1;
+  opacity: 0.45;
 }
 
 .bg-video__scrim {
   position: absolute;
   inset: 0;
+  background: linear-gradient(
+      120deg,
+      rgba(11, 20, 38, 0.95) 0%,
+      rgba(16, 33, 66, 0.7) 45%,
+      rgba(12, 23, 46, 0.95) 100%
+    ),
+    radial-gradient(800px 500px at 20% 30%, rgba(53, 123, 228, 0.35), transparent 60%);
+  backdrop-filter: blur(10px);
 }
 
 .fixed-center {
@@ -44,50 +55,109 @@
   z-index: 1;
 }
 
+.start-card {
+  width: min(520px, 92vw);
+  padding: 32px 26px 26px;
+  border-radius: var(--card-radius-lg);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  border: var(--glass-border);
+  box-shadow: var(--shadow-strong);
+  backdrop-filter: var(--glass-blur);
+}
+
+.start-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .start-logo {
-  width: 140px;
-  height: 140px;
+  width: 86px;
+  height: 86px;
   object-fit: contain;
-  margin-bottom: 0.5rem;
+  border-radius: 18px;
+  background: radial-gradient(circle at 30% 30%, rgba(53, 123, 228, 0.4), rgba(11, 20, 38, 0.2));
+  padding: 12px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.start-pill {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(53, 123, 228, 0.16);
+  color: var(--brand-foil);
+  font: var(--text-micro);
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .start-title {
-  font-size: 2.8rem;
-  font-weight: 800;
-  margin: 0;
-  line-height: 1.1;
-  color: #ffffff;
+  margin: 4px 0;
+  color: var(--brand-foil);
+  text-shadow: 0 18px 36px rgba(0, 0, 0, 0.45);
 }
 
 .start-subtitle {
-  font-size: 1.2rem;
-  font-weight: 500;
-  color: #d1d5db;
-  margin: 0 0 0.75rem 0;
+  margin: 6px 0 16px;
+  color: var(--brand-muted);
+}
+
+.start-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+.start-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--card-radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--brand-foil);
+  font: var(--text-body);
+}
+
+.start-highlight__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-strong));
+  box-shadow: 0 0 0 6px rgba(53, 123, 228, 0.15);
 }
 
 .start-actions {
   display: flex;
   flex-direction: column;
-  width: min(420px, 90vw);
+  width: 100%;
   gap: 0.75rem;
-  margin-top: 0.25rem;
+  margin-top: 4px;
 }
 
 .start-btn {
   width: 100%;
-  border-radius: 999px;
-  height: 46px;
-  font-weight: 600;
+  border-radius: 14px;
+  height: 48px;
+  font: var(--text-body-strong);
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 30px rgba(53, 123, 228, 0.25);
 }
 
 .start-btn-primary {
-  --background: var(--ion-color-primary);
-  --background-hover: var(--ion-color-primary-shade);
+  --background: linear-gradient(120deg, var(--brand-primary) 0%, var(--brand-primary-strong) 100%);
+  --background-hover: var(--brand-primary-strong);
+  color: #ffffff;
 }
 
 .start-btn-secondary {
-  --border-color: rgba(148, 163, 184, 0.65);
+  --border-color: rgba(255, 255, 255, 0.45);
+  --color: var(--brand-foil);
+  --background: rgba(255, 255, 255, 0.06);
 }
 
 .bg-video__media::-webkit-media-controls {
@@ -98,11 +168,17 @@
   display: none !important;
 }
 
+@media (max-width: 420px) {
+  .start-card {
+    padding: 26px 18px 22px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .bg-video__media {
     display: none;
   }
   .bg-video__scrim {
-    background: rgba(0, 0, 0, 0.75);
+    background: linear-gradient(145deg, #0b1426, #0c1c3a);
   }
 }

@@ -1,47 +1,69 @@
 .register-page {
-  --background: #121212;
-  background: #121212;
+  --background: transparent;
+  background: var(--brand-surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.register-page::before,
+.register-page::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.18;
+  pointer-events: none;
+}
+
+.register-page::before {
+  width: 320px;
+  height: 320px;
+  top: -120px;
+  right: -60px;
+  background: radial-gradient(circle, rgba(53, 123, 228, 0.55), transparent 60%);
+}
+
+.register-page::after {
+  width: 260px;
+  height: 260px;
+  bottom: -90px;
+  left: -30px;
+  background: radial-gradient(circle, rgba(110, 141, 255, 0.35), transparent 60%);
 }
 
 .register-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 460px;
   margin: 0 auto;
-  padding: 24px 20px 20px;
-  border-radius: 18px;
-  background: #121212;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  padding: 28px 22px 22px;
+  border-radius: var(--card-radius-lg);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  border: var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--shadow-strong);
   color: var(--ion-text-color, #f9fafb);
-}
-
-@media (prefers-color-scheme: light) {
-  .register-card {
-    background: rgba(255, 255, 255, 0.95);
-    color: #121212;
-  }
 }
 
 .register-header {
   text-align: center;
   margin-bottom: 18px;
+  display: grid;
+  gap: 6px;
 }
 
 .register-title {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  color: var(--brand-foil);
 }
 
 .register-subtitle {
-  margin: 6px 0 0;
-  font-size: 0.9rem;
-  opacity: 0.7;
+  margin: 0;
+  color: var(--brand-muted);
+  font: var(--text-subheading);
 }
 
 .register-form {
@@ -51,40 +73,49 @@
 }
 
 .register-item {
-  --background: transparent;
-  --border-color: rgba(148, 163, 184, 0.45);
-  --border-radius: 12px;
+  --background: rgba(255, 255, 255, 0.02);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-radius: 14px;
   --padding-start: 0;
   --inner-padding-end: 0;
   --highlight-color-focused: var(--ion-color-primary);
+  --color: var(--brand-foil);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: var(--glass-blur);
 }
 
 .register-item.ion-item {
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .register-item ion-label {
-  font-size: 0.85rem;
+  font: var(--text-label);
+  color: var(--brand-foil);
   margin-bottom: 4px;
 }
 
 .register-button {
   margin-top: 8px;
-  border-radius: 999px;
-  height: 44px;
-  font-weight: 600;
+  border-radius: 14px;
+  height: 46px;
+  font: var(--text-body-strong);
+  letter-spacing: 0.02em;
+  --background: linear-gradient(120deg, var(--brand-primary) 0%, var(--brand-primary-strong) 100%);
+  box-shadow: 0 12px 30px rgba(53, 123, 228, 0.25);
 }
 
 .register-footer {
   margin-top: 18px;
   text-align: center;
+  color: var(--brand-muted);
 }
 
 .register-footer p {
   margin: 0 0 4px;
-  font-size: 0.85rem;
+  font: var(--text-body);
 }
 
 .register-footer-button {
-  font-size: 0.9rem;
+  font: var(--text-body-strong);
+  --color: var(--brand-foil);
 }

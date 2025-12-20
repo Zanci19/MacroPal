@@ -1,25 +1,27 @@
 :root {
-  --mp-surface: #f8f9fb;
-  --mp-bg: var(--ion-background-color, #ffffff);
-  --mp-text: #111827;
-  --mp-text-muted: rgba(55, 65, 81, 0.7);
-  --mp-border: rgba(0, 0, 0, 0.08);
-  --mp-chip-bg: rgba(0, 0, 0, 0.04);
-  --mp-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --mp-shadow-strong: 0 8px 20px rgba(0, 0, 0, 0.15);
-  --mp-r-card: 16px;
+  --mp-surface: rgba(255, 255, 255, 0.06);
+  --mp-bg: var(--brand-surface);
+  --mp-text: var(--brand-foil);
+  --mp-text-muted: var(--brand-muted);
+  --mp-border: rgba(255, 255, 255, 0.16);
+  --mp-chip-bg: rgba(255, 255, 255, 0.08);
+  --mp-shadow: var(--shadow-soft);
+  --mp-shadow-strong: var(--shadow-strong);
+  --mp-r-card: var(--card-radius-md);
   --mp-sub: 0.95rem;
+  --mp-ring-accent: var(--brand-primary);
 }
 
 body.dark {
-  --mp-surface: #121212;
-  --mp-bg: #121212;
-  --mp-text: #ffffff;
-  --mp-text-muted: rgba(148, 163, 184, 0.9);
-  --mp-border: rgba(255, 255, 255, 0.28);
-  --mp-chip-bg: rgba(255, 255, 255, 0.16);
-  --mp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.45);
-  --mp-shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --mp-surface: rgba(11, 17, 32, 0.9);
+  --mp-bg: var(--brand-surface);
+  --mp-text: #e8f0ff;
+  --mp-text-muted: var(--brand-muted);
+  --mp-border: rgba(255, 255, 255, 0.18);
+  --mp-chip-bg: rgba(255, 255, 255, 0.1);
+  --mp-shadow: var(--shadow-soft);
+  --mp-shadow-strong: var(--shadow-strong);
+  --mp-ring-accent: var(--brand-primary);
 }
 
 body.dark .fs-summary__hdr ion-card-title {
@@ -42,16 +44,15 @@ body.dark .fs-datepicker {
 }
 
 .home-content {
-  background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(59, 130, 246, 0.06), transparent 60%),
-    radial-gradient(1000px 600px at 100% -20%, rgba(99, 102, 241, 0.06), transparent 55%),
-    var(--mp-bg);
+  background: var(--mp-bg);
   min-height: 100%;
+  padding-bottom: 32px;
 }
 
 ion-title {
-  font-weight: 800;
+  font: var(--text-heading);
   letter-spacing: 0.2px;
+  color: var(--brand-foil);
 }
 
 .fs-datebar {
@@ -78,24 +79,29 @@ ion-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .fs-datebtn__label {
-  font-weight: 700;
+  font: var(--text-body-strong);
   letter-spacing: 0.2px;
+  color: var(--brand-foil);
 }
 
 .fs-datebtn__badge {
   margin-left: 4px;
+  font: var(--text-label);
 }
 
 ion-card {
-  border-radius: var(--mp-r-card);
-  background: var(--mp-surface);
+  border-radius: var(--card-radius-lg);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
   box-shadow: var(--mp-shadow);
   border: 1px solid var(--mp-border);
   overflow: hidden;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  backdrop-filter: var(--glass-blur);
 }
 
 ion-card:hover {
@@ -114,8 +120,9 @@ ion-card:hover {
 }
 
 .fs-summary__hdr ion-card-title {
-  font-weight: 800;
+  font: var(--text-heading);
   letter-spacing: 0.2px;
+  color: var(--brand-foil) !important;
 }
 
 .fs-tip-card {
@@ -127,9 +134,9 @@ ion-card:hover {
 }
 
 .fs-tip-card__hdr ion-card-title {
-  font-weight: 800;
+  font: var(--text-heading);
   letter-spacing: 0.2px;
-  color: var(--mp-text) !important;
+  color: var(--brand-foil) !important;
 }
 
 .fs-summary__row {
@@ -166,7 +173,7 @@ ion-card:hover {
 }
 
 .fs-metric-title {
-  font-size: 0.95rem;
+  font: var(--text-label);
   color: var(--mp-text-muted);
 }
 
@@ -192,18 +199,18 @@ ion-card:hover {
 }
 
 .fs-summary__meta-label {
-  font-size: 0.82rem;
+  font: var(--text-label);
   color: var(--mp-text-muted);
 }
 
 .fs-summary__meta-value {
-  font-weight: 800;
-  font-size: 1.05rem;
+  font: var(--text-heading);
+  color: var(--mp-text);
 }
 
 .fs-metric-value {
-  font-weight: 800;
-  font-size: 1.3rem;
+  font: var(--text-title);
+  color: var(--mp-text);
 }
 
 .fs-macros {
@@ -216,6 +223,7 @@ ion-card:hover {
 
 .fs-tip-card {
   margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .fs-tip-card__hdr {
@@ -238,12 +246,15 @@ ion-card:hover {
   align-items: center;
   gap: 12px;
   padding: 12px 16px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .fs-tip-card__text {
   margin: 0;
   color: var(--mp-text-muted);
-  line-height: 1.4;
+  line-height: 1.5;
+  font: var(--text-body);
   flex: 1;
 }
 
@@ -261,34 +272,36 @@ ion-card:hover {
   gap: 8px;
   padding: 6px 10px;
   border-radius: 9999px;
-  background-color: var(--mp-chip-bg);
-  border: 1px solid var(--mp-border);
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .fs-macro__label {
-  font-weight: 800;
+  font: var(--text-label);
   opacity: 0.9;
+  color: var(--brand-foil);
 }
 
 .fs-macro__val {
-  color: var(--mp-text);
-  font-weight: 600;
+  color: var(--brand-foil);
+  font: var(--text-body-strong);
 }
 
 /* DARK MODE: make them impossible to miss */
 body.dark .fs-macros {
-  background-color: #050816 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.35) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  border-top: 1px solid var(--mp-border) !important;
 }
 
 body.dark .fs-macro {
-  background-color: #1f2937 !important;
-  border-color: rgba(148, 163, 184, 0.95) !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
 }
 
 body.dark .fs-macro__label,
 body.dark .fs-macro__val {
-  color: #f9fafb !important;
+  color: var(--brand-foil) !important;
 }
 
 body.dark ion-tab-bar {
@@ -304,10 +317,11 @@ body.dark ion-tab-bar {
 
 .fs-meal {
   position: relative;
-  border-radius: var(--mp-r-card);
+  border-radius: var(--card-radius-lg);
   border: 1px solid var(--mp-border);
-  background: var(--mp-surface);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, .35);
+  background: linear-gradient(175deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  box-shadow: var(--mp-shadow-strong);
+  backdrop-filter: var(--glass-blur);
 }
 
 .fs-meal__hdr {
@@ -333,8 +347,7 @@ body.dark ion-tab-bar {
 }
 
 .fs-meal__title-text {
-  font-size: 1.06rem;
-  font-weight: 800;
+  font: var(--text-heading);
   letter-spacing: .1px;
   color: var(--mp-text);
   margin: 0;
@@ -397,8 +410,7 @@ body.dark ion-tab-bar {
 }
 
 .fs-meal__title-text {
-  font-size: 1rem;
-  font-weight: 600;
+  font: var(--text-body-strong);
   margin: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -418,7 +430,7 @@ body.dark ion-tab-bar {
   text-align: center;
   width: fit-content;
   align-self: center;
-  font: 600 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+  font: var(--text-body-strong);
   color: var(--mp-text);
   padding: 8px 12px;
   border-radius: 12px;
@@ -446,7 +458,7 @@ ion-list {
 }
 
 .meal-item h2 {
-  font-weight: 600;
+  font: var(--text-body-strong);
   margin: 0 0 2px 0;
   color: var(--mp-text);
 }
@@ -454,11 +466,11 @@ ion-list {
 .meal-item p {
   color: var(--mp-text-muted);
   margin: 0;
-  font-size: var(--mp-sub);
+  font: var(--text-body);
 }
 
 .kcal-badge {
-  font-weight: 700;
+  font: var(--text-body-strong);
   padding: 6px 10px;
   border-radius: 10px;
   background: var(--mp-chip-bg);
