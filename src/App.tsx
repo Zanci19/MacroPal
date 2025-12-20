@@ -239,7 +239,10 @@ const TabsShell: React.FC = () => {
               : ""
         }`}
         aria-hidden
-      />
+      >
+        <div className="mp-swipe-signal__glow" />
+        <div className="mp-swipe-signal__chevron" />
+      </div>
       <IonTabs>
         <IonRouterOutlet id="tabs">
           <Route exact path="/app/analytics" component={Analytics} />

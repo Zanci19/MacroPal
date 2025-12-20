@@ -126,30 +126,87 @@ ion-textarea {
 .mp-swipe-signal {
   position: fixed;
   top: 50%;
-  width: 12px;
-  height: 12px;
-  margin-top: -6px;
-  border-radius: 9999px;
-  background: var(--mp-primary);
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   opacity: 0;
   pointer-events: none;
-  box-shadow: 0 0 0 8px rgba(53, 123, 228, 0.12), 0 12px 30px rgba(15, 23, 42, 0.18);
-  transform: scale(0.4);
-  transition: opacity 180ms ease, transform 200ms ease;
+  transform: translateY(-50%) scale(0.9);
+}
+
+.mp-swipe-signal__glow {
+  width: 36px;
+  height: 36px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(53, 123, 228, 0.7) 0%, rgba(53, 123, 228, 0.18) 55%, transparent 70%);
+  box-shadow: 0 0 0 10px rgba(53, 123, 228, 0.14), 0 16px 40px rgba(15, 23, 42, 0.28);
+  filter: drop-shadow(0 0 6px rgba(53, 123, 228, 0.35));
+}
+
+.mp-swipe-signal__chevron {
+  width: 18px;
+  height: 18px;
+  border-top: 3px solid var(--mp-primary-strong);
+  border-right: 3px solid var(--mp-primary-strong);
+  border-radius: 4px;
+  filter: drop-shadow(0 4px 12px rgba(15, 23, 42, 0.25));
 }
 
 .mp-swipe-signal--left,
 .mp-swipe-signal--right {
-  opacity: 0.32;
-  transform: scale(1) translateX(0);
+  opacity: 1;
 }
 
 .mp-swipe-signal--left {
   left: 18px;
+  animation: mp-swipe-left 420ms ease;
+}
+
+.mp-swipe-signal--left .mp-swipe-signal__chevron {
+  transform: rotate(-135deg);
 }
 
 .mp-swipe-signal--right {
   right: 18px;
+  animation: mp-swipe-right 420ms ease;
+}
+
+.mp-swipe-signal--right .mp-swipe-signal__chevron {
+  transform: rotate(45deg);
+}
+
+@keyframes mp-swipe-left {
+  0% {
+    opacity: 0;
+    transform: translate(-8px, -50%) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(8px, -50%) scale(0.94);
+  }
+}
+
+@keyframes mp-swipe-right {
+  0% {
+    opacity: 0;
+    transform: translate(8px, -50%) scale(0.92);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-8px, -50%) scale(0.94);
+  }
 }
 
 ion-item {
