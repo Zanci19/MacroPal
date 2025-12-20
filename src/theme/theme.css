@@ -118,6 +118,40 @@ ion-textarea {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+.mp-tab-shell {
+  position: relative;
+  height: 100%;
+}
+
+.mp-swipe-signal {
+  position: fixed;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  background: var(--mp-primary);
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 0 0 8px rgba(53, 123, 228, 0.12), 0 12px 30px rgba(15, 23, 42, 0.18);
+  transform: scale(0.4);
+  transition: opacity 180ms ease, transform 200ms ease;
+}
+
+.mp-swipe-signal--left,
+.mp-swipe-signal--right {
+  opacity: 0.32;
+  transform: scale(1) translateX(0);
+}
+
+.mp-swipe-signal--left {
+  left: 18px;
+}
+
+.mp-swipe-signal--right {
+  right: 18px;
+}
+
 ion-item {
   --background: transparent;
   --border-color: var(--mp-border);

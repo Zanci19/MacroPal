@@ -82,6 +82,10 @@ const TabsShell: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const [swipeNavigationEnabled, setSwipeNavigationEnabled] = React.useState(true);
+  const [swipeSignalDirection, setSwipeSignalDirection] = React.useState<"left" | "right" | null>(
+    null,
+  );
+  const swipeSignalTimeout = React.useRef<number | null>(null);
 
   const tabOrder = [
     { id: "analytics", route: "/app/analytics" },
@@ -172,6 +176,14 @@ const TabsShell: React.FC = () => {
 
         if (nextTab) {
           navigateToTab(nextTab);
+          const direction = deltaX < 0 ? "left" : "right";
+          setSwipeSignalDirection(direction);
+          if (swipeSignalTimeout.current) {
+            window.clearTimeout(swipeSignalTimeout.current);
+          }
+          swipeSignalTimeout.current = window.setTimeout(() => {
+            setSwipeSignalDirection(null);
+          }, 350);
         }
       }
     }
@@ -205,11 +217,29 @@ const TabsShell: React.FC = () => {
     return () => {
       unsubscribeProfile?.();
       unsubscribeAuth();
+      if (swipeSignalTimeout.current) {
+        window.clearTimeout(swipeSignalTimeout.current);
+      }
     };
   }, []);
 
   return (
-    <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div
+      className="mp-tab-shell"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <div
+        className={`mp-swipe-signal ${
+          swipeSignalDirection === "left"
+            ? "mp-swipe-signal--left"
+            : swipeSignalDirection === "right"
+              ? "mp-swipe-signal--right"
+              : ""
+        }`}
+        aria-hidden
+      />
       <IonTabs>
         <IonRouterOutlet id="tabs">
           <Route exact path="/app/analytics" component={Analytics} />
