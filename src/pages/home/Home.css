@@ -1,29 +1,34 @@
 :root {
-  --mp-surface: #f8f9fb;
-  --mp-bg: var(--ion-background-color, #ffffff);
-  --mp-text: #111827;
-  --mp-text-muted: rgba(55, 65, 81, 0.7);
-  --mp-border: rgba(0, 0, 0, 0.08);
-  --mp-chip-bg: rgba(0, 0, 0, 0.04);
-  --mp-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --mp-shadow-strong: 0 8px 20px rgba(0, 0, 0, 0.15);
-  --mp-r-card: 16px;
+  --mp-surface: #ffffff;
+  --mp-bg: var(--ion-background-color, #f6f7fb);
+  --mp-text: #0f172a;
+  --mp-text-muted: rgba(15, 23, 42, 0.65);
+  --mp-border: rgba(15, 23, 42, 0.08);
+  --mp-chip-bg: rgba(108, 76, 232, 0.12);
+  --mp-shadow: 0 12px 40px rgba(12, 25, 52, 0.12);
+  --mp-shadow-strong: 0 16px 50px rgba(12, 25, 52, 0.16);
+  --mp-r-card: 18px;
   --mp-sub: 0.95rem;
 }
 
 body.dark {
-  --mp-surface: #121212;
-  --mp-bg: #121212;
-  --mp-text: #ffffff;
-  --mp-text-muted: rgba(148, 163, 184, 0.9);
-  --mp-border: rgba(255, 255, 255, 0.28);
-  --mp-chip-bg: rgba(255, 255, 255, 0.16);
-  --mp-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 6px 20px rgba(0, 0, 0, 0.45);
-  --mp-shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.55);
+  --mp-surface: #0f172a;
+  --mp-bg: #0b1226;
+  --mp-text: #f8fafc;
+  --mp-text-muted: rgba(226, 232, 240, 0.8);
+  --mp-border: rgba(255, 255, 255, 0.12);
+  --mp-chip-bg: rgba(255, 255, 255, 0.12);
+  --mp-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --mp-shadow-strong: 0 18px 55px rgba(0, 0, 0, 0.65);
 }
 
 body.dark .fs-summary__hdr ion-card-title {
   color: #ffffff !important;
+}
+
+body.dark .fs-datebar {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 body.dark ion-modal {
@@ -43,10 +48,15 @@ body.dark .fs-datepicker {
 
 .home-content {
   background:
-    radial-gradient(1200px 600px at 20% -10%, rgba(59, 130, 246, 0.06), transparent 60%),
-    radial-gradient(1000px 600px at 100% -20%, rgba(99, 102, 241, 0.06), transparent 55%),
+    linear-gradient(140deg, rgba(108, 76, 232, 0.07) 0%, rgba(12, 25, 52, 0.03) 45%, transparent 70%),
+    radial-gradient(800px 500px at 10% 0%, rgba(16, 185, 129, 0.12), transparent 60%),
+    radial-gradient(900px 600px at 90% 10%, rgba(99, 102, 241, 0.14), transparent 65%),
     var(--mp-bg);
   min-height: 100%;
+}
+
+.home-content.tabbed-content {
+  padding-top: 6px;
 }
 
 ion-title {
@@ -54,12 +64,89 @@ ion-title {
   letter-spacing: 0.2px;
 }
 
+.fs-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 18px 20px;
+  margin-bottom: 18px;
+  border-radius: 22px;
+  color: #ffffff;
+  background:
+    radial-gradient(140% 120% at 85% 0%, rgba(255, 255, 255, 0.22), transparent 50%),
+    radial-gradient(140% 120% at 0% 20%, rgba(45, 212, 191, 0.35), transparent 40%),
+    linear-gradient(120deg, #1b1f3a 0%, #6c4ce8 60%, #4f46e5 100%);
+  box-shadow: var(--mp-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fs-hero:after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.fs-hero__eyebrow {
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin: 0 0 6px;
+}
+
+.fs-hero__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.fs-hero__meta {
+  margin: 8px 0 14px;
+  font-size: 0.98rem;
+  opacity: 0.92;
+}
+
+.fs-hero__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.fs-hero__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-weight: 700;
+}
+
+.fs-hero__pill small {
+  display: block;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
 .fs-datebar {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--mp-shadow);
+  padding: 10px 12px;
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
 }
 
 .fs-datebar ion-button[fill="clear"] {
@@ -105,17 +192,21 @@ ion-card:hover {
 }
 
 .fs-summary {
-  padding-bottom: 8px;
+  padding-bottom: 10px;
+  background:
+    linear-gradient(120deg, rgba(108, 76, 232, 0.12), rgba(99, 102, 241, 0.08)),
+    var(--mp-surface);
+  border: 1px solid rgba(108, 76, 232, 0.2);
 }
 
 .fs-summary__hdr {
-  padding: 12px 16px;
+  padding: 14px 16px 10px;
   background: transparent;
 }
 
 .fs-summary__hdr ion-card-title {
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
 }
 
 .fs-tip-card {
@@ -134,10 +225,10 @@ ion-card:hover {
 
 .fs-summary__row {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 70px 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 10px 14px 8px 14px;
+  padding: 10px 14px 12px 14px;
 }
 
 .fs-summary__left {
@@ -162,12 +253,13 @@ ion-card:hover {
 
 .fs-summary__mid {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .fs-metric-title {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--mp-text-muted);
+  font-weight: 700;
 }
 
 .fs-summary__right {
@@ -186,9 +278,12 @@ ion-card:hover {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
-  padding: 0 16px 14px;
-  border-top: 1px solid var(--mp-border);
-  background: var(--mp-surface);
+  padding: 8px 16px 16px;
+  border-top: 1px solid rgba(108, 76, 232, 0.15);
+  background: radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.3), transparent 45%),
+    radial-gradient(circle at 80% 0%, rgba(16, 185, 129, 0.12), transparent 40%),
+    var(--mp-surface);
+  border-radius: 0 0 var(--mp-r-card) var(--mp-r-card);
 }
 
 .fs-summary__meta-label {
@@ -252,6 +347,36 @@ ion-card:hover {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.fs-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.fs-highlight {
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  box-shadow: var(--mp-shadow);
+}
+
+.fs-highlight__label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mp-text-muted);
+}
+
+.fs-highlight__value {
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: var(--mp-text);
 }
 
 /* base (light mode) */
