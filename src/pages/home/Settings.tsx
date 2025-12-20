@@ -56,6 +56,7 @@ const Settings: React.FC = () => {
   const [showWellnessTipEnabled, setShowWellnessTipEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
+  const [swipeNavigationEnabled, setSwipeNavigationEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
   const [googleFitAutoImport, setGoogleFitAutoImport] = React.useState(false);
@@ -246,6 +247,12 @@ const Settings: React.FC = () => {
         setShowRecentSearchesEnabled(
           typeof (profile as any).showRecentSearches === "boolean"
             ? (profile as any).showRecentSearches
+            : true
+        );
+
+        setSwipeNavigationEnabled(
+          typeof (profile as any).swipeNavigationEnabled === "boolean"
+            ? (profile as any).swipeNavigationEnabled
             : true
         );
 
@@ -466,6 +473,42 @@ const Settings: React.FC = () => {
                     message:
                       err?.message ||
                       "Could not update recent searches setting.",
+                    color: "danger",
+                  });
+                }
+              }}
+            />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Enable swipe navigation</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={swipeNavigationEnabled}
+              onIonChange={async (e) => {
+                const checked = e.detail.checked;
+                setSwipeNavigationEnabled(checked);
+
+                const current = auth.currentUser;
+                if (!current) return;
+
+                const ref = doc(db, "users", current.uid);
+
+                try {
+                  await updateDoc(ref, {
+                    "profile.swipeNavigationEnabled": checked,
+                  });
+
+                  trackEvent("settings_swipe_navigation_toggle", {
+                    uid: current.uid,
+                    enabled: checked,
+                  });
+                } catch (err: any) {
+                  console.error("Failed to save swipeNavigationEnabled:", err);
+                  setToast({
+                    show: true,
+                    message:
+                      err?.message || "Could not update swipe navigation setting.",
                     color: "danger",
                   });
                 }

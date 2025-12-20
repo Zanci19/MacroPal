@@ -57,7 +57,9 @@ import "@ionic/react/css/palettes/dark.class.css";
 
 import "./theme/variables.css";
 
-import { trackEvent } from "./firebase";
+import { auth, db, trackEvent } from "./firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 import UpdateGate from "./UpdateGate";
 
 setupIonicReact();
@@ -79,6 +81,7 @@ const AnalyticsRouteTracker: React.FC = () => {
 const TabsShell: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
+  const [swipeNavigationEnabled, setSwipeNavigationEnabled] = React.useState(true);
 
   const tabOrder = [
     { id: "analytics", route: "/app/analytics" },
@@ -120,6 +123,10 @@ const TabsShell: React.FC = () => {
   };
 
   const onTouchStart: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (!swipeNavigationEnabled) {
+      resetTouchTracking();
+      return;
+    }
     if (event.touches.length !== 1) return;
 
     touchStartX.current = event.touches[0].clientX;
@@ -128,6 +135,10 @@ const TabsShell: React.FC = () => {
   };
 
   const onTouchMove: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (!swipeNavigationEnabled) {
+      resetTouchTracking();
+      return;
+    }
     if (!isSwipeTracking.current || touchStartX.current === null || touchStartY.current === null)
       return;
 
@@ -140,6 +151,10 @@ const TabsShell: React.FC = () => {
   };
 
   const onTouchEnd: React.TouchEventHandler<HTMLDivElement> = (event) => {
+    if (!swipeNavigationEnabled) {
+      resetTouchTracking();
+      return;
+    }
     if (!isSwipeTracking.current || touchStartX.current === null || touchStartY.current === null)
       return;
 
@@ -166,6 +181,32 @@ const TabsShell: React.FC = () => {
 
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
+
+  useEffect(() => {
+    let unsubscribeProfile: (() => void) | undefined;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (current) => {
+      unsubscribeProfile?.();
+
+      if (!current) {
+        setSwipeNavigationEnabled(true);
+        return;
+      }
+
+      const ref = doc(db, "users", current.uid);
+      unsubscribeProfile = onSnapshot(ref, (snap) => {
+        const data = snap.data() as { profile?: { swipeNavigationEnabled?: boolean } } | undefined;
+        const enabled = data?.profile?.swipeNavigationEnabled;
+
+        setSwipeNavigationEnabled(enabled !== false);
+      });
+    });
+
+    return () => {
+      unsubscribeProfile?.();
+      unsubscribeAuth();
+    };
+  }, []);
 
   return (
     <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
