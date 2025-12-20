@@ -1,6 +1,6 @@
 .register-page {
   --background: transparent;
-  background: var(--brand-surface);
+  background: var(--brand-surface-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +24,7 @@
   height: 320px;
   top: -120px;
   right: -60px;
-  background: radial-gradient(circle, rgba(53, 123, 228, 0.55), transparent 60%);
+  background: radial-gradient(circle, rgba(53, 123, 228, 0.6), transparent 60%);
 }
 
 .register-page::after {
@@ -32,7 +32,7 @@
   height: 260px;
   bottom: -90px;
   left: -30px;
-  background: radial-gradient(circle, rgba(110, 141, 255, 0.35), transparent 60%);
+  background: radial-gradient(circle, rgba(159, 122, 234, 0.38), transparent 60%);
 }
 
 .register-card {
@@ -41,10 +41,10 @@
   margin: 0 auto;
   padding: 28px 22px 22px;
   border-radius: var(--card-radius-lg);
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
-  border: var(--glass-border);
-  backdrop-filter: var(--glass-blur);
-  box-shadow: var(--shadow-strong);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+  border: var(--glass-border-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  box-shadow: var(--brand-glow);
   color: var(--ion-text-color, #f9fafb);
 }
 
@@ -53,6 +53,7 @@
   margin-bottom: 18px;
   display: grid;
   gap: 6px;
+  position: relative;
 }
 
 .register-title {
@@ -62,7 +63,7 @@
 
 .register-subtitle {
   margin: 0;
-  color: var(--brand-muted);
+  color: var(--brand-muted-strong);
   font: var(--text-subheading);
 }
 
@@ -80,7 +81,8 @@
   --inner-padding-end: 0;
   --highlight-color-focused: var(--ion-color-primary);
   --color: var(--brand-foil);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-focus);
   backdrop-filter: var(--glass-blur);
 }
 
@@ -100,14 +102,14 @@
   height: 46px;
   font: var(--text-body-strong);
   letter-spacing: 0.02em;
-  --background: linear-gradient(120deg, var(--brand-primary) 0%, var(--brand-primary-strong) 100%);
-  box-shadow: 0 12px 30px rgba(53, 123, 228, 0.25);
+  --background: linear-gradient(120deg, var(--brand-primary) 0%, var(--brand-primary-strong) 50%, #1a2f5a 100%);
+  box-shadow: 0 12px 30px rgba(53, 123, 228, 0.25), 0 0 0 1px rgba(124, 231, 255, 0.2);
 }
 
 .register-footer {
   margin-top: 18px;
   text-align: center;
-  color: var(--brand-muted);
+  color: var(--brand-muted-strong);
 }
 
 .register-footer p {

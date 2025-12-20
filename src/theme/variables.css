@@ -1,4 +1,5 @@
 :root {
+  /* Core brand hue (dark blue) */
   --ion-color-primary: #357be4;
   --ion-color-primary-rgb: 53, 123, 228;
   --ion-color-primary-contrast: #ffffff;
@@ -6,26 +7,49 @@
   --ion-color-primary-shade: #2f6bc9;
   --ion-color-primary-tint: #4f8cf8;
 
+  /* Harmonious supporting colors */
+  --ion-color-secondary: #7ce7ff;
+  --ion-color-tertiary: #9f7aea;
+  --ion-color-success: #4ade80;
+  --ion-color-warning: #fbbf24;
+  --ion-color-danger: #ef4444;
+
   --softkey-inset: 0px;
 
+  /* Extended design tokens */
   --brand-primary: var(--ion-color-primary);
   --brand-primary-strong: #265fb8;
+  --brand-secondary: #6ad5ff;
   --brand-ink: #0b1426;
   --brand-ink-soft: #0f1c33;
-  --brand-card: #0f1b2f;
-  --brand-card-contrast: #0f172a;
   --brand-foil: #e8f0ff;
   --brand-muted: #7b8aab;
-  --brand-success: #4ade80;
-  --brand-warning: #fbbf24;
-  --brand-surface: radial-gradient(1200px 900px at 15% -10%, rgba(53, 123, 228, 0.25), transparent 52%),
-    radial-gradient(900px 780px at 82% -12%, rgba(71, 85, 182, 0.22), transparent 50%),
-    linear-gradient(145deg, #0a1224 0%, #0c152d 45%, #0c1c3a 100%);
+  --brand-muted-strong: #9fb4de;
+  --brand-success: var(--ion-color-success);
+  --brand-warning: var(--ion-color-warning);
+  --brand-positive: #34d399;
+  --brand-critical: #f87171;
 
-  --font-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", system-ui, sans-serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
-    sans-serif;
+  --brand-card: #0f1b2f;
+  --brand-card-contrast: #0f172a;
+  --brand-panel: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  --brand-glow: 0 0 0 1px rgba(124, 231, 255, 0.15), 0 22px 46px rgba(0, 0, 0, 0.35);
+  --brand-sheen: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+
+  --brand-surface: radial-gradient(1200px 900px at 15% -10%, rgba(53, 123, 228, 0.22), transparent 52%),
+    radial-gradient(900px 780px at 82% -12%, rgba(71, 85, 182, 0.2), transparent 50%),
+    linear-gradient(145deg, #0a1224 0%, #0b152d 40%, #0d1b3b 100%);
+  --brand-surface-strong: radial-gradient(1200px 900px at 18% -14%, rgba(124, 231, 255, 0.18), transparent 48%),
+    radial-gradient(900px 780px at 78% -8%, rgba(159, 122, 234, 0.15), transparent 52%),
+    linear-gradient(165deg, #0b142b 0%, #0e1837 45%, #111f48 100%);
+  --brand-grid: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.06), transparent 20%),
+    radial-gradient(circle at 80% 0%, rgba(53, 123, 228, 0.35), transparent 35%),
+    linear-gradient(0deg, transparent 95%, rgba(255, 255, 255, 0.06) 100%),
+    linear-gradient(90deg, transparent 95%, rgba(255, 255, 255, 0.06) 100%);
+
+  /* Typography */
+  --font-display: "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 
   --text-hero: 800 clamp(2.35rem, 3vw, 3rem) / 1.05 var(--font-display);
   --text-title: 800 clamp(1.45rem, 2vw, 1.8rem) / 1.2 var(--font-display);
@@ -36,6 +60,7 @@
   --text-label: 700 0.9rem / 1.25 var(--font-body);
   --text-micro: 700 0.8rem / 1.2 var(--font-body);
 
+  /* Layout + surfaces */
   --ion-background-color: #0b1326;
   --ion-background-color-rgb: 11, 19, 38;
 
@@ -43,7 +68,7 @@
   --ion-text-color-rgb: 229, 237, 255;
 
   --ion-card-background: rgba(255, 255, 255, 0.04);
-  --ion-toolbar-background: rgba(12, 21, 45, 0.85);
+  --ion-toolbar-background: rgba(12, 21, 45, 0.9);
   --ion-item-background: rgba(255, 255, 255, 0.04);
 
   --ion-border-color: rgba(255, 255, 255, 0.08);
@@ -51,10 +76,14 @@
 
   --card-radius-lg: 22px;
   --card-radius-md: 16px;
+  --card-radius-sm: 12px;
   --glass-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-border-strong: 1px solid rgba(124, 231, 255, 0.28);
   --glass-blur: blur(14px);
+  --glass-blur-strong: blur(18px);
   --shadow-strong: 0 30px 70px rgba(0, 0, 0, 0.55);
   --shadow-soft: 0 14px 35px rgba(0, 0, 0, 0.32);
+  --shadow-focus: 0 0 0 1px rgba(124, 231, 255, 0.2), 0 16px 34px rgba(0, 0, 0, 0.36);
 }
 
 body.dark {
@@ -76,9 +105,13 @@ body.dark {
   --brand-card: #0b1120;
   --brand-card-contrast: #070b13;
   --brand-muted: #c3d0f5;
+  --brand-muted-strong: #d5dff9;
   --brand-surface: radial-gradient(1200px 900px at 15% -10%, rgba(53, 123, 228, 0.2), transparent 52%),
     radial-gradient(900px 780px at 82% -12%, rgba(71, 85, 182, 0.22), transparent 50%),
     linear-gradient(145deg, #05080f 0%, #070c18 45%, #0a1021 100%);
+  --brand-surface-strong: radial-gradient(1200px 900px at 18% -14%, rgba(124, 231, 255, 0.15), transparent 48%),
+    radial-gradient(900px 780px at 78% -8%, rgba(159, 122, 234, 0.14), transparent 52%),
+    linear-gradient(165deg, #050910 0%, #080f1f 45%, #0a1327 100%);
 }
 
 body.dark ion-action-sheet .action-sheet-button,
@@ -126,6 +159,25 @@ body {
   font: var(--text-label);
   color: var(--ion-text-color);
   letter-spacing: 0.02em;
+}
+
+.app-glass-panel {
+  background: var(--brand-panel);
+  border: var(--glass-border);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--glass-blur);
+}
+
+.app-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--brand-foil);
+  font: var(--text-label);
 }
 
 .mp-tab-btn ion-label {
