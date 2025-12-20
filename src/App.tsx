@@ -303,7 +303,13 @@ const TabsShell: React.FC = () => {
       onTouchEnd={onTouchEnd}
     >
       <IonTabs>
-        {tabPanels}
+        <IonRouterOutlet animated={false} className="mp-tab-panels-outlet">
+          <Route
+            path="/app/:tab(analytics|planner|home|workout|settings)"
+            render={() => tabPanels}
+          />
+          <Route exact path="/app" render={() => tabPanels} />
+        </IonRouterOutlet>
 
         <IonTabBar slot="bottom" className="mp-tabbar">
           <IonTabButton
