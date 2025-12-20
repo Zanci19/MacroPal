@@ -82,10 +82,10 @@ const TabsShell: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
   const [swipeNavigationEnabled, setSwipeNavigationEnabled] = React.useState(true);
-  const [swipeSignalDirection, setSwipeSignalDirection] = React.useState<"left" | "right" | null>(
-    null,
-  );
-  const swipeSignalTimeout = React.useRef<number | null>(null);
+  const [dragOffset, setDragOffset] = React.useState(0);
+  const [dragging, setDragging] = React.useState(false);
+  const [animating, setAnimating] = React.useState(false);
+  const [pendingTab, setPendingTab] = React.useState<string | null>(null);
 
   const tabOrder = [
     { id: "analytics", route: "/app/analytics" },
@@ -109,6 +109,12 @@ const TabsShell: React.FC = () => {
 
   const activeTab = getActiveTab();
 
+  useEffect(() => {
+    if (location.pathname === "/app") {
+      history.replace("/app/home");
+    }
+  }, [history, location.pathname]);
+
   const navigateToTab = (tabId: string) => {
     const target = tabOrder.find((tab) => tab.id === tabId);
     if (target && target.route !== location.pathname) {
@@ -119,11 +125,19 @@ const TabsShell: React.FC = () => {
   const touchStartX = React.useRef<number | null>(null);
   const touchStartY = React.useRef<number | null>(null);
   const isSwipeTracking = React.useRef(false);
+  const intendedDirection = React.useRef<"left" | "right" | null>(null);
+
+  const windowWidth = () => window.innerWidth || 360;
 
   const resetTouchTracking = () => {
     touchStartX.current = null;
     touchStartY.current = null;
     isSwipeTracking.current = false;
+    intendedDirection.current = null;
+    setDragging(false);
+    setDragOffset(0);
+    setPendingTab(null);
+    setAnimating(false);
   };
 
   const onTouchStart: React.TouchEventHandler<HTMLDivElement> = (event) => {
@@ -136,6 +150,10 @@ const TabsShell: React.FC = () => {
     touchStartX.current = event.touches[0].clientX;
     touchStartY.current = event.touches[0].clientY;
     isSwipeTracking.current = true;
+    setDragging(false);
+    setAnimating(false);
+    setPendingTab(null);
+    setDragOffset(0);
   };
 
   const onTouchMove: React.TouchEventHandler<HTMLDivElement> = (event) => {
@@ -149,12 +167,23 @@ const TabsShell: React.FC = () => {
     const deltaX = event.touches[0].clientX - touchStartX.current;
     const deltaY = event.touches[0].clientY - touchStartY.current;
 
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+    if (!dragging && Math.abs(deltaY) > Math.abs(deltaX)) {
       resetTouchTracking();
+      return;
     }
+
+    const direction = deltaX < 0 ? "left" : "right";
+    const currentIndex = tabOrder.findIndex((tab) => tab.id === activeTab);
+    const targetIndex = direction === "left" ? currentIndex + 1 : currentIndex - 1;
+    const targetTab = tabOrder[targetIndex]?.id || null;
+
+    intendedDirection.current = targetTab ? direction : null;
+    setPendingTab(targetTab);
+    setDragging(true);
+    setDragOffset(deltaX);
   };
 
-  const onTouchEnd: React.TouchEventHandler<HTMLDivElement> = (event) => {
+  const onTouchEnd: React.TouchEventHandler<HTMLDivElement> = () => {
     if (!swipeNavigationEnabled) {
       resetTouchTracking();
       return;
@@ -162,37 +191,83 @@ const TabsShell: React.FC = () => {
     if (!isSwipeTracking.current || touchStartX.current === null || touchStartY.current === null)
       return;
 
-    const deltaX = event.changedTouches[0].clientX - touchStartX.current;
-    const deltaY = event.changedTouches[0].clientY - touchStartY.current;
+    const threshold = windowWidth() * 0.22;
+    const shouldAdvance = pendingTab && Math.abs(dragOffset) > threshold;
 
-    const swipeThreshold = 50;
+    if (shouldAdvance && intendedDirection.current) {
+      setAnimating(true);
+      const finalOffset = intendedDirection.current === "left" ? -windowWidth() : windowWidth();
+      setDragOffset(finalOffset);
 
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > swipeThreshold) {
-      const currentIndex = tabOrder.findIndex((tab) => tab.id === activeTab);
-
-      if (currentIndex !== -1) {
-        const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-        const nextTab = tabOrder[nextIndex]?.id;
-
-        if (nextTab) {
-          navigateToTab(nextTab);
-          const direction = deltaX < 0 ? "left" : "right";
-          setSwipeSignalDirection(direction);
-          if (swipeSignalTimeout.current) {
-            window.clearTimeout(swipeSignalTimeout.current);
-          }
-          swipeSignalTimeout.current = window.setTimeout(() => {
-            setSwipeSignalDirection(null);
-          }, 350);
-        }
-      }
+      window.setTimeout(() => {
+        if (pendingTab) navigateToTab(pendingTab);
+        resetTouchTracking();
+      }, 220);
+      return;
     }
 
-    resetTouchTracking();
+    setAnimating(true);
+    setDragOffset(0);
+    window.setTimeout(() => {
+      resetTouchTracking();
+    }, 180);
   };
 
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
+
+  const panelOffset = (tabId: string) => {
+    if (tabId === activeTab) {
+      return dragOffset;
+    }
+
+    if (tabId === pendingTab && intendedDirection.current) {
+      const base = intendedDirection.current === "left" ? windowWidth() : -windowWidth();
+      return base + dragOffset;
+    }
+
+    const currentIndex = tabOrder.findIndex((tab) => tab.id === activeTab);
+    const targetIndex = tabOrder.findIndex((tab) => tab.id === tabId);
+    const relative = targetIndex - currentIndex;
+
+    if (relative === 0) return 0;
+    return relative > 0 ? windowWidth() : -windowWidth();
+  };
+
+  const tabPanels = (
+    <div
+      className={`mp-tab-panels${dragging ? " mp-tab-panels--dragging" : ""}${
+        animating ? " mp-tab-panels--animating" : ""
+      }`}
+    >
+      {tabOrder.map((tab) => {
+        const panelKey = tab.id;
+        const Component =
+          panelKey === "analytics"
+            ? Analytics
+            : panelKey === "planner"
+              ? Planner
+              : panelKey === "home"
+                ? Home
+                : panelKey === "workout"
+                  ? Workout
+                  : Settings;
+
+        return (
+          <div
+            key={panelKey}
+            className={`mp-tab-panel ${activeTab === panelKey ? "mp-tab-panel--active" : ""}`}
+            style={{
+              transform: `translateX(${panelOffset(panelKey)}px)`,
+              pointerEvents: activeTab === panelKey ? "auto" : "none",
+            }}
+          >
+            <Component />
+          </div>
+        );
+      })}
+    </div>
+  );
 
   useEffect(() => {
     let unsubscribeProfile: (() => void) | undefined;
@@ -217,9 +292,6 @@ const TabsShell: React.FC = () => {
     return () => {
       unsubscribeProfile?.();
       unsubscribeAuth();
-      if (swipeSignalTimeout.current) {
-        window.clearTimeout(swipeSignalTimeout.current);
-      }
     };
   }, []);
 
@@ -230,28 +302,8 @@ const TabsShell: React.FC = () => {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <div
-        className={`mp-swipe-signal ${
-          swipeSignalDirection === "left"
-            ? "mp-swipe-signal--left"
-            : swipeSignalDirection === "right"
-              ? "mp-swipe-signal--right"
-              : ""
-        }`}
-        aria-hidden
-      >
-        <div className="mp-swipe-signal__glow" />
-        <div className="mp-swipe-signal__chevron" />
-      </div>
       <IonTabs>
-        <IonRouterOutlet id="tabs">
-          <Route exact path="/app/analytics" component={Analytics} />
-          <Route exact path="/app/planner" component={Planner} />
-          <Route exact path="/app/home" component={Home} />
-          <Route exact path="/app/workout" component={Workout} />
-          <Route exact path="/app/settings" component={Settings} />
-          <Redirect exact from="/app" to="/app/home" />
-        </IonRouterOutlet>
+        {tabPanels}
 
         <IonTabBar slot="bottom" className="mp-tabbar">
           <IonTabButton
