@@ -398,6 +398,12 @@ const Home: React.FC = () => {
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
 
+  const totalEntriesCount =
+    dayData.breakfast.length +
+    dayData.lunch.length +
+    dayData.dinner.length +
+    dayData.snacks.length;
+
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
   const caloriesNeeded = useMemo(() => {
     if (!profile) return null;
@@ -1117,6 +1123,32 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="home-content ion-padding tabbed-content" fullscreen>
+        <div className="fs-hero">
+          <p className="fs-hero__eyebrow">Daily dashboard</p>
+          <h1 className="fs-hero__title">Fuel with clarity</h1>
+          <p className="fs-hero__meta">
+            {activeDateLabel} · {kcalGoal ? `${kcalGoal} kcal target` : "Calculating your goal"}
+          </p>
+
+          <div className="fs-hero__row">
+            <div className="fs-hero__pill">
+              <small>Consumed</small>
+              <span>{kcalConsumed} kcal</span>
+            </div>
+            <div className="fs-hero__pill">
+              <small>Remaining</small>
+              <span>{summaryDifferenceValue} kcal</span>
+            </div>
+
+            {streak > 1 && (
+              <IonChip color="success" style={{ marginInlineStart: "auto" }}>
+                <IonIcon icon={flameOutline} />
+                <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+              </IonChip>
+            )}
+          </div>
+        </div>
+
         <div className="fs-datebar" role="group" aria-label="Select day">
           <IonButton
             fill="clear"
@@ -1280,6 +1312,25 @@ const Home: React.FC = () => {
               })}
             </div>
           )}
+
+          <div className="fs-highlight-grid">
+            <div className="fs-highlight">
+              <div className="fs-highlight__label">Meals logged</div>
+              <div className="fs-highlight__value">
+                {totalEntriesCount} item{totalEntriesCount === 1 ? "" : "s"}
+              </div>
+            </div>
+            <div className="fs-highlight">
+              <div className="fs-highlight__label">Activity bonus</div>
+              <div className="fs-highlight__value">+{workoutCalories} kcal</div>
+            </div>
+            <div className="fs-highlight">
+              <div className="fs-highlight__label">Streak</div>
+              <div className="fs-highlight__value">
+                {streak > 0 ? `${streak} day${streak === 1 ? "" : "s"}` : "Fresh start"}
+              </div>
+            </div>
+          </div>
         </IonCard>
 
         {showWellnessTip && (
