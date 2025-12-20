@@ -58,6 +58,7 @@ import {
   shiftDateKey,
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
+import { computeGenericFoodBoost } from "../utils/genericFoodBoosts";
 import './AddFood.css'
 
 /**
@@ -1053,6 +1054,28 @@ const AddFood: React.FC = () => {
       .replace(/[^a-z0-9]+/gi, " ")
       .trim();
 
+  const expandToken = (token: string): string[] => {
+    const t = token.trim().toLowerCase();
+    const variants = new Set<string>();
+    if (!t) return [];
+
+    variants.add(t);
+
+    if (t.endsWith("s") && t.length > 3) {
+      variants.add(t.slice(0, -1));
+    }
+
+    if (t.endsWith("es") && t.length > 4) {
+      variants.add(t.slice(0, -2));
+    }
+
+    if (t.endsWith("ies") && t.length > 4) {
+      variants.add(t.slice(0, -3) + "y");
+    }
+
+    return Array.from(variants);
+  };
+
   const recordRecentQuery = (text: string) => {
     const normalized = normalizeText(text);
     if (!normalized) return;
@@ -1091,6 +1114,7 @@ const AddFood: React.FC = () => {
 
     const normalizedQuery = normalizeText(raw);
     const queryTokens = normalizedQuery.split(" ").filter(Boolean);
+    const expandedTokens = queryTokens.map(expandToken);
 
     const computeGenericBoost = (food: OFFSearchHit) => {
       const nameNorm = normalizeText(food.product_name || "");
@@ -1156,11 +1180,20 @@ const AddFood: React.FC = () => {
       const combined = `${nameNorm} ${brandNorm}`.trim();
 
       let score = 0;
+
+      // Use expanded tokens so "mushrooms" matches "mushroom" etc.
+      const tokenMatches = queryTokens.map((_, idx) => {
+        const variants =
+          expandedTokens[idx] && expandedTokens[idx].length
+            ? expandedTokens[idx]
+            : [queryTokens[idx]];
+        return variants.some((v) => combined.includes(v));
+      });
+
       const hasAllTokens =
-        queryTokens.length === 0
-          ? true
-          : queryTokens.every((token) => combined.includes(token));
-      const matchedTokens = queryTokens.filter((token) => combined.includes(token)).length;
+        queryTokens.length === 0 ? true : tokenMatches.every(Boolean);
+
+      const matchedTokens = tokenMatches.filter(Boolean).length;
 
       if (nameNorm === normalizedQuery) score += 1200;
       else if (nameNorm.startsWith(normalizedQuery)) score += 1000;
@@ -1172,8 +1205,13 @@ const AddFood: React.FC = () => {
         score += matchedTokens * 15;
       }
 
+      // Slightly prefer shorter, simpler names
       score -= nameNorm.split(" ").length;
 
+      // NEW: big boosts for generic ingredients (mushrooms, oats, rice, etc.)
+      score += computeGenericFoodBoost(nameNorm, brandNorm);
+
+      // Existing generic heuristic you already had
       score += computeGenericBoost(food);
 
       return { food, score, hasAllTokens };
@@ -1200,7 +1238,24 @@ const AddFood: React.FC = () => {
         );
       });
 
-      const scored = filteredByMacros.map(scoreFood);
+      const textFiltered = filteredByMacros.filter((food) => {
+        const nameNorm = normalizeText(food.product_name || "");
+        const brandNorm = normalizeText(food.brands || "");
+        const combined = `${nameNorm} ${brandNorm}`.trim();
+        if (!combined) return false;
+
+        if (queryTokens.length === 0) return true;
+
+        // every query token must match at least one of its variants
+        return queryTokens.every((_, idx) => {
+          const variants = expandedTokens[idx] && expandedTokens[idx].length
+            ? expandedTokens[idx]
+            : [queryTokens[idx]];
+          return variants.some((v) => combined.includes(v));
+        });
+      });
+
+      const scored = textFiltered.map(scoreFood);
       scored.sort((a, b) => {
         if (a.hasAllTokens !== b.hasAllTokens) {
           return a.hasAllTokens ? -1 : 1;
