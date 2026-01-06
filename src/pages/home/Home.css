@@ -151,6 +151,11 @@ ion-card:hover {
   color: var(--mp-text-muted);
 }
 
+.fs-metric-subtitle {
+  font-size: 0.9rem;
+  color: var(--mp-text-muted);
+}
+
 .fs-summary__right {
   display: grid;
   gap: 10px;
@@ -185,6 +190,64 @@ ion-card:hover {
 .fs-metric-value {
   font-weight: 800;
   font-size: 1.3rem;
+}
+
+.fs-metric-subvalue {
+  font-weight: 700;
+  color: var(--mp-text-muted);
+}
+
+.fs-macro-progress {
+  padding: 8px 16px 16px;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--mp-border);
+}
+
+.fs-macro-progress__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-macro-progress__title {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.fs-macro-progress__caption {
+  font-size: 0.85rem;
+}
+
+.fs-macro-progress__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.fs-macro-progress__item {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid var(--mp-border);
+  padding: 10px 12px;
+  border-radius: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+body.dark .fs-macro-progress__item {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.fs-macro-progress__top,
+.fs-macro-progress__foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.92rem;
+}
+
+.fs-macro-progress__bar {
+  height: 10px;
+  border-radius: 9999px;
 }
 
 .fs-macros {
@@ -352,6 +415,19 @@ body.dark ion-tab-bar {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+}
+
+.fs-meal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.fs-meal__hint {
+  margin: 2px 4px 10px;
+  font-size: 0.9rem;
 }
 
 .fs-meal__chevron {
