@@ -759,6 +759,7 @@ const AddFood: React.FC = () => {
         cleanUrl();
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search, history, meal, dateKey]);
 
   useEffect(() => {
