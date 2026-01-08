@@ -123,7 +123,7 @@ const TabsShell: React.FC = () => {
       // Remove any existing animation classes
       outlet.classList.remove("animate-slide-left", "animate-slide-right");
       
-      // Force a reflow to restart the animation
+      // Force a browser reflow to ensure CSS class removal is processed before adding the new animation class
       void outlet.offsetWidth;
       
       // Add the new animation class

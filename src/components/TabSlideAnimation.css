@@ -1,5 +1,10 @@
 /* Tab slide animation styles - Applied to ion-page elements */
 
+:root {
+  --tab-animation-duration: 0.35s;
+  --tab-animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Ensure smooth transitions for tab navigation */
 ion-router-outlet#tabs {
   position: relative;
@@ -7,11 +12,11 @@ ion-router-outlet#tabs {
 
 /* Page enter animations based on slide direction */
 ion-router-outlet#tabs.animate-slide-left ion-page.ion-page-invisible {
-  animation: slidePageFromRight 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slidePageFromRight var(--tab-animation-duration) var(--tab-animation-easing) forwards;
 }
 
 ion-router-outlet#tabs.animate-slide-right ion-page.ion-page-invisible {
-  animation: slidePageFromLeft 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: slidePageFromLeft var(--tab-animation-duration) var(--tab-animation-easing) forwards;
 }
 
 /* Keyframes for sliding page in from the right (moving to left tab) */
