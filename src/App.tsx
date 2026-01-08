@@ -158,6 +158,7 @@ const TabsShell: React.FC = () => {
       .addElement(enteringEl)
       .duration(ANIMATION_DURATION_MS)
       .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+      .beforeStyles({ zIndex: "2" })
       .beforeRemoveClass("ion-page-invisible")
       .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
       .fromTo("opacity", ENTER_MIN_OPACITY, 1);
@@ -169,6 +170,7 @@ const TabsShell: React.FC = () => {
         .addElement(leavingEl)
         .duration(ANIMATION_DURATION_MS)
         .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+        .beforeStyles({ zIndex: "1" })
         .fromTo("transform", "translateX(0)", `translateX(${leaveOffset}%)`)
         .fromTo("opacity", 1, LEAVE_MIN_OPACITY);
     }
