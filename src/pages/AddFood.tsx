@@ -413,8 +413,6 @@ const AddFood: React.FC = () => {
     color?: string;
   }>({ show: false, message: "", color: "success" });
 
-  const [hasSearched, setHasSearched] = useState(false);
-
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
   const [favoriteToDelete, setFavoriteToDelete] = useState<FavoriteFood | null>(
@@ -1061,7 +1059,6 @@ const AddFood: React.FC = () => {
     if (cached) {
       setResults(cached);
       setPage(pageNumber);
-      setHasSearched(true);
       return cached.length;
     }
 
@@ -1070,7 +1067,6 @@ const AddFood: React.FC = () => {
     searchAbortRef.current = controller;
 
     setLoading(true);
-    setHasSearched(true);
 
     trackEvent("food_search_start", {
       query: raw,
@@ -2918,6 +2914,19 @@ const AddFood: React.FC = () => {
             { text: "Delete", role: "destructive", handler: confirmDeleteFavorite },
           ]}
           onDidDismiss={() => setFavoriteToDelete(null)}
+        />
+
+        <IonAlert
+          isOpen={!!mealPresetToDelete}
+          header="Delete custom meal?"
+          message={
+            mealPresetToDelete ? `Remove "${mealPresetToDelete.name}" from your custom meals?` : ""
+          }
+          buttons={[
+            { text: "Cancel", role: "cancel", handler: () => setMealPresetToDelete(null) },
+            { text: "Delete", role: "destructive", handler: confirmDeleteMealPreset },
+          ]}
+          onDidDismiss={() => setMealPresetToDelete(null)}
         />
 
         <IonModal

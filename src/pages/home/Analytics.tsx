@@ -162,25 +162,6 @@ function movingAvg(vals: number[], w: number) {
   return out;
 }
 
-function collectMicroKeys(items: DiaryEntry[]) {
-  const keys = new Set<string>();
-  items.forEach((it) => {
-    const t = it.total || {};
-    Object.entries(t).forEach(([k, v]) => {
-      if (["calories", "carbs", "protein", "fat"].includes(k)) return;
-      if (typeof v === "number" && isFinite(v)) keys.add(k);
-    });
-  });
-  const arr = [...keys];
-  arr.sort((a, b) => {
-    const oa = microKeyOrder(a);
-    const ob = microKeyOrder(b);
-    if (oa !== ob) return oa - ob;
-    return a.localeCompare(b);
-  });
-  return arr;
-}
-
 /* ============================
    Component
    ============================ */
