@@ -2944,10 +2944,19 @@ const AddFood: React.FC = () => {
                               { key: "omega-3-fat_100g", label: "Omega-3", unit: "g" },
                               { key: "omega-6-fat_100g", label: "Omega-6", unit: "g" },
                               { key: "caffeine_100g", label: "Caffeine", unit: "mg" },
-                            ];
+                            ] as const;
+
+                            // Type-safe nutrient access helper
+                            const getNutrientValue = (key: string): number | undefined => {
+                              if (!nutri) return undefined;
+                              return nutri[key as keyof OFFNutriments];
+                            };
 
                             const availableMicros = micronutrients.filter(
-                              (m) => nutri && (nutri as any)[m.key] !== undefined && (nutri as any)[m.key] > 0
+                              (m) => {
+                                const val = getNutrientValue(m.key);
+                                return val !== undefined && val > 0;
+                              }
                             );
 
                             if (availableMicros.length === 0) {
@@ -2970,7 +2979,7 @@ const AddFood: React.FC = () => {
                                 overflowY: "auto"
                               }}>
                                 {availableMicros.map((m) => {
-                                  const val = ((nutri as any)[m.key] || 0) * factor;
+                                  const val = (getNutrientValue(m.key) || 0) * factor;
                                   return (
                                     <div 
                                       key={m.key} 

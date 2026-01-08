@@ -175,6 +175,9 @@ const TabsShell: React.FC = () => {
 
 const App: React.FC = () => {
   useEffect(() => {
+    // Valid theme values
+    const validThemes = ["system", "light", "dark", "macropal"];
+    
     // Check for saved theme preference first
     const savedTheme = localStorage.getItem("mp_theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -182,14 +185,22 @@ const App: React.FC = () => {
     const applyThemeFromStorage = () => {
       document.body.classList.remove("dark", "macropal-theme");
       
-      if (savedTheme === "dark") {
-        document.body.classList.add("dark");
-      } else if (savedTheme === "light") {
-        // Light mode - no class needed
-      } else if (savedTheme === "macropal") {
-        document.body.classList.add("macropal-theme");
+      // Validate saved theme before applying
+      if (savedTheme && validThemes.includes(savedTheme)) {
+        if (savedTheme === "dark") {
+          document.body.classList.add("dark");
+        } else if (savedTheme === "light") {
+          // Light mode - no class needed
+        } else if (savedTheme === "macropal") {
+          document.body.classList.add("macropal-theme");
+        } else if (savedTheme === "system") {
+          // System default
+          if (prefersDark.matches) {
+            document.body.classList.add("dark");
+          }
+        }
       } else {
-        // System default or no preference saved
+        // No valid preference saved - use system default
         if (prefersDark.matches) {
           document.body.classList.add("dark");
         }
@@ -201,7 +212,7 @@ const App: React.FC = () => {
     // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {
       const currentTheme = localStorage.getItem("mp_theme");
-      if (!currentTheme || currentTheme === "system") {
+      if (!currentTheme || currentTheme === "system" || !validThemes.includes(currentTheme)) {
         document.body.classList.toggle("dark", event.matches);
         document.body.classList.remove("macropal-theme");
       }

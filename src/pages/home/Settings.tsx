@@ -101,9 +101,14 @@ const Settings: React.FC = () => {
   const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
   const googleFitSupported = isGoogleFitSupported();
   
+  const VALID_THEMES: ThemeMode[] = ["system", "light", "dark", "macropal"];
+  
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => {
     const stored = localStorage.getItem("mp_theme");
-    return (stored as ThemeMode) || "macropal";
+    if (stored && VALID_THEMES.includes(stored as ThemeMode)) {
+      return stored as ThemeMode;
+    }
+    return "macropal";
   });
   const [showAbout, setShowAbout] = React.useState(false);
 
@@ -332,10 +337,10 @@ const Settings: React.FC = () => {
         );
 
         // Load theme preference from Firebase
-        const savedTheme = (profile as any)?.themeMode as ThemeMode | undefined;
-        if (savedTheme && ["system", "light", "dark", "macropal"].includes(savedTheme)) {
-          setThemeMode(savedTheme);
-          applyTheme(savedTheme);
+        const savedTheme = (profile as any)?.themeMode as string | undefined;
+        if (savedTheme && VALID_THEMES.includes(savedTheme as ThemeMode)) {
+          setThemeMode(savedTheme as ThemeMode);
+          applyTheme(savedTheme as ThemeMode);
         }
 
         setSmartRecommendationEnabled(enabled);
@@ -345,7 +350,7 @@ const Settings: React.FC = () => {
     };
 
     load();
-  }, []);
+  }, [VALID_THEMES]);
 
   if (!user) {
     return (
