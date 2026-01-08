@@ -91,6 +91,7 @@ const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
   const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
+  const lastDirectionRef = useRef<"forward" | "back" | null>(null);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -128,6 +129,7 @@ const TabsShell: React.FC = () => {
           : "back"
         : "forward";
 
+    lastDirectionRef.current = direction;
     router.push(href, direction, "push");
   };
 
@@ -136,10 +138,17 @@ const TabsShell: React.FC = () => {
     const previousTabIndex = previousTabIndexRef.current;
 
     const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+    const clickDirection = lastDirectionRef.current;
     const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
-    const isForward = hasValidIndices
-      ? currentTabIndex > previousTabIndex
-      : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
+    const isForward =
+      clickDirection === "forward"
+        ? true
+        : clickDirection === "back"
+          ? false
+          : hasValidIndices
+            ? currentTabIndex > previousTabIndex
+            : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
+    lastDirectionRef.current = null;
 
     const enteringEl = opts.enteringEl;
     const leavingEl = opts.leavingEl;
