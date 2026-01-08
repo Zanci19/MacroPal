@@ -9,6 +9,7 @@ import {
   IonLabel,
   setupIonicReact,
   createAnimation,
+  useIonRouter,
 } from "@ionic/react";
 import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
@@ -88,6 +89,7 @@ const AnalyticsRouteTracker: React.FC = () => {
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
+  const router = useIonRouter();
   const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
 
   const getActiveTab = () => {
@@ -105,6 +107,29 @@ const TabsShell: React.FC = () => {
   const activeTab = getActiveTab();
 
   const getTabIndex = (tabName: string) => TAB_ORDER.indexOf(tabName);
+
+  const navigateToTab = (
+    event: Event | React.MouseEvent | React.KeyboardEvent | CustomEvent,
+    tabName: string,
+    href: string,
+  ) => {
+    if ("preventDefault" in event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const currentTab = getActiveTab();
+    if (currentTab === tabName) return;
+
+    const currentTabIndex = getTabIndex(currentTab);
+    const targetIndex = getTabIndex(tabName);
+    const direction =
+      currentTabIndex !== -1 && targetIndex !== -1
+        ? targetIndex > currentTabIndex
+          ? "forward"
+          : "back"
+        : "forward";
+
+    router.push(href, direction, "push");
+  };
 
   const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
     const currentTabIndex = getTabIndex(getActiveTab());
@@ -173,6 +198,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="analytics"
           href="/app/analytics"
+          onClick={(event) => navigateToTab(event, "analytics", "/app/analytics")}
           className={tabClass("analytics")}
         >
           <IonIcon
@@ -185,6 +211,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="planner"
           href="/app/planner"
+          onClick={(event) => navigateToTab(event, "planner", "/app/planner")}
           className={tabClass("planner")}
         >
           <IonIcon
@@ -197,6 +224,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="home"
           href="/app/home"
+          onClick={(event) => navigateToTab(event, "home", "/app/home")}
           className={tabClass("home")}
         >
           <IonIcon
@@ -209,6 +237,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="workout"
           href="/app/workout"
+          onClick={(event) => navigateToTab(event, "workout", "/app/workout")}
           className={tabClass("workout")}
         >
           <IonIcon
@@ -221,6 +250,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="settings"
           href="/app/settings"
+          onClick={(event) => navigateToTab(event, "settings", "/app/settings")}
           className={tabClass("settings")}
         >
           <IonIcon
