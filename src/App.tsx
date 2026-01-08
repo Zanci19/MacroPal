@@ -10,7 +10,7 @@ import {
   setupIonicReact,
   createAnimation,
 } from "@ionic/react";
-import type { AnimationBuilder } from "@ionic/react";
+import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
@@ -58,7 +58,6 @@ import "@ionic/react/css/display.css";
 import "@ionic/react/css/palettes/dark.class.css";
 
 import "./theme/variables.css";
-import "./components/TabSlideAnimation.css";
 
 import { trackEvent } from "./firebase";
 import UpdateGate from "./UpdateGate";
@@ -67,6 +66,11 @@ setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
 const ANIMATION_DURATION_MS = 350;
+const ENTER_MIN_OPACITY = 0.2;
+const LEAVE_TRANSLATE_PERCENT = 30;
+const LEAVE_MIN_OPACITY = 0.4;
+const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
+const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
 const AnalyticsRouteTracker: React.FC = () => {
   const location = useLocation();
@@ -84,7 +88,7 @@ const AnalyticsRouteTracker: React.FC = () => {
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
-  const previousTabIndexRef = useRef<number>(TAB_ORDER.indexOf("home"));
+  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -103,12 +107,14 @@ const TabsShell: React.FC = () => {
   const getTabIndex = (tabName: string) => TAB_ORDER.indexOf(tabName);
 
   const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
-    const currentTabIndex = getTabIndex(activeTab);
+    const currentTabIndex = getTabIndex(getActiveTab());
     const previousTabIndex = previousTabIndexRef.current;
 
-    const isForward = currentTabIndex === -1 || previousTabIndex === -1
-      ? opts.direction !== "back"
-      : currentTabIndex >= previousTabIndex;
+    const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+    const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
+    const isForward = hasValidIndices
+      ? currentTabIndex > previousTabIndex
+      : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
 
     const enteringEl = opts.enteringEl;
     const leavingEl = opts.leavingEl;
@@ -120,18 +126,20 @@ const TabsShell: React.FC = () => {
       .easing("cubic-bezier(0.4, 0, 0.2, 1)")
       .beforeRemoveClass("ion-page-invisible")
       .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
-      .fromTo("opacity", 0.2, 1);
+      .fromTo("opacity", ENTER_MIN_OPACITY, 1);
 
-    const leavingAnimation =
-      leavingEl &&
-      createAnimation()
+    const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
+    let leavingAnimation: Animation | undefined;
+    if (leavingEl) {
+      leavingAnimation = createAnimation()
         .addElement(leavingEl)
         .duration(ANIMATION_DURATION_MS)
         .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-        .fromTo("transform", "translateX(0)", `translateX(${directionFactor * -30}%)`)
-        .fromTo("opacity", 1, 0.4);
+        .fromTo("transform", "translateX(0)", `translateX(${leaveOffset}%)`)
+        .fromTo("opacity", 1, LEAVE_MIN_OPACITY);
+    }
 
-    const animation = createAnimation().duration(ANIMATION_DURATION_MS).addAnimation(enteringAnimation);
+    const animation = createAnimation().addAnimation(enteringAnimation);
 
     if (leavingAnimation) {
       animation.addAnimation(leavingAnimation);
