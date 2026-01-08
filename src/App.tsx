@@ -175,16 +175,36 @@ const TabsShell: React.FC = () => {
 
 const App: React.FC = () => {
   useEffect(() => {
+    // Check for saved theme preference first
+    const savedTheme = localStorage.getItem("mp_theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
-    const applyTheme = (isDark: boolean) => {
-      document.body.classList.toggle("dark", isDark);
+    const applyThemeFromStorage = () => {
+      document.body.classList.remove("dark", "macropal-theme");
+      
+      if (savedTheme === "dark") {
+        document.body.classList.add("dark");
+      } else if (savedTheme === "light") {
+        // Light mode - no class needed
+      } else if (savedTheme === "macropal") {
+        document.body.classList.add("macropal-theme");
+      } else {
+        // System default or no preference saved
+        if (prefersDark.matches) {
+          document.body.classList.add("dark");
+        }
+      }
     };
 
-    applyTheme(prefersDark.matches);
+    applyThemeFromStorage();
 
+    // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {
-      applyTheme(event.matches);
+      const currentTheme = localStorage.getItem("mp_theme");
+      if (!currentTheme || currentTheme === "system") {
+        document.body.classList.toggle("dark", event.matches);
+        document.body.classList.remove("macropal-theme");
+      }
     };
 
     prefersDark.addEventListener("change", listener);

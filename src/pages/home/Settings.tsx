@@ -15,6 +15,12 @@ import {
   IonToast,
   IonText,
   IonToggle,
+  IonSelect,
+  IonSelectOption,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
 } from "@ionic/react";
 import {
   personCircleOutline,
@@ -25,6 +31,8 @@ import {
   cafeOutline,
   trashOutline,
   logoGoogle,
+  colorPaletteOutline,
+  informationCircleOutline,
 } from "ionicons/icons";
 import { auth, db, trackEvent } from "../../firebase";
 import {
@@ -37,6 +45,36 @@ import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import "./Settings.css";
 import { ensureGoogleFitAccess, isGoogleFitSupported } from "../../utils/googleFit";
+
+export type ThemeMode = "system" | "light" | "dark" | "macropal";
+
+export const applyTheme = (mode: ThemeMode) => {
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+  // Remove all theme classes first
+  document.body.classList.remove("dark", "macropal-theme");
+
+  switch (mode) {
+    case "dark":
+      document.body.classList.add("dark");
+      break;
+    case "light":
+      // No class needed for light mode
+      break;
+    case "macropal":
+      document.body.classList.add("macropal-theme");
+      break;
+    case "system":
+    default:
+      if (prefersDark) {
+        document.body.classList.add("dark");
+      }
+      break;
+  }
+
+  // Store in localStorage for quick load on next visit
+  localStorage.setItem("mp_theme", mode);
+};
 
 
 const Settings: React.FC = () => {
@@ -62,6 +100,39 @@ const Settings: React.FC = () => {
   const [checkingGoogleFit, setCheckingGoogleFit] = React.useState(false);
   const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
   const googleFitSupported = isGoogleFitSupported();
+  
+  const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => {
+    const stored = localStorage.getItem("mp_theme");
+    return (stored as ThemeMode) || "macropal";
+  });
+  const [showAbout, setShowAbout] = React.useState(false);
+
+  const handleThemeChange = async (newTheme: ThemeMode) => {
+    setThemeMode(newTheme);
+    applyTheme(newTheme);
+
+    const current = auth.currentUser;
+    if (!current) return;
+
+    try {
+      const ref = doc(db, "users", current.uid);
+      await updateDoc(ref, {
+        "profile.themeMode": newTheme,
+      });
+
+      trackEvent("settings_theme_change", {
+        uid: current.uid,
+        theme: newTheme,
+      });
+    } catch (err: any) {
+      console.error("Failed to save theme preference:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not save theme preference.",
+        color: "danger",
+      });
+    }
+  };
 
   const handleVerifyEmail = async () => {
     if (!auth.currentUser) return;
@@ -259,6 +330,13 @@ const Settings: React.FC = () => {
             ? "Auto-import is on. We'll pull calories from Google Fit when available."
             : ""
         );
+
+        // Load theme preference from Firebase
+        const savedTheme = (profile as any)?.themeMode as ThemeMode | undefined;
+        if (savedTheme && ["system", "light", "dark", "macropal"].includes(savedTheme)) {
+          setThemeMode(savedTheme);
+          applyTheme(savedTheme);
+        }
 
         setSmartRecommendationEnabled(enabled);
       } catch (e) {
@@ -474,6 +552,25 @@ const Settings: React.FC = () => {
           </IonItem>
 
           <IonItem lines="full">
+            <IonIcon slot="start" icon={colorPaletteOutline} />
+            <IonLabel>
+              <h2>App theme</h2>
+              <p>Choose your preferred appearance</p>
+            </IonLabel>
+            <IonSelect
+              slot="end"
+              interface="popover"
+              value={themeMode}
+              onIonChange={(e) => handleThemeChange(e.detail.value as ThemeMode)}
+            >
+              <IonSelectOption value="system">System Default</IonSelectOption>
+              <IonSelectOption value="light">Light</IonSelectOption>
+              <IonSelectOption value="dark">Dark</IonSelectOption>
+              <IonSelectOption value="macropal">MacroPal Theme</IonSelectOption>
+            </IonSelect>
+          </IonItem>
+
+          <IonItem lines="full">
             <IonIcon slot="start" icon={logoGoogle} />
             <IonLabel>
               <h2>Google Fit calories</h2>
@@ -522,6 +619,15 @@ const Settings: React.FC = () => {
           >
             <IonIcon slot="start" icon={cafeOutline} />
             <IonLabel>Buy me a coffee ☕</IonLabel>
+          </IonItem>
+
+          <IonItem
+            lines="full"
+            button
+            onClick={() => setShowAbout(true)}
+          >
+            <IonIcon slot="start" icon={informationCircleOutline} />
+            <IonLabel>About MacroPal</IonLabel>
           </IonItem>
 
           <IonItem
@@ -642,6 +748,44 @@ const Settings: React.FC = () => {
           },
         ]}
         onDidDismiss={() => setConfirmDeleteName(false)}
+      />
+
+      <IonAlert
+        isOpen={showAbout}
+        header="About MacroPal"
+        subHeader="Your Personal Nutrition Companion"
+        message={`MacroPal is a comprehensive nutrition tracking app designed to help you achieve your health and fitness goals through smart food logging, macro tracking, and personalized recommendations.
+
+Version: 1.0.0
+Created: 2024
+Developer: Zanci19
+
+Built with ❤️ using Ionic React and Firebase.
+
+Features:
+• Smart food search powered by Open Food Facts
+• Barcode scanning for quick food entry
+• Detailed macro and micronutrient tracking
+• Customizable daily goals and targets
+• Meal planning and workout tracking
+• Beautiful themes and smooth experience
+
+Thank you for using MacroPal!`}
+        buttons={[
+          {
+            text: "Close",
+            role: "cancel",
+            handler: () => setShowAbout(false),
+          },
+          {
+            text: "Support Developer",
+            handler: () => {
+              window.open("https://buymeacoffee.com/zanci19", "_blank");
+              setShowAbout(false);
+            },
+          },
+        ]}
+        onDidDismiss={() => setShowAbout(false)}
       />
 
       <IonToast

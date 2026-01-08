@@ -14,6 +14,7 @@
   --mp-border: rgba(15, 23, 42, 0.08);
   --mp-shadow-soft: 0 10px 40px rgba(15, 23, 42, 0.08);
   --mp-shadow-strong: 0 24px 70px rgba(15, 23, 42, 0.14);
+  --mp-chip-bg: rgba(244, 247, 251, 0.9);
 
   color-scheme: light;
 }
@@ -30,8 +31,42 @@ body.dark {
   --mp-border: rgba(255, 255, 255, 0.08);
   --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.35);
   --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.55);
+  --mp-chip-bg: rgba(31, 41, 55, 0.9);
 
   color-scheme: dark;
+}
+
+/* MacroPal Theme - Premium blue accent theme */
+body.macropal-theme {
+  --mp-bg: #0a0f1a;
+  --mp-surface: rgba(16, 24, 40, 0.85);
+  --mp-surface-muted: #111827;
+  --mp-surface-glow: 
+    radial-gradient(ellipse 800px 500px at 10% 0%, rgba(53, 123, 228, 0.25), transparent 50%),
+    radial-gradient(ellipse 600px 400px at 90% 10%, rgba(79, 140, 248, 0.2), transparent 45%),
+    radial-gradient(ellipse 500px 300px at 50% 100%, rgba(123, 178, 255, 0.12), transparent 40%);
+  --mp-text: #e7edf6;
+  --mp-text-muted: #9fb1c9;
+  --mp-border: rgba(53, 123, 228, 0.2);
+  --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.4);
+  --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.6);
+  --mp-chip-bg: rgba(31, 41, 55, 0.9);
+
+  color-scheme: dark;
+}
+
+/* Smooth theme transitions */
+html,
+body,
+ion-app,
+ion-content,
+ion-toolbar,
+ion-card,
+ion-item,
+ion-tab-bar,
+ion-chip,
+ion-badge {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 html,
@@ -58,11 +93,18 @@ ion-toolbar {
   --backdrop-filter: blur(18px);
   --color: var(--mp-text);
   border-bottom: 1px solid var(--mp-border);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-body.dark ion-toolbar {
+body.dark ion-toolbar,
+body.macropal-theme ion-toolbar {
   --background: rgba(8, 12, 20, 0.7);
   border-color: var(--mp-border);
+}
+
+ion-title {
+  color: var(--mp-text) !important;
+  font-weight: 700;
 }
 
 ion-card {
@@ -73,14 +115,20 @@ ion-card {
   box-shadow: var(--mp-shadow-soft);
   backdrop-filter: blur(12px);
   overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
 }
 
 ion-card-header {
   padding: 16px 18px 10px 18px;
 }
 
+ion-card-title {
+  color: var(--mp-text) !important;
+}
+
 ion-card-content {
   padding: 0 18px 18px 18px;
+  color: var(--mp-text);
 }
 
 ion-button {
@@ -90,6 +138,11 @@ ion-button {
   --box-shadow: 0 10px 30px rgba(53, 123, 228, 0.35);
   --color: #ffffff;
   font-weight: 700;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+ion-button:hover {
+  transform: translateY(-1px);
 }
 
 ion-button.button-outline,
@@ -116,6 +169,13 @@ ion-textarea {
   --highlight-color-focused: var(--ion-color-primary);
   border: 1px solid var(--mp-border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+ion-input:focus-within,
+ion-select:focus-within,
+ion-textarea:focus-within {
+  border-color: var(--mp-primary);
 }
 
 ion-item {
@@ -130,6 +190,14 @@ ion-item:hover {
   --background: var(--mp-primary-soft);
 }
 
+ion-label {
+  color: var(--mp-text) !important;
+}
+
+ion-label p {
+  color: var(--mp-text-muted) !important;
+}
+
 ion-tab-bar {
   --background: rgba(255, 255, 255, 0.75);
   --color: var(--mp-text-muted);
@@ -137,10 +205,12 @@ ion-tab-bar {
   backdrop-filter: blur(14px);
   border-top: 1px solid var(--mp-border);
   box-shadow: 0 -6px 40px rgba(15, 23, 42, 0.08);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-body.dark ion-tab-bar {
-  --background: rgba(8, 12, 20, 0.75);
+body.dark ion-tab-bar,
+body.macropal-theme ion-tab-bar {
+  --background: rgba(8, 12, 20, 0.85);
   box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.45);
 }
 
@@ -166,6 +236,11 @@ ion-chip {
   --color: var(--mp-text);
   --border-color: var(--mp-border);
   border-radius: 999px;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+ion-chip:hover {
+  transform: scale(1.02);
 }
 
 ion-badge {
@@ -183,4 +258,51 @@ ion-refresher-content .refresher-refreshing-icon {
 
 :root body.has-softkeys .mp-tabbar {
   padding-bottom: var(--softkey-inset);
+}
+
+/* Toast styling for all themes */
+ion-toast {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  --border-radius: 12px;
+  --box-shadow: var(--mp-shadow-soft);
+}
+
+/* Alert styling for all themes */
+ion-alert {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+}
+
+body.dark ion-alert .alert-title,
+body.dark ion-alert .alert-sub-title,
+body.dark ion-alert .alert-message,
+body.macropal-theme ion-alert .alert-title,
+body.macropal-theme ion-alert .alert-sub-title,
+body.macropal-theme ion-alert .alert-message {
+  color: var(--mp-text) !important;
+}
+
+body.dark ion-alert .alert-button,
+body.macropal-theme ion-alert .alert-button {
+  color: var(--mp-primary) !important;
+}
+
+/* Improved scrollbar for all themes */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mp-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mp-text-muted);
 }
