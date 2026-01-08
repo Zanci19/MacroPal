@@ -759,7 +759,7 @@ const AddFood: React.FC = () => {
         cleanUrl();
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
   useEffect(() => {
