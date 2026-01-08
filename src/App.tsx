@@ -175,16 +175,47 @@ const TabsShell: React.FC = () => {
 
 const App: React.FC = () => {
   useEffect(() => {
+    // Valid theme values
+    const validThemes = ["system", "light", "dark", "macropal"];
+    
+    // Check for saved theme preference first
+    const savedTheme = localStorage.getItem("mp_theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
 
-    const applyTheme = (isDark: boolean) => {
-      document.body.classList.toggle("dark", isDark);
+    const applyThemeFromStorage = () => {
+      document.body.classList.remove("dark", "macropal-theme");
+      
+      // Validate saved theme before applying
+      if (savedTheme && validThemes.includes(savedTheme)) {
+        if (savedTheme === "dark") {
+          document.body.classList.add("dark");
+        } else if (savedTheme === "light") {
+          // Light mode - no class needed
+        } else if (savedTheme === "macropal") {
+          document.body.classList.add("macropal-theme");
+        } else if (savedTheme === "system") {
+          // System default
+          if (prefersDark.matches) {
+            document.body.classList.add("dark");
+          }
+        }
+      } else {
+        // No valid preference saved - use system default
+        if (prefersDark.matches) {
+          document.body.classList.add("dark");
+        }
+      }
     };
 
-    applyTheme(prefersDark.matches);
+    applyThemeFromStorage();
 
+    // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {
-      applyTheme(event.matches);
+      const currentTheme = localStorage.getItem("mp_theme");
+      if (!currentTheme || currentTheme === "system" || !validThemes.includes(currentTheme)) {
+        document.body.classList.toggle("dark", event.matches);
+        document.body.classList.remove("macropal-theme");
+      }
     };
 
     prefersDark.addEventListener("change", listener);

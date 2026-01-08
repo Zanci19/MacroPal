@@ -61,6 +61,12 @@ import { handleError } from "../utils/handleError";
 import { computeGenericFoodBoost } from "../utils/genericFoodBoosts";
 import "./AddFood.css";
 
+// Import Swiper for swipeable nutrition pages
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+
 type OFFNutriments = {
   ["energy-kcal_100g"]?: number;
   ["energy-kcal_serving"]?: number;
@@ -80,6 +86,41 @@ type OFFNutriments = {
   ["salt_serving"]?: number;
   ["sodium_100g"]?: number;
   ["sodium_serving"]?: number;
+  // Vitamins
+  ["vitamin-a_100g"]?: number;
+  ["vitamin-c_100g"]?: number;
+  ["vitamin-d_100g"]?: number;
+  ["vitamin-e_100g"]?: number;
+  ["vitamin-k_100g"]?: number;
+  ["vitamin-b1_100g"]?: number;
+  ["vitamin-b2_100g"]?: number;
+  ["vitamin-b6_100g"]?: number;
+  ["vitamin-b12_100g"]?: number;
+  ["vitamin-b9_100g"]?: number;
+  ["folates_100g"]?: number;
+  ["niacin_100g"]?: number;
+  ["pantothenic-acid_100g"]?: number;
+  ["biotin_100g"]?: number;
+  // Minerals
+  ["calcium_100g"]?: number;
+  ["iron_100g"]?: number;
+  ["magnesium_100g"]?: number;
+  ["phosphorus_100g"]?: number;
+  ["potassium_100g"]?: number;
+  ["zinc_100g"]?: number;
+  ["copper_100g"]?: number;
+  ["manganese_100g"]?: number;
+  ["selenium_100g"]?: number;
+  ["iodine_100g"]?: number;
+  // Other
+  ["cholesterol_100g"]?: number;
+  ["trans-fat_100g"]?: number;
+  ["polyunsaturated-fat_100g"]?: number;
+  ["monounsaturated-fat_100g"]?: number;
+  ["omega-3-fat_100g"]?: number;
+  ["omega-6-fat_100g"]?: number;
+  ["caffeine_100g"]?: number;
+  ["alcohol_100g"]?: number;
 };
 
 type OFFSearchHit = {
@@ -2764,84 +2805,204 @@ const AddFood: React.FC = () => {
                         alignItems: "baseline",
                       }}
                     >
-                      <span>Nutrition total</span>
+                      <span>Nutrition info</span>
                       <IonText color="medium" style={{ fontSize: 12 }}>
                         {showServingCard
                           ? `${safeNum(servingsQty, 1)} × ${previewPerBaseLabel}`
                           : `${Math.max(1, weightQty)} g (base: ${previewPerBaseLabel})`}
                       </IonText>
                     </IonCardTitle>
+                    <IonText color="medium" style={{ fontSize: 11, marginTop: 4 }}>
+                      Swipe for micronutrients →
+                    </IonText>
                   </IonCardHeader>
-                  <IonCardContent>
-                    <div style={{ textAlign: "center", marginBottom: 8 }}>
-                      <div style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>
-                        {safeNum(previewTotal.calories, 0)} kcal
-                      </div>
-                    </div>
+                  <IonCardContent style={{ padding: "0 0 18px 0" }}>
+                    <Swiper
+                      modules={[Pagination]}
+                      pagination={{ clickable: true }}
+                      spaceBetween={0}
+                      slidesPerView={1}
+                      style={{ width: "100%" }}
+                    >
+                      {/* Page 1: Macronutrients */}
+                      <SwiperSlide>
+                        <div style={{ padding: "0 18px" }}>
+                          <div style={{ textAlign: "center", marginBottom: 8 }}>
+                            <div style={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>
+                              {safeNum(previewTotal.calories, 0)} kcal
+                            </div>
+                          </div>
 
-                    <IonGrid>
-                      <IonRow>
-                        <IonCol className="ion-text-center">
-                          <div style={{ fontSize: 12, opacity: 0.7 }}>Carbs</div>
-                          <div style={{ fontSize: 18, fontWeight: 700 }}>
-                            {safeNum(previewTotal.carbs, 1)} g
-                          </div>
-                        </IonCol>
-                        <IonCol className="ion-text-center">
-                          <div style={{ fontSize: 12, opacity: 0.7 }}>Protein</div>
-                          <div style={{ fontSize: 18, fontWeight: 700 }}>
-                            {safeNum(previewTotal.protein, 1)} g
-                          </div>
-                        </IonCol>
-                        <IonCol className="ion-text-center">
-                          <div style={{ fontSize: 12, opacity: 0.7 }}>Fat</div>
-                          <div style={{ fontSize: 18, fontWeight: 700 }}>
-                            {safeNum(previewTotal.fat, 1)} g
-                          </div>
-                        </IonCol>
-                      </IonRow>
-                    </IonGrid>
+                          <IonGrid>
+                            <IonRow>
+                              <IonCol className="ion-text-center">
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>Carbs</div>
+                                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                                  {safeNum(previewTotal.carbs, 1)} g
+                                </div>
+                              </IonCol>
+                              <IonCol className="ion-text-center">
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>Protein</div>
+                                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                                  {safeNum(previewTotal.protein, 1)} g
+                                </div>
+                              </IonCol>
+                              <IonCol className="ion-text-center">
+                                <div style={{ fontSize: 12, opacity: 0.7 }}>Fat</div>
+                                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                                  {safeNum(previewTotal.fat, 1)} g
+                                </div>
+                              </IonCol>
+                            </IonRow>
+                          </IonGrid>
 
-                    {hasExtraNutrients && (
-                      <IonGrid style={{ marginTop: 8 }}>
-                        <IonRow>
-                          {previewTotal.sugar !== undefined && (
-                            <IonCol className="ion-text-center">
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>Sugars</div>
-                              <div style={{ fontSize: 16, fontWeight: 600 }}>
-                                {safeNum(previewTotal.sugar, 1)} g
-                              </div>
-                            </IonCol>
+                          {hasExtraNutrients && (
+                            <IonGrid style={{ marginTop: 8 }}>
+                              <IonRow>
+                                {previewTotal.sugar !== undefined && (
+                                  <IonCol className="ion-text-center">
+                                    <div style={{ fontSize: 12, opacity: 0.7 }}>Sugars</div>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                                      {safeNum(previewTotal.sugar, 1)} g
+                                    </div>
+                                  </IonCol>
+                                )}
+                                {previewTotal.fiber !== undefined && (
+                                  <IonCol className="ion-text-center">
+                                    <div style={{ fontSize: 12, opacity: 0.7 }}>Fiber</div>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                                      {safeNum(previewTotal.fiber, 1)} g
+                                    </div>
+                                  </IonCol>
+                                )}
+                                {previewTotal.saturatedFat !== undefined && (
+                                  <IonCol className="ion-text-center">
+                                    <div style={{ fontSize: 12, opacity: 0.7 }}>Sat. fat</div>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                                      {safeNum(previewTotal.saturatedFat, 1)} g
+                                    </div>
+                                  </IonCol>
+                                )}
+                              </IonRow>
+                              {previewTotal.salt !== undefined && (
+                                <IonRow>
+                                  <IonCol className="ion-text-center">
+                                    <div style={{ fontSize: 12, opacity: 0.7 }}>Salt</div>
+                                    <div style={{ fontSize: 16, fontWeight: 600 }}>
+                                      {safeNum(previewTotal.salt, 2)} g
+                                    </div>
+                                  </IonCol>
+                                </IonRow>
+                              )}
+                            </IonGrid>
                           )}
-                          {previewTotal.fiber !== undefined && (
-                            <IonCol className="ion-text-center">
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>Fiber</div>
-                              <div style={{ fontSize: 16, fontWeight: 600 }}>
-                                {safeNum(previewTotal.fiber, 1)} g
+                        </div>
+                      </SwiperSlide>
+
+                      {/* Page 2: Micronutrients (Vitamins & Minerals) */}
+                      <SwiperSlide>
+                        <div style={{ padding: "0 18px" }}>
+                          <div style={{ textAlign: "center", marginBottom: 12 }}>
+                            <div style={{ fontSize: 16, fontWeight: 700 }}>
+                              Vitamins & Minerals
+                            </div>
+                            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                              Per {showServingCard ? `${safeNum(servingsQty, 1)} serving(s)` : `${Math.max(1, weightQty)} g`}
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const nutri = selectedFood?.nutriments;
+                            const factor = showServingCard ? servingsQty : (weightQty / 100);
+                            
+                            const micronutrients = [
+                              { key: "vitamin-a_100g", label: "Vitamin A", unit: "µg" },
+                              { key: "vitamin-c_100g", label: "Vitamin C", unit: "mg" },
+                              { key: "vitamin-d_100g", label: "Vitamin D", unit: "µg" },
+                              { key: "vitamin-e_100g", label: "Vitamin E", unit: "mg" },
+                              { key: "vitamin-k_100g", label: "Vitamin K", unit: "µg" },
+                              { key: "vitamin-b1_100g", label: "B1 (Thiamin)", unit: "mg" },
+                              { key: "vitamin-b2_100g", label: "B2 (Riboflavin)", unit: "mg" },
+                              { key: "vitamin-b6_100g", label: "Vitamin B6", unit: "mg" },
+                              { key: "vitamin-b12_100g", label: "Vitamin B12", unit: "µg" },
+                              { key: "folates_100g", label: "Folate", unit: "µg" },
+                              { key: "niacin_100g", label: "Niacin (B3)", unit: "mg" },
+                              { key: "calcium_100g", label: "Calcium", unit: "mg" },
+                              { key: "iron_100g", label: "Iron", unit: "mg" },
+                              { key: "magnesium_100g", label: "Magnesium", unit: "mg" },
+                              { key: "phosphorus_100g", label: "Phosphorus", unit: "mg" },
+                              { key: "potassium_100g", label: "Potassium", unit: "mg" },
+                              { key: "zinc_100g", label: "Zinc", unit: "mg" },
+                              { key: "copper_100g", label: "Copper", unit: "mg" },
+                              { key: "manganese_100g", label: "Manganese", unit: "mg" },
+                              { key: "selenium_100g", label: "Selenium", unit: "µg" },
+                              { key: "iodine_100g", label: "Iodine", unit: "µg" },
+                              { key: "cholesterol_100g", label: "Cholesterol", unit: "mg" },
+                              { key: "trans-fat_100g", label: "Trans Fat", unit: "g" },
+                              { key: "polyunsaturated-fat_100g", label: "Polyunsat. Fat", unit: "g" },
+                              { key: "monounsaturated-fat_100g", label: "Monounsat. Fat", unit: "g" },
+                              { key: "omega-3-fat_100g", label: "Omega-3", unit: "g" },
+                              { key: "omega-6-fat_100g", label: "Omega-6", unit: "g" },
+                              { key: "caffeine_100g", label: "Caffeine", unit: "mg" },
+                            ] as const;
+
+                            // Type-safe nutrient access helper
+                            const getNutrientValue = (key: string): number | undefined => {
+                              if (!nutri) return undefined;
+                              return nutri[key as keyof OFFNutriments];
+                            };
+
+                            const availableMicros = micronutrients.filter(
+                              (m) => {
+                                const val = getNutrientValue(m.key);
+                                return val !== undefined && val > 0;
+                              }
+                            );
+
+                            if (availableMicros.length === 0) {
+                              return (
+                                <div style={{ textAlign: "center", padding: "20px 0", opacity: 0.6 }}>
+                                  <p style={{ margin: 0 }}>No micronutrient data available for this food.</p>
+                                  <p style={{ margin: "8px 0 0", fontSize: 12 }}>
+                                    Data varies by product in the OpenFoodFacts database.
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div style={{ 
+                                display: "grid", 
+                                gridTemplateColumns: "repeat(2, 1fr)", 
+                                gap: 8,
+                                maxHeight: 200,
+                                overflowY: "auto"
+                              }}>
+                                {availableMicros.map((m) => {
+                                  const val = (getNutrientValue(m.key) || 0) * factor;
+                                  return (
+                                    <div 
+                                      key={m.key} 
+                                      style={{ 
+                                        padding: "8px 10px",
+                                        background: "var(--mp-surface-muted)",
+                                        borderRadius: 10,
+                                        fontSize: 13
+                                      }}
+                                    >
+                                      <div style={{ opacity: 0.7, fontSize: 11 }}>{m.label}</div>
+                                      <div style={{ fontWeight: 600 }}>
+                                        {safeNum(val, 2)} {m.unit}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
-                            </IonCol>
-                          )}
-                          {previewTotal.saturatedFat !== undefined && (
-                            <IonCol className="ion-text-center">
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>Sat. fat</div>
-                              <div style={{ fontSize: 16, fontWeight: 600 }}>
-                                {safeNum(previewTotal.saturatedFat, 1)} g
-                              </div>
-                            </IonCol>
-                          )}
-                        </IonRow>
-                        {previewTotal.salt !== undefined && (
-                          <IonRow>
-                            <IonCol className="ion-text-center">
-                              <div style={{ fontSize: 12, opacity: 0.7 }}>Salt</div>
-                              <div style={{ fontSize: 16, fontWeight: 600 }}>
-                                {safeNum(previewTotal.salt, 2)} g
-                              </div>
-                            </IonCol>
-                          </IonRow>
-                        )}
-                      </IonGrid>
-                    )}
+                            );
+                          })()}
+                        </div>
+                      </SwiperSlide>
+                    </Swiper>
                   </IonCardContent>
                 </IonCard>
 

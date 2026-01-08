@@ -541,3 +541,21 @@ ion-content {
   font-size: 20px;
   opacity: .95;
 }
+
+/* Fix for tabbed content to prevent bottom nav from covering snacks dropdown */
+.tabbed-content {
+  --padding-bottom: calc(80px + var(--softkey-inset, 0px));
+}
+
+.tabbed-content::part(scroll) {
+  padding-bottom: calc(80px + var(--softkey-inset, 0px));
+}
+
+/* Ensure action sheets appear above the tab bar */
+ion-action-sheet {
+  --backdrop-opacity: 0.4;
+}
+
+ion-action-sheet .action-sheet-wrapper {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset, 0px));
+}
