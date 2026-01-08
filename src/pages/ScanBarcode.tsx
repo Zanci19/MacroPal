@@ -17,13 +17,13 @@ import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import { trackEvent } from "../firebase";
 import "./ScanBarcode.css";
 
-const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
+type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 
-function useMealFromQuery(location: ReturnType<typeof useLocation>) {
+function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
   const p = new URLSearchParams(location.search);
   const m = (p.get("meal") || "breakfast").toLowerCase();
-  return (["breakfast", "lunch", "dinner", "snacks"] as const).includes(m as any)
-    ? (m as any)
+  return (["breakfast", "lunch", "dinner", "snacks"] as const).includes(m as MealKey)
+    ? (m as MealKey)
     : "breakfast";
 }
 

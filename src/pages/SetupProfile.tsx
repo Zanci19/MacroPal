@@ -55,7 +55,7 @@ const computeTargets = (
 ): { calories: number; proteinG: number; fatG: number; carbsG: number } | null => {
   if (!age || !weight || !height) return null;
 
-  let bmr =
+  const bmr =
     gender === "male"
       ? 10 * weight + 6.25 * height - 5 * age + 5
       : 10 * weight + 6.25 * height - 5 * age - 161;

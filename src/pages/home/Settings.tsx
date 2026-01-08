@@ -34,7 +34,7 @@ import {
   deleteUser,
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
-import { doc, getDoc, updateDoc, setDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import "./Settings.css";
 import { ensureGoogleFitAccess, isGoogleFitSupported } from "../../utils/googleFit";
 

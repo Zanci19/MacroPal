@@ -175,12 +175,12 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
     }
 
     const json = await r.json();
-    let products: any[] = Array.isArray(json?.products) ? json.products : [];
+    const products: Record<string, unknown>[] = Array.isArray(json?.products) ? json.products : [];
 
     // Lightweight relevance boost (product_name contains the query)
     products.sort((a, b) => {
-      const na = (a.product_name || "").toLowerCase();
-      const nb = (b.product_name || "").toLowerCase();
+      const na = (String(a.product_name || "")).toLowerCase();
+      const nb = (String(b.product_name || "")).toLowerCase();
       const scoreA = na.includes(qLower) ? 1 : 0;
       const scoreB = nb.includes(qLower) ? 1 : 0;
       return scoreB - scoreA;
@@ -189,11 +189,12 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
     res.set("Content-Type", "application/json");
     setCaching(res);
     return void res.status(200).send(JSON.stringify({ ...json, products }));
-  } catch (e: any) {
-    const aborted = e?.name === "AbortError";
-    console.error("offSearch failed:", aborted ? "timeout" : e);
+  } catch (e: unknown) {
+    const error = e instanceof Error ? e : new Error(String(e));
+    const aborted = error.name === "AbortError";
+    console.error("offSearch failed:", aborted ? "timeout" : error);
     res
       .status(aborted ? 504 : 502)
-      .json({ error: aborted ? "upstream_timeout" : "upstream_bad_gateway", message: e?.message ?? "unknown" });
+      .json({ error: aborted ? "upstream_timeout" : "upstream_bad_gateway", message: error.message ?? "unknown" });
   }
 });

@@ -31,7 +31,8 @@ const Login: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
-  const [failedAttempts, setFailedAttempts] = useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_failedAttempts, setFailedAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
 
   const [toast, setToast] = React.useState<{

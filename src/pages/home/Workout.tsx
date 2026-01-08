@@ -122,9 +122,28 @@ const Workout: React.FC = () => {
     }
   }, [profileLoading, uid, profile, history]);
 
+  const syncCaloriesFromPreset = useCallback((
+    presetId: string,
+    durationOverride?: number,
+    keepNote?: boolean
+  ) => {
+    const preset = getActivityPreset(presetId);
+    const duration = durationOverride ?? preset.defaultMinutes;
+    const calories = estimateCaloriesBurned(preset, weightKg, heightCm, duration);
+
+    setDraft((d) => ({
+      ...d,
+      title: preset.label,
+      durationMinutes: duration,
+      intensity: preset.intensity,
+      calories,
+      note: keepNote ? d.note : d.note || preset.blurb || "",
+    }));
+  }, [weightKg, heightCm]);
+
   useEffect(() => {
     syncCaloriesFromPreset(selectedPresetId, draft.durationMinutes, true);
-  }, [selectedPresetId, weightKg, heightCm]);
+  }, [selectedPresetId, syncCaloriesFromPreset, draft.durationMinutes]);
 
   useEffect(() => {
     if (!uid) return;
@@ -162,25 +181,6 @@ const Workout: React.FC = () => {
       ),
     [activities]
   );
-
-  const syncCaloriesFromPreset = (
-    presetId: string,
-    durationOverride?: number,
-    keepNote?: boolean
-  ) => {
-    const preset = getActivityPreset(presetId);
-    const duration = durationOverride ?? preset.defaultMinutes;
-    const calories = estimateCaloriesBurned(preset, weightKg, heightCm, duration);
-
-    setDraft((d) => ({
-      ...d,
-      title: preset.label,
-      durationMinutes: duration,
-      intensity: preset.intensity,
-      calories,
-      note: keepNote ? d.note : d.note || preset.blurb || "",
-    }));
-  };
 
   const goRelativeDay = (delta: number) => {
     const next = clampDateKeyToToday(shiftDateKey(activeDateKey, delta));

@@ -156,7 +156,8 @@ const DISH_PENALTY_REGEX =
  */
 export function computeGenericFoodBoost(
   nameNorm: string,
-  brandNorm: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _brandNorm: string
 ): number {
   const tokens = nameNorm.split(" ").filter(Boolean);
   let boost = 0;

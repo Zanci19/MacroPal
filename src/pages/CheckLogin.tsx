@@ -212,13 +212,4 @@ const CheckLogin: React.FC = () => {
   );
 };
 
-<video
-  src={"/assets/start_bg_loop.mp4"}
-  muted
-  playsInline
-  preload="auto"
-  controls={false}
-  style={{ display: "none" }}
-/>
-
 export default CheckLogin;

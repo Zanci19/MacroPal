@@ -4,7 +4,6 @@ import {
   IonHeader,
   IonToolbar,
   IonTitle,
-  IonButtons,
   IonContent,
   IonCard,
   IonCardHeader,
@@ -24,7 +23,6 @@ import {
   IonActionSheet,
   IonReorderGroup,
   IonReorder,
-  IonAlert,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -240,7 +238,6 @@ const Home: React.FC = () => {
     snacks: [],
   });
 
-  const [workouts, setWorkouts] = useState<WorkoutEntry[]>([]);
   const [workoutCalories, setWorkoutCalories] = useState<number>(0);
 
   const [streak, setStreak] = useState<number>(0);
@@ -348,20 +345,18 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!uid) return;
-    setWorkouts([]);
     setWorkoutCalories(0);
 
     const ref = doc(db, "users", uid, "workouts", activeDateKey);
     const unsub = onSnapshot(ref, (snap) => {
       const raw = snap.data() as WorkoutDayDoc | undefined;
       const activities = raw?.activities ?? [];
-      setWorkouts(activities);
 
       const totalBonus = activities.reduce((sum, activity) => {
         const calories =
           typeof activity?.calories === "number"
             ? activity.calories
-            : (activity as any)?.caloriesBurned ?? 0;
+            : (activity as Record<string, unknown>)?.caloriesBurned ?? 0;
         return sum + safeNum(calories);
       }, 0);
 
@@ -402,15 +397,15 @@ const Home: React.FC = () => {
   const caloriesNeeded = useMemo(() => {
     if (!profile) return null;
 
-    const stored = (profile as any).caloriesTarget as number | undefined;
+    const stored = (profile as { caloriesTarget?: number }).caloriesTarget;
     if (typeof stored === "number" && Number.isFinite(stored) && stored > 0) {
       return stored;
     }
 
-    const { age, weight, height, gender, goal, activity } = profile as any;
+    const { age, weight, height, gender, goal, activity } = profile;
     if (!age || !weight || !height || !gender) return null;
 
-    let bmr =
+    const bmr =
       gender === "male"
         ? 10 * weight + 6.25 * height - 5 * age + 5
         : 10 * weight + 6.25 * height - 5 * age - 161;
@@ -481,9 +476,7 @@ const Home: React.FC = () => {
   const macroTargets = useMemo(() => {
     if (!profile || !caloriesNeeded) return null;
 
-    const stored = (profile as any).macroTargets as
-      | { proteinG?: number; fatG?: number; carbsG?: number }
-      | undefined;
+    const stored = (profile as { macroTargets?: { proteinG?: number; fatG?: number; carbsG?: number } }).macroTargets;
 
     if (
       stored &&
@@ -498,7 +491,7 @@ const Home: React.FC = () => {
       };
     }
 
-    const weight = (profile as any).weight as number | null;
+    const { weight } = profile;
     if (!weight) return null;
 
     const proteinG = Math.round(1.8 * weight);
@@ -731,10 +724,11 @@ const Home: React.FC = () => {
         yesterday: yesterdayKey,
         meal,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
       setToast({
         open: true,
-        message: e?.message || "Could not copy from yesterday.",
+        message: error.message || "Could not copy from yesterday.",
       });
 
       trackEvent("meal_copy_from_yesterday_error", {
@@ -742,7 +736,7 @@ const Home: React.FC = () => {
         today: todayKeyValue,
         yesterday: yesterdayKey,
         meal,
-        error: e?.message || String(e),
+        error: error.message || String(e),
       });
     } finally {
       setCopyMenuMeal(null);
@@ -874,30 +868,31 @@ const Home: React.FC = () => {
         today: todayKeyValue,
         yesterday: yesterdayKey,
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
       setToast({
         open: true,
-        message: e?.message || "Could not copy entire day.",
+        message: error.message || "Could not copy entire day.",
       });
 
       trackEvent("day_copy_from_yesterday_error", {
         uid,
         today: todayKeyValue,
         yesterday: yesterdayKey,
-        error: e?.message || String(e),
+        error: error.message || String(e),
       });
     } finally {
       setDayMenuOpen(false);
     }
   };
 
-  const handleReorder = async (meal: MealKey, ev: CustomEvent) => {
+  const handleReorder = async (meal: MealKey, ev: CustomEvent<{ from: number; to: number; complete: () => void }>) => {
     if (!uid) {
-      (ev as any).detail.complete();
+      ev.detail.complete();
       return;
     }
-    const from = (ev as any).detail.from as number;
-    const to = (ev as any).detail.to as number;
+    const from = ev.detail.from;
+    const to = ev.detail.to;
 
     trackEvent("meal_reorder_attempt", {
       uid,
@@ -915,14 +910,14 @@ const Home: React.FC = () => {
       return { ...prev, [meal]: current };
     });
 
-    (ev as any).detail.complete();
+    ev.detail.complete();
 
     try {
       await runTransaction(db, async (tx) => {
         const ref = doc(db, "users", uid, "foods", activeDateKey);
         const snap = await tx.get(ref);
         const data = snap.data() || {};
-        const arr: DiaryEntry[] = [...(data[meal] || [])];
+        const arr: DiaryEntry[] = [...((data as Partial<DayDiaryDoc>)[meal] || [])];
         if (from < 0 || from >= arr.length) return;
         const [moved] = arr.splice(from, 1);
         arr.splice(to, 0, moved);
@@ -1024,7 +1019,7 @@ const Home: React.FC = () => {
     dayData.snacks.length >
     0;
 
-  const hasEverLoggedFood = !!(profile as any)?.hasEverLoggedFood;
+  const hasEverLoggedFood = !!(profile as { hasEverLoggedFood?: boolean })?.hasEverLoggedFood;
 
   const shuffleTip = () => {
     setTipIndex((prev) => {
@@ -1078,13 +1073,14 @@ const Home: React.FC = () => {
         kcalConsumed,
         kcalGoal,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to copy summary", err);
       setToast({ open: true, message: "Could not copy summary." });
+      const error = err instanceof Error ? err : new Error(String(err));
       trackEvent("day_summary_copy_failed", {
         uid,
         date: activeDateKey,
-        error: err?.message || String(err),
+        error: error.message || String(err),
       });
     }
   };
@@ -1092,7 +1088,7 @@ const Home: React.FC = () => {
   useEffect(() => {
     if (!uid) return;
     if (!anyItems) return;
-    if ((profile as any)?.hasEverLoggedFood === true) return;
+    if ((profile as { hasEverLoggedFood?: boolean })?.hasEverLoggedFood === true) return;
 
     const ref = doc(db, "users", uid);
     updateDoc(ref, { "profile.hasEverLoggedFood": true })
@@ -1433,10 +1429,10 @@ const Home: React.FC = () => {
                     <IonList>
                       <IonReorderGroup
                         disabled={false}
-                        onIonItemReorder={(ev) => handleReorder(meal, ev as any)}
+                        onIonItemReorder={(ev) => handleReorder(meal, ev as CustomEvent<{ from: number; to: number; complete: () => void }>)}
                       >
                         {items.map((it, idx) => {
-                          const t: any = it.total || {
+                          const t = it.total || {
                             calories: 0,
                             carbs: 0,
                             protein: 0,
