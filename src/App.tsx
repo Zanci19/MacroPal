@@ -81,7 +81,10 @@ const TabsShell: React.FC = () => {
   const location = useLocation();
   const previousTabIndexRef = useRef<number>(2); // Start with "home" index
   const routerOutletRef = useRef<HTMLIonRouterOutletElement>(null);
-  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationTimeoutRef = useRef<number | null>(null);
+
+  // Animation duration in milliseconds (matches CSS animation duration)
+  const ANIMATION_DURATION_MS = 350;
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -109,7 +112,7 @@ const TabsShell: React.FC = () => {
 
     if (currentTabIndex !== previousTabIndex && currentTabIndex !== -1 && routerOutletRef.current) {
       // Clear any existing animation timeout
-      if (animationTimeoutRef.current) {
+      if (animationTimeoutRef.current !== null) {
         clearTimeout(animationTimeoutRef.current);
       }
 
@@ -127,9 +130,9 @@ const TabsShell: React.FC = () => {
       outlet.classList.add(`animate-slide-${direction}`);
 
       // Remove animation class after animation completes
-      animationTimeoutRef.current = setTimeout(() => {
+      animationTimeoutRef.current = window.setTimeout(() => {
         outlet.classList.remove(`animate-slide-${direction}`);
-      }, 350);
+      }, ANIMATION_DURATION_MS);
 
       previousTabIndexRef.current = currentTabIndex;
     }

@@ -38,8 +38,7 @@ ion-router-outlet#tabs.animate-slide-right ion-page.ion-page-invisible {
   }
 }
 
-/* Optimize performance */
-ion-page {
+/* Optimize performance - scope to tabs context only */
+ion-router-outlet#tabs ion-page {
   will-change: transform, opacity;
 }
-
