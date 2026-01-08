@@ -8,7 +8,9 @@ import {
   IonIcon,
   IonLabel,
   setupIonicReact,
+  createAnimation,
 } from "@ionic/react";
+import type { AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
@@ -63,6 +65,9 @@ import UpdateGate from "./UpdateGate";
 
 setupIonicReact();
 
+const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
+const ANIMATION_DURATION_MS = 350;
+
 const AnalyticsRouteTracker: React.FC = () => {
   const location = useLocation();
 
@@ -79,12 +84,7 @@ const AnalyticsRouteTracker: React.FC = () => {
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
-  const previousTabIndexRef = useRef<number>(2); // Start with "home" index
-  const routerOutletRef = useRef<HTMLIonRouterOutletElement>(null);
-  const animationTimeoutRef = useRef<number | null>(null);
-
-  // Animation duration in milliseconds (matches CSS animation duration)
-  const ANIMATION_DURATION_MS = 350;
+  const previousTabIndexRef = useRef<number>(TAB_ORDER.indexOf("home"));
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -100,47 +100,59 @@ const TabsShell: React.FC = () => {
 
   const activeTab = getActiveTab();
 
+  const getTabIndex = (tabName: string) => TAB_ORDER.indexOf(tabName);
+
+  const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
+    const currentTabIndex = getTabIndex(activeTab);
+    const previousTabIndex = previousTabIndexRef.current;
+
+    const isForward = currentTabIndex === -1 || previousTabIndex === -1
+      ? opts.direction !== "back"
+      : currentTabIndex >= previousTabIndex;
+
+    const enteringEl = opts.enteringEl;
+    const leavingEl = opts.leavingEl;
+    const directionFactor = isForward ? 1 : -1;
+
+    const enteringAnimation = createAnimation()
+      .addElement(enteringEl)
+      .duration(ANIMATION_DURATION_MS)
+      .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+      .beforeRemoveClass("ion-page-invisible")
+      .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
+      .fromTo("opacity", 0.2, 1);
+
+    const leavingAnimation =
+      leavingEl &&
+      createAnimation()
+        .addElement(leavingEl)
+        .duration(ANIMATION_DURATION_MS)
+        .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+        .fromTo("transform", "translateX(0)", `translateX(${directionFactor * -30}%)`)
+        .fromTo("opacity", 1, 0.4);
+
+    const animation = createAnimation().duration(ANIMATION_DURATION_MS).addAnimation(enteringAnimation);
+
+    if (leavingAnimation) {
+      animation.addAnimation(leavingAnimation);
+    }
+
+    return animation;
+  };
+
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
 
-  // Handle slide animation when tab changes
   useEffect(() => {
-    // Tab order: analytics(0), planner(1), home(2), workout(3), settings(4)
-    const tabOrder = ["analytics", "planner", "home", "workout", "settings"];
-    const currentTabIndex = tabOrder.indexOf(activeTab);
-    const previousTabIndex = previousTabIndexRef.current;
-
-    if (currentTabIndex !== previousTabIndex && currentTabIndex !== -1 && routerOutletRef.current) {
-      // Clear any existing animation timeout
-      if (animationTimeoutRef.current !== null) {
-        clearTimeout(animationTimeoutRef.current);
-      }
-
-      // Determine slide direction
-      const direction = currentTabIndex > previousTabIndex ? "right" : "left";
-      const outlet = routerOutletRef.current;
-      
-      // Remove any existing animation classes
-      outlet.classList.remove("animate-slide-left", "animate-slide-right");
-      
-      // Force a browser reflow to ensure CSS class removal is processed before adding the new animation class
-      void outlet.offsetWidth;
-      
-      // Add the new animation class
-      outlet.classList.add(`animate-slide-${direction}`);
-
-      // Remove animation class after animation completes
-      animationTimeoutRef.current = window.setTimeout(() => {
-        outlet.classList.remove(`animate-slide-${direction}`);
-      }, ANIMATION_DURATION_MS);
-
+    const currentTabIndex = getTabIndex(activeTab);
+    if (currentTabIndex !== -1) {
       previousTabIndexRef.current = currentTabIndex;
     }
   }, [activeTab]);
 
   return (
     <IonTabs>
-      <IonRouterOutlet id="tabs" ref={routerOutletRef}>
+      <IonRouterOutlet id="tabs" animation={tabAnimation}>
         <Route exact path="/app/analytics" component={Analytics} />
         <Route exact path="/app/planner" component={Planner} />
         <Route exact path="/app/home" component={Home} />
