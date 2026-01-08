@@ -1,0 +1,45 @@
+/* Tab slide animation styles - Applied to ion-page elements */
+
+/* Ensure smooth transitions for tab navigation */
+ion-router-outlet#tabs {
+  position: relative;
+}
+
+/* Page enter animations based on slide direction */
+ion-router-outlet#tabs.animate-slide-left ion-page.ion-page-invisible {
+  animation: slidePageFromRight 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+ion-router-outlet#tabs.animate-slide-right ion-page.ion-page-invisible {
+  animation: slidePageFromLeft 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Keyframes for sliding page in from the right (moving to left tab) */
+@keyframes slidePageFromRight {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Keyframes for sliding page in from the left (moving to right tab) */
+@keyframes slidePageFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Optimize performance */
+ion-page {
+  will-change: transform, opacity;
+}
+
