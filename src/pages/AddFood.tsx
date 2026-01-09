@@ -517,6 +517,7 @@ const AddFood: React.FC = () => {
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const resultsListRef = useRef<HTMLIonListElement | null>(null);
+  const prevResultsLengthRef = useRef<number>(0);
 
   const per100g = useMemo(
     () => macrosPer100g(selectedFood?.nutriments),
@@ -808,7 +809,7 @@ const AddFood: React.FC = () => {
   }, [location.search, history, meal, dateKey]);
 
   useEffect(() => {
-    if (!loading && results.length > 0) {
+    if (!loading && results.length > 0 && results.length !== prevResultsLengthRef.current) {
       requestAnimationFrame(() => {
         resultsListRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -816,6 +817,7 @@ const AddFood: React.FC = () => {
         });
       });
     }
+    prevResultsLengthRef.current = results.length;
   }, [loading, results.length]);
 
   useEffect(() => {
@@ -1094,12 +1096,12 @@ const AddFood: React.FC = () => {
   };
 
   const hideKeyboard = () => {
-    Keyboard.hide().catch(() => {});
+    Keyboard.hide().catch((err) => console.warn("Keyboard hide failed", err));
     if (searchInputRef.current?.getInputElement) {
       searchInputRef.current
         .getInputElement()
         .then((el) => el?.blur())
-        .catch(() => {});
+        .catch((err) => console.warn("Input blur failed", err));
     }
   };
 
