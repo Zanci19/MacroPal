@@ -517,6 +517,7 @@ const AddFood: React.FC = () => {
 
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
+  const contentRef = useRef<HTMLIonContentElement | null>(null);
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const resultsListRef = useRef<HTMLIonListElement | null>(null);
@@ -812,24 +813,28 @@ const AddFood: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
-  const ensureResultsVisible = () => {
+  const ensureResultsVisible = async () => {
     const firstResult = results[0];
     const firstKey = firstResult?.code || firstResult?.product_name || null;
     const changed =
       results.length !== prevResultsLengthRef.current || firstKey !== prevResultsKeyRef.current;
     if (results.length > 0 && changed) {
       const rect = resultsListRef.current?.getBoundingClientRect();
-      if (rect) {
+      const scrollEl = await contentRef.current?.getScrollElement();
+      const headerEl = document.querySelector("ion-header");
+      const headerHeight = headerEl?.getBoundingClientRect().height ?? 0;
+      const topOffset = headerHeight + 12;
+      if (rect && scrollEl) {
         const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        const visibleHeight =
+          Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, topOffset);
         const alreadyInView =
           visibleHeight >= Math.min(rect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
           requestAnimationFrame(() => {
-            resultsListRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
+            const scrollRect = scrollEl.getBoundingClientRect();
+            const targetTop = Math.max(0, rect.top - scrollRect.top + scrollEl.scrollTop - topOffset);
+            contentRef.current?.scrollToPoint(0, targetTop, 300);
           });
         }
       }
@@ -840,7 +845,7 @@ const AddFood: React.FC = () => {
 
   useEffect(() => {
     if (!loading) {
-      ensureResultsVisible();
+      void ensureResultsVisible();
     }
   }, [loading, results]);
 
@@ -2280,7 +2285,7 @@ const AddFood: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding add-food-page" fullscreen>
+      <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}
