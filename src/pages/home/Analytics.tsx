@@ -67,6 +67,7 @@ import type {
   WeighInEntry,
 } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
+import { useHistory } from "react-router";
 
 import "./Analytics.css";
 
@@ -140,6 +141,7 @@ function movingAvg(vals: number[], w: number) {
    Component
    ============================ */
 const Analytics: React.FC = () => {
+  const history = useHistory();
   const { uid, loading: authLoading, profile } = useProfile();
 
   const [loading, setLoading] = useState(true); // loading for analytics data
@@ -462,31 +464,9 @@ const Analytics: React.FC = () => {
     ? weightView[weightView.length - 1]
     : null;
 
-  const targetComparison = useMemo(() => {
-    if (!caloriesTarget || !macroTargets) return [];
-    return [
-      {
-        metric: "Calories (kcal)",
-        average: avg.calories,
-        target: caloriesTarget,
-      },
-      {
-        metric: "Carbs (g)",
-        average: Math.round(avg.carbs),
-        target: macroTargets.carbsG,
-      },
-      {
-        metric: "Protein (g)",
-        average: Math.round(avg.protein),
-        target: macroTargets.proteinG,
-      },
-      {
-        metric: "Fat (g)",
-        average: Math.round(avg.fat),
-        target: macroTargets.fatG,
-      },
-    ];
-  }, [avg, caloriesTarget, macroTargets]);
+  const viewDay = (date: string) => {
+    history.push(`/app/home?date=${date}`);
+  };
 
   // export
   const exportCSV = () => {
@@ -993,38 +973,40 @@ const Analytics: React.FC = () => {
                       </IonRow>
                     </IonGrid>
 
-                    {/* Targets vs average */}
+                    {/* Calorie target */}
                     <IonCard>
                       <IonCardHeader>
                         <IonCardTitle className="mp-card-title">
-                          Targets vs average
+                          Calorie target
                           <IonChip color="tertiary" style={{ marginLeft: 8 }}>
                             <IonIcon icon={barChartOutline} />
-                            &nbsp;Goals
+                            &nbsp;Goal
                           </IonChip>
                         </IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Compare your average day to your plan
+                          Your daily calorie target
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        {targetComparison.length ? (
-                          <div style={{ width: "100%", height: 260 }}>
+                        {caloriesTarget ? (
+                          <div style={{ width: "100%", height: 220 }}>
                             <ResponsiveContainer>
-                              <BarChart data={targetComparison}>
+                              <BarChart
+                                data={[
+                                  {
+                                    metric: "Calories",
+                                    target: caloriesTarget,
+                                  },
+                                ]}
+                              >
                                 <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                                 <XAxis dataKey="metric" />
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
                                 <Bar
-                                  dataKey="average"
-                                  name="Average"
-                                  fill={palette[0]}
-                                />
-                                <Bar
                                   dataKey="target"
-                                  name="Target"
+                                  name="Target (kcal)"
                                   fill={palette[3]}
                                 />
                               </BarChart>
@@ -1032,8 +1014,62 @@ const Analytics: React.FC = () => {
                           </div>
                         ) : (
                           <div style={{ fontSize: 14, opacity: 0.75 }}>
-                            Set your calorie and macro targets in your profile to
-                            compare your averages.
+                            Set a calorie target in your profile to see it here.
+                          </div>
+                        )}
+                      </IonCardContent>
+                    </IonCard>
+
+                    {/* Macro targets */}
+                    <IonCard>
+                      <IonCardHeader>
+                        <IonCardTitle className="mp-card-title">
+                          Macro targets
+                          <IonChip color="secondary" style={{ marginLeft: 8 }}>
+                            <IonIcon icon={analyticsOutline} />
+                            &nbsp;Goals
+                          </IonChip>
+                        </IonCardTitle>
+                        <IonCardSubtitle className="mp-card-subtitle">
+                          Carbohydrates, protein, and fat targets
+                        </IonCardSubtitle>
+                      </IonCardHeader>
+                      <IonCardContent>
+                        {macroTargets ? (
+                          <div style={{ width: "100%", height: 260 }}>
+                            <ResponsiveContainer>
+                              <BarChart
+                                data={[
+                                  {
+                                    metric: "Carbohydrates",
+                                    target: macroTargets.carbsG,
+                                  },
+                                  {
+                                    metric: "Protein",
+                                    target: macroTargets.proteinG,
+                                  },
+                                  {
+                                    metric: "Fat",
+                                    target: macroTargets.fatG,
+                                  },
+                                ]}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                                <XAxis dataKey="metric" />
+                                <YAxis />
+                                <Tooltip />
+                                <Legend />
+                                <Bar
+                                  dataKey="target"
+                                  name="Target (g)"
+                                  fill={palette[1]}
+                                />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 14, opacity: 0.75 }}>
+                            Set macro targets in your profile to see them here.
                           </div>
                         )}
                       </IonCardContent>
@@ -1187,8 +1223,9 @@ const Analytics: React.FC = () => {
                               key={d.date}
                               style={{
                                 display: "grid",
-                                gridTemplateColumns: "110px 1fr",
+                                gridTemplateColumns: "110px 1fr auto",
                                 gap: 10,
+                                alignItems: "center",
                               }}
                             >
                               <div style={{ fontWeight: 700 }}>{d.date}</div>
@@ -1198,6 +1235,13 @@ const Analytics: React.FC = () => {
                                 {d.protein.toFixed(0)} g · Fat{" "}
                                 {d.fat.toFixed(0)} g
                               </div>
+                              <IonButton
+                                size="small"
+                                fill="outline"
+                                onClick={() => viewDay(d.date)}
+                              >
+                                View day
+                              </IonButton>
                             </div>
                           ))}
                         </div>
