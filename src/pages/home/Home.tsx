@@ -68,106 +68,8 @@ function safeNum(n: unknown, dp = 2): number {
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
 const WELLNESS_TIPS = [
-  "Add something nourishing to your next meal — it doesn't have to be perfect.",
-  "Your plate doesn’t need to be fancy; simple meals fuel well.",
-  "Include foods that help you feel stable and energized.",
-  "A little extra fiber can make meals more satisfying.",
-  "Whole foods help your energy last longer, but all foods fit.",
-  "Some days are heavy on carbs, some on protein — balance comes over time.",
-  "Frozen fruits and veggies count just as much as fresh.",
-  "Healthy eating is about patterns, not single meals.",
-  "Choose foods that help your mood, not stress it.",
-  "Meals don’t need rules — just awareness and kindness.",
-  "Keep water nearby — hydration is a quiet productivity hack.",
-  "Small sips often work better than chugging all at once.",
-  "Warm drinks can calm the nervous system on stressful days.",
-  "Electrolytes can help if you’ve been active or sweating a lot.",
-  "Hydration supports clearer thinking and steadier energy.",
-  "Sleep is a core part of wellness — protect it like a resource.",
-  "A steady sleep routine does more than most supplements.",
-  "Short rest breaks help your brain process the day.",
-  "Deep breathing before meals can ease tension.",
-  "Even a gentle stretch can restore focus.",
-  "Movement counts even if it’s short or simple.",
-  "You don’t need to ‘work out’ — moving your body is enough.",
-  "A casual walk can reset your mind better than scrolling.",
-  "Strength comes from small, repeated efforts.",
-  "Your pace doesn't matter; showing up for yourself does.",
-  "Mobility work is self-care disguised as exercise.",
-  "A slow walk is still movement, not a failure.",
-  "Some days you need intensity, some days gentleness.",
-  "Move in ways that feel good, not punishing.",
-  "Your body appreciates variety more than perfection.",
-  "Food should support your life, not take it over.",
-  "You don't have to earn your food — you need it.",
-  "Cravings are messages, not problems.",
-  "Satisfaction matters — bland meals aren’t sustainable.",
-  "Eating regularly keeps your mind clearer and calmer.",
-  "Feeling full is not failure — it's biology.",
-  "Your body deserves to be fed even on stressful days.",
-  "You can't out-discipline hunger; fuel works better.",
-  "Emergency snacks prevent emergency stress.",
-  "Allowing enjoyment helps reduce overeating later.",
-  "A small reset moment can change the direction of your day.",
-  "You don’t need motivation — tiny actions build momentum.",
-  "Notice how foods make you feel, not how they make you look.",
-  "Your worth has nothing to do with your plate.",
-  "It’s okay to have days where you prioritize comfort.",
-  "Wellness is not a competition — it’s a relationship with yourself.",
-  "Consistency feels easier when it’s flexible, not strict.",
-  "Self-kindness leads to better decisions than self-criticism.",
-  "You don't have to be perfect to make progress.",
-  "Listening to your body is a lifelong skill.",
-  "A clean desk can refresh your mind more than you expect.",
-  "Take 60 seconds to breathe — small resets matter.",
-  "Being overwhelmed is a sign to pause, not push.",
-  "Fresh air can improve your mood instantly.",
-  "A short break can prevent a big burnout.",
-  "Your brain focuses better with regular meals.",
-  "Write down one thing you're grateful for — tiny habit, big shift.",
-  "Music can regulate your mood surprisingly well.",
-  "You don’t have to multitask — single-tasking works better.",
-  "Let your future self benefit from your calm choices today.",
-  "Stack tiny habits onto routines you already have.",
-  "One small improvement repeated is more powerful than a big change once.",
-  "A 1% better choice is still progress.",
-  "Your habits don’t need to be aesthetic to be effective.",
-  "Set up your kitchen so the easiest option is a good one.",
-  "Make wellness simple enough that even tired-you can follow it.",
-  "Default meals save brain energy.",
-  "A little planning reduces a lot of stress later.",
-  "Your systems should support you, not pressure you.",
-  "Focus on what’s doable today, not what was ideal yesterday.",
-  "Your feelings are valid even when they don’t make sense.",
-  "Talking to someone you trust can help more than you expect.",
-  "Your body reacts to stress — be gentle with it.",
-  "A tough day doesn’t erase your progress.",
-  "Rest is productive when you need it.",
-  "You’re allowed to slow down when life gets loud.",
-  "Take mental breaks without guilt.",
-  "Being human means fluctuating energy — embrace it.",
-  "Let yourself enjoy small pleasures without explaining them.",
-  "Your wellbeing is worth time and attention.",
-  "No single food defines your health — the big picture does.",
-  "Enjoying dessert doesn’t cancel your nutrition.",
-  "Balanced eating includes foods you love.",
-  "Mindful enjoyment prevents overthinking later.",
-  "There’s room for fun foods and nourishing foods.",
-  "A flexible approach is healthier than a perfect one.",
-  "Let go of labels like ‘good’ or ‘bad’ — food is just food.",
-  "Your body knows what to do with consistent nourishment.",
-  "Fullness is feedback, not failure.",
-  "You deserve meals that keep you satisfied and happy.",
-  "Celebrate small wins — they stack up quietly.",
-  "You’re allowed to change direction anytime.",
-  "Being kind to yourself is not weakness.",
-  "Take moments to notice what already works for you.",
-  "You don’t need to rush to be improving.",
-  "Your body is on your team, even when you feel off.",
-  "Take pride in caring about your wellbeing.",
-  "One calm moment can change an entire chain of choices.",
-  "You’re learning, not competing.",
-  "Your journey is yours — no comparison needed."
+  "Poslušaj Radio GoonFM.",
+  "Listen to Radio GoonFM.",
 ];
 
 
@@ -1408,6 +1310,40 @@ const Home: React.FC = () => {
                   </div>
                 );
               })}
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "6px 12px",
+                  alignItems: "center",
+                  fontSize: 11,
+                  color: "var(--ion-color-medium)",
+                }}
+              >
+                {[
+                  { label: "Saturated fat (in fat)", color: "#facc15" },
+                  { label: "Sugar (in carbohydrates)", color: "#facc15" },
+                  { label: "Fiber (in carbohydrates)", color: "#22c55e" },
+                  { label: "Remaining carbs/fat/protein", color: "#3b82f6" },
+                ].map(({ label, color }) => (
+                  <span
+                    key={label}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                  >
+                    <span
+                      aria-hidden="true"
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 9999,
+                        background: color,
+                        display: "inline-block",
+                      }}
+                    />
+                    <span>{label}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </IonCard>

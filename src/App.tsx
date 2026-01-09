@@ -66,7 +66,7 @@ import UpdateGate from "./UpdateGate";
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
-const ANIMATION_DURATION_MS = 350;
+const ANIMATION_DURATION_MS = 500;
 const ENTER_MIN_OPACITY = 0.2;
 const LEAVE_TRANSLATE_PERCENT = 30;
 const LEAVE_MIN_OPACITY = 0.4;
@@ -381,8 +381,7 @@ const App: React.FC = () => {
         ? Math.max(0, ...gapEstimates)
         : 0;
 
-      // Cap the value to avoid runaway values on devices that report
-      // unrealistic viewport sizes.
+      // Cap the value to avoid runaway values on devices that report unrealistic viewport sizes.
       const clampedSoftkeyHeight = Math.min(softkeyHeight, 120);
 
       setSoftkeyInset(clampedSoftkeyHeight);
