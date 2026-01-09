@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -21,8 +21,6 @@ import {
   IonDatetime,
   IonModal,
   IonActionSheet,
-  IonReorderGroup,
-  IonReorder,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -32,7 +30,6 @@ import {
   fastFoodOutline,
   flameOutline,
   bulbOutline,
-  trashOutline,
   chevronBackOutline,
   chevronForwardOutline,
   calendarOutline,
@@ -255,6 +252,13 @@ const Home: React.FC = () => {
 
   const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
+  const [foodMenuEntry, setFoodMenuEntry] = useState<{
+    meal: MealKey;
+    index: number;
+    name: string;
+  } | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -436,8 +440,19 @@ const Home: React.FC = () => {
           carbs: a.carbs + (it.total?.carbs || 0),
           protein: a.protein + (it.total?.protein || 0),
           fat: a.fat + (it.total?.fat || 0),
+          sugar: a.sugar + (it.total?.sugar || 0),
+          fiber: a.fiber + (it.total?.fiber || 0),
+          saturatedFat: a.saturatedFat + (it.total?.saturatedFat || 0),
         }),
-        { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+        {
+          calories: 0,
+          carbs: 0,
+          protein: 0,
+          fat: 0,
+          sugar: 0,
+          fiber: 0,
+          saturatedFat: 0,
+        }
       );
 
     const perMeal = {
@@ -452,8 +467,19 @@ const Home: React.FC = () => {
         carbs: a.carbs + m.carbs,
         protein: a.protein + m.protein,
         fat: a.fat + m.fat,
+        sugar: a.sugar + m.sugar,
+        fiber: a.fiber + m.fiber,
+        saturatedFat: a.saturatedFat + m.saturatedFat,
       }),
-      { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+      {
+        calories: 0,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+        sugar: 0,
+        fiber: 0,
+        saturatedFat: 0,
+      }
     );
 
     return { perMeal, day };
@@ -886,31 +912,54 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleReorder = async (meal: MealKey, ev: CustomEvent<{ from: number; to: number; complete: () => void }>) => {
-    if (!uid) {
-      ev.detail.complete();
-      return;
+  const startLongPress = (
+    meal: MealKey,
+    index: number,
+    name: string
+  ) => {
+    longPressTriggeredRef.current = false;
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
     }
-    const from = ev.detail.from;
-    const to = ev.detail.to;
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setFoodMenuEntry({ meal, index, name });
+      trackEvent("food_long_press_menu_open", {
+        uid,
+        date: activeDateKey,
+        meal,
+        index,
+        name,
+      });
+    }, 500);
+  };
 
-    trackEvent("meal_reorder_attempt", {
+  const stopLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const moveFood = async (meal: MealKey, index: number, direction: -1 | 1) => {
+    if (!uid) return;
+    const current = dayData[meal] || [];
+    const target = index + direction;
+    if (index < 0 || index >= current.length) return;
+    if (target < 0 || target >= current.length) return;
+
+    const nextMeal = [...current];
+    [nextMeal[index], nextMeal[target]] = [nextMeal[target], nextMeal[index]];
+
+    trackEvent("food_move_attempt", {
       uid,
       date: activeDateKey,
       meal,
-      from,
-      to,
+      from: index,
+      to: target,
     });
 
-    setDayData((prev) => {
-      const current = [...(prev[meal] || [])];
-      if (from < 0 || from >= current.length) return prev;
-      const [moved] = current.splice(from, 1);
-      current.splice(to, 0, moved);
-      return { ...prev, [meal]: current };
-    });
-
-    ev.detail.complete();
+    setDayData({ ...dayData, [meal]: nextMeal });
 
     try {
       await runTransaction(db, async (tx) => {
@@ -918,28 +967,29 @@ const Home: React.FC = () => {
         const snap = await tx.get(ref);
         const data = snap.data() || {};
         const arr: DiaryEntry[] = [...((data as Partial<DayDiaryDoc>)[meal] || [])];
-        if (from < 0 || from >= arr.length) return;
-        const [moved] = arr.splice(from, 1);
-        arr.splice(to, 0, moved);
+        if (index < 0 || index >= arr.length) return;
+        if (target < 0 || target >= arr.length) return;
+        [arr[index], arr[target]] = [arr[target], arr[index]];
         tx.set(ref, { ...data, [meal]: arr }, { merge: true });
       });
 
-      trackEvent("meal_reorder_success", {
+      trackEvent("food_move_success", {
         uid,
         date: activeDateKey,
         meal,
-        from,
-        to,
+        from: index,
+        to: target,
       });
     } catch {
-      setToast({ open: true, message: "Reorder failed." });
+      setDayData({ ...dayData, [meal]: current });
+      setToast({ open: true, message: "Move failed." });
 
-      trackEvent("meal_reorder_error", {
+      trackEvent("food_move_error", {
         uid,
         date: activeDateKey,
         meal,
-        from,
-        to,
+        from: index,
+        to: target,
       });
     }
   };
@@ -1221,6 +1271,12 @@ const Home: React.FC = () => {
             >
               {[
                 {
+                  k: "fat",
+                  g: totals.day.fat,
+                  tg: macroTargets.fatG,
+                  l: "Fat",
+                },
+                {
                   k: "carbs",
                   g: totals.day.carbs,
                   tg: macroTargets.carbsG,
@@ -1232,14 +1288,106 @@ const Home: React.FC = () => {
                   tg: macroTargets.proteinG,
                   l: "Protein",
                 },
-                {
-                  k: "fat",
-                  g: totals.day.fat,
-                  tg: macroTargets.fatG,
-                  l: "Fat",
-                },
               ].map(({ k, g, tg, l }) => {
                 const pct = tg ? Math.min(1, g / tg) : 0;
+                const baseBarStyle = {
+                  height: 8,
+                  background: "rgba(148, 163, 184, 0.35)",
+                  borderRadius: 9999,
+                  overflow: "hidden",
+                } as const;
+
+                const fillStyle = {
+                  width: `${pct * 100}%`,
+                  height: "100%",
+                  transition: "width 0.2s ease-out",
+                } as const;
+
+                const macroBars =
+                  k === "fat"
+                    ? (() => {
+                        const total = Math.max(0, totals.day.fat);
+                        const sat = Math.min(
+                          total,
+                          Math.max(0, totals.day.saturatedFat)
+                        );
+                        const rest = Math.max(0, total - sat);
+                        const satPct = total > 0 ? sat / total : 0;
+                        const restPct = total > 0 ? rest / total : 0;
+                        return (
+                          <div style={{ display: "flex", height: "100%" }}>
+                            {rest > 0 && (
+                              <div
+                                style={{
+                                  width: `${restPct * 100}%`,
+                                  background: "var(--ion-color-primary)",
+                                }}
+                              />
+                            )}
+                            {sat > 0 && (
+                              <div
+                                style={{
+                                  width: `${satPct * 100}%`,
+                                  background: "var(--ion-color-warning)",
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })()
+                    : k === "carbs"
+                      ? (() => {
+                          const total = Math.max(0, totals.day.carbs);
+                          const sugar = Math.min(
+                            total,
+                            Math.max(0, totals.day.sugar)
+                          );
+                          const fiber = Math.min(
+                            total - sugar,
+                            Math.max(0, totals.day.fiber)
+                          );
+                          const rest = Math.max(0, total - sugar - fiber);
+                          const sugarPct = total > 0 ? sugar / total : 0;
+                          const fiberPct = total > 0 ? fiber / total : 0;
+                          const restPct = total > 0 ? rest / total : 0;
+                          return (
+                            <div style={{ display: "flex", height: "100%" }}>
+                              {rest > 0 && (
+                                <div
+                                  style={{
+                                    width: `${restPct * 100}%`,
+                                    background: "var(--ion-color-primary)",
+                                  }}
+                                />
+                              )}
+                              {sugar > 0 && (
+                                <div
+                                  style={{
+                                    width: `${sugarPct * 100}%`,
+                                    background: "var(--ion-color-warning)",
+                                  }}
+                                />
+                              )}
+                              {fiber > 0 && (
+                                <div
+                                  style={{
+                                    width: `${fiberPct * 100}%`,
+                                    background: "var(--ion-color-success)",
+                                  }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })()
+                      : (
+                          <div
+                            style={{
+                              ...fillStyle,
+                              background: "var(--ion-color-primary)",
+                            }}
+                          />
+                        );
+
                 return (
                   <div key={k} style={{ display: "grid", gap: 4 }}>
                     <div
@@ -1254,22 +1402,8 @@ const Home: React.FC = () => {
                         {g.toFixed(0)} / {tg} g
                       </span>
                     </div>
-                    <div
-                      style={{
-                        height: 8,
-                        background: "rgba(148, 163, 184, 0.35)",
-                        borderRadius: 9999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${pct * 100}%`,
-                          height: "100%",
-                          background: "var(--ion-color-primary)",
-                          transition: "width 0.2s ease-out",
-                        }}
-                      />
+                    <div style={baseBarStyle}>
+                      <div style={fillStyle}>{macroBars}</div>
                     </div>
                   </div>
                 );
@@ -1427,11 +1561,7 @@ const Home: React.FC = () => {
                     </IonButton>
 
                     <IonList>
-                      <IonReorderGroup
-                        disabled={false}
-                        onIonItemReorder={(ev) => handleReorder(meal, ev as CustomEvent<{ from: number; to: number; complete: () => void }>)}
-                      >
-                        {items.map((it, idx) => {
+                      {items.map((it, idx) => {
                           const t = it.total || {
                             calories: 0,
                             carbs: 0,
@@ -1469,7 +1599,15 @@ const Home: React.FC = () => {
                               className="meal-item"
                               button
                               detail={false}
+                              onPointerDown={() => startLongPress(meal, idx, it.name)}
+                              onPointerUp={stopLongPress}
+                              onPointerLeave={stopLongPress}
+                              onPointerCancel={stopLongPress}
                               onClick={() => {
+                                if (longPressTriggeredRef.current) {
+                                  longPressTriggeredRef.current = false;
+                                  return;
+                                }
                                 trackEvent("meal_item_edit_via_add_food", {
                                   uid,
                                   date: activeDateKey,
@@ -1491,7 +1629,6 @@ const Home: React.FC = () => {
                                 });
                               }}
                             >
-                              <IonReorder slot="start" />
                               <IonLabel>
                                 <h2>
                                   {it.name}
@@ -1529,32 +1666,74 @@ const Home: React.FC = () => {
                                 )}
                               </IonLabel>
 
-                              <IonButton
-                                slot="end"
-                                fill="clear"
-                                aria-label={`Remove ${it.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteFood(meal, idx);
-                                }}
-                                className="del-btn"
-                              >
-                                <IonIcon icon={trashOutline} />
-                              </IonButton>
-
                               <div className="kcal-badge" slot="end">
                                 {kcal} kcal
                               </div>
                             </IonItem>
                           );
                         })}
-                      </IonReorderGroup>
                     </IonList>
                   </IonCardContent>
                 )}
               </IonCard>
             );
           })}
+
+        <IonActionSheet
+          isOpen={foodMenuEntry !== null}
+          onDidDismiss={() => {
+            setFoodMenuEntry(null);
+            longPressTriggeredRef.current = false;
+            trackEvent("food_long_press_menu_close", {
+              uid,
+              date: activeDateKey,
+            });
+          }}
+          header={foodMenuEntry ? `Actions for ${foodMenuEntry.name}` : undefined}
+          buttons={[
+            {
+              text: "Move up",
+              cssClass:
+                foodMenuEntry &&
+                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  ? ""
+                  : "action-sheet-disabled",
+              handler: () => {
+                if (!foodMenuEntry) return false;
+                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                moveFood(foodMenuEntry.meal, foodMenuEntry.index, -1);
+              },
+            },
+            {
+              text: "Move down",
+              cssClass:
+                foodMenuEntry &&
+                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  ? ""
+                  : "action-sheet-disabled",
+              handler: () => {
+                if (!foodMenuEntry) return false;
+                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                moveFood(foodMenuEntry.meal, foodMenuEntry.index, 1);
+              },
+            },
+            {
+              text: "Remove",
+              role: "destructive",
+              handler: () => {
+                if (foodMenuEntry) {
+                  deleteFood(foodMenuEntry.meal, foodMenuEntry.index);
+                }
+                setFoodMenuEntry(null);
+                longPressTriggeredRef.current = false;
+              },
+            },
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
 
         <IonActionSheet
           isOpen={copyMenuMeal !== null}
