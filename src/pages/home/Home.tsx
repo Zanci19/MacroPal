@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -21,8 +21,6 @@ import {
   IonDatetime,
   IonModal,
   IonActionSheet,
-  IonReorderGroup,
-  IonReorder,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -32,7 +30,6 @@ import {
   fastFoodOutline,
   flameOutline,
   bulbOutline,
-  trashOutline,
   chevronBackOutline,
   chevronForwardOutline,
   calendarOutline,
@@ -255,6 +252,13 @@ const Home: React.FC = () => {
 
   const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
+  const [foodMenuEntry, setFoodMenuEntry] = useState<{
+    meal: MealKey;
+    index: number;
+    name: string;
+  } | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -886,61 +890,32 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleReorder = async (meal: MealKey, ev: CustomEvent<{ from: number; to: number; complete: () => void }>) => {
-    if (!uid) {
-      ev.detail.complete();
-      return;
+  const startLongPress = (
+    meal: MealKey,
+    index: number,
+    name: string
+  ) => {
+    longPressTriggeredRef.current = false;
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
     }
-    const from = ev.detail.from;
-    const to = ev.detail.to;
-
-    trackEvent("meal_reorder_attempt", {
-      uid,
-      date: activeDateKey,
-      meal,
-      from,
-      to,
-    });
-
-    setDayData((prev) => {
-      const current = [...(prev[meal] || [])];
-      if (from < 0 || from >= current.length) return prev;
-      const [moved] = current.splice(from, 1);
-      current.splice(to, 0, moved);
-      return { ...prev, [meal]: current };
-    });
-
-    ev.detail.complete();
-
-    try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", activeDateKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
-        const arr: DiaryEntry[] = [...((data as Partial<DayDiaryDoc>)[meal] || [])];
-        if (from < 0 || from >= arr.length) return;
-        const [moved] = arr.splice(from, 1);
-        arr.splice(to, 0, moved);
-        tx.set(ref, { ...data, [meal]: arr }, { merge: true });
-      });
-
-      trackEvent("meal_reorder_success", {
+    longPressTimerRef.current = window.setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      setFoodMenuEntry({ meal, index, name });
+      trackEvent("food_long_press_menu_open", {
         uid,
         date: activeDateKey,
         meal,
-        from,
-        to,
+        index,
+        name,
       });
-    } catch {
-      setToast({ open: true, message: "Reorder failed." });
+    }, 500);
+  };
 
-      trackEvent("meal_reorder_error", {
-        uid,
-        date: activeDateKey,
-        meal,
-        from,
-        to,
-      });
+  const stopLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   };
 
@@ -1427,11 +1402,7 @@ const Home: React.FC = () => {
                     </IonButton>
 
                     <IonList>
-                      <IonReorderGroup
-                        disabled={false}
-                        onIonItemReorder={(ev) => handleReorder(meal, ev as CustomEvent<{ from: number; to: number; complete: () => void }>)}
-                      >
-                        {items.map((it, idx) => {
+                      {items.map((it, idx) => {
                           const t = it.total || {
                             calories: 0,
                             carbs: 0,
@@ -1469,7 +1440,15 @@ const Home: React.FC = () => {
                               className="meal-item"
                               button
                               detail={false}
+                              onPointerDown={() => startLongPress(meal, idx, it.name)}
+                              onPointerUp={stopLongPress}
+                              onPointerLeave={stopLongPress}
+                              onPointerCancel={stopLongPress}
                               onClick={() => {
+                                if (longPressTriggeredRef.current) {
+                                  longPressTriggeredRef.current = false;
+                                  return;
+                                }
                                 trackEvent("meal_item_edit_via_add_food", {
                                   uid,
                                   date: activeDateKey,
@@ -1491,7 +1470,6 @@ const Home: React.FC = () => {
                                 });
                               }}
                             >
-                              <IonReorder slot="start" />
                               <IonLabel>
                                 <h2>
                                   {it.name}
@@ -1529,32 +1507,48 @@ const Home: React.FC = () => {
                                 )}
                               </IonLabel>
 
-                              <IonButton
-                                slot="end"
-                                fill="clear"
-                                aria-label={`Remove ${it.name}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteFood(meal, idx);
-                                }}
-                                className="del-btn"
-                              >
-                                <IonIcon icon={trashOutline} />
-                              </IonButton>
-
                               <div className="kcal-badge" slot="end">
                                 {kcal} kcal
                               </div>
                             </IonItem>
                           );
                         })}
-                      </IonReorderGroup>
                     </IonList>
                   </IonCardContent>
                 )}
               </IonCard>
             );
           })}
+
+        <IonActionSheet
+          isOpen={foodMenuEntry !== null}
+          onDidDismiss={() => {
+            setFoodMenuEntry(null);
+            longPressTriggeredRef.current = false;
+            trackEvent("food_long_press_menu_close", {
+              uid,
+              date: activeDateKey,
+            });
+          }}
+          header={foodMenuEntry ? `Actions for ${foodMenuEntry.name}` : undefined}
+          buttons={[
+            {
+              text: "Remove",
+              role: "destructive",
+              handler: () => {
+                if (foodMenuEntry) {
+                  deleteFood(foodMenuEntry.meal, foodMenuEntry.index);
+                }
+                setFoodMenuEntry(null);
+                longPressTriggeredRef.current = false;
+              },
+            },
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
 
         <IonActionSheet
           isOpen={copyMenuMeal !== null}
