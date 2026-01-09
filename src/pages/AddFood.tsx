@@ -421,6 +421,9 @@ const FAT_SUGGESTIONS: Record<Goal, string[]> = {
   ],
 };
 
+const MIN_RESULTS_VISIBILITY_PX = 120;
+const RESULTS_VISIBILITY_RATIO = 0.5;
+
 function pickRandom(list: string[]): string {
   if (!list.length) return "";
   const idx = Math.floor(Math.random() * list.length);
@@ -518,6 +521,7 @@ const AddFood: React.FC = () => {
   const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const resultsListRef = useRef<HTMLIonListElement | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
+  const prevResultsKeyRef = useRef<string | null>(null);
 
   const per100g = useMemo(
     () => macrosPer100g(selectedFood?.nutriments),
@@ -808,17 +812,37 @@ const AddFood: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
-  useEffect(() => {
-    if (!loading && results.length > 0 && results.length !== prevResultsLengthRef.current) {
-      requestAnimationFrame(() => {
-        resultsListRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      });
+  const ensureResultsVisible = () => {
+    const firstResult = results[0];
+    const firstKey = firstResult?.code || firstResult?.product_name || null;
+    const changed =
+      results.length !== prevResultsLengthRef.current || firstKey !== prevResultsKeyRef.current;
+    if (results.length > 0 && changed) {
+      const rect = resultsListRef.current?.getBoundingClientRect();
+      if (rect) {
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+        const alreadyInView =
+          visibleHeight >= Math.min(rect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
+        if (!alreadyInView) {
+          requestAnimationFrame(() => {
+            resultsListRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          });
+        }
+      }
     }
     prevResultsLengthRef.current = results.length;
-  }, [loading, results.length]);
+    prevResultsKeyRef.current = firstKey;
+  };
+
+  useEffect(() => {
+    if (!loading) {
+      ensureResultsVisible();
+    }
+  }, [loading, results]);
 
   useEffect(() => {
     const state = (location as any).state as
@@ -1095,13 +1119,19 @@ const AddFood: React.FC = () => {
     trackEvent("recent_queries_cleared");
   };
 
-  const hideKeyboard = () => {
-    Keyboard.hide().catch((err) => console.warn("Keyboard hide failed", err));
+  const hideKeyboard = async () => {
+    try {
+      await Keyboard.hide();
+    } catch (err) {
+      console.warn("Keyboard hide failed", err);
+    }
     if (searchInputRef.current?.getInputElement) {
-      searchInputRef.current
-        .getInputElement()
-        .then((el) => el?.blur())
-        .catch((err) => console.warn("Input blur failed", err));
+      try {
+        const el = await searchInputRef.current.getInputElement();
+        el?.blur();
+      } catch (err) {
+        console.warn("Input blur failed", err);
+      }
     }
   };
 
