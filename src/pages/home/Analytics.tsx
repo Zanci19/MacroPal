@@ -1044,7 +1044,7 @@ const Analytics: React.FC = () => {
                           </IonChip>
                         </IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Your daily calorie target
+                          Current average vs target
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
@@ -1055,6 +1055,7 @@ const Analytics: React.FC = () => {
                                 data={[
                                   {
                                     metric: "Calories",
+                                    average: avg.calories,
                                     target: caloriesTarget,
                                   },
                                 ]}
@@ -1064,6 +1065,11 @@ const Analytics: React.FC = () => {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
+                                <Bar
+                                  dataKey="average"
+                                  name="Current avg (kcal)"
+                                  fill={palette[0]}
+                                />
                                 <Bar
                                   dataKey="target"
                                   name="Target (kcal)"
@@ -1091,7 +1097,7 @@ const Analytics: React.FC = () => {
                           </IonChip>
                         </IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Carbohydrates, protein, and fat targets
+                          Current averages vs targets
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
@@ -1102,14 +1108,17 @@ const Analytics: React.FC = () => {
                                 data={[
                                   {
                                     metric: "Carbohydrates",
+                                    average: Math.round(avg.carbs),
                                     target: macroTargets.carbsG,
                                   },
                                   {
                                     metric: "Protein",
+                                    average: Math.round(avg.protein),
                                     target: macroTargets.proteinG,
                                   },
                                   {
                                     metric: "Fat",
+                                    average: Math.round(avg.fat),
                                     target: macroTargets.fatG,
                                   },
                                 ]}
@@ -1119,6 +1128,11 @@ const Analytics: React.FC = () => {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
+                                <Bar
+                                  dataKey="average"
+                                  name="Current avg (g)"
+                                  fill={palette[0]}
+                                />
                                 <Bar
                                   dataKey="target"
                                   name="Target (g)"
