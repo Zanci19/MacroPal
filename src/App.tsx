@@ -8,7 +8,10 @@ import {
   IonIcon,
   IonLabel,
   setupIonicReact,
+  createAnimation,
+  useIonRouter,
 } from "@ionic/react";
+import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useLocation } from "react-router-dom";
@@ -56,12 +59,19 @@ import "@ionic/react/css/display.css";
 import "@ionic/react/css/palettes/dark.class.css";
 
 import "./theme/variables.css";
-import "./components/TabSlideAnimation.css";
 
 import { trackEvent } from "./firebase";
 import UpdateGate from "./UpdateGate";
 
 setupIonicReact();
+
+const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
+const ANIMATION_DURATION_MS = 350;
+const ENTER_MIN_OPACITY = 0.2;
+const LEAVE_TRANSLATE_PERCENT = 30;
+const LEAVE_MIN_OPACITY = 0.4;
+const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
+const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
 const AnalyticsRouteTracker: React.FC = () => {
   const location = useLocation();
@@ -79,12 +89,9 @@ const AnalyticsRouteTracker: React.FC = () => {
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
-  const previousTabIndexRef = useRef<number>(2); // Start with "home" index
-  const routerOutletRef = useRef<HTMLIonRouterOutletElement>(null);
-  const animationTimeoutRef = useRef<number | null>(null);
-
-  // Animation duration in milliseconds (matches CSS animation duration)
-  const ANIMATION_DURATION_MS = 350;
+  const router = useIonRouter();
+  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
+  const lastDirectionRef = useRef<"forward" | "back" | null>(null);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -100,47 +107,116 @@ const TabsShell: React.FC = () => {
 
   const activeTab = getActiveTab();
 
+  const getTabIndex = (tabName: string) => TAB_ORDER.indexOf(tabName);
+
+  const navigateToTab = (
+    event: Event | React.MouseEvent | React.KeyboardEvent | CustomEvent,
+    tabName: string,
+    href: string,
+  ) => {
+    if ("preventDefault" in event && typeof event.preventDefault === "function") {
+      event.preventDefault();
+    }
+    const currentTab = getActiveTab();
+    if (currentTab === tabName) return;
+
+    const currentTabIndex = getTabIndex(currentTab);
+    const targetIndex = getTabIndex(tabName);
+    const direction =
+      currentTabIndex !== -1 && targetIndex !== -1
+        ? targetIndex > currentTabIndex
+          ? "forward"
+          : "back"
+        : "forward";
+
+    lastDirectionRef.current = direction;
+    router.push(href, direction, "push");
+  };
+
+  const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
+    const currentTabIndex = getTabIndex(getActiveTab());
+    const previousTabIndex = previousTabIndexRef.current;
+
+    const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+    const clickDirection = lastDirectionRef.current;
+    const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
+    const isForward =
+      clickDirection === "forward"
+        ? true
+        : clickDirection === "back"
+          ? false
+          : hasValidIndices
+            ? currentTabIndex > previousTabIndex
+            : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
+    lastDirectionRef.current = null;
+
+    const enteringEl = opts.enteringEl;
+    const leavingEl = opts.leavingEl;
+    const directionFactor = isForward ? 1 : -1;
+
+    const enteringAnimation = createAnimation()
+      .addElement(enteringEl)
+      .duration(ANIMATION_DURATION_MS)
+      .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+      .beforeStyles({
+        zIndex: "101",
+        position: "absolute",
+        top: "0",
+        left: "0",
+        right: "0",
+        bottom: "0",
+        width: "100%",
+        height: "100%",
+      })
+      .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
+      .beforeRemoveClass("ion-page-invisible")
+      .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
+      .fromTo("opacity", ENTER_MIN_OPACITY, 1);
+
+    const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
+    let leavingAnimation: Animation | undefined;
+    if (leavingEl) {
+      leavingAnimation = createAnimation()
+        .addElement(leavingEl)
+        .duration(ANIMATION_DURATION_MS)
+        .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+        .beforeStyles({
+          zIndex: "100",
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          width: "100%",
+          height: "100%",
+        })
+        .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
+        .fromTo("transform", "translateX(0)", `translateX(${leaveOffset}%)`)
+        .fromTo("opacity", 1, LEAVE_MIN_OPACITY);
+    }
+
+    const animation = createAnimation().addAnimation(enteringAnimation);
+
+    if (leavingAnimation) {
+      animation.addAnimation(leavingAnimation);
+    }
+
+    return animation;
+  };
+
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
 
-  // Handle slide animation when tab changes
   useEffect(() => {
-    // Tab order: analytics(0), planner(1), home(2), workout(3), settings(4)
-    const tabOrder = ["analytics", "planner", "home", "workout", "settings"];
-    const currentTabIndex = tabOrder.indexOf(activeTab);
-    const previousTabIndex = previousTabIndexRef.current;
-
-    if (currentTabIndex !== previousTabIndex && currentTabIndex !== -1 && routerOutletRef.current) {
-      // Clear any existing animation timeout
-      if (animationTimeoutRef.current !== null) {
-        clearTimeout(animationTimeoutRef.current);
-      }
-
-      // Determine slide direction
-      const direction = currentTabIndex > previousTabIndex ? "right" : "left";
-      const outlet = routerOutletRef.current;
-      
-      // Remove any existing animation classes
-      outlet.classList.remove("animate-slide-left", "animate-slide-right");
-      
-      // Force a browser reflow to ensure CSS class removal is processed before adding the new animation class
-      void outlet.offsetWidth;
-      
-      // Add the new animation class
-      outlet.classList.add(`animate-slide-${direction}`);
-
-      // Remove animation class after animation completes
-      animationTimeoutRef.current = window.setTimeout(() => {
-        outlet.classList.remove(`animate-slide-${direction}`);
-      }, ANIMATION_DURATION_MS);
-
+    const currentTabIndex = getTabIndex(activeTab);
+    if (currentTabIndex !== -1) {
       previousTabIndexRef.current = currentTabIndex;
     }
   }, [activeTab]);
 
   return (
     <IonTabs>
-      <IonRouterOutlet id="tabs" ref={routerOutletRef}>
+      <IonRouterOutlet id="tabs" animation={tabAnimation}>
         <Route exact path="/app/analytics" component={Analytics} />
         <Route exact path="/app/planner" component={Planner} />
         <Route exact path="/app/home" component={Home} />
@@ -153,6 +229,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="analytics"
           href="/app/analytics"
+          onClick={(event) => navigateToTab(event, "analytics", "/app/analytics")}
           className={tabClass("analytics")}
         >
           <IonIcon
@@ -165,6 +242,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="planner"
           href="/app/planner"
+          onClick={(event) => navigateToTab(event, "planner", "/app/planner")}
           className={tabClass("planner")}
         >
           <IonIcon
@@ -177,6 +255,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="home"
           href="/app/home"
+          onClick={(event) => navigateToTab(event, "home", "/app/home")}
           className={tabClass("home")}
         >
           <IonIcon
@@ -189,6 +268,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="workout"
           href="/app/workout"
+          onClick={(event) => navigateToTab(event, "workout", "/app/workout")}
           className={tabClass("workout")}
         >
           <IonIcon
@@ -201,6 +281,7 @@ const TabsShell: React.FC = () => {
         <IonTabButton
           tab="settings"
           href="/app/settings"
+          onClick={(event) => navigateToTab(event, "settings", "/app/settings")}
           className={tabClass("settings")}
         >
           <IonIcon
