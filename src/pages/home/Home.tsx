@@ -440,8 +440,19 @@ const Home: React.FC = () => {
           carbs: a.carbs + (it.total?.carbs || 0),
           protein: a.protein + (it.total?.protein || 0),
           fat: a.fat + (it.total?.fat || 0),
+          sugar: a.sugar + (it.total?.sugar || 0),
+          fiber: a.fiber + (it.total?.fiber || 0),
+          saturatedFat: a.saturatedFat + (it.total?.saturatedFat || 0),
         }),
-        { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+        {
+          calories: 0,
+          carbs: 0,
+          protein: 0,
+          fat: 0,
+          sugar: 0,
+          fiber: 0,
+          saturatedFat: 0,
+        }
       );
 
     const perMeal = {
@@ -456,8 +467,19 @@ const Home: React.FC = () => {
         carbs: a.carbs + m.carbs,
         protein: a.protein + m.protein,
         fat: a.fat + m.fat,
+        sugar: a.sugar + m.sugar,
+        fiber: a.fiber + m.fiber,
+        saturatedFat: a.saturatedFat + m.saturatedFat,
       }),
-      { calories: 0, carbs: 0, protein: 0, fat: 0 } as Macros
+      {
+        calories: 0,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+        sugar: 0,
+        fiber: 0,
+        saturatedFat: 0,
+      }
     );
 
     return { perMeal, day };
@@ -1249,6 +1271,12 @@ const Home: React.FC = () => {
             >
               {[
                 {
+                  k: "fat",
+                  g: totals.day.fat,
+                  tg: macroTargets.fatG,
+                  l: "Fat",
+                },
+                {
                   k: "carbs",
                   g: totals.day.carbs,
                   tg: macroTargets.carbsG,
@@ -1260,14 +1288,106 @@ const Home: React.FC = () => {
                   tg: macroTargets.proteinG,
                   l: "Protein",
                 },
-                {
-                  k: "fat",
-                  g: totals.day.fat,
-                  tg: macroTargets.fatG,
-                  l: "Fat",
-                },
               ].map(({ k, g, tg, l }) => {
                 const pct = tg ? Math.min(1, g / tg) : 0;
+                const baseBarStyle = {
+                  height: 8,
+                  background: "rgba(148, 163, 184, 0.35)",
+                  borderRadius: 9999,
+                  overflow: "hidden",
+                } as const;
+
+                const fillStyle = {
+                  width: `${pct * 100}%`,
+                  height: "100%",
+                  transition: "width 0.2s ease-out",
+                } as const;
+
+                const macroBars =
+                  k === "fat"
+                    ? (() => {
+                        const total = Math.max(0, totals.day.fat);
+                        const sat = Math.min(
+                          total,
+                          Math.max(0, totals.day.saturatedFat)
+                        );
+                        const rest = Math.max(0, total - sat);
+                        const satPct = total > 0 ? sat / total : 0;
+                        const restPct = total > 0 ? rest / total : 0;
+                        return (
+                          <div style={{ display: "flex", height: "100%" }}>
+                            {rest > 0 && (
+                              <div
+                                style={{
+                                  width: `${restPct * 100}%`,
+                                  background: "var(--ion-color-primary)",
+                                }}
+                              />
+                            )}
+                            {sat > 0 && (
+                              <div
+                                style={{
+                                  width: `${satPct * 100}%`,
+                                  background: "var(--ion-color-warning)",
+                                }}
+                              />
+                            )}
+                          </div>
+                        );
+                      })()
+                    : k === "carbs"
+                      ? (() => {
+                          const total = Math.max(0, totals.day.carbs);
+                          const sugar = Math.min(
+                            total,
+                            Math.max(0, totals.day.sugar)
+                          );
+                          const fiber = Math.min(
+                            total - sugar,
+                            Math.max(0, totals.day.fiber)
+                          );
+                          const rest = Math.max(0, total - sugar - fiber);
+                          const sugarPct = total > 0 ? sugar / total : 0;
+                          const fiberPct = total > 0 ? fiber / total : 0;
+                          const restPct = total > 0 ? rest / total : 0;
+                          return (
+                            <div style={{ display: "flex", height: "100%" }}>
+                              {rest > 0 && (
+                                <div
+                                  style={{
+                                    width: `${restPct * 100}%`,
+                                    background: "var(--ion-color-primary)",
+                                  }}
+                                />
+                              )}
+                              {sugar > 0 && (
+                                <div
+                                  style={{
+                                    width: `${sugarPct * 100}%`,
+                                    background: "var(--ion-color-warning)",
+                                  }}
+                                />
+                              )}
+                              {fiber > 0 && (
+                                <div
+                                  style={{
+                                    width: `${fiberPct * 100}%`,
+                                    background: "var(--ion-color-success)",
+                                  }}
+                                />
+                              )}
+                            </div>
+                          );
+                        })()
+                      : (
+                          <div
+                            style={{
+                              ...fillStyle,
+                              background: "var(--ion-color-primary)",
+                            }}
+                          />
+                        );
+
                 return (
                   <div key={k} style={{ display: "grid", gap: 4 }}>
                     <div
@@ -1282,22 +1402,8 @@ const Home: React.FC = () => {
                         {g.toFixed(0)} / {tg} g
                       </span>
                     </div>
-                    <div
-                      style={{
-                        height: 8,
-                        background: "rgba(148, 163, 184, 0.35)",
-                        borderRadius: 9999,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${pct * 100}%`,
-                          height: "100%",
-                          background: "var(--ion-color-primary)",
-                          transition: "width 0.2s ease-out",
-                        }}
-                      />
+                    <div style={baseBarStyle}>
+                      <div style={fillStyle}>{macroBars}</div>
                     </div>
                   </div>
                 );
