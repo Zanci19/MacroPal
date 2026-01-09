@@ -14,6 +14,7 @@ import {
   IonToast,
   IonToolbar,
 } from "@ionic/react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useHistory } from "react-router";
 import { auth, db, trackEvent } from "../../firebase";
@@ -29,6 +30,34 @@ type RemindersData = {
   workout?: ReminderBlock;
 };
 
+const REMINDER_IDS = {
+  meals: 4101,
+  weighIn: 4102,
+  workout: 4103,
+};
+
+type LocalNotificationSchedule = {
+  on: { hour: number; minute: number };
+  repeats?: boolean;
+  allowWhileIdle?: boolean;
+};
+
+type LocalNotificationRequest = {
+  id: number;
+  title: string;
+  body: string;
+  schedule?: LocalNotificationSchedule;
+};
+
+type LocalNotificationsPlugin = {
+  checkPermissions(): Promise<{ display: string }>;
+  requestPermissions(): Promise<{ display: string }>;
+  schedule(options: { notifications: LocalNotificationRequest[] }): Promise<void>;
+  cancel(options: { notifications: { id: number }[] }): Promise<void>;
+};
+
+const LocalNotifications = registerPlugin<LocalNotificationsPlugin>("LocalNotifications");
+
 const normalizeTime = (value: string | null | undefined) => {
   if (!value) return "";
   if (value.includes("T")) {
@@ -36,6 +65,14 @@ const normalizeTime = (value: string | null | undefined) => {
     return time ? time.slice(0, 5) : "";
   }
   return value.slice(0, 5);
+};
+
+const parseTime = (value: string) => {
+  const [hour, minute] = value.split(":").map((entry) => Number(entry));
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) {
+    return null;
+  }
+  return { hour, minute };
 };
 
 const Reminders: React.FC = () => {
@@ -56,6 +93,44 @@ const Reminders: React.FC = () => {
     message: "",
     color: "success",
   });
+
+  const ensureNotificationPermission = async () => {
+    if (!Capacitor.isNativePlatform()) return false;
+    const current = await LocalNotifications.checkPermissions();
+    if (current.display === "granted") return true;
+    const requested = await LocalNotifications.requestPermissions();
+    return requested.display === "granted";
+  };
+
+  const scheduleReminder = async (
+    id: number,
+    title: string,
+    body: string,
+    time: string,
+    enabled: boolean
+  ) => {
+    if (!Capacitor.isNativePlatform()) return;
+    await LocalNotifications.cancel({ notifications: [{ id }] });
+    if (!enabled) return;
+
+    const parsed = parseTime(time);
+    if (!parsed) return;
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id,
+          title,
+          body,
+          schedule: {
+            on: { hour: parsed.hour, minute: parsed.minute },
+            repeats: true,
+            allowWhileIdle: true,
+          },
+        },
+      ],
+    });
+  };
 
   useEffect(() => {
     const current = auth.currentUser;
@@ -113,6 +188,50 @@ const Reminders: React.FC = () => {
         uid: current.uid,
         reminders,
       });
+      const needsPermission = mealEnabled || weighInEnabled || workoutEnabled;
+      if (needsPermission) {
+        const granted = await ensureNotificationPermission();
+        if (!granted) {
+          setToast({
+            show: true,
+            message: "Enable notifications to receive reminders.",
+            color: "warning",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      if (Capacitor.isNativePlatform()) {
+        await scheduleReminder(
+          REMINDER_IDS.meals,
+          "MacroPal meal reminder",
+          "Time to log your meal.",
+          mealTime,
+          mealEnabled
+        );
+        await scheduleReminder(
+          REMINDER_IDS.weighIn,
+          "MacroPal weigh-in reminder",
+          "Log your weigh-in to track progress.",
+          weighInTime,
+          weighInEnabled
+        );
+        await scheduleReminder(
+          REMINDER_IDS.workout,
+          "MacroPal workout reminder",
+          "Log your workout when you're done.",
+          workoutTime,
+          workoutEnabled
+        );
+      } else if (needsPermission) {
+        setToast({
+          show: true,
+          message: "Reminders will appear when running on a device.",
+          color: "warning",
+        });
+      }
+
       setToast({ show: true, message: "Reminders updated.", color: "success" });
       history.push("/app/settings");
     } catch (err: any) {

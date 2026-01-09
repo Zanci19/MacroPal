@@ -485,6 +485,9 @@ const AddFood: React.FC = () => {
     index: number;
     item: DiaryEntryDoc;
   } | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoName, setPhotoName] = useState("");
+  const [photoRemoved, setPhotoRemoved] = useState(false);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -527,6 +530,7 @@ const AddFood: React.FC = () => {
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<any>(null);
   const resultsListRef = useRef<any>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
   const prevResultsKeyRef = useRef<string | null>(null);
 
@@ -551,6 +555,14 @@ const AddFood: React.FC = () => {
       }),
     [dateKey]
   );
+
+  useEffect(() => {
+    if (!editEntry) {
+      setPhotoPreview(null);
+      setPhotoName("");
+      setPhotoRemoved(false);
+    }
+  }, [selectedFood, editEntry]);
 
   const hasServingMacros = useMemo(
     () =>
@@ -867,6 +879,9 @@ const AddFood: React.FC = () => {
     const { meal, index, item } = state.editEntry;
 
     setEditEntry({ meal, index, item });
+    setPhotoPreview(typeof item.photoUrl === "string" ? item.photoUrl : null);
+    setPhotoName(typeof item.photoName === "string" ? item.photoName : "");
+    setPhotoRemoved(false);
 
     const sel: any = item.selection || {};
     const mode: "serving" | "weight" =
@@ -1469,6 +1484,29 @@ const AddFood: React.FC = () => {
     };
   };
 
+  const handlePhotoChange = (file?: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === "string") {
+        setPhotoPreview(result);
+        setPhotoName(file.name || "food-photo");
+        setPhotoRemoved(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearPhoto = () => {
+    setPhotoPreview(null);
+    setPhotoName("");
+    setPhotoRemoved(true);
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  };
+
   const addFoodToMeal = async () => {
     const user = auth.currentUser;
     if (!user) return;
@@ -1563,6 +1601,8 @@ const AddFood: React.FC = () => {
           ...item,
           total: newTotal,
           selection: newSel,
+          photoUrl: photoRemoved ? null : photoPreview ?? item.photoUrl ?? null,
+          photoName: photoRemoved ? null : photoName || item.photoName || null,
         };
 
         const userRef = doc(db, "users", user.uid, "foods", dateKey);
@@ -1645,6 +1685,8 @@ const AddFood: React.FC = () => {
         },
         perBase: perBaseClean,
         total: totalClean,
+        photoUrl: photoPreview ?? null,
+        photoName: photoName || null,
         addedAt: new Date().toISOString(),
       };
 
@@ -2923,7 +2965,7 @@ const AddFood: React.FC = () => {
                       </IonText>
                     </IonCardTitle>
                     <IonText color="medium" style={{ fontSize: 11, marginTop: 4 }}>
-                      Swipe for micronutrients →
+                      Swipe for micronutrients & photo →
                     </IonText>
                   </IonCardHeader>
                   <IonCardContent style={{ padding: "0 0 18px 0" }}>
@@ -3110,6 +3152,70 @@ const AddFood: React.FC = () => {
                               </div>
                             );
                           })()}
+                        </div>
+                      </SwiperSlide>
+
+                      {/* Page 3: Photo */}
+                      <SwiperSlide>
+                        <div style={{ padding: "0 18px" }}>
+                          <div style={{ textAlign: "center", marginBottom: 12 }}>
+                            <div style={{ fontSize: 16, fontWeight: 700 }}>Food photo</div>
+                            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 4 }}>
+                              Add a photo of your meal (optional).
+                            </div>
+                          </div>
+
+                          {photoPreview ? (
+                            <div style={{ textAlign: "center" }}>
+                              <img
+                                src={photoPreview}
+                                alt="Selected food"
+                                style={{
+                                  width: "100%",
+                                  maxHeight: 220,
+                                  objectFit: "cover",
+                                  borderRadius: 12,
+                                }}
+                              />
+                              <IonText color="medium" style={{ fontSize: 12 }}>
+                                {photoName || "Photo attached"}
+                              </IonText>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                textAlign: "center",
+                                padding: "16px 0",
+                                opacity: 0.7,
+                              }}
+                            >
+                              No photo selected yet.
+                            </div>
+                          )}
+
+                          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                            <IonButton
+                              expand="block"
+                              onClick={() => photoInputRef.current?.click()}
+                            >
+                              {photoPreview ? "Replace photo" : "Add photo"}
+                            </IonButton>
+                            {photoPreview && (
+                              <IonButton expand="block" fill="outline" onClick={clearPhoto}>
+                                Remove
+                              </IonButton>
+                            )}
+                          </div>
+                          <input
+                            ref={photoInputRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            style={{ display: "none" }}
+                            onChange={(event) =>
+                              handlePhotoChange(event.target.files?.[0] ?? null)
+                            }
+                          />
                         </div>
                       </SwiperSlide>
                     </Swiper>

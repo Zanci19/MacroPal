@@ -23,6 +23,7 @@ import {
   IonActionSheet,
   IonButtons,
   IonInput,
+  IonThumbnail,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -1138,6 +1139,9 @@ const Home: React.FC = () => {
     }
   };
 
+  const streakMilestones = [3, 7, 14, 30];
+  const nextStreakTarget = streakMilestones.find((target) => streak < target) ?? null;
+
 
   return (
     <IonPage>
@@ -1435,6 +1439,32 @@ const Home: React.FC = () => {
           )}
         </IonCard>
 
+        <IonCard className="fs-achievements">
+          <IonCardHeader>
+            <IonCardTitle>Achievements</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {streakMilestones.map((target) => (
+                <IonChip key={target} color={streak >= target ? "success" : "medium"}>
+                  {target}-day streak
+                </IonChip>
+              ))}
+            </div>
+            {nextStreakTarget ? (
+              <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                {nextStreakTarget - streak} more day
+                {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
+                {nextStreakTarget}-day badge.
+              </IonText>
+            ) : (
+              <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                You’ve unlocked all streak badges 🎉
+              </IonText>
+            )}
+          </IonCardContent>
+        </IonCard>
+
         {showWellnessTip && (
           <IonCard className="fs-tip-card">
             <IonCardHeader className="fs-tip-card__hdr">
@@ -1652,6 +1682,11 @@ const Home: React.FC = () => {
                                 });
                               }}
                             >
+                              {it.photoUrl && (
+                                <IonThumbnail slot="start">
+                                  <img src={it.photoUrl} alt={it.photoName || it.name} />
+                                </IonThumbnail>
+                              )}
                               <IonLabel>
                                 <h2>
                                   {it.name}

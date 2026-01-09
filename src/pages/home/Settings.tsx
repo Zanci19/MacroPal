@@ -47,6 +47,8 @@ import "./Settings.css";
 import { ensureGoogleFitAccess, isGoogleFitSupported } from "../../utils/googleFit";
 
 export type ThemeMode = "system" | "light" | "dark" | "macropal";
+type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
+type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
 
 export const applyTheme = (mode: ThemeMode) => {
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -91,6 +93,8 @@ const Settings: React.FC = () => {
   const [confirmDeleteName, setConfirmDeleteName] = React.useState(false);
 
   const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
+  const [smartDietStyle, setSmartDietStyle] = React.useState<SmartDietStyle>("none");
+  const [smartMacroFocus, setSmartMacroFocus] = React.useState<SmartMacroFocus>("balanced");
   const [showWellnessTipEnabled, setShowWellnessTipEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
@@ -134,6 +138,36 @@ const Settings: React.FC = () => {
       setToast({
         show: true,
         message: err?.message || "Could not save theme preference.",
+        color: "danger",
+      });
+    }
+  };
+
+  const saveSmartRecommendationProfile = async (
+    updates: Partial<{ dietStyle: SmartDietStyle; macroFocus: SmartMacroFocus }>
+  ) => {
+    const current = auth.currentUser;
+    if (!current) return;
+
+    const nextProfile = {
+      dietStyle: updates.dietStyle ?? smartDietStyle,
+      macroFocus: updates.macroFocus ?? smartMacroFocus,
+    };
+
+    try {
+      const ref = doc(db, "users", current.uid);
+      await updateDoc(ref, {
+        "profile.smartRecommendationProfile": nextProfile,
+      });
+      trackEvent("settings_smart_recommendation_profile_update", {
+        uid: current.uid,
+        ...nextProfile,
+      });
+    } catch (err: any) {
+      console.error("Failed to save smart recommendation profile:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not update smart recommendations.",
         color: "danger",
       });
     }
@@ -306,6 +340,16 @@ const Settings: React.FC = () => {
             : true
         );
 
+        const smartProfile = (profile as any)?.smartRecommendationProfile;
+        if (smartProfile) {
+          if (typeof smartProfile.dietStyle === "string") {
+            setSmartDietStyle(smartProfile.dietStyle as SmartDietStyle);
+          }
+          if (typeof smartProfile.macroFocus === "string") {
+            setSmartMacroFocus(smartProfile.macroFocus as SmartMacroFocus);
+          }
+        }
+
         setShowWellnessTipEnabled(
           typeof (profile as any).showWellnessTip === "boolean"
             ? (profile as any).showWellnessTip
@@ -471,6 +515,41 @@ const Settings: React.FC = () => {
                 }
               }}
             />
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Recommendation diet style</IonLabel>
+            <IonSelect
+              value={smartDietStyle}
+              disabled={!smartRecommendationEnabled}
+              onIonChange={(e) => {
+                const value = (e.detail.value || "none") as SmartDietStyle;
+                setSmartDietStyle(value);
+                void saveSmartRecommendationProfile({ dietStyle: value });
+              }}
+            >
+              <IonSelectOption value="none">No preference</IonSelectOption>
+              <IonSelectOption value="vegetarian">Vegetarian</IonSelectOption>
+              <IonSelectOption value="vegan">Vegan</IonSelectOption>
+              <IonSelectOption value="pescatarian">Pescatarian</IonSelectOption>
+            </IonSelect>
+          </IonItem>
+
+          <IonItem lines="full">
+            <IonLabel>Recommendation macro focus</IonLabel>
+            <IonSelect
+              value={smartMacroFocus}
+              disabled={!smartRecommendationEnabled}
+              onIonChange={(e) => {
+                const value = (e.detail.value || "balanced") as SmartMacroFocus;
+                setSmartMacroFocus(value);
+                void saveSmartRecommendationProfile({ macroFocus: value });
+              }}
+            >
+              <IonSelectOption value="balanced">Balanced</IonSelectOption>
+              <IonSelectOption value="high-protein">High protein</IonSelectOption>
+              <IonSelectOption value="low-carb">Low carb</IonSelectOption>
+            </IonSelect>
           </IonItem>
 
           <IonItem lines="full">

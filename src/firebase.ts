@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore } from "firebase/firestore";
+import { enableIndexedDbPersistence, initializeFirestore } from "firebase/firestore";
 import {
   getAnalytics,
   isSupported,
@@ -24,6 +24,12 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
+
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err) => {
+    console.warn("Firestore persistence unavailable:", err);
+  });
+}
 
 export let analytics: Analytics | null = null;
 
