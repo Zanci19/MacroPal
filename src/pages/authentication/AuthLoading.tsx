@@ -33,7 +33,7 @@ const AuthLoading: React.FC = () => {
         const userRef = doc(db, "users", user.uid);
         const snap = await getDoc(userRef);
 
-        let targetRoute = "/setup-profile";
+        let targetRoute = "/onboarding-profile";
 
         if (snap.exists()) {
           setMessage("Checking your profile details…");
@@ -54,7 +54,7 @@ const AuthLoading: React.FC = () => {
             targetRoute = "/app/home";
             setMessage("All set! Opening your diary…");
           } else {
-            targetRoute = "/setup-profile";
+            targetRoute = "/onboarding-profile";
             setMessage("We need a few details. Opening setup…");
           }
         } else {
@@ -71,7 +71,7 @@ const AuthLoading: React.FC = () => {
             { merge: true }
           );
 
-          targetRoute = "/setup-profile";
+          targetRoute = "/onboarding-profile";
           setMessage("Profile created. Opening setup…");
         }
 

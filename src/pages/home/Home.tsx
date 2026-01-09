@@ -206,7 +206,7 @@ const Home: React.FC = () => {
 
     if (!profile || !profile.age) {
       trackEvent("home_redirect_no_profile", { uid });
-      history.replace("/setup-profile");
+      history.replace("/onboarding-profile");
       return;
     }
 

@@ -33,6 +33,7 @@ import Login from "./pages/authentication/Login";
 import Register from "./pages/authentication/Register";
 import AddFood from "./pages/AddFood";
 import SetupProfile from "./pages/SetupProfile";
+import OnboardingProfile from "./pages/OnboardingProfile";
 import CheckLogin from "./pages/CheckLogin";
 import Start from "./pages/Start";
 import ResetPassword from "./pages/ResetPassword";
@@ -415,6 +416,7 @@ const App: React.FC = () => {
               <Route exact path="/login" component={Login} />
               <Route exact path="/register" component={Register} />
               <Route exact path="/add-food" component={AddFood} />
+              <Route exact path="/onboarding-profile" component={OnboardingProfile} />
               <Route exact path="/setup-profile" component={SetupProfile} />
               <Route exact path="/check-login" component={CheckLogin} />
               <Route exact path="/start" component={Start} />
