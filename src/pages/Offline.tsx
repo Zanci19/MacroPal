@@ -9,7 +9,7 @@ import {
   IonText,
   IonIcon,
 } from "@ionic/react";
-import { wifiOutline, refreshOutline } from "ionicons/icons";
+import { cloudOfflineOutline, refreshOutline, wifiOutline } from "ionicons/icons";
 import { useHistory } from "react-router";
 import "./Offline.css";
 
@@ -18,6 +18,10 @@ const Offline: React.FC = () => {
 
   const goBackToCheck = () => {
     history.replace("/check-login");
+  };
+
+  const continueOffline = () => {
+    history.replace("/app/home");
   };
 
   useEffect(() => {
@@ -51,9 +55,9 @@ const Offline: React.FC = () => {
           <h2 style={{ marginTop: 12 }}>You’re offline</h2>
           <IonText color="medium">
             <p style={{ marginTop: 8 }}>
-              MacroPal needs an internet connection to work.
+              MacroPal can keep working offline with your cached data.
               <br />
-              Please turn on Wi-Fi or mobile data, then try again.
+              We’ll sync updates once you’re back online.
             </p>
           </IonText>
 
@@ -64,6 +68,15 @@ const Offline: React.FC = () => {
           >
             <IonIcon slot="start" icon={refreshOutline} />
             Try again
+          </IonButton>
+          <IonButton
+            expand="block"
+            fill="outline"
+            style={{ marginTop: 12 }}
+            onClick={continueOffline}
+          >
+            <IonIcon slot="start" icon={cloudOfflineOutline} />
+            Continue offline
           </IonButton>
         </div>
       </IonContent>

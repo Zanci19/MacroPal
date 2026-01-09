@@ -20,7 +20,9 @@ import {
   IonButton,
   IonIcon,
   IonChip,
+  IonActionSheet,
 } from "@ionic/react";
+import { shareOrDownload } from "../../utils/exportUtils";
 import {
   downloadOutline,
   barChartOutline,
@@ -149,6 +151,7 @@ const Analytics: React.FC = () => {
   const [tf, setTf] = useState<TF>("30d");
   const [days, setDays] = useState<DayRoll[]>([]);
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const unitSystem = getUnitSystem(profile?.units);
 
   // Fetch last 60 days whenever we have a uid and auth has settled
@@ -472,27 +475,6 @@ const Analytics: React.FC = () => {
   };
 
   // export
-  const shareOrDownload = async (file: File, fallbackName: string) => {
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({
-          files: [file],
-          title: fallbackName,
-        });
-        return;
-      } catch {
-        // fall back to download
-      }
-    }
-
-    const url = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fallbackName;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const buildPdf = (content: string) => {
     const escaped = content
       .replace(/\\/g, "\\\\")
@@ -558,6 +540,30 @@ const Analytics: React.FC = () => {
     });
     const fileName = `macropal_${tf}_summary.json`;
     const file = new File([blob], fileName, { type: "application/json" });
+    await shareOrDownload(file, fileName);
+  };
+
+  const exportCSV = async () => {
+    const header = ["Date", "Calories", "Carbs (g)", "Protein (g)", "Fat (g)"];
+    const rows = dayTable.map((row) => [
+      row.date,
+      row.calories,
+      row.carbs,
+      row.protein,
+      row.fat,
+    ]);
+    rows.push(["Totals", totals.calories, totals.carbs, totals.protein, totals.fat]);
+    rows.push(["Average", avg.calories, avg.carbs, avg.protein, avg.fat]);
+
+    const escapeCell = (value: string | number) =>
+      `"${String(value).replace(/"/g, '""')}"`;
+
+    const csv = [header, ...rows]
+      .map((row) => row.map(escapeCell).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const fileName = `macropal_${tf}_summary.csv`;
+    const file = new File([blob], fileName, { type: "text/csv" });
     await shareOrDownload(file, fileName);
   };
 
@@ -629,19 +635,12 @@ const Analytics: React.FC = () => {
                     >
                       <IonButton
                         fill="outline"
-                        onClick={exportPDF}
-                        style={{ marginRight: 8, marginBottom: 8 }}
-                        disabled={!hasFoodData}
-                      >
-                        <IonIcon icon={downloadOutline} slot="start" /> PDF
-                      </IonButton>
-                      <IonButton
-                        fill="outline"
-                        onClick={exportJSON}
                         style={{ marginBottom: 8 }}
                         disabled={!hasFoodData}
+                        onClick={() => setExportMenuOpen(true)}
                       >
-                        <IonIcon icon={downloadOutline} slot="start" /> JSON
+                        <IonIcon icon={downloadOutline} slot="start" />
+                        Export
                       </IonButton>
                     </IonCol>
                   </IonRow>
@@ -1377,6 +1376,35 @@ const Analytics: React.FC = () => {
           </>
         )}
       </IonContent>
+      <IonActionSheet
+        isOpen={exportMenuOpen}
+        onDidDismiss={() => setExportMenuOpen(false)}
+        header="Export summary"
+        buttons={[
+          {
+            text: "PDF",
+            handler: () => {
+              void exportPDF();
+            },
+          },
+          {
+            text: "JSON",
+            handler: () => {
+              void exportJSON();
+            },
+          },
+          {
+            text: "CSV",
+            handler: () => {
+              void exportCSV();
+            },
+          },
+          {
+            text: "Cancel",
+            role: "cancel",
+          },
+        ]}
+      />
     </IonPage>
   );
 };
