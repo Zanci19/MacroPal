@@ -27,8 +27,22 @@ import "./Register.css";
 const emailOk = (s: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim());
 
-const passwordStrongEnough = (s: string) =>
-  s.length >= 8 && /[A-Za-z]/.test(s) && /\d/.test(s);
+const passwordIssues = (s: string) => {
+  const issues: string[] = [];
+  if (s.length < 8) issues.push("at least 8 characters");
+  if (!/[A-Za-z]/.test(s)) issues.push("a letter");
+  if (!/\d/.test(s)) issues.push("a number");
+  return issues;
+};
+
+const passwordStrongEnough = (s: string) => passwordIssues(s).length === 0;
+
+const formatIssues = (issues: string[]) => {
+  if (issues.length === 0) return "";
+  if (issues.length === 1) return issues[0];
+  if (issues.length === 2) return `${issues[0]} and ${issues[1]}`;
+  return `${issues.slice(0, -1).join(", ")}, and ${issues.at(-1)}`;
+};
 
 const Register: React.FC = () => {
   const [name, setName] = useState("");
@@ -82,9 +96,10 @@ const Register: React.FC = () => {
       return showToast("Please enter a password.");
     }
     if (!passwordStrongEnough(cleanPw)) {
+      const issues = formatIssues(passwordIssues(cleanPw));
       trackEvent("register_validation_failed", { reason: "weak_password" });
       return showToast(
-        "Password must be at least 8 characters and include a letter and a number."
+        `Password isn't strong enough. Add ${issues}.`
       );
     }
     if (!cleanPw2) {
@@ -136,7 +151,10 @@ const Register: React.FC = () => {
       } else if (code === "auth/invalid-email") {
         msg = "Invalid email address.";
       } else if (code === "auth/weak-password") {
-        msg = "Password is too weak.";
+        const issues = formatIssues(passwordIssues(cleanPw));
+        msg = issues
+          ? `Password isn't strong enough. Add ${issues}.`
+          : "Password is too weak.";
       } else {
         msg = handleError("register", err);
       }

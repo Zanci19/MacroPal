@@ -130,6 +130,13 @@ export interface MealPlanDoc {
   [k: string]: any;
 }
 
+export interface WeighInEntry {
+  date: string; // yyyy-mm-dd
+  weight: number; // kg
+  createdAt?: string;
+  [k: string]: any;
+}
+
 /** =========================
  *  Open Food Facts (subset)
  *  ========================= */
