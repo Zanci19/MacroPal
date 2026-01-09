@@ -130,7 +130,7 @@ const TabsShell: React.FC = () => {
         : "forward";
 
     lastDirectionRef.current = direction;
-    router.push(href, direction, "push");
+    router.push(href, "forward", "push");
   };
 
   const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
@@ -154,12 +154,17 @@ const TabsShell: React.FC = () => {
     const leavingEl = opts.leavingEl;
     const directionFactor = isForward ? 1 : -1;
 
+    const enteringStartOpacity = isForward ? ENTER_MIN_OPACITY : 1;
+    const leavingEndOpacity = LEAVE_MIN_OPACITY;
+    const enteringZIndex = "102";
+    const leavingZIndex = "101";
+
     const enteringAnimation = createAnimation()
       .addElement(enteringEl)
       .duration(ANIMATION_DURATION_MS)
       .easing("cubic-bezier(0.4, 0, 0.2, 1)")
       .beforeStyles({
-        zIndex: "101",
+        zIndex: enteringZIndex,
         position: "absolute",
         top: "0",
         left: "0",
@@ -171,7 +176,7 @@ const TabsShell: React.FC = () => {
       .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
       .beforeRemoveClass("ion-page-invisible")
       .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
-      .fromTo("opacity", ENTER_MIN_OPACITY, 1);
+      .fromTo("opacity", enteringStartOpacity, 1);
 
     const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
     let leavingAnimation: Animation | undefined;
@@ -181,7 +186,7 @@ const TabsShell: React.FC = () => {
         .duration(ANIMATION_DURATION_MS)
         .easing("cubic-bezier(0.4, 0, 0.2, 1)")
         .beforeStyles({
-          zIndex: "100",
+          zIndex: leavingZIndex,
           position: "absolute",
           top: "0",
           left: "0",
@@ -192,7 +197,7 @@ const TabsShell: React.FC = () => {
         })
         .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
         .fromTo("transform", "translateX(0)", `translateX(${leaveOffset}%)`)
-        .fromTo("opacity", 1, LEAVE_MIN_OPACITY);
+        .fromTo("opacity", 1, leavingEndOpacity);
     }
 
     const animation = createAnimation().addAnimation(enteringAnimation);
