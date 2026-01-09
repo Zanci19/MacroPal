@@ -25,3 +25,27 @@
 .settings-page ion-card-header {
   padding-bottom: 8px;
 }
+
+.settings-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.settings-avatar ion-avatar {
+  width: 52px;
+  height: 52px;
+  background: color-mix(in srgb, var(--mp-surface) 85%, transparent);
+  border: 1px solid var(--mp-border);
+}
+
+.settings-avatar ion-icon {
+  font-size: 2.2rem;
+  color: var(--mp-text-muted);
+}
+
+.settings-file-input {
+  display: none;
+}

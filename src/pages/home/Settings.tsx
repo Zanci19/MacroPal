@@ -21,6 +21,8 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonAvatar,
+  IonActionSheet,
 } from "@ionic/react";
 import {
   personCircleOutline,
@@ -100,6 +102,8 @@ const Settings: React.FC = () => {
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
+  const [showPhotoActions, setShowPhotoActions] = React.useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = React.useState<string | null>(null);
   const [googleFitAutoImport, setGoogleFitAutoImport] = React.useState(false);
   const [checkingGoogleFit, setCheckingGoogleFit] = React.useState(false);
   const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
@@ -115,6 +119,8 @@ const Settings: React.FC = () => {
     return "macropal";
   });
   const [showAbout, setShowAbout] = React.useState(false);
+  const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleThemeChange = async (newTheme: ThemeMode) => {
     setThemeMode(newTheme);
@@ -265,6 +271,52 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handlePhotoChange = async (file?: File | null) => {
+    if (!file || !auth.currentUser) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (!dataUrl) return;
+
+      try {
+        const ref = doc(db, "users", auth.currentUser?.uid ?? "");
+        await updateDoc(ref, {
+          "profile.photoUrl": dataUrl,
+        });
+        setProfilePhotoUrl(dataUrl);
+        trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
+        setToast({ show: true, message: "Profile photo updated.", color: "success" });
+      } catch (err: any) {
+        console.error("Failed to save profile photo:", err);
+        setToast({
+          show: true,
+          message: err?.message || "Could not update profile photo.",
+          color: "danger",
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const ref = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(ref, { "profile.photoUrl": null });
+      setProfilePhotoUrl(null);
+      trackEvent("settings_profile_photo_remove", { uid: auth.currentUser.uid });
+      setToast({ show: true, message: "Profile photo removed.", color: "success" });
+    } catch (err: any) {
+      console.error("Failed to remove profile photo:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not remove profile photo.",
+        color: "danger",
+      });
+    }
+  };
+
   const handleGoogleFitToggle = async (checked: boolean) => {
     const current = auth.currentUser;
     if (!current) return;
@@ -369,6 +421,10 @@ const Settings: React.FC = () => {
             : true
         );
 
+        setProfilePhotoUrl(
+          typeof (profile as any)?.photoUrl === "string" ? (profile as any).photoUrl : null
+        );
+
         const googleFitEnabled =
           typeof (profile as any).googleFitAutoImport === "boolean"
             ? (profile as any).googleFitAutoImport
@@ -437,7 +493,26 @@ const Settings: React.FC = () => {
             <IonCardContent>
               <IonList>
                 <IonItem lines="full">
-                  <IonIcon slot="start" icon={personCircleOutline} />
+                  <div
+                    className="settings-avatar"
+                    onClick={() => setShowPhotoActions(true)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Update profile photo"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        setShowPhotoActions(true);
+                      }
+                    }}
+                  >
+                    <IonAvatar>
+                      {profilePhotoUrl ? (
+                        <img src={profilePhotoUrl} alt="Profile" />
+                      ) : (
+                        <IonIcon icon={personCircleOutline} />
+                      )}
+                    </IonAvatar>
+                  </div>
                   <IonLabel>
                     <h2>{user.displayName || "Unnamed User"}</h2>
                     <p>{user.email}</p>
@@ -844,6 +919,59 @@ const Settings: React.FC = () => {
           </IonCard>
         </div>
       </IonContent>
+
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="settings-file-input"
+        onChange={(event) => {
+          void handlePhotoChange(event.target.files?.[0] ?? null);
+          if (event.currentTarget) event.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="settings-file-input"
+        onChange={(event) => {
+          void handlePhotoChange(event.target.files?.[0] ?? null);
+          if (event.currentTarget) event.currentTarget.value = "";
+        }}
+      />
+
+      <IonActionSheet
+        isOpen={showPhotoActions}
+        onDidDismiss={() => setShowPhotoActions(false)}
+        header="Update profile photo"
+        buttons={[
+          {
+            text: "Choose from gallery",
+            handler: () => galleryInputRef.current?.click(),
+          },
+          {
+            text: "Take a photo",
+            handler: () => cameraInputRef.current?.click(),
+          },
+          ...(profilePhotoUrl
+            ? [
+                {
+                  text: "Remove photo",
+                  role: "destructive",
+                  handler: () => {
+                    void handleRemovePhoto();
+                  },
+                },
+              ]
+            : []),
+          {
+            text: "Cancel",
+            role: "cancel",
+          },
+        ]}
+      />
 
       {/* Alerts + Toasts unchanged */}
       <IonAlert
