@@ -12,7 +12,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_FIREBASE_API_KEY",
+  apiKey: "AIzaSyAgL2MSg4fAUnwsQZ7lLpQlO19lVMykNow",
   authDomain: "macropal-zanci19.firebaseapp.com",
   projectId: "macropal-zanci19",
   storageBucket: "macropal-zanci19.firebasestorage.app",

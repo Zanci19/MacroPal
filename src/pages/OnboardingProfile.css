@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
+  overflow: hidden;
 }
 
 @media (prefers-color-scheme: light) {
@@ -35,6 +36,23 @@
   align-items: center;
   gap: 16px;
   text-align: center;
+}
+
+.onboarding-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation-duration: 280ms;
+  animation-timing-function: ease;
+  animation-fill-mode: both;
+}
+
+.onboarding-forward {
+  animation-name: onboarding-slide-forward;
+}
+
+.onboarding-back {
+  animation-name: onboarding-slide-back;
 }
 
 .onboarding-intro {
@@ -112,4 +130,26 @@
   border-radius: 999px;
   height: 44px;
   font-weight: 600;
+}
+
+@keyframes onboarding-slide-forward {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes onboarding-slide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }

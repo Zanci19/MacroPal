@@ -233,8 +233,8 @@ const SetupProfile: React.FC = () => {
         gender,
       });
 
-      showToast("Profile saved.", "success");
-      history.push("/app/home");
+      showToast("Profile updated.", "success");
+      history.push("/app/settings");
     } catch (error: any) {
       console.error(error);
       trackEvent("profile_save_error", {

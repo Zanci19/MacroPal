@@ -103,6 +103,7 @@ const clampNumber = (value: number, min: number, max: number) =>
 
 const OnboardingProfile: React.FC = () => {
   const [step, setStep] = useState(0);
+  const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [gender, setGender] = useState<Gender | null>(null);
   const [age, setAge] = useState<number | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
@@ -265,7 +266,7 @@ const OnboardingProfile: React.FC = () => {
         gender,
       });
 
-      showToast("Profile saved.", "success");
+      showToast("Profile saved. Welcome!", "success");
       history.push("/app/home");
     } catch (error: any) {
       console.error(error);
@@ -292,10 +293,12 @@ const OnboardingProfile: React.FC = () => {
       return;
     }
 
+    setDirection("forward");
     setStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
   const handleBack = () => {
+    setDirection("back");
     setStep((prev) => Math.max(prev - 1, 0));
   };
 
@@ -309,8 +312,12 @@ const OnboardingProfile: React.FC = () => {
 
       <IonContent className="onboarding-profile-page" fullscreen>
         <div className="onboarding-card">
-          {steps[step] === "gender" && (
-            <div className="onboarding-step">
+          <div
+            key={step}
+            className={`onboarding-step-card onboarding-${direction}`}
+          >
+            {steps[step] === "gender" && (
+              <div className="onboarding-step">
               <p className="onboarding-intro">
                 We’ll need to ask you some questions before you can proceed.
               </p>
@@ -329,11 +336,11 @@ const OnboardingProfile: React.FC = () => {
                   Female
                 </IonButton>
               </div>
-            </div>
-          )}
+              </div>
+            )}
 
-          {steps[step] === "age" && (
-            <div className="onboarding-step">
+            {steps[step] === "age" && (
+              <div className="onboarding-step">
               <h1 className="onboarding-title">How old are you?</h1>
               <div className="onboarding-number-wrapper">
                 <IonButton
@@ -369,11 +376,11 @@ const OnboardingProfile: React.FC = () => {
               <p className="onboarding-helper">
                 We need this to calculate your daily calorie needs.
               </p>
-            </div>
-          )}
+              </div>
+            )}
 
-          {steps[step] === "weight" && (
-            <div className="onboarding-step">
+            {steps[step] === "weight" && (
+              <div className="onboarding-step">
               <h1 className="onboarding-title">What’s your weight?</h1>
               <div className="onboarding-number-wrapper">
                 <IonButton
@@ -407,11 +414,11 @@ const OnboardingProfile: React.FC = () => {
                 </IonButton>
               </div>
               <p className="onboarding-helper">In kilograms (kg).</p>
-            </div>
-          )}
+              </div>
+            )}
 
-          {steps[step] === "height" && (
-            <div className="onboarding-step">
+            {steps[step] === "height" && (
+              <div className="onboarding-step">
               <h1 className="onboarding-title">How tall are you?</h1>
               <div className="onboarding-number-wrapper">
                 <IonButton
@@ -445,11 +452,11 @@ const OnboardingProfile: React.FC = () => {
                 </IonButton>
               </div>
               <p className="onboarding-helper">In centimeters (cm).</p>
-            </div>
-          )}
+              </div>
+            )}
 
-          {steps[step] === "goal" && (
-            <div className="onboarding-step">
+            {steps[step] === "goal" && (
+              <div className="onboarding-step">
               <h1 className="onboarding-title">What is your goal?</h1>
               <div className="onboarding-choice-row">
                 <IonButton
@@ -471,11 +478,11 @@ const OnboardingProfile: React.FC = () => {
                   Gain
                 </IonButton>
               </div>
-            </div>
-          )}
+              </div>
+            )}
 
-          {steps[step] === "activity" && (
-            <div className="onboarding-step">
+            {steps[step] === "activity" && (
+              <div className="onboarding-step">
               <h1 className="onboarding-title">What’s your activity level?</h1>
               <IonItem lines="full" className="onboarding-select">
                 <IonLabel position="stacked">Activity level</IonLabel>
@@ -500,8 +507,9 @@ const OnboardingProfile: React.FC = () => {
                   </IonSelectOption>
                 </IonSelect>
               </IonItem>
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           <div className="onboarding-actions">
             <IonButton
