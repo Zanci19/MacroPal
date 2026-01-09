@@ -1,36 +1,51 @@
 :root {
-  --mp-primary: #357be4;
-  --mp-primary-strong: #1f63cc;
-  --mp-primary-soft: rgba(53, 123, 228, 0.12);
-  --mp-primary-gradient: linear-gradient(120deg, #357be4 0%, #4f8cf8 45%, #7bb2ff 100%);
+  --mp-primary: #1f2937;
+  --mp-primary-strong: #111827;
+  --mp-primary-soft: rgba(31, 41, 55, 0.12);
+  --mp-primary-gradient: linear-gradient(
+    120deg,
+    #1f2937 0%,
+    #374151 45%,
+    #4b5563 100%
+  );
 
-  --mp-bg: #f4f7fb;
+  --mp-bg: #f5f6f8;
   --mp-surface: #ffffff;
-  --mp-surface-muted: #ecf0f7;
-  --mp-surface-glow: radial-gradient(circle at 20% 20%, rgba(79, 140, 248, 0.12), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(31, 99, 204, 0.1), transparent 35%);
-  --mp-text: #0b1b33;
+  --mp-surface-muted: #eef0f3;
+
+  --mp-surface-glow:
+    radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.04), transparent 40%),
+    radial-gradient(circle at 80% 0%, rgba(0, 0, 0, 0.03), transparent 35%);
+
+  --mp-text: #0f172a;
   --mp-text-muted: #4b5563;
   --mp-border: rgba(15, 23, 42, 0.08);
-  --mp-shadow-soft: 0 10px 40px rgba(15, 23, 42, 0.08);
-  --mp-shadow-strong: 0 24px 70px rgba(15, 23, 42, 0.14);
-  --mp-chip-bg: rgba(244, 247, 251, 0.9);
+
+  --mp-shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
+  --mp-shadow-strong: 0 24px 70px rgba(0, 0, 0, 0.14);
+
+  --mp-chip-bg: rgba(245, 246, 248, 0.9);
 
   color-scheme: light;
 }
 
 body.dark {
-  --mp-bg: #080c14;
-  --mp-surface: rgba(12, 16, 26, 0.8);
-  --mp-surface-muted: #0f1520;
-  --mp-surface-glow: radial-gradient(circle at 15% 15%, rgba(79, 140, 248, 0.18), transparent 36%),
-    radial-gradient(circle at 95% 5%, rgba(31, 99, 204, 0.16), transparent 30%),
-    radial-gradient(circle at 50% 90%, rgba(124, 147, 255, 0.08), transparent 30%);
-  --mp-text: #e7edf6;
-  --mp-text-muted: #9fb1c9;
+  --mp-bg: #080a0f;
+  --mp-surface: rgba(14, 17, 24, 0.85);
+  --mp-surface-muted: #0f131b;
+
+  --mp-surface-glow:
+    radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.04), transparent 36%),
+    radial-gradient(circle at 95% 5%, rgba(255, 255, 255, 0.03), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.02), transparent 30%);
+
+  --mp-text: #e5e7eb;
+  --mp-text-muted: #9ca3af;
   --mp-border: rgba(255, 255, 255, 0.08);
+
   --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.35);
   --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.55);
+
   --mp-chip-bg: rgba(31, 41, 55, 0.9);
 
   color-scheme: dark;

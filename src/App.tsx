@@ -130,7 +130,7 @@ const TabsShell: React.FC = () => {
         : "forward";
 
     lastDirectionRef.current = direction;
-    router.push(href, direction, "push");
+    router.push(href, "forward", "push");
   };
 
   const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
@@ -176,7 +176,7 @@ const TabsShell: React.FC = () => {
       .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
       .beforeRemoveClass("ion-page-invisible")
       .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
-      .fromTo("opacity", enteringStartOpacity, 1);
+      //.fromTo("opacity", enteringStartOpacity, 1);
 
     const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
     let leavingAnimation: Animation | undefined;
