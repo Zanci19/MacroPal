@@ -33,6 +33,7 @@ export interface Profile {
   gender: Gender;
   goal: Goal;
   activity: ActivityLevel;
+  units?: "metric" | "imperial";
 
   // room for extra fields (targets, flags, etc.)
   [k: string]: any;
@@ -127,6 +128,13 @@ export interface MealPlanDoc {
   lunch: MealPlanEntry[];
   dinner: MealPlanEntry[];
   snacks: MealPlanEntry[];
+  [k: string]: any;
+}
+
+export interface WeighInEntry {
+  date: string; // yyyy-mm-dd
+  weight: number; // kg
+  createdAt?: string;
   [k: string]: any;
 }
 

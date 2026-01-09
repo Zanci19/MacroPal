@@ -21,6 +21,8 @@ import {
   IonDatetime,
   IonModal,
   IonActionSheet,
+  IonButtons,
+  IonInput,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -39,7 +41,14 @@ import {
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
-import { doc, getDoc, onSnapshot, runTransaction, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  onSnapshot,
+  runTransaction,
+  updateDoc,
+  setDoc,
+} from "firebase/firestore";
 import "./Home.css";
 import {
   clampDateKeyToToday,
@@ -56,7 +65,14 @@ import type {
   WorkoutDayDoc,
   WorkoutEntry,
 } from "../../types";
+import type { WeighInEntry } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
+import {
+  fromMetricWeight,
+  getUnitSystem,
+  toMetricWeight,
+  weightLabel,
+} from "../../utils/units";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -159,6 +175,17 @@ const Home: React.FC = () => {
     index: number;
     name: string;
   } | null>(null);
+  const [showWeighInModal, setShowWeighInModal] = useState(false);
+  const [weighInValue, setWeighInValue] = useState<string>("");
+  const [weighInToast, setWeighInToast] = useState<{
+    open: boolean;
+    message: string;
+    color?: string;
+  }>({
+    open: false,
+    message: "",
+    color: "success",
+  });
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
 
@@ -174,6 +201,7 @@ const Home: React.FC = () => {
   const [tipIndex, setTipIndex] = useState(() =>
     Math.floor(Math.random() * WELLNESS_TIPS.length)
   );
+  const unitSystem = getUnitSystem(profile?.units);
 
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
@@ -1055,6 +1083,61 @@ const Home: React.FC = () => {
       });
   }, [uid, anyItems, profile, activeDateKey]);
 
+  const openWeighInModal = () => {
+    const fallback =
+      typeof profile?.weight === "number"
+        ? String(
+            Math.round(fromMetricWeight(profile.weight, unitSystem) * 10) / 10
+          )
+        : "";
+    setWeighInValue((prev) => prev || fallback);
+    setShowWeighInModal(true);
+    trackEvent("weigh_in_modal_open", { uid, date: activeDateKey });
+  };
+
+  const saveWeighIn = async () => {
+    if (!uid) return;
+    const weight = Number(weighInValue);
+    if (!Number.isFinite(weight) || weight <= 0) {
+      setWeighInToast({
+        open: true,
+        message: "Please enter a valid weight in kg.",
+        color: "warning",
+      });
+      return;
+    }
+
+    const entry: WeighInEntry = {
+      date: activeDateKey,
+      weight: Math.round(toMetricWeight(weight, unitSystem) * 10) / 10,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await setDoc(doc(db, "users", uid, "weighins", activeDateKey), entry, {
+        merge: true,
+      });
+      setWeighInToast({
+        open: true,
+        message: `Saved weigh-in for ${activeDateKey}.`,
+        color: "success",
+      });
+      trackEvent("weigh_in_saved", {
+        uid,
+        date: activeDateKey,
+        weight: entry.weight,
+      });
+      setShowWeighInModal(false);
+    } catch {
+      setWeighInToast({
+        open: true,
+        message: "Could not save weigh-in.",
+        color: "danger",
+      });
+      trackEvent("weigh_in_save_error", { uid, date: activeDateKey });
+    }
+  };
+
 
   return (
     <IonPage>
@@ -1153,16 +1236,20 @@ const Home: React.FC = () => {
                 <div className="fs-summary__meta-label">Base goal</div>
                 <div className="fs-summary__meta-value">{baseKcalGoal}</div>
               </div>
-              <div>
-                <div className="fs-summary__meta-label">Activity bonus</div>
-                <div className="fs-summary__meta-value">
-                  +{workoutCalories} kcal
-                </div>
-              </div>
-              <div>
-                <div className="fs-summary__meta-label">Adjusted goal</div>
-                <div className="fs-summary__meta-value">{kcalGoal}</div>
-              </div>
+              {workoutCalories > 0 && (
+                <>
+                  <div>
+                    <div className="fs-summary__meta-label">Activity bonus</div>
+                    <div className="fs-summary__meta-value">
+                      +{workoutCalories} kcal
+                    </div>
+                  </div>
+                  <div>
+                    <div className="fs-summary__meta-label">Adjusted goal</div>
+                    <div className="fs-summary__meta-value">{kcalGoal}</div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1615,6 +1702,20 @@ const Home: React.FC = () => {
             );
           })}
 
+        <IonCard className="fs-weighin">
+          <IonCardHeader>
+            <IonCardTitle>Weigh-in</IonCardTitle>
+          </IonCardHeader>
+          <IonCardContent>
+            <p style={{ marginTop: 0 }}>
+              Track your weight over time to see progress in Analytics.
+            </p>
+            <IonButton expand="block" onClick={openWeighInModal}>
+              Log weigh-in
+            </IonButton>
+          </IonCardContent>
+        </IonCard>
+
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
           onDidDismiss={() => {
@@ -1759,7 +1860,54 @@ const Home: React.FC = () => {
           ]}
           onDidDismiss={() => setToast({ open: false, message: "" })}
         />
+        <IonToast
+          isOpen={weighInToast.open}
+          message={weighInToast.message}
+          color={weighInToast.color}
+          duration={2500}
+          onDidDismiss={() =>
+            setWeighInToast((prev) => ({ ...prev, open: false }))
+          }
+        />
       </IonContent>
+
+      <IonModal
+        isOpen={showWeighInModal}
+        onDidDismiss={() => setShowWeighInModal(false)}
+      >
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Log weigh-in</IonTitle>
+            <IonButtons slot="end">
+              <IonButton onClick={() => setShowWeighInModal(false)}>
+                Close
+              </IonButton>
+            </IonButtons>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent className="ion-padding">
+          <IonItem>
+            <IonLabel position="stacked">
+              Weight ({weightLabel(unitSystem)})
+            </IonLabel>
+            <IonInput
+              type="number"
+              inputMode="decimal"
+              value={weighInValue}
+              placeholder="e.g. 72.5"
+              onIonInput={(e) => setWeighInValue(e.detail.value || "")}
+            />
+          </IonItem>
+          <IonItem lines="none">
+            <IonLabel>
+              Date: <strong>{activeDateKey}</strong>
+            </IonLabel>
+          </IonItem>
+          <IonButton expand="block" className="ion-margin-top" onClick={saveWeighIn}>
+            Save weigh-in
+          </IonButton>
+        </IonContent>
+      </IonModal>
 
       <IonModal
         isOpen={showDatePicker}

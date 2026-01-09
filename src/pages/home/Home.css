@@ -228,6 +228,15 @@ ion-card:hover {
   flex: 1;
 }
 
+.fs-weighin ion-card-title {
+  font-weight: 800;
+}
+
+.fs-weighin p {
+  color: var(--mp-text-muted);
+  line-height: 1.4;
+}
+
 @media (max-width: 520px) {
   .fs-tip-card__content {
     flex-direction: column;
