@@ -919,6 +919,59 @@ const Home: React.FC = () => {
     }
   };
 
+  const moveFood = async (meal: MealKey, index: number, direction: -1 | 1) => {
+    if (!uid) return;
+    const current = dayData[meal] || [];
+    const target = index + direction;
+    if (index < 0 || index >= current.length) return;
+    if (target < 0 || target >= current.length) return;
+
+    const nextMeal = [...current];
+    [nextMeal[index], nextMeal[target]] = [nextMeal[target], nextMeal[index]];
+
+    trackEvent("food_move_attempt", {
+      uid,
+      date: activeDateKey,
+      meal,
+      from: index,
+      to: target,
+    });
+
+    setDayData({ ...dayData, [meal]: nextMeal });
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", activeDateKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const arr: DiaryEntry[] = [...((data as Partial<DayDiaryDoc>)[meal] || [])];
+        if (index < 0 || index >= arr.length) return;
+        if (target < 0 || target >= arr.length) return;
+        [arr[index], arr[target]] = [arr[target], arr[index]];
+        tx.set(ref, { ...data, [meal]: arr }, { merge: true });
+      });
+
+      trackEvent("food_move_success", {
+        uid,
+        date: activeDateKey,
+        meal,
+        from: index,
+        to: target,
+      });
+    } catch {
+      setDayData({ ...dayData, [meal]: current });
+      setToast({ open: true, message: "Move failed." });
+
+      trackEvent("food_move_error", {
+        uid,
+        date: activeDateKey,
+        meal,
+        from: index,
+        to: target,
+      });
+    }
+  };
+
   const ringColor =
     progress <= 0.9
       ? "var(--ion-color-success)"
@@ -1532,6 +1585,32 @@ const Home: React.FC = () => {
           }}
           header={foodMenuEntry ? `Actions for ${foodMenuEntry.name}` : undefined}
           buttons={[
+            {
+              text: "Move up",
+              cssClass:
+                foodMenuEntry &&
+                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  ? ""
+                  : "action-sheet-disabled",
+              handler: () => {
+                if (!foodMenuEntry) return false;
+                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                moveFood(foodMenuEntry.meal, foodMenuEntry.index, -1);
+              },
+            },
+            {
+              text: "Move down",
+              cssClass:
+                foodMenuEntry &&
+                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  ? ""
+                  : "action-sheet-disabled",
+              handler: () => {
+                if (!foodMenuEntry) return false;
+                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                moveFood(foodMenuEntry.meal, foodMenuEntry.index, 1);
+              },
+            },
             {
               text: "Remove",
               role: "destructive",
