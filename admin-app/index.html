@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MacroPal Admin Console</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <div>
+          <p class="eyebrow">MacroPal</p>
+          <h1>Firebase Admin Console</h1>
+          <p class="subhead">
+            Load a user by UID and edit profile data, meals, and any Firestore
+            document under <code>users/{uid}</code>.
+          </p>
+        </div>
+        <div class="status" id="authStatus">Auth: initializing…</div>
+      </header>
+
+      <section class="card">
+        <h2>Login (UID)</h2>
+        <p class="muted">
+          This does not authenticate the user. It selects which user document you
+          want to edit. The app signs in anonymously to access Firestore.
+        </p>
+        <div class="row">
+          <label>
+            User UID
+            <input id="uidInput" placeholder="Enter user UID" />
+          </label>
+          <button id="setUidBtn">Load user</button>
+        </div>
+        <div class="inline-status" id="uidStatus">No user loaded.</div>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <h2>Profile document</h2>
+          <p class="muted">Document path: <code>users/{uid}</code></p>
+          <div class="row">
+            <button id="loadProfileBtn">Load profile</button>
+            <button id="saveProfileBtn">Save profile</button>
+          </div>
+          <textarea id="profileJson" spellcheck="false"></textarea>
+        </div>
+
+        <div class="card">
+          <h2>Meals</h2>
+          <p class="muted">
+            Document path: <code>users/{uid}/foods/{dateKey}</code>
+          </p>
+          <div class="row">
+            <label>
+              Date key
+              <input id="mealDate" placeholder="YYYY-MM-DD" />
+            </label>
+            <button id="loadMealsBtn">Load meals</button>
+            <button id="saveMealsBtn">Save meals</button>
+          </div>
+          <textarea id="mealsJson" spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Custom document</h2>
+        <p class="muted">
+          Provide a document path under <code>users/{uid}</code>, for example
+          <code>workouts/2024-02-09</code> or <code>mealPresets/abc123</code>.
+        </p>
+        <div class="row">
+          <label class="grow">
+            Document path
+            <input id="customPath" placeholder="collection/doc" />
+          </label>
+          <button id="loadCustomBtn">Load document</button>
+          <button id="saveCustomBtn">Save document</button>
+        </div>
+        <textarea id="customJson" spellcheck="false"></textarea>
+      </section>
+
+      <footer class="footer">
+        <p>
+          Tip: use valid JSON objects. Saving replaces the entire document at the
+          chosen path.
+        </p>
+      </footer>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
