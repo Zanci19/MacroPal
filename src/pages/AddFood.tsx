@@ -839,17 +839,17 @@ const AddFood: React.FC = () => {
       results.length !== prevResultsLengthRef.current || firstKey !== prevResultsKeyRef.current;
     if (results.length > 0 && changed) {
       const listEl = resultsListRef.current as HTMLElement | null;
-      const scrollEl = await contentRef.current?.getScrollElement();
-      if (listEl && scrollEl) {
+      const contentEl = await contentRef.current?.getScrollElement();
+      if (listEl && contentEl) {
         const listRect = listEl.getBoundingClientRect();
-        const scrollRect = scrollEl.getBoundingClientRect();
+        const scrollRect = contentEl.getBoundingClientRect();
         const visibleHeight = Math.min(listRect.bottom, scrollRect.bottom) - Math.max(listRect.top, scrollRect.top);
         const alreadyInView =
           visibleHeight >= Math.min(listRect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
           const targetTop = Math.max(listEl.offsetTop - 12, 0);
           requestAnimationFrame(() => {
-            scrollEl.scrollTo({ top: targetTop, behavior: "smooth" });
+            void contentRef.current?.scrollToPoint(0, targetTop, 350);
           });
         }
       }
