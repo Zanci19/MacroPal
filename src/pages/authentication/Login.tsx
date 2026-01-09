@@ -9,14 +9,20 @@ import {
   IonLabel,
   IonInput,
   IonButton,
+  IonIcon,
   IonText,
   IonToast,
   IonSpinner,
 } from "@ionic/react";
 import {
+  logoGoogle,
+} from "ionicons/icons";
+import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
@@ -174,6 +180,27 @@ const Login: React.FC = () => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      trackEvent("login_google_success", { uid: result.user.uid });
+      showToast("Signed in with Google.", "success");
+      history.replace("/auth-loading");
+    } catch (err: any) {
+      trackEvent("login_google_error", { code: err?.code || "unknown" });
+      if (err?.code === "auth/popup-closed-by-user") {
+        showToast("Google sign-in cancelled.", "warning");
+      } else {
+        showToast(handleError("login", err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -243,6 +270,21 @@ const Login: React.FC = () => {
               {busy ? <IonSpinner name="dots" /> : "Log In"}
             </IonButton>
           </div>
+
+          <div className="login-divider">
+            <span>or</span>
+          </div>
+
+          <IonButton
+            expand="block"
+            fill="outline"
+            className="login-google-button"
+            onClick={handleGoogleLogin}
+            disabled={busy}
+          >
+            <IonIcon icon={logoGoogle} slot="start" />
+            Sign in with Google
+          </IonButton>
 
           <div className="login-footer">
             <IonText color="medium">

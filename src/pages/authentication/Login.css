@@ -107,6 +107,33 @@
   font-weight: 700;
 }
 
+.login-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 16px 0 10px;
+  color: var(--mp-text-muted);
+  font-size: 0.85rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--mp-border);
+}
+
+.login-google-button {
+  border-radius: 999px;
+  height: 46px;
+  font-weight: 700;
+  --border-color: color-mix(in srgb, var(--mp-text) 18%, transparent);
+  --color: var(--mp-text);
+  --background-hover: color-mix(in srgb, var(--mp-primary) 8%, transparent);
+}
+
 .login-footer {
   margin-top: 18px;
   text-align: center;

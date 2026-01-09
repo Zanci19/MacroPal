@@ -4,6 +4,7 @@ import {
   IonContent,
   IonInput,
   IonButton,
+  IonIcon,
   IonHeader,
   IonTitle,
   IonToolbar,
@@ -14,10 +15,15 @@ import {
   IonSpinner,
 } from "@ionic/react";
 import {
+  logoGoogle,
+} from "ionicons/icons";
+import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
@@ -165,6 +171,27 @@ const Register: React.FC = () => {
     }
   };
 
+  const handleGoogleRegister = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      trackEvent("register_google_success", { uid: result.user.uid });
+      showToast("Signed up with Google.", "success");
+      history.replace("/auth-loading");
+    } catch (err: any) {
+      trackEvent("register_google_error", { code: err?.code || "unknown" });
+      if (err?.code === "auth/popup-closed-by-user") {
+        showToast("Google sign-up cancelled.", "warning");
+      } else {
+        showToast(handleError("register", err));
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -235,6 +262,21 @@ const Register: React.FC = () => {
               {busy ? <IonSpinner name="dots" /> : "Sign Up"}
             </IonButton>
           </div>
+
+          <div className="register-divider">
+            <span>or</span>
+          </div>
+
+          <IonButton
+            expand="block"
+            fill="outline"
+            className="register-google-button"
+            onClick={handleGoogleRegister}
+            disabled={busy}
+          >
+            <IonIcon icon={logoGoogle} slot="start" />
+            Register with Google
+          </IonButton>
 
           <div className="register-footer">
             <IonText color="medium">
