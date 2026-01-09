@@ -42,6 +42,7 @@ import Offline from "./pages/Offline";
 import Home from "./pages/home/Home";
 import Analytics from "./pages/home/Analytics";
 import Settings from "./pages/home/Settings";
+import EnergyNeeds from "./pages/home/EnergyNeeds";
 import Planner from "./pages/home/Planner";
 import Workout from "./pages/home/Workout";
 import ScanBarcode from "./pages/ScanBarcode";
@@ -228,6 +229,7 @@ const TabsShell: React.FC = () => {
         <Route exact path="/app/home" component={Home} />
         <Route exact path="/app/workout" component={Workout} />
         <Route exact path="/app/settings" component={Settings} />
+        <Route exact path="/app/energy-needs" component={EnergyNeeds} />
         <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 

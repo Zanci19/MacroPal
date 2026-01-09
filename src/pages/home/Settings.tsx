@@ -406,6 +406,13 @@ const Settings: React.FC = () => {
           >
             <IonLabel>Profile, goals & targets</IonLabel>
           </IonItem>
+          <IonItem
+            lines="full"
+            button
+            onClick={() => history.push("/app/energy-needs")}
+          >
+            <IonLabel>Change energy needs</IonLabel>
+          </IonItem>
 
           <IonItem lines="full">
             <IonLabel>Show smart recommendation</IonLabel>

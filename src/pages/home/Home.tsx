@@ -1224,16 +1224,20 @@ const Home: React.FC = () => {
                 <div className="fs-summary__meta-label">Base goal</div>
                 <div className="fs-summary__meta-value">{baseKcalGoal}</div>
               </div>
-              <div>
-                <div className="fs-summary__meta-label">Activity bonus</div>
-                <div className="fs-summary__meta-value">
-                  +{workoutCalories} kcal
-                </div>
-              </div>
-              <div>
-                <div className="fs-summary__meta-label">Adjusted goal</div>
-                <div className="fs-summary__meta-value">{kcalGoal}</div>
-              </div>
+              {workoutCalories > 0 && (
+                <>
+                  <div>
+                    <div className="fs-summary__meta-label">Activity bonus</div>
+                    <div className="fs-summary__meta-value">
+                      +{workoutCalories} kcal
+                    </div>
+                  </div>
+                  <div>
+                    <div className="fs-summary__meta-label">Adjusted goal</div>
+                    <div className="fs-summary__meta-value">{kcalGoal}</div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
