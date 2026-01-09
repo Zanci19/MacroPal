@@ -32,7 +32,6 @@ import {
 } from "@ionic/react";
 
 import { Keyboard } from "@capacitor/keyboard";
-import { HTMLIonInputElement, HTMLIonListElement } from "@ionic/core/components";
 import { useLocation, useHistory } from "react-router";
 import { auth, db, trackEvent } from "../firebase";
 import {
@@ -61,6 +60,7 @@ import {
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
 import { computeGenericFoodBoost } from "../utils/genericFoodBoosts";
+import basicFoods from "../data/basicFoods.json";
 import "./AddFood.css";
 
 // Import Swiper for swipeable nutrition pages
@@ -133,6 +133,7 @@ type OFFSearchHit = {
   image_front_url?: string | null;
   nutriscore_grade?: string | null;
   nutriments?: OFFNutriments;
+  dataSource?: "local" | "openfoodfacts";
 };
 
 type OFFProduct = OFFSearchHit;
@@ -238,6 +239,12 @@ type ProfileFromFirestore = {
 };
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
+
+const BASIC_FOODS: OFFSearchHit[] = basicFoods as OFFSearchHit[];
+const BASIC_FOODS_BY_CODE = new Map(
+  BASIC_FOODS.map((food) => [food.code, food])
+);
+
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -518,8 +525,8 @@ const AddFood: React.FC = () => {
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
-  const searchInputRef = useRef<HTMLIonInputElement | null>(null);
-  const resultsListRef = useRef<HTMLIonListElement | null>(null);
+  const searchInputRef = useRef<any>(null);
+  const resultsListRef = useRef<any>(null);
   const prevResultsLengthRef = useRef<number>(0);
   const prevResultsKeyRef = useRef<string | null>(null);
 
@@ -1224,6 +1231,27 @@ const AddFood: React.FC = () => {
       return { food, score, matched, required };
     };
 
+    const localFoods = BASIC_FOODS.map((food) => ({
+      ...food,
+      dataSource: "local" as const,
+    }));
+
+    const localScored = localFoods.map(scoreFood);
+    let localKept = localScored;
+    if (tokenCount > 0) {
+      localKept = localScored.filter((x) => x.matched >= x.required);
+    }
+    if (tokenCount > 0 && localKept.length < 5) {
+      localKept = localScored.filter((x) => x.matched >= 1);
+    }
+    localKept.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const an = (a.food.product_name || "").toLowerCase();
+      const bn = (b.food.product_name || "").toLowerCase();
+      return an.localeCompare(bn);
+    });
+    const localResults = localKept.map((item) => item.food);
+
     try {
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", raw);
@@ -1266,6 +1294,13 @@ const AddFood: React.FC = () => {
 
       const deduped: OFFSearchHit[] = [];
       const seen = new Set<string>();
+      for (const item of localResults) {
+        const f = item;
+        const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        deduped.push(f);
+      }
       for (const item of kept) {
         const f = item.food;
         const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
@@ -1328,6 +1363,21 @@ const AddFood: React.FC = () => {
       date: dateKey,
     });
 
+    const localMatch = BASIC_FOODS_BY_CODE.get(code);
+    if (localMatch) {
+      setSelectedFood({ ...localMatch, dataSource: "local" });
+      setUseServing(false);
+      setServingsQty(1);
+      setWeightQty(100);
+      setOpen(true);
+      trackEvent("food_details_by_code_success", {
+        code,
+        hasServing: false,
+        source: "local",
+      });
+      return;
+    }
+
     try {
       const r = await fetch(
         `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
@@ -1339,7 +1389,7 @@ const AddFood: React.FC = () => {
         const ps = macrosPerServing(p.nutriments);
         const canServing =
           !!p.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
-        setSelectedFood(p);
+        setSelectedFood({ ...p, dataSource: "openfoodfacts" });
         setUseServing(canServing);
         setServingsQty(1);
         setWeightQty(100);
@@ -1585,7 +1635,7 @@ const AddFood: React.FC = () => {
         code: selectedFood.code,
         name: selectedFood.product_name || "(no name)",
         brand: selectedFood.brands || null,
-        dataSource: "openfoodfacts",
+        dataSource: selectedFood.dataSource ?? "openfoodfacts",
         base: baseMeta,
         selection: {
           mode: useServingMode ? "serving" : "weight",
@@ -1683,7 +1733,7 @@ const AddFood: React.FC = () => {
         },
         perBase: perBaseClean,
         total: totalClean,
-        dataSource: "openfoodfacts",
+        dataSource: selectedFood.dataSource ?? "openfoodfacts",
         code: selectedFood.code,
         createdAt: new Date().toISOString(),
       };
