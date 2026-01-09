@@ -68,6 +68,7 @@ import type {
 } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
 import { useHistory } from "react-router";
+import { fromMetricWeight, getUnitSystem, weightLabel } from "../../utils/units";
 
 import "./Analytics.css";
 
@@ -148,6 +149,7 @@ const Analytics: React.FC = () => {
   const [tf, setTf] = useState<TF>("30d");
   const [days, setDays] = useState<DayRoll[]>([]);
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
+  const unitSystem = getUnitSystem(profile?.units);
 
   // Fetch last 60 days whenever we have a uid and auth has settled
   const fetchDays = useCallback(async () => {
@@ -455,9 +457,10 @@ const Analytics: React.FC = () => {
     () =>
       weightView.map((entry) => ({
         date: fmtDate(entry.date),
-        weight: entry.weight,
+        weight:
+          Math.round(fromMetricWeight(entry.weight, unitSystem) * 10) / 10,
       })),
-    [weightView]
+    [weightView, unitSystem]
   );
 
   const latestWeight = weightView.length
@@ -656,7 +659,12 @@ const Analytics: React.FC = () => {
                       </IonCardTitle>
                       <IonCardSubtitle className="mp-card-subtitle">
                         {latestWeight
-                          ? `Latest ${latestWeight.weight} kg on ${latestWeight.date}`
+                          ? `Latest ${
+                              Math.round(
+                                fromMetricWeight(latestWeight.weight, unitSystem) *
+                                  10
+                              ) / 10
+                            } ${weightLabel(unitSystem)} on ${latestWeight.date}`
                           : "Track your weight trend over time."}
                       </IonCardSubtitle>
                     </IonCardHeader>
@@ -673,7 +681,7 @@ const Analytics: React.FC = () => {
                               <Line
                                 type="monotone"
                                 dataKey="weight"
-                                name="Weight (kg)"
+                                name={`Weight (${weightLabel(unitSystem)})`}
                                 stroke={palette[4]}
                                 dot={false}
                                 strokeWidth={2}

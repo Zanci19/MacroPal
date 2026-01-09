@@ -17,6 +17,17 @@ import { auth, db, trackEvent } from "../firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useHistory } from "react-router";
 import "./SetupProfile.css";
+import {
+  DEFAULT_UNIT_SYSTEM,
+  fromMetricHeight,
+  fromMetricWeight,
+  getUnitSystem,
+  heightLabel,
+  toMetricHeight,
+  toMetricWeight,
+  UnitSystem,
+  weightLabel,
+} from "../utils/units";
 
 const toNumOrNull = (v: any) => {
   if (v === null || v === undefined || v === "") return null;
@@ -43,6 +54,7 @@ type ProfileData = {
   activity: Activity;
   caloriesTarget?: number;
   macroTargets?: MacroTargets;
+  units?: UnitSystem;
 };
 
 const computeTargets = (
@@ -97,6 +109,7 @@ const SetupProfile: React.FC = () => {
   const [goal, setGoal] = useState<Goal>("maintain");
   const [gender, setGender] = useState<Gender>("male");
   const [activity, setActivity] = useState<Activity>("sedentary");
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(DEFAULT_UNIT_SYSTEM);
 
   const [toast, setToast] = useState<{
     show: boolean;
@@ -135,8 +148,18 @@ const SetupProfile: React.FC = () => {
         if (!p) return;
 
         setAge(p.age ?? null);
-        setWeight(p.weight ?? null);
-        setHeight(p.height ?? null);
+        const resolvedUnits = getUnitSystem(p.units);
+        setUnitSystem(resolvedUnits);
+        setWeight(
+          typeof p.weight === "number"
+            ? Math.round(fromMetricWeight(p.weight, resolvedUnits) * 10) / 10
+            : null
+        );
+        setHeight(
+          typeof p.height === "number"
+            ? Math.round(fromMetricHeight(p.height, resolvedUnits))
+            : null
+        );
         setGoal((p.goal as Goal) || "maintain");
         setGender((p.gender as Gender) || "male");
         setActivity((p.activity as Activity) || "sedentary");
@@ -166,12 +189,18 @@ const SetupProfile: React.FC = () => {
     }
     if (weight === null || weight <= 0) {
       trackEvent("profile_validation_failed", { field: "weight" });
-      showToast("Please enter your weight in kg.", "warning");
+      showToast(
+        `Please enter your weight in ${weightLabel(unitSystem)}.`,
+        "warning"
+      );
       return;
     }
     if (height === null || height <= 0) {
       trackEvent("profile_validation_failed", { field: "height" });
-      showToast("Please enter your height in cm.", "warning");
+      showToast(
+        `Please enter your height in ${heightLabel(unitSystem)}.`,
+        "warning"
+      );
       return;
     }
 
@@ -180,7 +209,16 @@ const SetupProfile: React.FC = () => {
     try {
       const userRef = doc(db, "users", user.uid);
 
-      const targets = computeTargets(age, weight, height, gender, goal, activity);
+      const weightMetric = toMetricWeight(weight, unitSystem);
+      const heightMetric = toMetricHeight(height, unitSystem);
+      const targets = computeTargets(
+        age,
+        weightMetric,
+        heightMetric,
+        gender,
+        goal,
+        activity
+      );
 
       if (targets) {
         trackEvent("profile_targets_computed", {
@@ -203,11 +241,12 @@ const SetupProfile: React.FC = () => {
         {
           profile: {
             age,
-            weight,
-            height,
+            weight: weightMetric,
+            height: heightMetric,
             goal,
             gender,
             activity,
+            units: unitSystem,
             ...(targets && {
               caloriesTarget: targets.calories,
               macroTargets: {
@@ -276,7 +315,9 @@ const SetupProfile: React.FC = () => {
             </IonItem>
 
             <IonItem lines="full" className="setup-item">
-              <IonLabel position="stacked">Weight (kg)</IonLabel>
+              <IonLabel position="stacked">
+                Weight ({weightLabel(unitSystem)})
+              </IonLabel>
               <IonInput
                 type="number"
                 inputMode="decimal"
@@ -286,7 +327,9 @@ const SetupProfile: React.FC = () => {
             </IonItem>
 
             <IonItem lines="full" className="setup-item">
-              <IonLabel position="stacked">Height (cm)</IonLabel>
+              <IonLabel position="stacked">
+                Height ({heightLabel(unitSystem)})
+              </IonLabel>
               <IonInput
                 type="number"
                 inputMode="numeric"

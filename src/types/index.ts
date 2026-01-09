@@ -33,6 +33,7 @@ export interface Profile {
   gender: Gender;
   goal: Goal;
   activity: ActivityLevel;
+  units?: "metric" | "imperial";
 
   // room for extra fields (targets, flags, etc.)
   [k: string]: any;

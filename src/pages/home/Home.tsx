@@ -67,6 +67,12 @@ import type {
 } from "../../types";
 import type { WeighInEntry } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
+import {
+  fromMetricWeight,
+  getUnitSystem,
+  toMetricWeight,
+  weightLabel,
+} from "../../utils/units";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -195,6 +201,7 @@ const Home: React.FC = () => {
   const [tipIndex, setTipIndex] = useState(() =>
     Math.floor(Math.random() * WELLNESS_TIPS.length)
   );
+  const unitSystem = getUnitSystem(profile?.units);
 
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
@@ -1077,7 +1084,12 @@ const Home: React.FC = () => {
   }, [uid, anyItems, profile, activeDateKey]);
 
   const openWeighInModal = () => {
-    const fallback = profile?.weight ? String(profile.weight) : "";
+    const fallback =
+      typeof profile?.weight === "number"
+        ? String(
+            Math.round(fromMetricWeight(profile.weight, unitSystem) * 10) / 10
+          )
+        : "";
     setWeighInValue((prev) => prev || fallback);
     setShowWeighInModal(true);
     trackEvent("weigh_in_modal_open", { uid, date: activeDateKey });
@@ -1097,7 +1109,7 @@ const Home: React.FC = () => {
 
     const entry: WeighInEntry = {
       date: activeDateKey,
-      weight: Math.round(weight * 10) / 10,
+      weight: Math.round(toMetricWeight(weight, unitSystem) * 10) / 10,
       createdAt: new Date().toISOString(),
     };
 
@@ -1875,7 +1887,9 @@ const Home: React.FC = () => {
         </IonHeader>
         <IonContent className="ion-padding">
           <IonItem>
-            <IonLabel position="stacked">Weight (kg)</IonLabel>
+            <IonLabel position="stacked">
+              Weight ({weightLabel(unitSystem)})
+            </IonLabel>
             <IonInput
               type="number"
               inputMode="decimal"

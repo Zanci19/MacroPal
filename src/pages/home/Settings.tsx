@@ -413,6 +413,27 @@ const Settings: React.FC = () => {
           >
             <IonLabel>Change energy needs</IonLabel>
           </IonItem>
+          <IonItem
+            lines="full"
+            button
+            onClick={() => history.push("/app/units")}
+          >
+            <IonLabel>Units & measurements</IonLabel>
+          </IonItem>
+          <IonItem
+            lines="full"
+            button
+            onClick={() => history.push("/app/reminders")}
+          >
+            <IonLabel>Reminders</IonLabel>
+          </IonItem>
+          <IonItem
+            lines="full"
+            button
+            onClick={() => history.push("/app/data-privacy")}
+          >
+            <IonLabel>Data & privacy</IonLabel>
+          </IonItem>
 
           <IonItem lines="full">
             <IonLabel>Show smart recommendation</IonLabel>

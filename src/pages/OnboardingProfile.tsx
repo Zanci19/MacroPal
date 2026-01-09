@@ -19,6 +19,17 @@ import { auth, db, trackEvent } from "../firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useHistory } from "react-router";
 import "./OnboardingProfile.css";
+import {
+  DEFAULT_UNIT_SYSTEM,
+  fromMetricHeight,
+  fromMetricWeight,
+  getUnitSystem,
+  heightLabel,
+  toMetricHeight,
+  toMetricWeight,
+  UnitSystem,
+  weightLabel,
+} from "../utils/units";
 
 type Activity = "sedentary" | "light" | "moderate" | "very" | "extra";
 type Goal = "lose" | "maintain" | "gain";
@@ -39,6 +50,7 @@ type ProfileData = {
   activity: Activity;
   caloriesTarget?: number;
   macroTargets?: MacroTargets;
+  units?: UnitSystem;
 };
 
 const toNumOrNull = (v: any) => {
@@ -108,6 +120,7 @@ const OnboardingProfile: React.FC = () => {
   const [age, setAge] = useState<number | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
   const [height, setHeight] = useState<number | null>(null);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>(DEFAULT_UNIT_SYSTEM);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [activity, setActivity] = useState<Activity>("sedentary");
   const [loading, setLoading] = useState(false);
@@ -146,8 +159,18 @@ const OnboardingProfile: React.FC = () => {
         if (!p) return;
 
         setAge(p.age ?? null);
-        setWeight(p.weight ?? null);
-        setHeight(p.height ?? null);
+        const resolvedUnits = getUnitSystem(p.units);
+        setUnitSystem(resolvedUnits);
+        setWeight(
+          typeof p.weight === "number"
+            ? Math.round(fromMetricWeight(p.weight, resolvedUnits) * 10) / 10
+            : null
+        );
+        setHeight(
+          typeof p.height === "number"
+            ? Math.round(fromMetricHeight(p.height, resolvedUnits))
+            : null
+        );
         setGoal((p.goal as Goal) || "maintain");
         setGender((p.gender as Gender) || null);
         setActivity((p.activity as Activity) || "sedentary");
@@ -166,6 +189,19 @@ const OnboardingProfile: React.FC = () => {
     () => ["gender", "age", "weight", "height", "goal", "activity"],
     []
   );
+
+  const weightDefaults =
+    unitSystem === "imperial"
+      ? Math.round(fromMetricWeight(DEFAULTS.weight, unitSystem))
+      : DEFAULTS.weight;
+  const heightDefaults =
+    unitSystem === "imperial"
+      ? Math.round(fromMetricHeight(DEFAULTS.height, unitSystem))
+      : DEFAULTS.height;
+  const weightMin = unitSystem === "imperial" ? 45 : 20;
+  const weightMax = unitSystem === "imperial" ? 660 : 300;
+  const heightMin = unitSystem === "imperial" ? 48 : 80;
+  const heightMax = unitSystem === "imperial" ? 90 : 230;
 
   const isLastStep = step === steps.length - 1;
 
@@ -205,11 +241,17 @@ const OnboardingProfile: React.FC = () => {
       return;
     }
     if (!weight || weight <= 0) {
-      showToast("Please enter your weight in kg.", "warning");
+      showToast(
+        `Please enter your weight in ${weightLabel(unitSystem)}.`,
+        "warning"
+      );
       return;
     }
     if (!height || height <= 0) {
-      showToast("Please enter your height in cm.", "warning");
+      showToast(
+        `Please enter your height in ${heightLabel(unitSystem)}.`,
+        "warning"
+      );
       return;
     }
 
@@ -217,7 +259,16 @@ const OnboardingProfile: React.FC = () => {
 
     try {
       const userRef = doc(db, "users", user.uid);
-      const targets = computeTargets(age, weight, height, gender, goal, activity);
+      const weightMetric = toMetricWeight(weight, unitSystem);
+      const heightMetric = toMetricHeight(height, unitSystem);
+      const targets = computeTargets(
+        age,
+        weightMetric,
+        heightMetric,
+        gender,
+        goal,
+        activity
+      );
 
       if (targets) {
         trackEvent("onboarding_targets_computed", {
@@ -236,11 +287,12 @@ const OnboardingProfile: React.FC = () => {
         {
           profile: {
             age,
-            weight,
-            height,
+            weight: weightMetric,
+            height: heightMetric,
             goal,
             gender,
             activity,
+            units: unitSystem,
             ...(targets && {
               caloriesTarget: targets.calories,
               macroTargets: {
@@ -388,7 +440,7 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-step-button"
                   onClick={() =>
                     setWeight(
-                      adjustNumber(weight, 1, 20, 300, DEFAULTS.weight)
+                      adjustNumber(weight, 1, weightMin, weightMax, weightDefaults)
                     )
                   }
                 >
@@ -406,14 +458,16 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-step-button"
                   onClick={() =>
                     setWeight(
-                      adjustNumber(weight, -1, 20, 300, DEFAULTS.weight)
+                      adjustNumber(weight, -1, weightMin, weightMax, weightDefaults)
                     )
                   }
                 >
                   <IonIcon icon={chevronDownOutline} />
                 </IonButton>
               </div>
-              <p className="onboarding-helper">In kilograms (kg).</p>
+              <p className="onboarding-helper">
+                In {weightLabel(unitSystem)}.
+              </p>
               </div>
             )}
 
@@ -426,7 +480,7 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-step-button"
                   onClick={() =>
                     setHeight(
-                      adjustNumber(height, 1, 80, 230, DEFAULTS.height)
+                      adjustNumber(height, 1, heightMin, heightMax, heightDefaults)
                     )
                   }
                 >
@@ -444,14 +498,16 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-step-button"
                   onClick={() =>
                     setHeight(
-                      adjustNumber(height, -1, 80, 230, DEFAULTS.height)
+                      adjustNumber(height, -1, heightMin, heightMax, heightDefaults)
                     )
                   }
                 >
                   <IonIcon icon={chevronDownOutline} />
                 </IonButton>
               </div>
-              <p className="onboarding-helper">In centimeters (cm).</p>
+              <p className="onboarding-helper">
+                In {heightLabel(unitSystem)}.
+              </p>
               </div>
             )}
 
