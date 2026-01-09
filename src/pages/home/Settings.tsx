@@ -21,6 +21,8 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonAvatar,
+  IonActionSheet,
 } from "@ionic/react";
 import {
   personCircleOutline,
@@ -100,6 +102,8 @@ const Settings: React.FC = () => {
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
+  const [showPhotoActions, setShowPhotoActions] = React.useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = React.useState<string | null>(null);
   const [googleFitAutoImport, setGoogleFitAutoImport] = React.useState(false);
   const [checkingGoogleFit, setCheckingGoogleFit] = React.useState(false);
   const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
@@ -115,6 +119,8 @@ const Settings: React.FC = () => {
     return "macropal";
   });
   const [showAbout, setShowAbout] = React.useState(false);
+  const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleThemeChange = async (newTheme: ThemeMode) => {
     setThemeMode(newTheme);
@@ -265,6 +271,52 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handlePhotoChange = async (file?: File | null) => {
+    if (!file || !auth.currentUser) return;
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (!dataUrl) return;
+
+      try {
+        const ref = doc(db, "users", auth.currentUser?.uid ?? "");
+        await updateDoc(ref, {
+          "profile.photoUrl": dataUrl,
+        });
+        setProfilePhotoUrl(dataUrl);
+        trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
+        setToast({ show: true, message: "Profile photo updated.", color: "success" });
+      } catch (err: any) {
+        console.error("Failed to save profile photo:", err);
+        setToast({
+          show: true,
+          message: err?.message || "Could not update profile photo.",
+          color: "danger",
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!auth.currentUser) return;
+    try {
+      const ref = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(ref, { "profile.photoUrl": null });
+      setProfilePhotoUrl(null);
+      trackEvent("settings_profile_photo_remove", { uid: auth.currentUser.uid });
+      setToast({ show: true, message: "Profile photo removed.", color: "success" });
+    } catch (err: any) {
+      console.error("Failed to remove profile photo:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not remove profile photo.",
+        color: "danger",
+      });
+    }
+  };
+
   const handleGoogleFitToggle = async (checked: boolean) => {
     const current = auth.currentUser;
     if (!current) return;
@@ -369,6 +421,10 @@ const Settings: React.FC = () => {
             : true
         );
 
+        setProfilePhotoUrl(
+          typeof (profile as any)?.photoUrl === "string" ? (profile as any).photoUrl : null
+        );
+
         const googleFitEnabled =
           typeof (profile as any).googleFitAutoImport === "boolean"
             ? (profile as any).googleFitAutoImport
@@ -429,353 +485,493 @@ const Settings: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding tabbed-content settings-page">
-        <IonList>
-          <IonItem lines="full">
-            <IonIcon slot="start" icon={personCircleOutline} />
-            <IonLabel>
-              <h2>{user.displayName || "Unnamed User"}</h2>
-              <p>{user.email}</p>
-            </IonLabel>
-            <IonNote slot="end" color={verified ? "success" : "warning"}>
-              {verified ? "Verified" : "Unverified"}
-            </IonNote>
-          </IonItem>
-        </IonList>
+        <div className="settings-sections">
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Account</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem lines="full">
+                  <div
+                    className="settings-avatar"
+                    onClick={() => setShowPhotoActions(true)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Update profile photo"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        setShowPhotoActions(true);
+                      }
+                    }}
+                  >
+                    <IonAvatar>
+                      {profilePhotoUrl ? (
+                        <img src={profilePhotoUrl} alt="Profile" />
+                      ) : (
+                        <IonIcon icon={personCircleOutline} />
+                      )}
+                    </IonAvatar>
+                  </div>
+                  <IonLabel>
+                    <h2>{user.displayName || "Unnamed User"}</h2>
+                    <p>{user.email}</p>
+                  </IonLabel>
+                  <IonNote slot="end" color={verified ? "success" : "warning"}>
+                    {verified ? "Verified" : "Unverified"}
+                  </IonNote>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Email verification</IonLabel>
+                  <IonButton
+                    fill="outline"
+                    onClick={handleVerifyEmail}
+                    disabled={verified}
+                  >
+                    <IonIcon slot="start" icon={mailOutline} />
+                    {verified ? "Verified" : "Send link"}
+                  </IonButton>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Password</IonLabel>
+                  <IonButton onClick={handleResetPassword}>
+                    <IonIcon slot="start" icon={keyOutline} />
+                    Send reset email
+                  </IonButton>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-        <IonList>
-          <IonItem
-            lines="full"
-            button
-            onClick={() => history.push("/setup-profile")}
-          >
-            <IonLabel>Profile, goals & targets</IonLabel>
-          </IonItem>
-          <IonItem
-            lines="full"
-            button
-            onClick={() => history.push("/app/energy-needs")}
-          >
-            <IonLabel>Change energy needs</IonLabel>
-          </IonItem>
-          <IonItem
-            lines="full"
-            button
-            onClick={() => history.push("/app/units")}
-          >
-            <IonLabel>Units & measurements</IonLabel>
-          </IonItem>
-          <IonItem
-            lines="full"
-            button
-            onClick={() => history.push("/app/reminders")}
-          >
-            <IonLabel>Reminders</IonLabel>
-          </IonItem>
-          <IonItem
-            lines="full"
-            button
-            onClick={() => history.push("/app/data-privacy")}
-          >
-            <IonLabel>Data & privacy</IonLabel>
-          </IonItem>
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">
+                Profile & goals
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/setup-profile")}
+                >
+                  <IonLabel>Profile, goals & targets</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/app/energy-needs")}
+                >
+                  <IonLabel>Change energy needs</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/app/units")}
+                >
+                  <IonLabel>Units & measurements</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/app/reminders")}
+                >
+                  <IonLabel>Reminders</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/app/data-privacy")}
+                >
+                  <IonLabel>Data & privacy</IonLabel>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-          <IonItem lines="full">
-            <IonLabel>Show smart recommendation</IonLabel>
-            <IonToggle
-              slot="end"
-              checked={smartRecommendationEnabled}
-              onIonChange={async (e) => {
-                const checked = e.detail.checked;
-                setSmartRecommendationEnabled(checked);
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">
+                Smart recommendations
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem lines="full">
+                  <IonLabel>Show smart recommendation</IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={smartRecommendationEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setSmartRecommendationEnabled(checked);
 
-                const current = auth.currentUser;
-                if (!current) return;
+                      const current = auth.currentUser;
+                      if (!current) return;
 
-                const ref = doc(db, "users", current.uid);
+                      const ref = doc(db, "users", current.uid);
 
+                      try {
+                        await updateDoc(ref, {
+                          "profile.smartRecommendationEnabled": checked,
+                        });
 
-                try {
-                  await updateDoc(ref, {
-                    "profile.smartRecommendationEnabled": checked,
-                  });
+                        trackEvent("settings_smart_recommendation_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save smartRecommendationEnabled:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update smart recommendation setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Recommendation diet style</IonLabel>
+                  <IonSelect
+                    value={smartDietStyle}
+                    disabled={!smartRecommendationEnabled}
+                    onIonChange={(e) => {
+                      const value = (e.detail.value || "none") as SmartDietStyle;
+                      setSmartDietStyle(value);
+                      void saveSmartRecommendationProfile({ dietStyle: value });
+                    }}
+                  >
+                    <IonSelectOption value="none">No preference</IonSelectOption>
+                    <IonSelectOption value="vegetarian">Vegetarian</IonSelectOption>
+                    <IonSelectOption value="vegan">Vegan</IonSelectOption>
+                    <IonSelectOption value="pescatarian">Pescatarian</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Recommendation macro focus</IonLabel>
+                  <IonSelect
+                    value={smartMacroFocus}
+                    disabled={!smartRecommendationEnabled}
+                    onIonChange={(e) => {
+                      const value = (e.detail.value || "balanced") as SmartMacroFocus;
+                      setSmartMacroFocus(value);
+                      void saveSmartRecommendationProfile({ macroFocus: value });
+                    }}
+                  >
+                    <IonSelectOption value="balanced">Balanced</IonSelectOption>
+                    <IonSelectOption value="high-protein">High protein</IonSelectOption>
+                    <IonSelectOption value="low-carb">Low carb</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-                  trackEvent("settings_smart_recommendation_toggle", {
-                    uid: current.uid,
-                    enabled: checked,
-                  });
-                } catch (err: any) {
-                  console.error("Failed to save smartRecommendationEnabled:", err);
-                  setToast({
-                    show: true,
-                    message:
-                      err?.message ||
-                      "Could not update smart recommendation setting.",
-                    color: "danger",
-                  });
-                }
-              }}
-            />
-          </IonItem>
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">
+                Home feed
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem lines="full">
+                  <IonLabel>Show wellness tip</IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={showWellnessTipEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setShowWellnessTipEnabled(checked);
 
-          <IonItem lines="full">
-            <IonLabel>Recommendation diet style</IonLabel>
-            <IonSelect
-              value={smartDietStyle}
-              disabled={!smartRecommendationEnabled}
-              onIonChange={(e) => {
-                const value = (e.detail.value || "none") as SmartDietStyle;
-                setSmartDietStyle(value);
-                void saveSmartRecommendationProfile({ dietStyle: value });
-              }}
-            >
-              <IonSelectOption value="none">No preference</IonSelectOption>
-              <IonSelectOption value="vegetarian">Vegetarian</IonSelectOption>
-              <IonSelectOption value="vegan">Vegan</IonSelectOption>
-              <IonSelectOption value="pescatarian">Pescatarian</IonSelectOption>
-            </IonSelect>
-          </IonItem>
+                      const current = auth.currentUser;
+                      if (!current) return;
 
-          <IonItem lines="full">
-            <IonLabel>Recommendation macro focus</IonLabel>
-            <IonSelect
-              value={smartMacroFocus}
-              disabled={!smartRecommendationEnabled}
-              onIonChange={(e) => {
-                const value = (e.detail.value || "balanced") as SmartMacroFocus;
-                setSmartMacroFocus(value);
-                void saveSmartRecommendationProfile({ macroFocus: value });
-              }}
-            >
-              <IonSelectOption value="balanced">Balanced</IonSelectOption>
-              <IonSelectOption value="high-protein">High protein</IonSelectOption>
-              <IonSelectOption value="low-carb">Low carb</IonSelectOption>
-            </IonSelect>
-          </IonItem>
+                      const ref = doc(db, "users", current.uid);
 
-          <IonItem lines="full">
-            <IonLabel>Show wellness tip</IonLabel>
-            <IonToggle
-              slot="end"
-              checked={showWellnessTipEnabled}
-              onIonChange={async (e) => {
-                const checked = e.detail.checked;
-                setShowWellnessTipEnabled(checked);
+                      try {
+                        await updateDoc(ref, {
+                          "profile.showWellnessTip": checked,
+                        });
 
-                const current = auth.currentUser;
-                if (!current) return;
+                        trackEvent("settings_show_wellness_tip_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save showWellnessTip:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update wellness tip setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Show recently added foods</IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={showRecentItemsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setShowRecentItemsEnabled(checked);
 
-                const ref = doc(db, "users", current.uid);
+                      const current = auth.currentUser;
+                      if (!current) return;
 
-                try {
-                  await updateDoc(ref, {
-                    "profile.showWellnessTip": checked,
-                  });
+                      const ref = doc(db, "users", current.uid);
 
-                  trackEvent("settings_show_wellness_tip_toggle", {
-                    uid: current.uid,
-                    enabled: checked,
-                  });
-                } catch (err: any) {
-                  console.error("Failed to save showWellnessTip:", err);
-                  setToast({
-                    show: true,
-                    message:
-                      err?.message ||
-                      "Could not update wellness tip setting.",
-                    color: "danger",
-                  });
-                }
-              }}
-            />
-          </IonItem>
+                      try {
+                        await updateDoc(ref, {
+                          "profile.showRecentItems": checked,
+                        });
 
-          <IonItem lines="full">
-            <IonLabel>Show recently added foods</IonLabel>
-            <IonToggle
-              slot="end"
-              checked={showRecentItemsEnabled}
-              onIonChange={async (e) => {
-                const checked = e.detail.checked;
-                setShowRecentItemsEnabled(checked);
+                        trackEvent("settings_show_recent_items_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save showRecentItems:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update recent items setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Show recently searched items</IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={showRecentSearchesEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setShowRecentSearchesEnabled(checked);
 
-                const current = auth.currentUser;
-                if (!current) return;
+                      const current = auth.currentUser;
+                      if (!current) return;
 
-                const ref = doc(db, "users", current.uid);
+                      const ref = doc(db, "users", current.uid);
 
-                try {
-                  await updateDoc(ref, {
-                    "profile.showRecentItems": checked,
-                  });
+                      try {
+                        await updateDoc(ref, {
+                          "profile.showRecentSearches": checked,
+                        });
 
-                  trackEvent("settings_show_recent_items_toggle", {
-                    uid: current.uid,
-                    enabled: checked,
-                  });
-                } catch (err: any) {
-                  console.error("Failed to save showRecentItems:", err);
-                  setToast({
-                    show: true,
-                    message:
-                      err?.message ||
-                      "Could not update recent items setting.",
-                    color: "danger",
-                  });
-                }
-              }}
-            />
-          </IonItem>
+                        trackEvent("settings_show_recent_searches_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save showRecentSearches:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update recent searches setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-          <IonItem lines="full">
-            <IonLabel>Show recently searched items</IonLabel>
-            <IonToggle
-              slot="end"
-              checked={showRecentSearchesEnabled}
-              onIonChange={async (e) => {
-                const checked = e.detail.checked;
-                setShowRecentSearchesEnabled(checked);
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">
+                Appearance & integrations
+              </IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={colorPaletteOutline} />
+                  <IonLabel>
+                    <h2>App theme</h2>
+                    <p>Choose your preferred appearance</p>
+                  </IonLabel>
+                  <IonSelect
+                    slot="end"
+                    interface="popover"
+                    value={themeMode}
+                    onIonChange={(e) => handleThemeChange(e.detail.value as ThemeMode)}
+                  >
+                    <IonSelectOption value="system">System Default</IonSelectOption>
+                    <IonSelectOption value="light">Light</IonSelectOption>
+                    <IonSelectOption value="dark">Dark</IonSelectOption>
+                    <IonSelectOption value="macropal">MacroPal Theme</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={logoGoogle} />
+                  <IonLabel>
+                    <h2>Google Fit calories</h2>
+                    <p>Automatically import burned calories into workouts.</p>
+                    <IonNote color="medium">
+                      {googleFitSupported
+                        ? googleFitStatus ||
+                          "Requires Google Fit on Android. We'll sync once it's enabled."
+                        : "Requires the Android app with the Google Fit plugin installed."}
+                    </IonNote>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    disabled={!googleFitSupported || checkingGoogleFit}
+                    checked={googleFitAutoImport}
+                    onIonChange={(e) => void handleGoogleFitToggle(e.detail.checked)}
+                  />
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-                const current = auth.currentUser;
-                if (!current) return;
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Data</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  disabled={clearingRecent}
+                  onClick={() => setConfirmClearRecent(true)}
+                >
+                  <IonIcon slot="start" icon={trashOutline} />
+                  <IonLabel>Clear recent foods history</IonLabel>
+                  {clearingRecent && (
+                    <IonNote slot="end" color="medium">
+                      Clearing…
+                    </IonNote>
+                  )}
+                </IonItem>
+                <IonItem lines="none">
+                  <IonButton color="danger" onClick={() => setConfirmDelete(true)}>
+                    <IonIcon slot="start" icon={warningOutline} />
+                    Delete account
+                  </IonButton>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-                const ref = doc(db, "users", current.uid);
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Support</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() =>
+                    window.open("https://buymeacoffee.com/zanci19", "_blank")
+                  }
+                >
+                  <IonIcon slot="start" icon={cafeOutline} />
+                  <IonLabel>Buy me a coffee ☕</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => setShowAbout(true)}
+                >
+                  <IonIcon slot="start" icon={informationCircleOutline} />
+                  <IonLabel>About MacroPal</IonLabel>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
 
-                try {
-                  await updateDoc(ref, {
-                    "profile.showRecentSearches": checked,
-                  });
-
-                  trackEvent("settings_show_recent_searches_toggle", {
-                    uid: current.uid,
-                    enabled: checked,
-                  });
-                } catch (err: any) {
-                  console.error("Failed to save showRecentSearches:", err);
-                  setToast({
-                    show: true,
-                    message:
-                      err?.message ||
-                      "Could not update recent searches setting.",
-                    color: "danger",
-                  });
-                }
-              }}
-            />
-          </IonItem>
-
-          <IonItem lines="full">
-            <IonIcon slot="start" icon={colorPaletteOutline} />
-            <IonLabel>
-              <h2>App theme</h2>
-              <p>Choose your preferred appearance</p>
-            </IonLabel>
-            <IonSelect
-              slot="end"
-              interface="popover"
-              value={themeMode}
-              onIonChange={(e) => handleThemeChange(e.detail.value as ThemeMode)}
-            >
-              <IonSelectOption value="system">System Default</IonSelectOption>
-              <IonSelectOption value="light">Light</IonSelectOption>
-              <IonSelectOption value="dark">Dark</IonSelectOption>
-              <IonSelectOption value="macropal">MacroPal Theme</IonSelectOption>
-            </IonSelect>
-          </IonItem>
-
-          <IonItem lines="full">
-            <IonIcon slot="start" icon={logoGoogle} />
-            <IonLabel>
-              <h2>Google Fit calories</h2>
-              <p>Automatically import burned calories into workouts.</p>
-              <IonNote color="medium">
-                {googleFitSupported
-                  ? googleFitStatus ||
-                    "Requires Google Fit on Android. We'll sync once it's enabled."
-                  : "Requires the Android app with the Google Fit plugin installed."}
-              </IonNote>
-            </IonLabel>
-            <IonToggle
-              slot="end"
-              disabled={!googleFitSupported || checkingGoogleFit}
-              checked={googleFitAutoImport}
-              onIonChange={(e) => void handleGoogleFitToggle(e.detail.checked)}
-            />
-          </IonItem>
-
-          <IonItem lines="full">
-            <IonLabel>Email verification</IonLabel>
-            <IonButton
-              fill="outline"
-              onClick={handleVerifyEmail}
-              disabled={verified}
-            >
-              <IonIcon slot="start" icon={mailOutline} />
-              {verified ? "Verified" : "Send link"}
-            </IonButton>
-          </IonItem>
-
-          <IonItem lines="full">
-            <IonLabel>Password</IonLabel>
-            <IonButton onClick={handleResetPassword}>
-              <IonIcon slot="start" icon={keyOutline} />
-              Send reset email
-            </IonButton>
-          </IonItem>
-
-          <IonItem
-            lines="full"
-            button
-            onClick={() =>
-              window.open("https://buymeacoffee.com/zanci19", "_blank")
-            }
-          >
-            <IonIcon slot="start" icon={cafeOutline} />
-            <IonLabel>Buy me a coffee ☕</IonLabel>
-          </IonItem>
-
-          <IonItem
-            lines="full"
-            button
-            onClick={() => setShowAbout(true)}
-          >
-            <IonIcon slot="start" icon={informationCircleOutline} />
-            <IonLabel>About MacroPal</IonLabel>
-          </IonItem>
-
-          <IonItem
-            lines="full"
-            button
-            disabled={clearingRecent}
-            onClick={() => setConfirmClearRecent(true)}
-          >
-            <IonIcon slot="start" icon={trashOutline} />
-            <IonLabel>Clear recent foods history</IonLabel>
-            {clearingRecent && (
-              <IonNote slot="end" color="medium">
-                Clearing…
-              </IonNote>
-            )}
-          </IonItem>
-
-          <IonItem
-            lines="full"
-            button
-            onClick={async () => {
-              await signOut(auth);
-            }}
-          >
-            <IonIcon slot="start" icon={logOutOutline} />
-            <IonLabel>Sign out</IonLabel>
-          </IonItem>
-
-          <IonItem lines="none">
-            <IonButton color="danger" onClick={() => setConfirmDelete(true)}>
-              <IonIcon slot="start" icon={warningOutline} />
-              Delete account
-            </IonButton>
-          </IonItem>
-        </IonList>
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Sign out</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={async () => {
+                    await signOut(auth);
+                  }}
+                >
+                  <IonIcon slot="start" icon={logOutOutline} />
+                  <IonLabel>Sign out</IonLabel>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
+        </div>
       </IonContent>
+
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="settings-file-input"
+        onChange={(event) => {
+          void handlePhotoChange(event.target.files?.[0] ?? null);
+          if (event.currentTarget) event.currentTarget.value = "";
+        }}
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="settings-file-input"
+        onChange={(event) => {
+          void handlePhotoChange(event.target.files?.[0] ?? null);
+          if (event.currentTarget) event.currentTarget.value = "";
+        }}
+      />
+
+      <IonActionSheet
+        isOpen={showPhotoActions}
+        onDidDismiss={() => setShowPhotoActions(false)}
+        header="Update profile photo"
+        buttons={[
+          {
+            text: "Choose from gallery",
+            handler: () => galleryInputRef.current?.click(),
+          },
+          {
+            text: "Take a photo",
+            handler: () => cameraInputRef.current?.click(),
+          },
+          ...(profilePhotoUrl
+            ? [
+                {
+                  text: "Remove photo",
+                  role: "destructive",
+                  handler: () => {
+                    void handleRemovePhoto();
+                  },
+                },
+              ]
+            : []),
+          {
+            text: "Cancel",
+            role: "cancel",
+          },
+        ]}
+      />
 
       {/* Alerts + Toasts unchanged */}
       <IonAlert

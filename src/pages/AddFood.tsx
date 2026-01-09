@@ -529,6 +529,7 @@ const AddFood: React.FC = () => {
   const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<any>(null);
+  const contentRef = useRef<HTMLIonContentElement | null>(null);
   const resultsListRef = useRef<any>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
@@ -831,24 +832,24 @@ const AddFood: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
-  const ensureResultsVisible = () => {
+  const ensureResultsVisible = async () => {
     const firstResult = results[0];
     const firstKey = firstResult?.code || firstResult?.product_name || null;
     const changed =
       results.length !== prevResultsLengthRef.current || firstKey !== prevResultsKeyRef.current;
     if (results.length > 0 && changed) {
-      const rect = resultsListRef.current?.getBoundingClientRect();
-      if (rect) {
-        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-        const visibleHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+      const listEl = resultsListRef.current as HTMLElement | null;
+      const contentEl = await contentRef.current?.getScrollElement();
+      if (listEl && contentEl) {
+        const listRect = listEl.getBoundingClientRect();
+        const scrollRect = contentEl.getBoundingClientRect();
+        const visibleHeight = Math.min(listRect.bottom, scrollRect.bottom) - Math.max(listRect.top, scrollRect.top);
         const alreadyInView =
-          visibleHeight >= Math.min(rect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
+          visibleHeight >= Math.min(listRect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
+          const targetTop = Math.max(listEl.offsetTop - 12, 0);
           requestAnimationFrame(() => {
-            resultsListRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
+            void contentRef.current?.scrollToPoint(0, targetTop, 350);
           });
         }
       }
@@ -859,7 +860,7 @@ const AddFood: React.FC = () => {
 
   useEffect(() => {
     if (!loading) {
-      ensureResultsVisible();
+      void ensureResultsVisible();
     }
   }, [loading, results]);
 
@@ -2372,7 +2373,7 @@ const AddFood: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding add-food-page" fullscreen>
+      <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}

@@ -5,6 +5,7 @@ import {
   IonToolbar,
   IonTitle,
   IonContent,
+  IonButtons,
   IonAccordion,
   IonAccordionGroup,
   IonItem,
@@ -20,6 +21,7 @@ import {
   IonCard,
   IonCardHeader,
   IonCardTitle,
+  IonCardSubtitle,
   IonCardContent,
 } from "@ionic/react";
 import { addCircleOutline, refreshOutline } from "ionicons/icons";
@@ -132,99 +134,111 @@ const Planner: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Meal Planner</IonTitle>
-          <IonButton
-            slot="end"
-            fill="clear"
-            color="medium"
-            aria-label="Refresh plans"
-            onClick={() => {
-              trackEvent("planner_refresh");
-              void fetchPlans();
-            }}
-          >
-            <IonIcon icon={refreshOutline} />
-          </IonButton>
+          <IonButtons slot="end">
+            <IonButton
+              fill="clear"
+              color="medium"
+              aria-label="Refresh plans"
+              onClick={() => {
+                trackEvent("planner_refresh");
+                void fetchPlans();
+              }}
+            >
+              <IonIcon icon={refreshOutline} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen>
-        <IonCard className="planner-hero">
+      <IonContent fullscreen className="home-content">
+        <div className="planner-content">
+          <IonCard className="planner-hero">
           <IonCardHeader>
-            <IonCardTitle>Plan ahead</IonCardTitle>
+            <IonCardTitle className="mp-card-title">Plan ahead</IonCardTitle>
+            <IonCardSubtitle className="mp-card-subtitle">
+              Sketch your meals for the next week without touching your streak.
+            </IonCardSubtitle>
           </IonCardHeader>
           <IonCardContent>
-            Keep a lightweight sketch of what you want to eat over the next week.
-            Plans stay separate from your daily log so you can tweak them without
-            touching your streak.
+            <div className="planner-hero__meta">
+              <IonChip color="tertiary">
+                <IonIcon icon={refreshOutline} />
+                <span>{horizon}-day outlook</span>
+              </IonChip>
+              <IonChip color="medium">
+                {Object.keys(plans).length} days loaded
+              </IonChip>
+            </div>
           </IonCardContent>
-        </IonCard>
+          </IonCard>
 
-        {loading ? (
-          <div className="planner-loading">
-            <IonSpinner name="crescent" />
-          </div>
-        ) : (
-          <IonAccordionGroup className="planner-accordion" multiple>
-            {upcomingDates.map((dateKey) => {
-              const plan = plans[dateKey] ?? emptyPlan();
-              return (
-                <IonAccordion value={dateKey} key={dateKey} className="planner-day">
-                  <IonItem slot="header" lines="full">
-                    <IonLabel>
-                      <div className="planner-date">{formatDateKey(dateKey)}</div>
-                      <IonNote color="medium">{planSummary(plan)} planned items</IonNote>
-                    </IonLabel>
-                    <IonBadge color="tertiary">{dateKey}</IonBadge>
-                  </IonItem>
-                  <div className="planner-day-content" slot="content">
-                    <IonList lines="none">
-                      {MEALS.map((meal) => (
-                        <IonItem key={meal} className="planner-meal" lines="full">
-                          <IonLabel>
-                            <div className="planner-meal-header">{meal}</div>
-                            <div className="planner-meal-items">
-                              {(plan[meal] || []).length === 0 && (
-                                <IonNote color="medium">No plan yet</IonNote>
-                              )}
-                              {(plan[meal] || []).map((entry, idx) => (
-                                <IonChip key={`${meal}-${idx}`} color="success">
-                                  <IonLabel>
-                                    <div className="planner-chip-title">{entry.title}</div>
-                                    {entry.note && (
-                                      <div className="planner-chip-note">{entry.note}</div>
-                                    )}
-                                  </IonLabel>
-                                  <IonButton
-                                    fill="clear"
-                                    color="medium"
-                                    size="small"
-                                    aria-label="Remove"
-                                    onClick={() => removeEntry(dateKey, meal, idx)}
-                                  >
-                                    ✕
-                                  </IonButton>
-                                </IonChip>
-                              ))}
-                            </div>
-                          </IonLabel>
-                          <IonButton
-                            slot="end"
-                            fill="outline"
-                            size="small"
-                            onClick={() => setAdding({ date: dateKey, meal })}
-                          >
-                            <IonIcon icon={addCircleOutline} slot="start" />
-                            Add
-                          </IonButton>
-                        </IonItem>
-                      ))}
-                    </IonList>
-                  </div>
-                </IonAccordion>
-              );
-            })}
-          </IonAccordionGroup>
-        )}
+          {loading ? (
+            <div className="planner-loading">
+              <IonSpinner name="crescent" />
+            </div>
+          ) : (
+            <IonAccordionGroup className="planner-accordion" multiple>
+              {upcomingDates.map((dateKey) => {
+                const plan = plans[dateKey] ?? emptyPlan();
+                return (
+                  <IonAccordion value={dateKey} key={dateKey} className="planner-day">
+                    <IonItem slot="header" lines="none" className="planner-day-header">
+                      <IonLabel>
+                        <div className="planner-date">{formatDateKey(dateKey)}</div>
+                        <IonNote color="medium">{planSummary(plan)} planned items</IonNote>
+                      </IonLabel>
+                      <IonBadge color="tertiary">{dateKey}</IonBadge>
+                    </IonItem>
+                    <div className="planner-day-content" slot="content">
+                      <IonList lines="full" className="planner-meal-list">
+                        {MEALS.map((meal) => (
+                          <IonItem key={meal} className="planner-meal" lines="none">
+                            <IonLabel>
+                              <div className="planner-meal-header">{meal}</div>
+                              <div className="planner-meal-items">
+                                {(plan[meal] || []).length === 0 && (
+                                  <IonNote color="medium">No plan yet</IonNote>
+                                )}
+                                {(plan[meal] || []).map((entry, idx) => (
+                                  <IonChip key={`${meal}-${idx}`} color="success">
+                                    <IonLabel>
+                                      <div className="planner-chip-title">{entry.title}</div>
+                                      {entry.note && (
+                                        <div className="planner-chip-note">{entry.note}</div>
+                                      )}
+                                    </IonLabel>
+                                    <IonButton
+                                      fill="clear"
+                                      color="medium"
+                                      size="small"
+                                      aria-label="Remove"
+                                      onClick={() => removeEntry(dateKey, meal, idx)}
+                                    >
+                                      ✕
+                                    </IonButton>
+                                  </IonChip>
+                                ))}
+                              </div>
+                            </IonLabel>
+                            <IonButton
+                              slot="end"
+                              fill="outline"
+                              size="small"
+                              onClick={() => setAdding({ date: dateKey, meal })}
+                            >
+                              <IonIcon icon={addCircleOutline} slot="start" />
+                              Add
+                            </IonButton>
+                          </IonItem>
+                        ))}
+                      </IonList>
+                    </div>
+                  </IonAccordion>
+                );
+              })}
+            </IonAccordionGroup>
+          )}
+        </div>
 
         <IonAlert
           isOpen={!!adding}

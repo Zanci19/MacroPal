@@ -5,3 +5,49 @@
 .settings-page ion-item {
   --inner-padding-end: 12px;
 }
+
+.settings-sections {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-card-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: var(--mp-text);
+}
+
+.settings-page ion-card {
+  margin: 0;
+}
+
+.settings-page ion-card-header {
+  padding-bottom: 8px;
+}
+
+.settings-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.settings-avatar ion-avatar {
+  width: 52px;
+  height: 52px;
+  background: color-mix(in srgb, var(--mp-surface) 85%, transparent);
+  border: 1px solid var(--mp-border);
+}
+
+.settings-avatar ion-icon {
+  width: 100%;
+  height: 100%;
+  font-size: 52px;
+  color: var(--mp-text-muted);
+}
+
+.settings-file-input {
+  display: none;
+}
