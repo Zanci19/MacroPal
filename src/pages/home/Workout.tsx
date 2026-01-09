@@ -117,7 +117,7 @@ const Workout: React.FC = () => {
     }
 
     if (!profile || !profile.age) {
-      history.replace("/setup-profile");
+      history.replace("/onboarding-profile");
       return;
     }
   }, [profileLoading, uid, profile, history]);
