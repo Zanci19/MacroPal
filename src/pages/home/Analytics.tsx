@@ -469,33 +469,93 @@ const Analytics: React.FC = () => {
   };
 
   // export
-  const exportCSV = () => {
-    const rows = [
-      ["date", "calories", "carbohydrates_g", "protein_g", "fat_g"].join(","),
-      ...dayTable.map((r) =>
-        [r.date, r.calories, r.carbs, r.protein, r.fat].join(",")
-      ),
-    ].join("\n");
-    const blob = new Blob([rows], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
+  const shareOrDownload = async (file: File, fallbackName: string) => {
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: fallbackName,
+        });
+        return;
+      } catch {
+        // fall back to download
+      }
+    }
+
+    const url = URL.createObjectURL(file);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `macropal_${tf}_summary.csv`;
+    a.download = fallbackName;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const exportJSON = () => {
+  const buildPdf = (content: string) => {
+    const escaped = content
+      .replace(/\\/g, "\\\\")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)");
+    const lines = escaped.split("\n");
+    const textBlock = lines
+      .map((line, idx) => `${idx === 0 ? "" : "T* "}(${line}) Tj`)
+      .join("\n");
+
+    const objects: string[] = [];
+    objects.push("1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj");
+    objects.push("2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj");
+    objects.push(
+      "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj"
+    );
+    objects.push(
+      `4 0 obj << /Length ${textBlock.length + 63} >> stream\nBT\n/F1 12 Tf\n72 760 Td\n14 TL\n${textBlock}\nET\nendstream\nendobj`
+    );
+    objects.push(
+      "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj"
+    );
+
+    let offset = 0;
+    const xref = ["0000000000 65535 f "];
+    const body = objects
+      .map((obj) => {
+        const entry = `${offset}`.padStart(10, "0") + " 00000 n ";
+        xref.push(entry);
+        const chunk = `${obj}\n`;
+        offset += chunk.length;
+        return chunk;
+      })
+      .join("");
+
+    const xrefOffset = offset;
+    const xrefTable = `xref\n0 ${xref.length}\n${xref.join("\n")}\n`;
+    const trailer = `trailer << /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    return `%PDF-1.4\n${body}${xrefTable}${trailer}`;
+  };
+
+  const exportPDF = async () => {
+    const header = `MacroPal Summary (${tf})`;
+    const rows = dayTable.map(
+      (r) =>
+        `${r.date} | ${r.calories} kcal | C ${r.carbs} g | P ${r.protein} g | F ${r.fat} g`
+    );
+    const footer = `Totals: ${totals.calories} kcal | C ${totals.carbs.toFixed(
+      1
+    )} g | P ${totals.protein.toFixed(1)} g | F ${totals.fat.toFixed(1)} g`;
+    const content = [header, "", ...rows, "", footer].join("\n");
+    const pdfText = buildPdf(content);
+    const blob = new Blob([pdfText], { type: "application/pdf" });
+    const fileName = `macropal_${tf}_summary.pdf`;
+    const file = new File([blob], fileName, { type: "application/pdf" });
+    await shareOrDownload(file, fileName);
+  };
+
+  const exportJSON = async () => {
     const payload = { timeframe: tf, days: dayTable, totals, avg };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",
     });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `macropal_${tf}_summary.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `macropal_${tf}_summary.json`;
+    const file = new File([blob], fileName, { type: "application/json" });
+    await shareOrDownload(file, fileName);
   };
 
   const palette = [
@@ -566,11 +626,11 @@ const Analytics: React.FC = () => {
                     >
                       <IonButton
                         fill="outline"
-                        onClick={exportCSV}
+                        onClick={exportPDF}
                         style={{ marginRight: 8, marginBottom: 8 }}
                         disabled={!hasFoodData}
                       >
-                        <IonIcon icon={downloadOutline} slot="start" /> CSV
+                        <IonIcon icon={downloadOutline} slot="start" /> PDF
                       </IonButton>
                       <IonButton
                         fill="outline"
