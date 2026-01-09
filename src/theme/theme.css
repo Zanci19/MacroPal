@@ -26,6 +26,13 @@
 
   --mp-chip-bg: rgba(245, 246, 248, 0.9);
 
+  --ion-background-color: var(--mp-bg);
+  --ion-text-color: var(--mp-text);
+  --ion-item-background: var(--mp-surface);
+  --ion-card-background: var(--mp-surface);
+  --ion-toolbar-background: rgba(255, 255, 255, 0.6);
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.75);
+
   color-scheme: light;
 }
 
@@ -48,6 +55,13 @@ body.dark {
 
   --mp-chip-bg: rgba(31, 41, 55, 0.9);
 
+  --ion-background-color: var(--mp-bg);
+  --ion-text-color: var(--mp-text);
+  --ion-item-background: var(--mp-surface);
+  --ion-card-background: var(--mp-surface);
+  --ion-toolbar-background: rgba(8, 12, 20, 0.7);
+  --ion-tab-bar-background: rgba(8, 12, 20, 0.85);
+
   color-scheme: dark;
 }
 
@@ -66,6 +80,13 @@ body.macropal-theme {
   --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.4);
   --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.6);
   --mp-chip-bg: rgba(31, 41, 55, 0.9);
+
+  --ion-background-color: var(--mp-bg);
+  --ion-text-color: var(--mp-text);
+  --ion-item-background: var(--mp-surface);
+  --ion-card-background: var(--mp-surface);
+  --ion-toolbar-background: rgba(10, 15, 26, 0.78);
+  --ion-tab-bar-background: rgba(10, 15, 26, 0.88);
 
   color-scheme: dark;
 }
@@ -87,7 +108,9 @@ ion-badge {
 html,
 body,
 ion-app,
-ion-content {
+ion-content,
+ion-page,
+ion-router-outlet {
   background: var(--mp-bg);
   color: var(--mp-text);
 }
@@ -182,8 +205,8 @@ ion-textarea {
   --background: var(--mp-surface-muted);
   --border-radius: 14px;
   --highlight-color-focused: var(--ion-color-primary);
-  border: 1px solid var(--mp-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border: none;
+  box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -194,7 +217,7 @@ ion-textarea:focus-within {
 }
 
 ion-item {
-  --background: transparent;
+  --background: var(--mp-surface);
   --border-color: var(--mp-border);
   --color: var(--mp-text);
   border-radius: 14px;
@@ -243,6 +266,27 @@ ion-modal {
   --background: var(--mp-surface);
   --box-shadow: var(--mp-shadow-strong);
   --border-radius: 18px;
+  --border-color: var(--mp-border);
+}
+
+ion-popover {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  --border-color: var(--mp-border);
+}
+
+ion-popover::part(content) {
+  border: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow-soft);
+  background: var(--mp-surface);
+  color: var(--mp-text);
+}
+
+ion-action-sheet {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  --button-color: var(--mp-text);
+  --button-background: transparent;
   --border-color: var(--mp-border);
 }
 
