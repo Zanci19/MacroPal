@@ -196,7 +196,7 @@ const Planner: React.FC = () => {
                                   </IonLabel>
                                   <IonButton
                                     fill="clear"
-                                    color="light"
+                                    color="medium"
                                     size="small"
                                     aria-label="Remove"
                                     onClick={() => removeEntry(dateKey, meal, idx)}
