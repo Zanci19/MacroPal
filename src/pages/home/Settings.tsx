@@ -98,6 +98,7 @@ const Settings: React.FC = () => {
   const [smartDietStyle, setSmartDietStyle] = React.useState<SmartDietStyle>("none");
   const [smartMacroFocus, setSmartMacroFocus] = React.useState<SmartMacroFocus>("balanced");
   const [showWellnessTipEnabled, setShowWellnessTipEnabled] = React.useState(true);
+  const [showAchievementsEnabled, setShowAchievementsEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
@@ -408,6 +409,12 @@ const Settings: React.FC = () => {
             : true
         );
 
+        setShowAchievementsEnabled(
+          typeof (profile as any).showAchievements === "boolean"
+            ? (profile as any).showAchievements
+            : true
+        );
+
 
         setShowRecentItemsEnabled(
           typeof (profile as any).showRecentItems === "boolean"
@@ -680,7 +687,7 @@ const Settings: React.FC = () => {
             <IonCardContent>
               <IonList>
                 <IonItem lines="full">
-                  <IonLabel>Show inspirational quote</IonLabel>
+                  <IonLabel>Show random quote</IonLabel>
                   <IonToggle
                     slot="end"
                     checked={showWellnessTipEnabled}
@@ -708,7 +715,43 @@ const Settings: React.FC = () => {
                           show: true,
                           message:
                             err?.message ||
-                            "Could not update inspirational quote setting.",
+                            "Could not update random quote setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Show achievements</IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={showAchievementsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setShowAchievementsEnabled(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      const ref = doc(db, "users", current.uid);
+
+                      try {
+                        await updateDoc(ref, {
+                          "profile.showAchievements": checked,
+                        });
+
+                        trackEvent("settings_show_achievements_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save showAchievements:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update achievements setting.",
                           color: "danger",
                         });
                       }

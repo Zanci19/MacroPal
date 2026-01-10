@@ -101,7 +101,6 @@ function safeNum(n: unknown, dp = 2): number {
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
 const ZEN_QUOTES_ENDPOINT = "https://zenquotes.io/api/random";
-const INSPIRATIONAL_QUOTE_SLIDE_INDEX = 3;
 
 const getFallbackQuote = (): InspirationalQuote => {
   const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
@@ -215,7 +214,6 @@ const Home: React.FC = () => {
   });
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
-  const [quoteLoading, setQuoteLoading] = useState(false);
   const quoteHasLoadedRef = useRef(false);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
@@ -366,6 +364,7 @@ const Home: React.FC = () => {
   });
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
+  const showAchievements = profile?.showAchievements ?? true;
   const summarySwiperRef = useRef<SwiperClass | null>(null);
 
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
@@ -1133,7 +1132,6 @@ const Home: React.FC = () => {
   const hasEverLoggedFood = !!(profile as { hasEverLoggedFood?: boolean })?.hasEverLoggedFood;
 
   const fetchInspirationalQuote = useCallback(async () => {
-    setQuoteLoading(true);
     const fallbackQuote = getFallbackQuote();
     try {
       const response = await fetch(ZEN_QUOTES_ENDPOINT);
@@ -1173,23 +1171,19 @@ const Home: React.FC = () => {
         });
       }
     } finally {
-      setQuoteLoading(false);
       quoteHasLoadedRef.current = true;
     }
   }, [activeDateKey, uid]);
-
-  const refreshQuote = () => {
-    void fetchInspirationalQuote();
-  };
 
   const handleSummarySlideChange = useCallback(
     (swiper: SwiperClass) => {
       if (!showWellnessTip) return;
       if (quoteHasLoadedRef.current) return;
-      if (swiper.activeIndex !== INSPIRATIONAL_QUOTE_SLIDE_INDEX) return;
+      const quoteSlideIndex = showAchievements ? 3 : 2;
+      if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
     },
-    [fetchInspirationalQuote, showWellnessTip]
+    [fetchInspirationalQuote, showAchievements, showWellnessTip]
   );
 
   const copyDaySummary = async () => {
@@ -1754,36 +1748,38 @@ const Home: React.FC = () => {
               </div>
             </SwiperSlide>
 
-            <SwiperSlide>
-              <div className="fs-summary__slide">
-                <IonCardHeader className="fs-summary__hdr">
-                  <IonCardTitle>Achievements</IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {streakMilestones.map((target) => (
-                      <IonChip
-                        key={target}
-                        color={streak >= target ? "success" : "medium"}
-                      >
-                        {target}-day streak
-                      </IonChip>
-                    ))}
-                  </div>
-                  {nextStreakTarget ? (
-                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                      {nextStreakTarget - streak} more day
-                      {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
-                      {nextStreakTarget}-day badge.
-                    </IonText>
-                  ) : (
-                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                      You’ve unlocked all streak badges 🎉
-                    </IonText>
-                  )}
-                </IonCardContent>
-              </div>
-            </SwiperSlide>
+            {showAchievements && (
+              <SwiperSlide>
+                <div className="fs-summary__slide">
+                  <IonCardHeader className="fs-summary__hdr">
+                    <IonCardTitle>Achievements</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {streakMilestones.map((target) => (
+                        <IonChip
+                          key={target}
+                          color={streak >= target ? "success" : "medium"}
+                        >
+                          {target}-day streak
+                        </IonChip>
+                      ))}
+                    </div>
+                    {nextStreakTarget ? (
+                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                        {nextStreakTarget - streak} more day
+                        {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
+                        {nextStreakTarget}-day badge.
+                      </IonText>
+                    ) : (
+                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                        You’ve unlocked all streak badges 🎉
+                      </IonText>
+                    )}
+                  </IonCardContent>
+                </div>
+              </SwiperSlide>
+            )}
 
             {showWellnessTip && (
               <SwiperSlide>
