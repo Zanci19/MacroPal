@@ -12,6 +12,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@capgo/capacitor-social-login": "^6.0.0",
     "@capacitor/android": "^7.4.4",
     "@capacitor/app": "7.1.0",
     "@capacitor/core": "^7.4.4",
