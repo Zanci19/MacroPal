@@ -26,6 +26,8 @@ import {
   IonThumbnail,
   IonText,
   IonAlert,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -272,8 +274,17 @@ const Home: React.FC = () => {
     const stored = readStoredQuote();
     return stored?.date ?? null;
   });
+  const [isViewActive, setIsViewActive] = useState(false);
 
   const unitSystem = getUnitSystem(profile?.units);
+
+  useIonViewDidEnter(() => {
+    setIsViewActive(true);
+  });
+
+  useIonViewDidLeave(() => {
+    setIsViewActive(false);
+  });
 
   const streak = useMemo(() => {
     const value = (profile as { streak?: number } | null)?.streak;
@@ -324,15 +335,18 @@ const Home: React.FC = () => {
     setActiveDateKey((prev) => clampDateKeyToToday(prev));
   }, [profileLoading, uid, profile, history]);
 
-  useEffect(() => {
-    if (!uid) return;
+  const startHomeListeners = useCallback(() => {
+    if (!uid) return () => {};
     setLoading(true);
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
     collapsedInitKeyRef.current = null;
+    setWorkoutCalories(0);
 
-    const ref = doc(db, "users", uid, "foods", activeDateKey);
-    const unsub = onSnapshot(ref, (snap) => {
+    const cleanupFns: Array<() => void> = [];
+
+    const foodsRef = doc(db, "users", uid, "foods", activeDateKey);
+    const foodsUnsub = onSnapshot(foodsRef, (snap) => {
       const raw = snap.data() as Partial<DayDiaryDoc> | undefined;
       const nextDay: DayDiaryDoc = {
         breakfast: raw?.breakfast ?? [],
@@ -376,16 +390,10 @@ const Home: React.FC = () => {
         });
       }
     });
+    cleanupFns.push(foodsUnsub);
 
-    return () => unsub();
-  }, [uid, activeDateKey, mealSignature, shouldTrackSnapshot]);
-
-  useEffect(() => {
-    if (!uid) return;
-    setWorkoutCalories(0);
-
-    const ref = doc(db, "users", uid, "workouts", activeDateKey);
-    const unsub = onSnapshot(ref, (snap) => {
+    const workoutsRef = doc(db, "users", uid, "workouts", activeDateKey);
+    const workoutsUnsub = onSnapshot(workoutsRef, (snap) => {
       const raw = snap.data() as WorkoutDayDoc | undefined;
       const activities = raw?.activities ?? [];
 
@@ -408,9 +416,28 @@ const Home: React.FC = () => {
         });
       }
     });
+    cleanupFns.push(workoutsUnsub);
 
-    return () => unsub();
-  }, [uid, activeDateKey, shouldTrackSnapshot]);
+    const templatesRef = collection(db, "users", uid, "mealTemplates");
+    const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
+    const templatesUnsub = onSnapshot(templatesQuery, (snapshot) => {
+      const next = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        data: docSnap.data() as MealTemplate,
+      }));
+      setMealTemplates(next);
+    });
+    cleanupFns.push(templatesUnsub);
+
+    return () => {
+      cleanupFns.forEach((fn) => fn());
+    };
+  }, [activeDateKey, mealSignature, shouldTrackSnapshot, uid]);
+
+  useEffect(() => {
+    if (!isViewActive) return;
+    return startHomeListeners();
+  }, [isViewActive, startHomeListeners]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -590,22 +617,6 @@ const Home: React.FC = () => {
   }, [profile, caloriesNeeded]);
 
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
-
-  useEffect(() => {
-    if (!uid) return;
-
-    const templatesRef = collection(db, "users", uid, "mealTemplates");
-    const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
-      const next = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        data: docSnap.data() as MealTemplate,
-      }));
-      setMealTemplates(next);
-    });
-
-    return () => unsubscribe();
-  }, [uid]);
 
   const mealIcon: Record<MealKey, string> = {
     breakfast: sunnyOutline,
