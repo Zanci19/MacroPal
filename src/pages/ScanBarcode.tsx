@@ -123,11 +123,28 @@ const ScanBarcode: React.FC = () => {
     const offsetX = (rect.width - displayWidth) / 2;
     const offsetY = (rect.height - displayHeight) / 2;
 
+    const baseLeft = offsetX + minX * scale;
+    const baseTop = offsetY + minY * scale;
+    const baseWidth = Math.max(0, (maxX - minX) * scale);
+    const baseHeight = Math.max(0, (maxY - minY) * scale);
+    const padding = Math.max(8, Math.min(baseWidth, baseHeight) * 0.25);
+    const minWidth = 80;
+    const minHeight = 48;
+    const paddedWidth = baseWidth + padding * 2;
+    const paddedHeight = baseHeight + padding * 2;
+    const width = Math.max(minWidth, paddedWidth);
+    const height = Math.max(minHeight, paddedHeight);
+    const left = baseLeft - padding - (width - paddedWidth) / 2;
+    const top = baseTop - padding - (height - paddedHeight) / 2;
+
+    const clampedLeft = Math.max(0, left);
+    const clampedTop = Math.max(0, top);
+
     return {
-      left: offsetX + minX * scale,
-      top: offsetY + minY * scale,
-      width: Math.max(0, (maxX - minX) * scale),
-      height: Math.max(0, (maxY - minY) * scale),
+      left: clampedLeft,
+      top: clampedTop,
+      width: Math.min(rect.width - clampedLeft, width),
+      height: Math.min(rect.height - clampedTop, height),
     };
   };
 
