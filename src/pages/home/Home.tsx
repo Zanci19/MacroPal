@@ -24,6 +24,7 @@ import {
   IonButtons,
   IonInput,
   IonThumbnail,
+  IonText,
 } from "@ionic/react";
 import {
   addCircleOutline,
