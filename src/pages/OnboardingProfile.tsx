@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IonButton,
   IonContent,
@@ -123,8 +123,10 @@ const OnboardingProfile: React.FC = () => {
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(DEFAULT_UNIT_SYSTEM);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [activity, setActivity] = useState<Activity>("sedentary");
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const history = useHistory();
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const [toast, setToast] = useState<{
     show: boolean;
@@ -174,6 +176,11 @@ const OnboardingProfile: React.FC = () => {
         setGoal((p.goal as Goal) || "maintain");
         setGender((p.gender as Gender) || null);
         setActivity((p.activity as Activity) || "sedentary");
+        setProfilePhotoUrl(
+          typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
+            ? (p as { photoUrl?: string }).photoUrl
+            : null
+        );
       } catch (e) {
         console.error("Error loading profile:", e);
         trackEvent("onboarding_profile_load_error", {
@@ -186,7 +193,7 @@ const OnboardingProfile: React.FC = () => {
   }, []);
 
   const steps = useMemo(
-    () => ["gender", "age", "weight", "height", "goal", "activity"],
+    () => ["gender", "age", "weight", "height", "goal", "activity", "photo"],
     []
   );
 
@@ -293,6 +300,7 @@ const OnboardingProfile: React.FC = () => {
             gender,
             activity,
             units: unitSystem,
+            ...(profilePhotoUrl ? { photoUrl: profilePhotoUrl } : {}),
             ...(targets && {
               caloriesTarget: targets.calories,
               macroTargets: {
@@ -347,6 +355,17 @@ const OnboardingProfile: React.FC = () => {
 
     setDirection("forward");
     setStep((prev) => Math.min(prev + 1, steps.length - 1));
+  };
+
+  const handlePhotoChange = (file?: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : null;
+      if (!dataUrl) return;
+      setProfilePhotoUrl(dataUrl);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleBack = () => {
@@ -563,6 +582,55 @@ const OnboardingProfile: React.FC = () => {
                   </IonSelectOption>
                 </IonSelect>
               </IonItem>
+              </div>
+            )}
+
+            {steps[step] === "photo" && (
+              <div className="onboarding-step">
+                <h1 className="onboarding-title">
+                  Would you like to add a profile picture?
+                </h1>
+                <p className="onboarding-helper">
+                  Optional. You can always change it later in Settings.
+                </p>
+                <div className="onboarding-photo-wrapper">
+                  {profilePhotoUrl ? (
+                    <>
+                      <div className="onboarding-photo-preview">
+                        <img src={profilePhotoUrl} alt="Profile preview" />
+                      </div>
+                      <p className="onboarding-photo-message">
+                        There! You look beautiful!
+                      </p>
+                    </>
+                  ) : (
+                    <p className="onboarding-helper">No photo selected yet.</p>
+                  )}
+                </div>
+                <IonButton
+                  className="onboarding-photo-button"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  {profilePhotoUrl ? "Replace photo" : "Add photo"}
+                </IonButton>
+                {profilePhotoUrl && (
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-photo-remove"
+                    onClick={() => setProfilePhotoUrl(null)}
+                  >
+                    Remove photo
+                  </IonButton>
+                )}
+                <input
+                  ref={photoInputRef}
+                  className="onboarding-photo-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) =>
+                    handlePhotoChange(event.target.files?.[0] ?? null)
+                  }
+                />
               </div>
             )}
           </div>
