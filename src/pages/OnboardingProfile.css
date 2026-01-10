@@ -116,6 +116,47 @@
   width: 100%;
 }
 
+.onboarding-photo-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.onboarding-photo-preview {
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 2px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+}
+
+.onboarding-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.onboarding-photo-message {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.onboarding-photo-button {
+  width: 100%;
+  max-width: 240px;
+}
+
+.onboarding-photo-remove {
+  color: var(--ion-color-danger);
+}
+
+.onboarding-photo-input {
+  display: none;
+}
+
 .onboarding-actions {
   display: flex;
   justify-content: space-between;
