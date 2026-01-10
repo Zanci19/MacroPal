@@ -232,6 +232,7 @@ const Register: React.FC = () => {
       }
     } finally {
       setBusy(false);
+      showToast(handleError("register", err));
     }
   };
 
