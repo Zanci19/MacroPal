@@ -1,7 +1,7 @@
 // src/UpdateGate.tsx
 import React, { useEffect, useState } from "react";
 import { IonToast, IonButton } from "@ionic/react";
-import { db } from "./firebase";
+import { db, trackEvent } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { APP_VERSION } from "./hooks/version";
 
@@ -54,8 +54,22 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
 
         if (isBelowMin || forceUpdate) {
           setHardBlocked(true);
+          trackEvent("update_required_block", {
+            currentVersion: APP_VERSION,
+            minSupported,
+            latest,
+            forceUpdate,
+          });
         } else if (isBehindLatest) {
           setShowSoftBanner(true);
+          trackEvent("update_available_banner_shown", {
+            currentVersion: APP_VERSION,
+            latest,
+          });
+        } else {
+          trackEvent("update_check_current", {
+            currentVersion: APP_VERSION,
+          });
         }
       } catch (e) {
         console.error("update-check error:", e);
@@ -65,13 +79,17 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
     run();
   }, []);
 
-  const update = () => {
+  const update = (source: "hard_block" | "soft_banner") => {
+    trackEvent("update_prompt_click", {
+      source,
+      hasStoreUrl: !!config?.storeUrl,
+    });
     if (config?.storeUrl) {
-        window.location.href = config.storeUrl;
+      window.location.href = config.storeUrl;
     } else {
-        window.location.reload(); // fallback
+      window.location.reload(); // fallback
     }
-    };
+  };
 
   if (hardBlocked && config) {
     return (
@@ -91,7 +109,7 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
           Please update to the latest version to continue.
         </p>
         <div style={{ marginTop: 16 }}>
-          <IonButton onClick={update}>Update app</IonButton>
+          <IonButton onClick={() => update("hard_block")}>Update app</IonButton>
           {config.changelogUrl && (
             <IonButton
               fill="outline"
@@ -99,6 +117,7 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
               target="_blank"
               rel="noreferrer"
               style={{ marginLeft: 8 }}
+              onClick={() => trackEvent("update_changelog_click", { source: "hard_block" })}
             >
               What&apos;s new
             </IonButton>
@@ -120,10 +139,11 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
           {
             text: "Later",
             role: "cancel",
+            handler: () => trackEvent("update_prompt_dismiss", { source: "soft_banner" }),
           },
           {
             text: "Update",
-            handler: update,
+            handler: () => update("soft_banner"),
           },
         ]}
       />
