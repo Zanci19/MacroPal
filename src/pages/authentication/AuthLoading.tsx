@@ -40,6 +40,7 @@ const AuthLoading: React.FC = () => {
 
           const data: any = snap.data();
           const p = data.profile;
+          const hasAcceptedTerms = Boolean(data.termsAcceptedAt);
 
           const hasFullProfile =
             p &&
@@ -53,6 +54,9 @@ const AuthLoading: React.FC = () => {
           if (hasFullProfile) {
             targetRoute = "/app/home";
             setMessage("All set! Opening your diary…");
+          } else if (!hasAcceptedTerms) {
+            targetRoute = "/onboarding-terms";
+            setMessage("Please review the terms before continuing…");
           } else {
             targetRoute = "/onboarding-profile";
             setMessage("We need a few details. Opening setup…");
@@ -71,8 +75,8 @@ const AuthLoading: React.FC = () => {
             { merge: true }
           );
 
-          targetRoute = "/onboarding-profile";
-          setMessage("Profile created. Opening setup…");
+          targetRoute = "/onboarding-terms";
+          setMessage("Profile created. Please review the terms…");
         }
 
         history.replace(targetRoute);
