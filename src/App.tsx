@@ -135,6 +135,11 @@ const TabsShell: React.FC = () => {
         : "forward";
 
     lastDirectionRef.current = direction;
+    trackEvent("tab_navigation", {
+      from: currentTab,
+      to: tabName,
+      direction,
+    });
     router.push(href, "forward", "push");
   };
 
