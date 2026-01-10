@@ -74,5 +74,5 @@ export const shareOrDownload = async (file: File, fallbackName: string) => {
   a.href = url;
   a.download = fallbackName;
   a.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 };

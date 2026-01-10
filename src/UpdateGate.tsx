@@ -14,8 +14,12 @@ type AppConfig = {
 };
 
 function cmpVersion(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
+  const parsePart = (part: string) => {
+    const value = Number.parseInt(part, 10);
+    return Number.isFinite(value) ? value : 0;
+  };
+  const pa = a.split(".").map(parsePart);
+  const pb = b.split(".").map(parsePart);
   const len = Math.max(pa.length, pb.length);
   for (let i = 0; i < len; i++) {
     const x = pa[i] || 0;
