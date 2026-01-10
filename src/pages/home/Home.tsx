@@ -1638,7 +1638,7 @@ const Home: React.FC = () => {
           MEALS.map((meal) => {
             const items = dayData[meal] || [];
             const hasItems = items.length > 0;
-            const isCollapsed = !hasItems;
+            const isCollapsed = collapsedMeals[meal];
 
             const mealTotals = totals.perMeal[meal];
             const hasMealTotals =
@@ -1658,6 +1658,14 @@ const Home: React.FC = () => {
                     lines="none"
                     className="fs-meal__row"
                     detail={false}
+                    button
+                    aria-expanded={!isCollapsed}
+                    onClick={() => {
+                      setCollapsedMeals((prev) => ({
+                        ...prev,
+                        [meal]: !prev[meal],
+                      }));
+                    }}
                   >
                     <IonIcon
                       slot="start"
