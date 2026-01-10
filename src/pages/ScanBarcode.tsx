@@ -304,15 +304,33 @@ const ScanBarcode: React.FC = () => {
                   top: highlightBox.top,
                   width: highlightBox.width,
                   height: highlightBox.height,
-                  border: "3px solid #facc15",
-                  background: "rgba(250, 204, 21, 0.15)",
-                  borderRadius: 6,
                   opacity: highlightActive ? 1 : 0,
                   transition: "opacity 120ms ease-out",
                   pointerEvents: "none",
                   zIndex: 2,
                 }}
-              />
+              >
+                {[
+                  { top: 0, left: 0, rotate: "0deg" },
+                  { top: 0, right: 0, rotate: "90deg" },
+                  { bottom: 0, right: 0, rotate: "180deg" },
+                  { bottom: 0, left: 0, rotate: "270deg" },
+                ].map((corner, index) => (
+                  <div
+                    key={`corner-${index}`}
+                    style={{
+                      position: "absolute",
+                      width: 24,
+                      height: 24,
+                      borderTop: "3px solid #facc15",
+                      borderLeft: "3px solid #facc15",
+                      borderRadius: 4,
+                      transform: `rotate(${corner.rotate})`,
+                      ...corner,
+                    }}
+                  />
+                ))}
+              </div>
             )}
 
             {/* 🔔 Shutter flash */}
