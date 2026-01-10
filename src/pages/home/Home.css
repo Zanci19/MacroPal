@@ -204,13 +204,13 @@ ion-card:hover {
 }
 
 .fs-summary__nutrition {
-  padding-top: 4px;
+  padding: 6px 16px 12px;
 }
 
 .fs-summary__nutrition-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .fs-summary__nutrition-item {
@@ -219,13 +219,13 @@ ion-card:hover {
 }
 
 .fs-summary__nutrition-label {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
   color: var(--mp-text-muted);
 }
 
 .fs-summary__nutrition-value {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .fs-tip-card {

@@ -46,6 +46,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
+import type { Swiper as SwiperClass } from "swiper";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
 import {
@@ -356,6 +357,7 @@ const Home: React.FC = () => {
   });
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
+  const summarySwiperRef = useRef<SwiperClass | null>(null);
 
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
   const caloriesNeeded = useMemo(() => {
@@ -1337,6 +1339,20 @@ const Home: React.FC = () => {
     return value.toFixed(0);
   };
 
+  useEffect(() => {
+    if (!summarySwiperRef.current) return;
+    summarySwiperRef.current.updateAutoHeight(300);
+    summarySwiperRef.current.update();
+  }, [
+    profile,
+    caloriesNeeded,
+    macroTargets,
+    totals.day,
+    nutritionEntries,
+    streak,
+    showWellnessTip,
+  ]);
+
 
   return (
     <IonPage>
@@ -1397,6 +1413,12 @@ const Home: React.FC = () => {
             slidesPerView={1}
             autoHeight
             className="fs-summary__swiper"
+            observer
+            observeParents
+            observeSlideChildren
+            onSwiper={(swiper) => {
+              summarySwiperRef.current = swiper;
+            }}
           >
             <SwiperSlide>
               <div className="fs-summary__slide">
