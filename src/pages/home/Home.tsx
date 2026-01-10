@@ -1179,7 +1179,7 @@ const Home: React.FC = () => {
     (swiper: SwiperClass) => {
       if (!showWellnessTip) return;
       if (quoteHasLoadedRef.current) return;
-      const quoteSlideIndex = showAchievements ? 3 : 2;
+      const quoteSlideIndex = showAchievements ? 4 : 3;
       if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
     },
@@ -1748,6 +1748,22 @@ const Home: React.FC = () => {
               </div>
             </SwiperSlide>
 
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Weigh-in</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <p style={{ marginTop: 0 }}>
+                    Track your weight over time to see progress in Analytics.
+                  </p>
+                  <IonButton expand="block" onClick={openWeighInModal}>
+                    Log weigh-in
+                  </IonButton>
+                </IonCardContent>
+              </div>
+            </SwiperSlide>
+
             {showAchievements && (
               <SwiperSlide>
                 <div className="fs-summary__slide">
@@ -2062,20 +2078,6 @@ const Home: React.FC = () => {
               </IonCard>
             );
           })}
-
-        <IonCard className="fs-weighin">
-          <IonCardHeader>
-            <IonCardTitle>Weigh-in</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <p style={{ marginTop: 0 }}>
-              Track your weight over time to see progress in Analytics.
-            </p>
-            <IonButton expand="block" onClick={openWeighInModal}>
-              Log weigh-in
-            </IonButton>
-          </IonCardContent>
-        </IonCard>
 
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
