@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   IonPage,
   IonContent,
@@ -23,7 +23,8 @@ import {
   sendEmailVerification,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup,
+  getRedirectResult,
+  signInWithRedirect,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
@@ -72,6 +73,36 @@ const Register: React.FC = () => {
     message: string,
     color: "success" | "danger" | "warning" = "danger"
   ) => setToast({ show: true, message, color });
+
+  useEffect(() => {
+    let active = true;
+
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!active || !result?.user) return;
+
+        setBusy(true);
+        trackEvent("register_google_success", { uid: result.user.uid });
+        showToast("Signed up with Google.", "success");
+        history.replace("/auth-loading");
+      } catch (err: any) {
+        if (!active) return;
+        trackEvent("register_google_error", { code: err?.code || "unknown" });
+        showToast(handleError("register", err));
+      } finally {
+        if (active) {
+          setBusy(false);
+        }
+      }
+    };
+
+    checkRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, [history]);
 
   const handleRegister = async () => {
     if (busy) return;
@@ -176,19 +207,12 @@ const Register: React.FC = () => {
     setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      trackEvent("register_google_success", { uid: result.user.uid });
-      showToast("Signed up with Google.", "success");
-      history.replace("/auth-loading");
+      trackEvent("register_google_start", { method: "redirect" });
+      await signInWithRedirect(auth, provider);
     } catch (err: any) {
       trackEvent("register_google_error", { code: err?.code || "unknown" });
-      if (err?.code === "auth/popup-closed-by-user") {
-        showToast("Google sign-up cancelled.", "warning");
-      } else {
-        showToast(handleError("register", err));
-      }
-    } finally {
       setBusy(false);
+      showToast(handleError("register", err));
     }
   };
 
