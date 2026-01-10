@@ -252,6 +252,7 @@ const Home: React.FC = () => {
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
   const quoteHasLoadedRef = useRef(false);
+  const streakRefreshTimerRef = useRef<number | null>(null);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -279,11 +280,15 @@ const Home: React.FC = () => {
 
   const refreshStreak = useCallback(async (userId: string) => {
     const todayKeyValue = todayDateKey();
+    const dateKeys = Array.from({ length: 14 }, (_, i) =>
+      shiftDateKey(todayKeyValue, -i)
+    );
+    const snapshots = await Promise.all(
+      dateKeys.map((dateKey) => getDoc(doc(db, "users", userId, "foods", dateKey)))
+    );
     let s = 0;
-    for (let i = 0; i < 14; i++) {
-      const offset = shiftDateKey(todayKeyValue, -i);
-      const ds = await getDoc(doc(db, "users", userId, "foods", offset));
-      const dd = ds.data() as Partial<DayDiaryDoc> | undefined;
+    for (let i = 0; i < dateKeys.length; i++) {
+      const dd = snapshots[i].data() as Partial<DayDiaryDoc> | undefined;
       const any = !!(
         dd?.breakfast?.length ||
         dd?.lunch?.length ||
@@ -295,6 +300,27 @@ const Home: React.FC = () => {
     }
     setStreak(s);
     trackEvent("streak_calculated", { uid: userId, streak: s });
+  }, []);
+
+  const scheduleStreakRefresh = useCallback(
+    (userId: string) => {
+      if (streakRefreshTimerRef.current !== null) {
+        window.clearTimeout(streakRefreshTimerRef.current);
+      }
+      streakRefreshTimerRef.current = window.setTimeout(() => {
+        streakRefreshTimerRef.current = null;
+        refreshStreak(userId);
+      }, 300);
+    },
+    [refreshStreak]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (streakRefreshTimerRef.current !== null) {
+        window.clearTimeout(streakRefreshTimerRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -313,8 +339,8 @@ const Home: React.FC = () => {
     }
 
     setActiveDateKey((prev) => clampDateKeyToToday(prev));
-    refreshStreak(uid);
-  }, [profileLoading, uid, profile, history, refreshStreak]);
+    scheduleStreakRefresh(uid);
+  }, [profileLoading, uid, profile, history, scheduleStreakRefresh]);
 
   useEffect(() => {
     if (!uid) return;
@@ -343,7 +369,7 @@ const Home: React.FC = () => {
         collapsedInitKeyRef.current = activeDateKey;
       }
       setLoading(false);
-      refreshStreak(uid);
+      scheduleStreakRefresh(uid);
 
       const totalEntries =
         nextDay.breakfast.length +
@@ -359,7 +385,7 @@ const Home: React.FC = () => {
     });
 
     return () => unsub();
-  }, [uid, activeDateKey, refreshStreak]);
+  }, [uid, activeDateKey, scheduleStreakRefresh]);
 
   useEffect(() => {
     if (!uid) return;
