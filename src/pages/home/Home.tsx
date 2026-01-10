@@ -86,6 +86,10 @@ import {
   toMetricWeight,
   weightLabel,
 } from "../../utils/units";
+import {
+  INSPIRATIONAL_QUOTES,
+  type InspirationalQuote,
+} from "../../data/inspirationalQuotes";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -96,10 +100,12 @@ function safeNum(n: unknown, dp = 2): number {
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-const WELLNESS_TIPS = [
-  "Poslušaj Radio GoonFM.",
-  "Listen to Radio GoonFM.",
-];
+const ZEN_QUOTES_ENDPOINT = "https://zenquotes.io/api/random";
+
+const getFallbackQuote = (): InspirationalQuote => {
+  const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
+  return INSPIRATIONAL_QUOTES[index];
+};
 
 
 const ProgressRing: React.FC<{
@@ -208,6 +214,7 @@ const Home: React.FC = () => {
   });
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
+  const quoteHasLoadedRef = useRef(false);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -219,8 +226,8 @@ const Home: React.FC = () => {
   });
   const collapsedInitKeyRef = useRef<string | null>(null);
 
-  const [tipIndex, setTipIndex] = useState(() =>
-    Math.floor(Math.random() * WELLNESS_TIPS.length)
+  const [quote, setQuote] = useState<InspirationalQuote>(() =>
+    getFallbackQuote()
   );
   const unitSystem = getUnitSystem(profile?.units);
 
@@ -357,6 +364,7 @@ const Home: React.FC = () => {
   });
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
+  const showAchievements = profile?.showAchievements ?? true;
   const summarySwiperRef = useRef<SwiperClass | null>(null);
 
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
@@ -1123,22 +1131,60 @@ const Home: React.FC = () => {
 
   const hasEverLoggedFood = !!(profile as { hasEverLoggedFood?: boolean })?.hasEverLoggedFood;
 
-  const shuffleTip = () => {
-    setTipIndex((prev) => {
-      if (WELLNESS_TIPS.length <= 1) return prev;
-      const next =
-        (prev + 1 + Math.floor(Math.random() * (WELLNESS_TIPS.length - 1))) %
-        WELLNESS_TIPS.length;
+  const fetchInspirationalQuote = useCallback(async () => {
+    const fallbackQuote = getFallbackQuote();
+    try {
+      const response = await fetch(ZEN_QUOTES_ENDPOINT);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch quote: ${response.status}`);
+      }
+      const data = (await response.json()) as Array<{ q?: string; a?: string }>;
+      const [first] = Array.isArray(data) ? data : [];
+      const quoteText = typeof first?.q === "string" ? first.q.trim() : "";
+      const quoteAuthor =
+        typeof first?.a === "string" ? first.a.trim() : "Unknown";
 
-      trackEvent("wellness_tip_shuffled", {
-        uid,
-        date: activeDateKey,
-        next_tip_index: next,
+      if (!quoteText) {
+        throw new Error("Missing quote text");
+      }
+
+      setQuote({
+        quote: quoteText,
+        author: quoteAuthor || "Unknown",
       });
 
-      return next;
-    });
-  };
+      if (uid) {
+        trackEvent("inspirational_quote_loaded", {
+          uid,
+          date: activeDateKey,
+          source: "api",
+        });
+      }
+    } catch (error) {
+      setQuote(fallbackQuote);
+      if (uid) {
+        trackEvent("inspirational_quote_loaded", {
+          uid,
+          date: activeDateKey,
+          source: "fallback",
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    } finally {
+      quoteHasLoadedRef.current = true;
+    }
+  }, [activeDateKey, uid]);
+
+  const handleSummarySlideChange = useCallback(
+    (swiper: SwiperClass) => {
+      if (!showWellnessTip) return;
+      if (quoteHasLoadedRef.current) return;
+      const quoteSlideIndex = showAchievements ? 4 : 3;
+      if (swiper.activeIndex !== quoteSlideIndex) return;
+      void fetchInspirationalQuote();
+    },
+    [fetchInspirationalQuote, showAchievements, showWellnessTip]
+  );
 
   const copyDaySummary = async () => {
     if (!profile || caloriesNeeded == null || !macroTargets) return;
@@ -1418,7 +1464,9 @@ const Home: React.FC = () => {
             observeSlideChildren
             onSwiper={(swiper) => {
               summarySwiperRef.current = swiper;
+              handleSummarySlideChange(swiper);
             }}
+            onSlideChange={handleSummarySlideChange}
           >
             <SwiperSlide>
               <div className="fs-summary__slide">
@@ -1703,33 +1751,51 @@ const Home: React.FC = () => {
             <SwiperSlide>
               <div className="fs-summary__slide">
                 <IonCardHeader className="fs-summary__hdr">
-                  <IonCardTitle>Achievements</IonCardTitle>
+                  <IonCardTitle>Weigh-in</IonCardTitle>
                 </IonCardHeader>
                 <IonCardContent>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {streakMilestones.map((target) => (
-                      <IonChip
-                        key={target}
-                        color={streak >= target ? "success" : "medium"}
-                      >
-                        {target}-day streak
-                      </IonChip>
-                    ))}
-                  </div>
-                  {nextStreakTarget ? (
-                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                      {nextStreakTarget - streak} more day
-                      {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
-                      {nextStreakTarget}-day badge.
-                    </IonText>
-                  ) : (
-                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                      You’ve unlocked all streak badges 🎉
-                    </IonText>
-                  )}
+                  <p style={{ marginTop: 0 }}>
+                    Track your weight over time to see progress in Analytics.
+                  </p>
+                  <IonButton expand="block" onClick={openWeighInModal}>
+                    Log weigh-in
+                  </IonButton>
                 </IonCardContent>
               </div>
             </SwiperSlide>
+
+            {showAchievements && (
+              <SwiperSlide>
+                <div className="fs-summary__slide">
+                  <IonCardHeader className="fs-summary__hdr">
+                    <IonCardTitle>Achievements</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {streakMilestones.map((target) => (
+                        <IonChip
+                          key={target}
+                          color={streak >= target ? "success" : "medium"}
+                        >
+                          {target}-day streak
+                        </IonChip>
+                      ))}
+                    </div>
+                    {nextStreakTarget ? (
+                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                        {nextStreakTarget - streak} more day
+                        {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
+                        {nextStreakTarget}-day badge.
+                      </IonText>
+                    ) : (
+                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                        You’ve unlocked all streak badges 🎉
+                      </IonText>
+                    )}
+                  </IonCardContent>
+                </div>
+              </SwiperSlide>
+            )}
 
             {showWellnessTip && (
               <SwiperSlide>
@@ -1737,14 +1803,12 @@ const Home: React.FC = () => {
                   <IonCardHeader className="fs-tip-card__hdr">
                     <div className="fs-tip-card__title">
                       <IonIcon icon={bulbOutline} aria-hidden="true" />
-                      <IonCardTitle>Wellness tip</IonCardTitle>
+                      <IonCardTitle>Inspirational quote</IonCardTitle>
                     </div>
                   </IonCardHeader>
                   <IonCardContent className="fs-tip-card__content">
-                    <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
-                    <IonButton size="small" fill="outline" onClick={shuffleTip}>
-                      New tip
-                    </IonButton>
+                    <p className="fs-tip-card__text">“{quote.quote}”</p>
+                    <IonText color="medium">— {quote.author}</IonText>
                   </IonCardContent>
                 </div>
               </SwiperSlide>
@@ -2014,20 +2078,6 @@ const Home: React.FC = () => {
               </IonCard>
             );
           })}
-
-        <IonCard className="fs-weighin">
-          <IonCardHeader>
-            <IonCardTitle>Weigh-in</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <p style={{ marginTop: 0 }}>
-              Track your weight over time to see progress in Analytics.
-            </p>
-            <IonButton expand="block" onClick={openWeighInModal}>
-              Log weigh-in
-            </IonButton>
-          </IonCardContent>
-        </IonCard>
 
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
