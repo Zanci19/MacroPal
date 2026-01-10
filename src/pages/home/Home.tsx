@@ -100,13 +100,50 @@ function safeNum(n: unknown, dp = 2): number {
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
-const ZEN_QUOTES_ENDPOINT = "https://zenquotes.io/api/random";
+const ZEN_QUOTES_ENDPOINT = "https://zenquote-wjgl4tt7ha-ew.a.run.app";
+const QUOTE_STORAGE_KEY = "mp_daily_quote";
 
 const getFallbackQuote = (): InspirationalQuote => {
   const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
   return INSPIRATIONAL_QUOTES[index];
 };
 
+type StoredQuote = {
+  date: string;
+  quote: string;
+  author: string;
+};
+
+const readStoredQuote = (): StoredQuote | null => {
+  try {
+    const raw = localStorage.getItem(QUOTE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredQuote>;
+    if (
+      typeof parsed?.date === "string" &&
+      typeof parsed?.quote === "string" &&
+      typeof parsed?.author === "string"
+    ) {
+      return { date: parsed.date, quote: parsed.quote, author: parsed.author };
+    }
+  } catch (error) {
+    console.warn("Unable to read stored quote", error);
+  }
+  return null;
+};
+
+const storeQuote = (dateKey: string, quote: InspirationalQuote) => {
+  try {
+    const payload: StoredQuote = {
+      date: dateKey,
+      quote: quote.quote,
+      author: quote.author,
+    };
+    localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.warn("Unable to store quote", error);
+  }
+};
 
 const ProgressRing: React.FC<{
   size?: number;
@@ -226,9 +263,18 @@ const Home: React.FC = () => {
   });
   const collapsedInitKeyRef = useRef<string | null>(null);
 
-  const [quote, setQuote] = useState<InspirationalQuote>(() =>
-    getFallbackQuote()
-  );
+  const [quote, setQuote] = useState<InspirationalQuote>(() => {
+    const stored = readStoredQuote();
+    if (stored?.date === todayDateKey()) {
+      return { quote: stored.quote, author: stored.author };
+    }
+    return getFallbackQuote();
+  });
+  const [quoteDateKey, setQuoteDateKey] = useState<string | null>(() => {
+    const stored = readStoredQuote();
+    return stored?.date ?? null;
+  });
+
   const unitSystem = getUnitSystem(profile?.units);
 
   const refreshStreak = useCallback(async (userId: string) => {
@@ -366,6 +412,23 @@ const Home: React.FC = () => {
   const showWellnessTip = profile?.showWellnessTip ?? true;
   const showAchievements = profile?.showAchievements ?? true;
   const summarySwiperRef = useRef<SwiperClass | null>(null);
+
+  useEffect(() => {
+    if (quoteDateKey === todayKey) {
+      quoteHasLoadedRef.current = true;
+      return;
+    }
+    quoteHasLoadedRef.current = false;
+    if (quoteDateKey) {
+      setQuote(getFallbackQuote());
+      setQuoteDateKey(null);
+      try {
+        localStorage.removeItem(QUOTE_STORAGE_KEY);
+      } catch (error) {
+        console.warn("Unable to clear stored quote", error);
+      }
+    }
+  }, [quoteDateKey, todayKey]);
 
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
   const caloriesNeeded = useMemo(() => {
@@ -1133,6 +1196,7 @@ const Home: React.FC = () => {
 
   const fetchInspirationalQuote = useCallback(async () => {
     const fallbackQuote = getFallbackQuote();
+    const todayKeyValue = todayDateKey();
     try {
       const response = await fetch(ZEN_QUOTES_ENDPOINT);
       if (!response.ok) {
@@ -1148,10 +1212,13 @@ const Home: React.FC = () => {
         throw new Error("Missing quote text");
       }
 
-      setQuote({
+      const nextQuote = {
         quote: quoteText,
         author: quoteAuthor || "Unknown",
-      });
+      };
+      setQuote(nextQuote);
+      setQuoteDateKey(todayKeyValue);
+      storeQuote(todayKeyValue, nextQuote);
 
       if (uid) {
         trackEvent("inspirational_quote_loaded", {
@@ -1162,6 +1229,8 @@ const Home: React.FC = () => {
       }
     } catch (error) {
       setQuote(fallbackQuote);
+      setQuoteDateKey(todayKeyValue);
+      storeQuote(todayKeyValue, fallbackQuote);
       if (uid) {
         trackEvent("inspirational_quote_loaded", {
           uid,
@@ -1178,12 +1247,16 @@ const Home: React.FC = () => {
   const handleSummarySlideChange = useCallback(
     (swiper: SwiperClass) => {
       if (!showWellnessTip) return;
+      if (quoteDateKey === todayKey) {
+        quoteHasLoadedRef.current = true;
+        return;
+      }
       if (quoteHasLoadedRef.current) return;
       const quoteSlideIndex = showAchievements ? 4 : 3;
       if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
     },
-    [fetchInspirationalQuote, showAchievements, showWellnessTip]
+    [fetchInspirationalQuote, quoteDateKey, showAchievements, showWellnessTip, todayKey]
   );
 
   const copyDaySummary = async () => {
@@ -1255,8 +1328,8 @@ const Home: React.FC = () => {
     const fallback =
       typeof profile?.weight === "number"
         ? String(
-            Math.round(fromMetricWeight(profile.weight, unitSystem) * 10) / 10
-          )
+          Math.round(fromMetricWeight(profile.weight, unitSystem) * 10) / 10
+        )
         : "";
     setWeighInValue((prev) => prev || fallback);
     setShowWeighInModal(true);
@@ -1312,7 +1385,7 @@ const Home: React.FC = () => {
   const nutritionTotals = useMemo(() => {
     const aggregated: Record<string, number> = {};
     Object.values(dayData).forEach((items) => {
-      items.forEach((entry) => {
+      items.forEach((entry: DiaryEntry) => {
         Object.entries(entry.total || {}).forEach(([key, value]) => {
           if (key === "calories" || typeof value !== "number") return;
           if (!Number.isFinite(value)) return;
@@ -1575,13 +1648,49 @@ const Home: React.FC = () => {
                       const macroBars =
                         k === "fat"
                           ? (() => {
-                              const total = Math.max(0, totals.day.fat);
-                              const sat = Math.min(
+                            const total = Math.max(0, totals.day.fat);
+                            const sat = Math.min(
+                              total,
+                              Math.max(0, totals.day.saturatedFat)
+                            );
+                            const rest = Math.max(0, total - sat);
+                            const satPct = total > 0 ? sat / total : 0;
+                            const restPct = total > 0 ? rest / total : 0;
+                            return (
+                              <div style={{ display: "flex", height: "100%" }}>
+                                {rest > 0 && (
+                                  <div
+                                    style={{
+                                      width: `${restPct * 100}%`,
+                                      background: "var(--ion-color-primary)",
+                                    }}
+                                  />
+                                )}
+                                {sat > 0 && (
+                                  <div
+                                    style={{
+                                      width: `${satPct * 100}%`,
+                                      background: "var(--ion-color-warning)",
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()
+                          : k === "carbs"
+                            ? (() => {
+                              const total = Math.max(0, totals.day.carbs);
+                              const sugar = Math.min(
                                 total,
-                                Math.max(0, totals.day.saturatedFat)
+                                Math.max(0, totals.day.sugar)
                               );
-                              const rest = Math.max(0, total - sat);
-                              const satPct = total > 0 ? sat / total : 0;
+                              const fiber = Math.min(
+                                total - sugar,
+                                Math.max(0, totals.day.fiber)
+                              );
+                              const rest = Math.max(0, total - sugar - fiber);
+                              const sugarPct = total > 0 ? sugar / total : 0;
+                              const fiberPct = total > 0 ? fiber / total : 0;
                               const restPct = total > 0 ? rest / total : 0;
                               return (
                                 <div style={{ display: "flex", height: "100%" }}>
@@ -1593,69 +1702,33 @@ const Home: React.FC = () => {
                                       }}
                                     />
                                   )}
-                                  {sat > 0 && (
+                                  {sugar > 0 && (
                                     <div
                                       style={{
-                                        width: `${satPct * 100}%`,
+                                        width: `${sugarPct * 100}%`,
                                         background: "var(--ion-color-warning)",
+                                      }}
+                                    />
+                                  )}
+                                  {fiber > 0 && (
+                                    <div
+                                      style={{
+                                        width: `${fiberPct * 100}%`,
+                                        background: "var(--ion-color-success)",
                                       }}
                                     />
                                   )}
                                 </div>
                               );
                             })()
-                          : k === "carbs"
-                            ? (() => {
-                                const total = Math.max(0, totals.day.carbs);
-                                const sugar = Math.min(
-                                  total,
-                                  Math.max(0, totals.day.sugar)
-                                );
-                                const fiber = Math.min(
-                                  total - sugar,
-                                  Math.max(0, totals.day.fiber)
-                                );
-                                const rest = Math.max(0, total - sugar - fiber);
-                                const sugarPct = total > 0 ? sugar / total : 0;
-                                const fiberPct = total > 0 ? fiber / total : 0;
-                                const restPct = total > 0 ? rest / total : 0;
-                                return (
-                                  <div style={{ display: "flex", height: "100%" }}>
-                                    {rest > 0 && (
-                                      <div
-                                        style={{
-                                          width: `${restPct * 100}%`,
-                                          background: "var(--ion-color-primary)",
-                                        }}
-                                      />
-                                    )}
-                                    {sugar > 0 && (
-                                      <div
-                                        style={{
-                                          width: `${sugarPct * 100}%`,
-                                          background: "var(--ion-color-warning)",
-                                        }}
-                                      />
-                                    )}
-                                    {fiber > 0 && (
-                                      <div
-                                        style={{
-                                          width: `${fiberPct * 100}%`,
-                                          background: "var(--ion-color-success)",
-                                        }}
-                                      />
-                                    )}
-                                  </div>
-                                );
-                              })()
                             : (
-                                <div
-                                  style={{
-                                    ...fillStyle,
-                                    background: "var(--ion-color-primary)",
-                                  }}
-                                />
-                              );
+                              <div
+                                style={{
+                                  ...fillStyle,
+                                  background: "var(--ion-color-primary)",
+                                }}
+                              />
+                            );
 
                       return (
                         <div key={k} style={{ display: "grid", gap: 4 }}>
@@ -2095,7 +2168,7 @@ const Home: React.FC = () => {
               text: "Move up",
               cssClass:
                 foodMenuEntry &&
-                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
                   ? ""
                   : "action-sheet-disabled",
               handler: () => {
@@ -2108,7 +2181,7 @@ const Home: React.FC = () => {
               text: "Move down",
               cssClass:
                 foodMenuEntry &&
-                (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
+                  (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
                   ? ""
                   : "action-sheet-disabled",
               handler: () => {
@@ -2203,21 +2276,21 @@ const Home: React.FC = () => {
           buttons={[
             ...(mealTemplates.length
               ? mealTemplates.map((template) => ({
-                  text: template.data.name,
-                  handler: () => {
-                    if (templateMenuMeal) {
-                      applyTemplateToMeal(templateMenuMeal, template.data);
-                    }
-                    setTemplateMenuMeal(null);
-                  },
-                }))
+                text: template.data.name,
+                handler: () => {
+                  if (templateMenuMeal) {
+                    applyTemplateToMeal(templateMenuMeal, template.data);
+                  }
+                  setTemplateMenuMeal(null);
+                },
+              }))
               : [
-                  {
-                    text: "No templates saved yet",
-                    cssClass: "action-sheet-disabled",
-                    handler: () => false,
-                  },
-                ]),
+                {
+                  text: "No templates saved yet",
+                  cssClass: "action-sheet-disabled",
+                  handler: () => false,
+                },
+              ]),
             {
               text: "Cancel",
               role: "cancel",
