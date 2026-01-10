@@ -31,6 +31,7 @@ import {
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
 import { handleError } from "../../utils/handleError";
+import { signInWithGoogleSocialLogin } from "../../utils/googleSocialLogin";
 import "./Register.css";
 
 const emailOk = (s: string) =>
@@ -208,9 +209,21 @@ const Register: React.FC = () => {
     if (busy) return;
     setBusy(true);
     try {
+      if (isPlatform("hybrid")) {
+        trackEvent("register_google_start", {
+          method: "social_login",
+        });
+
+        const result = await signInWithGoogleSocialLogin();
+        trackEvent("register_google_success", { uid: result.user.uid });
+        showToast("Signed up with Google.", "success");
+        history.replace("/auth-loading");
+        return;
+      }
+
       const provider = new GoogleAuthProvider();
       const isMobileWeb = isPlatform("mobileweb");
-      const useRedirect = isPlatform("hybrid") || isMobileWeb;
+      const useRedirect = isMobileWeb;
       const popupFallbackCodes = new Set([
         "auth/operation-not-supported-in-this-environment",
         "auth/popup-blocked",
