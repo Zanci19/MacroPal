@@ -13,6 +13,7 @@ import {
   IonLabel,
   IonToast,
   IonSpinner,
+  isPlatform,
 } from "@ionic/react";
 import {
   logoGoogle,
@@ -24,6 +25,7 @@ import {
   signOut,
   GoogleAuthProvider,
   getRedirectResult,
+  signInWithPopup,
   signInWithRedirect,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
@@ -207,10 +209,28 @@ const Register: React.FC = () => {
     setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
-      trackEvent("register_google_start", { method: "redirect" });
-      await signInWithRedirect(auth, provider);
+      const useRedirect = isPlatform("hybrid");
+      trackEvent("register_google_start", {
+        method: useRedirect ? "redirect" : "popup",
+      });
+
+      if (useRedirect) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      const result = await signInWithPopup(auth, provider);
+      trackEvent("register_google_success", { uid: result.user.uid });
+      showToast("Signed up with Google.", "success");
+      history.replace("/auth-loading");
     } catch (err: any) {
       trackEvent("register_google_error", { code: err?.code || "unknown" });
+      if (!isPlatform("hybrid") && err?.code === "auth/popup-closed-by-user") {
+        showToast("Google sign-up cancelled.", "warning");
+      } else {
+        showToast(handleError("register", err));
+      }
+    } finally {
       setBusy(false);
       showToast(handleError("register", err));
     }
