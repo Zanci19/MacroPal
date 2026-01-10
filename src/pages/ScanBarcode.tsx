@@ -136,16 +136,19 @@ const ScanBarcode: React.FC = () => {
     const baseTop = offsetY + minY * scale;
     const baseWidth = Math.max(0, (maxX - minX) * scale);
     const baseHeight = Math.max(0, (maxY - minY) * scale);
-    const paddingX = Math.max(16, baseWidth * 0.35);
-    const paddingY = Math.max(8, baseHeight * 0.25);
+    const adjustedHeight = Math.max(baseHeight, baseWidth * 0.6);
+    const paddingX = Math.max(8, baseWidth * 0.25);
+    const paddingY = Math.max(24, adjustedHeight * 0.35);
     const minWidth = 80;
     const minHeight = 48;
     const paddedWidth = baseWidth + paddingX * 2;
-    const paddedHeight = baseHeight + paddingY * 2;
+    const paddedHeight = adjustedHeight + paddingY * 2;
     const width = Math.max(minWidth, paddedWidth);
     const height = Math.max(minHeight, paddedHeight);
     const left = baseLeft - paddingX - (width - paddedWidth) / 2;
-    const top = baseTop - paddingY - (height - paddedHeight) / 2;
+    const heightDelta = adjustedHeight - baseHeight;
+    const adjustedTop = baseTop - heightDelta / 2;
+    const top = adjustedTop - paddingY - (height - paddedHeight) / 2;
 
     const clampedLeft = Math.max(0, left);
     const clampedTop = Math.max(0, top);
@@ -222,7 +225,10 @@ const ScanBarcode: React.FC = () => {
               window.clearTimeout(highlightTimeoutRef.current);
             }
 
-            setHighlightActive(true);
+            setHighlightActive(false);
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => setHighlightActive(true));
+            });
             await new Promise<void>((resolve) => {
               highlightTimeoutRef.current = window.setTimeout(() => {
                 setHighlightActive(false);
