@@ -1,4 +1,10 @@
 import { onRequest } from "firebase-functions/v2/https";
+import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { initializeApp } from "firebase-admin/app";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
+
+initializeApp();
+const firestore = getFirestore();
 
 /* ============ Shared helpers ============ */
 function setCors(res: any) {
@@ -12,6 +18,20 @@ function setCaching(res: any) {
   // Client cache 60s, CDN/edge cache 300s, serve stale 600s
   res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
 }
+
+const toDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const shiftDateKey = (key: string, delta: number): string => {
+  const [year, month, day] = key.split("-").map(Number);
+  const date = new Date(year || 1970, (month || 1) - 1, day || 1);
+  date.setDate(date.getDate() + delta);
+  return toDateKey(date);
+};
 
 // Keep the UI responsive; OFF + CDN caches are typically fast
 async function fetchWithTimeout(url: string, init: RequestInit = {}, ms = 5000) {
@@ -198,3 +218,47 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
       .json({ error: aborted ? "upstream_timeout" : "upstream_bad_gateway", message: error.message ?? "unknown" });
   }
 });
+
+export const updateStreakCache = onDocumentWritten(
+  { region: "us-central1", document: "users/{uid}/foods/{dateKey}" },
+  async (event) => {
+    const uid = event.params.uid as string | undefined;
+    if (!uid) return;
+
+    const todayKey = toDateKey(new Date());
+    const dateKeys = Array.from({ length: 14 }, (_, i) =>
+      shiftDateKey(todayKey, -i)
+    );
+    const refs = dateKeys.map((dateKey) =>
+      firestore.doc(`users/${uid}/foods/${dateKey}`)
+    );
+
+    try {
+      const snapshots = await firestore.getAll(...refs);
+      let streak = 0;
+      for (const snap of snapshots) {
+        const data = snap.data() as Record<string, unknown> | undefined;
+        const any = !!(
+          (data?.breakfast as unknown[] | undefined)?.length ||
+          (data?.lunch as unknown[] | undefined)?.length ||
+          (data?.dinner as unknown[] | undefined)?.length ||
+          (data?.snacks as unknown[] | undefined)?.length
+        );
+        if (any) streak++;
+        else break;
+      }
+
+      await firestore.doc(`users/${uid}`).set(
+        {
+          profile: {
+            streak,
+            streakUpdatedAt: FieldValue.serverTimestamp(),
+          },
+        },
+        { merge: true }
+      );
+    } catch (error) {
+      console.error("updateStreakCache failed:", error);
+    }
+  }
+);

@@ -79,20 +79,6 @@ const LEAVE_MIN_OPACITY = 0.4;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
-const AnalyticsRouteTracker: React.FC = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    const path = location.pathname + (location.search || "");
-    trackEvent("screen_view", {
-      screen_name: path,
-      screen_class: path,
-    });
-  }, [location]);
-
-  return null;
-};
-
 const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
@@ -424,8 +410,6 @@ const App: React.FC = () => {
       <ErrorBoundary>
         <IonReactRouter>
           <UpdateGate>
-            <AnalyticsRouteTracker />
-
             <IonRouterOutlet id="root">
               <Route exact path="/login" component={Login} />
               <Route exact path="/register" component={Register} />
