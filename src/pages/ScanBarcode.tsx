@@ -75,7 +75,10 @@ const ScanBarcode: React.FC = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
-    readerRef.current?.reset();
+    const reader = readerRef.current;
+    if (reader && "stopContinuousDecode" in reader) {
+      (reader as { stopContinuousDecode: () => void }).stopContinuousDecode();
+    }
     readerRef.current = null;
     decodeInProgressRef.current = false;
     setHighlightActive(false);
