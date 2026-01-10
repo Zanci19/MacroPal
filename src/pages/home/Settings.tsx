@@ -680,7 +680,7 @@ const Settings: React.FC = () => {
             <IonCardContent>
               <IonList>
                 <IonItem lines="full">
-                  <IonLabel>Show wellness tip</IonLabel>
+                  <IonLabel>Show inspirational quote</IonLabel>
                   <IonToggle
                     slot="end"
                     checked={showWellnessTipEnabled}
@@ -708,7 +708,7 @@ const Settings: React.FC = () => {
                           show: true,
                           message:
                             err?.message ||
-                            "Could not update wellness tip setting.",
+                            "Could not update inspirational quote setting.",
                           color: "danger",
                         });
                       }
