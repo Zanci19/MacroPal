@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -13,6 +13,7 @@ import {
   IonText,
   IonToast,
   IonSpinner,
+  isPlatform,
 } from "@ionic/react";
 import {
   logoGoogle,
@@ -22,7 +23,9 @@ import {
   sendEmailVerification,
   signOut,
   GoogleAuthProvider,
+  getRedirectResult,
   signInWithPopup,
+  signInWithRedirect,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
@@ -65,6 +68,36 @@ const Login: React.FC = () => {
       handler?: () => void;
     }[]
   ) => setToast({ show: true, message, color, buttons });
+
+  useEffect(() => {
+    let active = true;
+
+    const checkRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!active || !result?.user) return;
+
+        setBusy(true);
+        trackEvent("login_google_success", { uid: result.user.uid });
+        showToast("Signed in with Google.", "success");
+        history.replace("/auth-loading");
+      } catch (err: any) {
+        if (!active) return;
+        trackEvent("login_google_error", { code: err?.code || "unknown" });
+        showToast(handleError("login", err));
+      } finally {
+        if (active) {
+          setBusy(false);
+        }
+      }
+    };
+
+    checkRedirect();
+
+    return () => {
+      active = false;
+    };
+  }, [history]);
 
   const handleLogin = async () => {
     if (busy) return;
@@ -185,13 +218,23 @@ const Login: React.FC = () => {
     setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
+      const useRedirect = isPlatform("hybrid");
+      trackEvent("login_google_start", {
+        method: useRedirect ? "redirect" : "popup",
+      });
+
+      if (useRedirect) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
       const result = await signInWithPopup(auth, provider);
       trackEvent("login_google_success", { uid: result.user.uid });
       showToast("Signed in with Google.", "success");
       history.replace("/auth-loading");
     } catch (err: any) {
       trackEvent("login_google_error", { code: err?.code || "unknown" });
-      if (err?.code === "auth/popup-closed-by-user") {
+      if (!isPlatform("hybrid") && err?.code === "auth/popup-closed-by-user") {
         showToast("Google sign-in cancelled.", "warning");
       } else {
         showToast(handleError("login", err));
