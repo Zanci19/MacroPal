@@ -377,7 +377,7 @@ const ScanBarcode: React.FC = () => {
                   width: highlightBox.width,
                   height: highlightBox.height,
                   opacity: highlightActive ? 1 : 0,
-                  transition: "opacity 120ms ease-out",
+                  transition: "opacity 350ms ease-out",
                   pointerEvents: "none",
                   zIndex: 2,
                 }}
@@ -424,7 +424,7 @@ const ScanBarcode: React.FC = () => {
                     key={corner.key}
                     style={{
                       position: "absolute",
-                      width: 24,
+                      width: 32,
                       height: 24,
                       borderRadius: 4,
                       ...corner.style,
