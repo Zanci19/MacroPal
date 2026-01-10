@@ -205,15 +205,15 @@ const OnboardingTerms: React.FC = () => {
         <div className="onboarding-terms-card">
           <IonText color="medium">
             <p className="onboarding-terms-intro">
-              Please review the full terms before continuing. You must scroll to the bottom and
-              agree to proceed.
+              <b>Please review the full terms before continuing. You must scroll to the bottom and
+              agree to proceed.</b>
             </p>
           </IonText>
 
           <div className="onboarding-terms-body">
             {sections.map((section) => (
               <section key={section.title} className="onboarding-terms-section">
-                <h2>{section.title}</h2>
+                <h2><b>{section.title}</b></h2>
                 {section.body.map((line) => (
                   <p key={line}>{line}</p>
                 ))}
