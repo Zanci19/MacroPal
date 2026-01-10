@@ -340,6 +340,8 @@ const Home: React.FC = () => {
     setLoading(true);
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
+    dayDataSignatureRef.current = "";
+    setDayDataSignature("");
     collapsedInitKeyRef.current = null;
     setWorkoutCalories(0);
 
