@@ -44,6 +44,7 @@ const ScanBarcode: React.FC = () => {
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
   const decodeInProgressRef = useRef(false);
+  const hasScannedRef = useRef(false);
 
   const history = useHistory();
   const location = useLocation();
@@ -74,6 +75,7 @@ const ScanBarcode: React.FC = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
+    readerRef.current?.reset();
     readerRef.current = null;
     decodeInProgressRef.current = false;
     setHighlightActive(false);
@@ -157,6 +159,7 @@ const ScanBarcode: React.FC = () => {
     setStarting(true);
     setHighlightBox(null);
     setHighlightActive(false);
+    hasScannedRef.current = false;
 
     trackEvent("barcode_scan_start", { meal, date: dateKey });
 
@@ -201,6 +204,7 @@ const ScanBarcode: React.FC = () => {
         devId,
         videoRef.current!,
         async (result, err) => {
+          if (hasScannedRef.current) return;
           if (decodeInProgressRef.current) return;
           if (!result) return;
 
@@ -233,6 +237,7 @@ const ScanBarcode: React.FC = () => {
               return;
             }
 
+            hasScannedRef.current = true;
             setFlash(true);
             if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
             await sleep(180);
