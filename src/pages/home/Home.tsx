@@ -1715,7 +1715,7 @@ const Home: React.FC = () => {
                   </IonItem>
                 </IonCardHeader>
 
-                {hasItems && !isCollapsed && (
+                {!isCollapsed && (
                   <IonCardContent>
                     <IonButton
                       size="small"
@@ -1733,8 +1733,9 @@ const Home: React.FC = () => {
                       More options
                     </IonButton>
 
-                    <IonList>
-                      {items.map((it, idx) => {
+                    {hasItems && (
+                      <IonList>
+                        {items.map((it, idx) => {
                           const t = it.total || {
                             calories: 0,
                             carbs: 0,
@@ -1850,7 +1851,8 @@ const Home: React.FC = () => {
                             </IonItem>
                           );
                         })}
-                    </IonList>
+                      </IonList>
+                    )}
                   </IonCardContent>
                 )}
               </IonCard>
