@@ -44,6 +44,7 @@ const ScanBarcode: React.FC = () => {
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
   const decodeInProgressRef = useRef(false);
+  const hasScannedRef = useRef(false);
 
   const history = useHistory();
   const location = useLocation();
@@ -74,6 +75,10 @@ const ScanBarcode: React.FC = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
+    const reader = readerRef.current;
+    if (reader && "stopContinuousDecode" in reader) {
+      (reader as { stopContinuousDecode: () => void }).stopContinuousDecode();
+    }
     readerRef.current = null;
     decodeInProgressRef.current = false;
     setHighlightActive(false);
@@ -131,15 +136,16 @@ const ScanBarcode: React.FC = () => {
     const baseTop = offsetY + minY * scale;
     const baseWidth = Math.max(0, (maxX - minX) * scale);
     const baseHeight = Math.max(0, (maxY - minY) * scale);
-    const padding = Math.max(8, Math.min(baseWidth, baseHeight) * 0.25);
+    const paddingX = Math.max(8, baseWidth * 0.25);
+    const paddingY = Math.max(16, baseHeight * 0.35);
     const minWidth = 80;
     const minHeight = 48;
-    const paddedWidth = baseWidth + padding * 2;
-    const paddedHeight = baseHeight + padding * 2;
+    const paddedWidth = baseWidth + paddingX * 2;
+    const paddedHeight = baseHeight + paddingY * 2;
     const width = Math.max(minWidth, paddedWidth);
     const height = Math.max(minHeight, paddedHeight);
-    const left = baseLeft - padding - (width - paddedWidth) / 2;
-    const top = baseTop - padding - (height - paddedHeight) / 2;
+    const left = baseLeft - paddingX - (width - paddedWidth) / 2;
+    const top = baseTop - paddingY - (height - paddedHeight) / 2;
 
     const clampedLeft = Math.max(0, left);
     const clampedTop = Math.max(0, top);
@@ -157,6 +163,7 @@ const ScanBarcode: React.FC = () => {
     setStarting(true);
     setHighlightBox(null);
     setHighlightActive(false);
+    hasScannedRef.current = false;
 
     trackEvent("barcode_scan_start", { meal, date: dateKey });
 
@@ -201,6 +208,7 @@ const ScanBarcode: React.FC = () => {
         devId,
         videoRef.current!,
         async (result, err) => {
+          if (hasScannedRef.current) return;
           if (decodeInProgressRef.current) return;
           if (!result) return;
 
@@ -214,7 +222,8 @@ const ScanBarcode: React.FC = () => {
               window.clearTimeout(highlightTimeoutRef.current);
             }
 
-            setHighlightActive(true);
+            setHighlightActive(false);
+            requestAnimationFrame(() => setHighlightActive(true));
             await new Promise<void>((resolve) => {
               highlightTimeoutRef.current = window.setTimeout(() => {
                 setHighlightActive(false);
@@ -233,6 +242,7 @@ const ScanBarcode: React.FC = () => {
               return;
             }
 
+            hasScannedRef.current = true;
             setFlash(true);
             if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
             await sleep(180);
@@ -369,7 +379,7 @@ const ScanBarcode: React.FC = () => {
                   width: highlightBox.width,
                   height: highlightBox.height,
                   opacity: highlightActive ? 1 : 0,
-                  transition: "opacity 120ms ease-out",
+                  transition: "opacity 350ms ease-out",
                   pointerEvents: "none",
                   zIndex: 2,
                 }}
@@ -416,7 +426,7 @@ const ScanBarcode: React.FC = () => {
                     key={corner.key}
                     style={{
                       position: "absolute",
-                      width: 24,
+                      width: 32,
                       height: 24,
                       borderRadius: 4,
                       ...corner.style,
