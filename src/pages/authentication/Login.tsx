@@ -218,7 +218,8 @@ const Login: React.FC = () => {
     setBusy(true);
     try {
       const provider = new GoogleAuthProvider();
-      const useRedirect = isPlatform("hybrid");
+      const isMobileWeb = isPlatform("mobileweb");
+      const useRedirect = isPlatform("hybrid") || isMobileWeb;
       const popupFallbackCodes = new Set([
         "auth/operation-not-supported-in-this-environment",
         "auth/popup-blocked",
@@ -229,6 +230,13 @@ const Login: React.FC = () => {
       });
 
       if (useRedirect) {
+        if (isMobileWeb && window.location.hostname === "localhost") {
+          showToast(
+            "Google sign-in doesn't work on localhost from a phone. Use your computer's LAN IP or the production URL.",
+            "warning"
+          );
+          return;
+        }
         await signInWithRedirect(auth, provider);
         return;
       }
