@@ -328,22 +328,51 @@ const ScanBarcode: React.FC = () => {
                 }}
               >
                 {[
-                  { top: 0, left: 0, rotate: "0deg" },
-                  { top: 0, right: 0, rotate: "90deg" },
-                  { bottom: 0, right: 0, rotate: "180deg" },
-                  { bottom: 0, left: 0, rotate: "270deg" },
-                ].map((corner, index) => (
+                  {
+                    key: "top-left",
+                    style: {
+                      top: 0,
+                      left: 0,
+                      borderTop: "3px solid #facc15",
+                      borderLeft: "3px solid #facc15",
+                    },
+                  },
+                  {
+                    key: "top-right",
+                    style: {
+                      top: 0,
+                      right: 0,
+                      borderTop: "3px solid #facc15",
+                      borderRight: "3px solid #facc15",
+                    },
+                  },
+                  {
+                    key: "bottom-right",
+                    style: {
+                      bottom: 0,
+                      right: 0,
+                      borderBottom: "3px solid #facc15",
+                      borderRight: "3px solid #facc15",
+                    },
+                  },
+                  {
+                    key: "bottom-left",
+                    style: {
+                      bottom: 0,
+                      left: 0,
+                      borderBottom: "3px solid #facc15",
+                      borderLeft: "3px solid #facc15",
+                    },
+                  },
+                ].map((corner) => (
                   <div
-                    key={`corner-${index}`}
+                    key={corner.key}
                     style={{
                       position: "absolute",
                       width: 24,
                       height: 24,
-                      borderTop: "3px solid #facc15",
-                      borderLeft: "3px solid #facc15",
                       borderRadius: 4,
-                      transform: `rotate(${corner.rotate})`,
-                      ...corner,
+                      ...corner.style,
                     }}
                   />
                 ))}
