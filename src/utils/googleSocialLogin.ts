@@ -1,10 +1,22 @@
-import { SocialLogin } from "@capgo/capacitor-social-login";
+import { registerPlugin } from "@capacitor/core";
 import {
   GoogleAuthProvider,
   signInWithCredential,
   UserCredential,
 } from "firebase/auth";
 import { auth } from "../firebase";
+
+type SocialLoginPlugin = {
+  initialize: (options: { google: { webClientId: string } }) => Promise<void>;
+  login: (options: {
+    provider: "google";
+    options?: {
+      scopes?: string[];
+    };
+  }) => Promise<Record<string, any>>;
+};
+
+const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
 
 let initPromise: Promise<void> | null = null;
 
