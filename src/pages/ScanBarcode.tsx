@@ -50,6 +50,7 @@ const ScanBarcode: React.FC = () => {
 
   // 🔔 Shutter flash state
   const [flash, setFlash] = useState(false);
+  const [highlight, setHighlight] = useState(false);
 
   // Screen view
   useEffect(() => {
@@ -105,17 +106,21 @@ const ScanBarcode: React.FC = () => {
       );
       const rawText = result?.getText() || "";
       const code = rawText.replace(/\D/g, ""); // EAN/UPC numbers only
-      stop();
-
       if (!code) {
         trackEvent("barcode_scan_no_code", { rawText });
         throw new Error("No barcode detected.");
       }
 
+      setHighlight(true);
+      await sleep(750);
+      setHighlight(false);
+
       setFlash(true);
       if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
       await sleep(180);
       setFlash(false);
+
+      stop();
 
       trackEvent("barcode_scan_success", {
         code,
@@ -218,6 +223,19 @@ const ScanBarcode: React.FC = () => {
                 transition: "border-color 120ms ease-out",
                 pointerEvents: "none",
                 zIndex: 3,
+              }}
+            />
+
+            {/* 🟡 Barcode highlight */}
+            <div
+              style={{
+                position: "absolute",
+                inset: "10% 15%",
+                border: highlight ? "4px solid #facc15" : "4px solid transparent",
+                borderRadius: 12,
+                transition: "border-color 120ms ease-out",
+                pointerEvents: "none",
+                zIndex: 4,
               }}
             />
           </div>
