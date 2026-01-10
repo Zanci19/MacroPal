@@ -53,7 +53,6 @@ import {
   doc,
   addDoc,
   collection,
-  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -211,8 +210,6 @@ const Home: React.FC = () => {
 
   const [workoutCalories, setWorkoutCalories] = useState<number>(0);
 
-  const [streak, setStreak] = useState<number>(0);
-
   const [lastDeleted, setLastDeleted] = useState<{
     meal: MealKey;
     index: number;
@@ -252,6 +249,7 @@ const Home: React.FC = () => {
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
   const quoteHasLoadedRef = useRef(false);
+  const snapshotTrackRef = useRef({ day: 0, workout: 0 });
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -277,25 +275,36 @@ const Home: React.FC = () => {
 
   const unitSystem = getUnitSystem(profile?.units);
 
-  const refreshStreak = useCallback(async (userId: string) => {
-    const todayKeyValue = todayDateKey();
-    let s = 0;
-    for (let i = 0; i < 14; i++) {
-      const offset = shiftDateKey(todayKeyValue, -i);
-      const ds = await getDoc(doc(db, "users", userId, "foods", offset));
-      const dd = ds.data() as Partial<DayDiaryDoc> | undefined;
-      const any = !!(
-        dd?.breakfast?.length ||
-        dd?.lunch?.length ||
-        dd?.dinner?.length ||
-        dd?.snacks?.length
-      );
-      if (any) s++;
-      else break;
-    }
-    setStreak(s);
-    trackEvent("streak_calculated", { uid: userId, streak: s });
+  const streak = useMemo(() => {
+    const value = (profile as { streak?: number } | null)?.streak;
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+      ? Math.floor(value)
+      : 0;
+  }, [profile]);
+
+  const shouldTrackSnapshot = useCallback((key: "day" | "workout") => {
+    const now = Date.now();
+    const last = snapshotTrackRef.current[key];
+    if (now - last < 10000) return false;
+    snapshotTrackRef.current[key] = now;
+    return true;
   }, []);
+
+  const mealSignature = useCallback((entries: DiaryEntry[]) => {
+    if (entries.length === 0) return "0";
+    let calories = 0;
+    let latest = "";
+    for (const entry of entries) {
+      calories += entry.total?.calories || 0;
+      if (entry.addedAt && entry.addedAt > latest) {
+        latest = entry.addedAt;
+      }
+    }
+    return `${entries.length}:${Math.round(calories * 100) / 100}:${latest}`;
+  }, []);
+
+  const [dayDataSignature, setDayDataSignature] = useState<string>("");
+  const dayDataSignatureRef = useRef<string>("");
 
   useEffect(() => {
     if (profileLoading) return;
@@ -313,8 +322,7 @@ const Home: React.FC = () => {
     }
 
     setActiveDateKey((prev) => clampDateKeyToToday(prev));
-    refreshStreak(uid);
-  }, [profileLoading, uid, profile, history, refreshStreak]);
+  }, [profileLoading, uid, profile, history]);
 
   useEffect(() => {
     if (!uid) return;
@@ -332,18 +340,27 @@ const Home: React.FC = () => {
         dinner: raw?.dinner ?? [],
         snacks: raw?.snacks ?? [],
       };
-      setDayData(nextDay);
-      if (collapsedInitKeyRef.current !== activeDateKey) {
-        setCollapsedMeals({
-          breakfast: nextDay.breakfast.length === 0,
-          lunch: nextDay.lunch.length === 0,
-          dinner: nextDay.dinner.length === 0,
-          snacks: nextDay.snacks.length === 0,
-        });
-        collapsedInitKeyRef.current = activeDateKey;
+      const nextSignature = [
+        mealSignature(nextDay.breakfast),
+        mealSignature(nextDay.lunch),
+        mealSignature(nextDay.dinner),
+        mealSignature(nextDay.snacks),
+      ].join("|");
+      if (nextSignature !== dayDataSignatureRef.current) {
+        dayDataSignatureRef.current = nextSignature;
+        setDayData(nextDay);
+        setDayDataSignature(nextSignature);
+        if (collapsedInitKeyRef.current !== activeDateKey) {
+          setCollapsedMeals({
+            breakfast: nextDay.breakfast.length === 0,
+            lunch: nextDay.lunch.length === 0,
+            dinner: nextDay.dinner.length === 0,
+            snacks: nextDay.snacks.length === 0,
+          });
+          collapsedInitKeyRef.current = activeDateKey;
+        }
       }
       setLoading(false);
-      refreshStreak(uid);
 
       const totalEntries =
         nextDay.breakfast.length +
@@ -351,15 +368,17 @@ const Home: React.FC = () => {
         nextDay.dinner.length +
         nextDay.snacks.length;
 
-      trackEvent("day_diary_snapshot", {
-        uid,
-        date: activeDateKey,
-        total_entries: totalEntries,
-      });
+      if (shouldTrackSnapshot("day")) {
+        trackEvent("day_diary_snapshot", {
+          uid,
+          date: activeDateKey,
+          total_entries: totalEntries,
+        });
+      }
     });
 
     return () => unsub();
-  }, [uid, activeDateKey, refreshStreak]);
+  }, [uid, activeDateKey, mealSignature, shouldTrackSnapshot]);
 
   useEffect(() => {
     if (!uid) return;
@@ -380,16 +399,18 @@ const Home: React.FC = () => {
 
       setWorkoutCalories(Math.max(0, Math.round(totalBonus)));
 
-      trackEvent("workout_snapshot", {
-        uid,
-        date: activeDateKey,
-        total_activities: activities.length,
-        calories_bonus: Math.round(totalBonus),
-      });
+      if (shouldTrackSnapshot("workout")) {
+        trackEvent("workout_snapshot", {
+          uid,
+          date: activeDateKey,
+          total_activities: activities.length,
+          calories_bonus: Math.round(totalBonus),
+        });
+      }
     });
 
     return () => unsub();
-  }, [uid, activeDateKey]);
+  }, [uid, activeDateKey, shouldTrackSnapshot]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -516,7 +537,7 @@ const Home: React.FC = () => {
     );
 
     return { perMeal, day };
-  }, [dayData]);
+  }, [dayData, dayDataSignature]);
 
   const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
   const baseKcalGoal = caloriesNeeded ?? 0;
