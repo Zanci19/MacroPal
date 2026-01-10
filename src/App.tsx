@@ -10,6 +10,7 @@ import {
   setupIonicReact,
   createAnimation,
   useIonRouter,
+  useIonBackButton,
 } from "@ionic/react";
 import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
