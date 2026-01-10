@@ -13,6 +13,7 @@ import {
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import type { Result, ResultPoint } from "@zxing/library";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import { trackEvent } from "../firebase";
 import "./ScanBarcode.css";
@@ -39,6 +40,8 @@ function useDateFromQuery(location: ReturnType<typeof useLocation>) {
 const ScanBarcode: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const highlightTimeoutRef = useRef<number | null>(null);
+  const decodeInProgressRef = useRef(false);
 
   const history = useHistory();
   const location = useLocation();
@@ -47,6 +50,13 @@ const ScanBarcode: React.FC = () => {
 
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [highlightBox, setHighlightBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [highlightActive, setHighlightActive] = useState(false);
 
   // 🔔 Shutter flash state
   const [flash, setFlash] = useState(false);
@@ -60,15 +70,72 @@ const ScanBarcode: React.FC = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
+    readerRef.current?.reset();
     readerRef.current = null;
+    decodeInProgressRef.current = false;
+    setHighlightActive(false);
+    setHighlightBox(null);
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
     trackEvent("barcode_scan_camera_stopped");
   };
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+  const getResultPointValue = (
+    point: ResultPoint,
+    axis: "x" | "y"
+  ): number => {
+    if (axis === "x") {
+      return typeof point.getX === "function" ? point.getX() : point.x;
+    }
+    return typeof point.getY === "function" ? point.getY() : point.y;
+  };
+
+  const getHighlightBox = (
+    result: Result,
+    video: HTMLVideoElement
+  ): {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null => {
+    const points = result.getResultPoints?.() ?? [];
+    if (!points.length) return null;
+    const xs = points.map((p) => getResultPointValue(p, "x"));
+    const ys = points.map((p) => getResultPointValue(p, "y"));
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+
+    if (!video.videoWidth || !video.videoHeight) return null;
+    const rect = video.getBoundingClientRect();
+    const scale = Math.min(
+      rect.width / video.videoWidth,
+      rect.height / video.videoHeight
+    );
+    const displayWidth = video.videoWidth * scale;
+    const displayHeight = video.videoHeight * scale;
+    const offsetX = (rect.width - displayWidth) / 2;
+    const offsetY = (rect.height - displayHeight) / 2;
+
+    return {
+      left: offsetX + minX * scale,
+      top: offsetY + minY * scale,
+      width: Math.max(0, (maxX - minX) * scale),
+      height: Math.max(0, (maxY - minY) * scale),
+    };
+  };
+
   const start = async () => {
     setError(null);
     setStarting(true);
+    setHighlightBox(null);
+    setHighlightActive(false);
 
     trackEvent("barcode_scan_start", { meal, date: dateKey });
 
@@ -99,36 +166,70 @@ const ScanBarcode: React.FC = () => {
       );
       if (back) devId = back.deviceId;
 
-      const result = await reader.decodeOnceFromVideoDevice(
+      await reader.decodeFromVideoDevice(
         devId,
-        videoRef.current!
-      );
-      const rawText = result?.getText() || "";
-      const code = rawText.replace(/\D/g, ""); // EAN/UPC numbers only
-      stop();
+        videoRef.current!,
+        async (result, err) => {
+          if (decodeInProgressRef.current) return;
+          if (!result) return;
 
-      if (!code) {
-        trackEvent("barcode_scan_no_code", { rawText });
-        throw new Error("No barcode detected.");
-      }
+          try {
+            const video = videoRef.current;
+            if (video) {
+              setHighlightBox(getHighlightBox(result, video));
+            }
+            if (highlightTimeoutRef.current) {
+              window.clearTimeout(highlightTimeoutRef.current);
+            }
 
-      setFlash(true);
-      if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
-      await sleep(180);
-      setFlash(false);
+            setHighlightActive(true);
+            decodeInProgressRef.current = true;
+            await new Promise<void>((resolve) => {
+              highlightTimeoutRef.current = window.setTimeout(() => {
+                setHighlightActive(false);
+                highlightTimeoutRef.current = null;
+                resolve();
+              }, 750);
+            });
 
-      trackEvent("barcode_scan_success", {
-        code,
-        length: code.length,
-        meal,
-        date: dateKey,
-      });
+            const rawText = result?.getText() || "";
+            const code = rawText.replace(/\D/g, ""); // EAN/UPC numbers only
 
-      // Let AddFood handle the actual lookup UX
-      history.replace(
-        `/add-food?meal=${meal}&date=${dateKey}&code=${encodeURIComponent(
-          code
-        )}&found=1`
+            if (!code) {
+              trackEvent("barcode_scan_no_code", { rawText });
+              setError("No barcode detected.");
+              decodeInProgressRef.current = false;
+              return;
+            }
+
+            setFlash(true);
+            if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
+            await sleep(180);
+            setFlash(false);
+
+            stop();
+
+            trackEvent("barcode_scan_success", {
+              code,
+              length: code.length,
+              meal,
+              date: dateKey,
+            });
+
+            // Let AddFood handle the actual lookup UX
+            history.replace(
+              `/add-food?meal=${meal}&date=${dateKey}&code=${encodeURIComponent(
+                code
+              )}&found=1`
+            );
+          } catch (decodeError: any) {
+            console.error(decodeError);
+            const msg = decodeError?.message ?? "Failed to decode barcode";
+            setError(msg);
+            trackEvent("barcode_scan_error", { message: msg });
+            decodeInProgressRef.current = false;
+          }
+        }
       );
     } catch (e: any) {
       console.error(e);
@@ -195,6 +296,25 @@ const ScanBarcode: React.FC = () => {
               }}
             />
 
+            {highlightBox && (
+              <div
+                style={{
+                  position: "absolute",
+                  left: highlightBox.left,
+                  top: highlightBox.top,
+                  width: highlightBox.width,
+                  height: highlightBox.height,
+                  border: "3px solid #facc15",
+                  background: "rgba(250, 204, 21, 0.15)",
+                  borderRadius: 6,
+                  opacity: highlightActive ? 1 : 0,
+                  transition: "opacity 120ms ease-out",
+                  pointerEvents: "none",
+                  zIndex: 2,
+                }}
+              />
+            )}
+
             {/* 🔔 Shutter flash */}
             <div
               style={{
@@ -204,7 +324,7 @@ const ScanBarcode: React.FC = () => {
                 opacity: flash ? 1 : 0,
                 transition: "opacity 180ms ease-out",
                 pointerEvents: "none",
-                zIndex: 2,
+                zIndex: 3,
               }}
             />
 
@@ -217,7 +337,7 @@ const ScanBarcode: React.FC = () => {
                 borderRadius: 12,
                 transition: "border-color 120ms ease-out",
                 pointerEvents: "none",
-                zIndex: 3,
+                zIndex: 4,
               }}
             />
           </div>
