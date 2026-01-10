@@ -40,7 +40,8 @@ const OnboardingTerms: React.FC = () => {
           "Nutrition data: food entries, meals, favorites, and nutrition targets.",
           "Fitness data: workouts, plans, and weigh-ins.",
           "Content you provide: photos or notes you upload.",
-          "Device data: device identifiers, app version, IP address, and usage analytics used to improve app reliability.",
+          "Device data: device identifiers, app version, IP address, crash logs, and usage analytics used to improve app reliability.",
+          "Approximate location data inferred from IP for security and fraud prevention.",
         ],
       },
       {
@@ -54,11 +55,26 @@ const OnboardingTerms: React.FC = () => {
         ],
       },
       {
+        title: "App permissions",
+        body: [
+          "Camera access is used only when you choose to scan barcodes or upload a photo.",
+          "Photo library access is used only when you select a photo to upload.",
+          "Notifications are optional and only used for reminders you configure.",
+        ],
+      },
+      {
         title: "Sharing and disclosure",
         body: [
           "We do not sell your personal data.",
           "We share data only with service providers that help operate MacroPal (such as hosting, analytics, and customer support) under strict confidentiality agreements.",
           "We may disclose information if required by law, to protect our users, or to prevent fraud and abuse.",
+        ],
+      },
+      {
+        title: "Third-party services",
+        body: [
+          "MacroPal may integrate third-party services for analytics, crash reporting, and authentication.",
+          "These providers only access data needed to deliver their services and are contractually required to protect it.",
         ],
       },
       {
@@ -78,6 +94,14 @@ const OnboardingTerms: React.FC = () => {
         ],
       },
       {
+        title: "Your responsibilities",
+        body: [
+          "Provide accurate information and keep your login credentials secure.",
+          "Do not use MacroPal for unlawful, harmful, or abusive activities.",
+          "You are responsible for verifying any nutritional information before making decisions based on it.",
+        ],
+      },
+      {
         title: "Content license",
         body: [
           "You retain ownership of the content you upload.",
@@ -92,9 +116,36 @@ const OnboardingTerms: React.FC = () => {
         ],
       },
       {
+        title: "International transfers",
+        body: [
+          "Your data may be processed in countries other than where you live.",
+          "We apply appropriate safeguards to protect data transferred internationally.",
+        ],
+      },
+      {
+        title: "Children's privacy",
+        body: [
+          "MacroPal is not intended for children under 13.",
+          "If we learn that a child has provided personal data, we will delete it.",
+        ],
+      },
+      {
+        title: "Limitation of liability",
+        body: [
+          "MacroPal is provided \"as is\" without warranties of any kind.",
+          "We are not liable for indirect, incidental, or consequential damages related to your use of the app.",
+        ],
+      },
+      {
         title: "Updates",
         body: [
           "We may update these terms from time to time. If changes are material, we will notify you in the app.",
+        ],
+      },
+      {
+        title: "Contact us",
+        body: [
+          "If you have questions about these terms or your data, contact support from within the app.",
         ],
       },
     ],

@@ -1,5 +1,6 @@
 .onboarding-terms-page {
   --background: var(--ion-color-light);
+  color: var(--ion-text-color);
 }
 
 .onboarding-terms-card {
@@ -15,6 +16,7 @@
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 20px;
+  color: var(--ion-text-color);
 }
 
 .onboarding-terms-body {
@@ -33,7 +35,7 @@
   margin: 0 0 8px;
   font-size: 0.95rem;
   line-height: 1.5;
-  color: var(--ion-color-dark);
+  color: var(--ion-text-color);
 }
 
 .onboarding-terms-actions {
@@ -48,7 +50,7 @@
   gap: 12px;
   align-items: flex-start;
   font-size: 0.95rem;
-  color: var(--ion-color-dark);
+  color: var(--ion-text-color);
 }
 
 .onboarding-terms-checkbox span {
@@ -58,4 +60,5 @@
 .onboarding-terms-hint {
   text-align: center;
   font-size: 0.85rem;
+  color: var(--ion-text-color);
 }
