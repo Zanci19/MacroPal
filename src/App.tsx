@@ -226,16 +226,25 @@ const TabsShell: React.FC = () => {
     }
   }, [activeTab]);
 
-  useIonBackButton((event) => {
-    if (!isTabRootRoute(location.pathname)) return;
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      if (!isTabRootRoute(location.pathname)) return;
+      if (!("detail" in event) || typeof event.detail?.register !== "function") return;
 
-    event.detail.register(10, () => {
-      if (location.pathname !== "/app/home") {
-        lastDirectionRef.current = "back";
-        router.push("/app/home", "root", "replace");
-      }
-    });
-  });
+      event.detail.register(10, () => {
+        if (location.pathname !== "/app/home") {
+          lastDirectionRef.current = "back";
+          router.push("/app/home", "root", "replace");
+        }
+      });
+    };
+
+    document.addEventListener("ionBackButton", handler as EventListener);
+
+    return () => {
+      document.removeEventListener("ionBackButton", handler as EventListener);
+    };
+  }, [location.pathname, router]);
 
   useEffect(() => {
     const unblock = history.block((_nextLocation, action) => {
