@@ -1691,7 +1691,7 @@ const Home: React.FC = () => {
                     <IonIcon
                       slot="end"
                       className="fs-meal__chevron"
-                      icon={isCollapsed ? chevronDownOutline : chevronUpOutline}
+                      icon={chevronDownOutline}
                       aria-hidden="true"
                     />
 

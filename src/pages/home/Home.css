@@ -367,6 +367,12 @@ body.dark ion-tab-bar {
   font-size: 18px;
   opacity: 0.7;
   margin-inline-end: 4px;
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.fs-meal.is-open .fs-meal__chevron {
+  transform: rotate(180deg);
 }
 
 .meal-item-macros {
