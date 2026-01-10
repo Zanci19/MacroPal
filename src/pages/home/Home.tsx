@@ -204,6 +204,16 @@ const Home: React.FC = () => {
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
 
+  const [collapsedMeals, setCollapsedMeals] = useState<
+    Record<MealKey, boolean>
+  >({
+    breakfast: true,
+    lunch: true,
+    dinner: true,
+    snacks: true,
+  });
+  const collapsedInitKeyRef = useRef<string | null>(null);
+
   const [tipIndex, setTipIndex] = useState(() =>
     Math.floor(Math.random() * WELLNESS_TIPS.length)
   );
@@ -253,6 +263,7 @@ const Home: React.FC = () => {
     setLoading(true);
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
+    collapsedInitKeyRef.current = null;
 
     const ref = doc(db, "users", uid, "foods", activeDateKey);
     const unsub = onSnapshot(ref, (snap) => {
@@ -264,6 +275,15 @@ const Home: React.FC = () => {
         snacks: raw?.snacks ?? [],
       };
       setDayData(nextDay);
+      if (collapsedInitKeyRef.current !== activeDateKey) {
+        setCollapsedMeals({
+          breakfast: nextDay.breakfast.length === 0,
+          lunch: nextDay.lunch.length === 0,
+          dinner: nextDay.dinner.length === 0,
+          snacks: nextDay.snacks.length === 0,
+        });
+        collapsedInitKeyRef.current = activeDateKey;
+      }
       setLoading(false);
       refreshStreak(uid);
 
@@ -1631,7 +1651,7 @@ const Home: React.FC = () => {
             return (
               <IonCard
                 key={meal}
-                className={`fs-meal ${hasItems ? "is-open" : ""}`}
+                className={`fs-meal ${!isCollapsed ? "is-open" : ""}`}
               >
                 <IonCardHeader className="fs-meal__hdr">
                   <IonItem
