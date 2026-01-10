@@ -178,7 +178,7 @@ const OnboardingProfile: React.FC = () => {
         setActivity((p.activity as Activity) || "sedentary");
         setProfilePhotoUrl(
           typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
-            ? (p as { photoUrl?: string }).photoUrl
+            ? (p as { photoUrl?: string }).photoUrl!
             : null
         );
       } catch (e) {
