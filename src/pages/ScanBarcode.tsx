@@ -74,7 +74,6 @@ const ScanBarcode: React.FC = () => {
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
-    readerRef.current?.reset();
     readerRef.current = null;
     decodeInProgressRef.current = false;
     setHighlightActive(false);
@@ -94,9 +93,9 @@ const ScanBarcode: React.FC = () => {
     axis: "x" | "y"
   ): number => {
     if (axis === "x") {
-      return typeof point.getX === "function" ? point.getX() : point.x;
+      return point.getX();
     }
-    return typeof point.getY === "function" ? point.getY() : point.y;
+    return point.getY();
   };
 
   const getHighlightBox = (
@@ -206,6 +205,7 @@ const ScanBarcode: React.FC = () => {
           if (!result) return;
 
           try {
+            decodeInProgressRef.current = true;
             const video = videoRef.current;
             if (video) {
               setHighlightBox(getHighlightBox(result, video));
@@ -215,7 +215,6 @@ const ScanBarcode: React.FC = () => {
             }
 
             setHighlightActive(true);
-            decodeInProgressRef.current = true;
             await new Promise<void>((resolve) => {
               highlightTimeoutRef.current = window.setTimeout(() => {
                 setHighlightActive(false);
