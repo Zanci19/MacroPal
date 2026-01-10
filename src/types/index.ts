@@ -131,6 +131,13 @@ export interface MealPlanDoc {
   [k: string]: any;
 }
 
+export interface MealTemplate {
+  name: string;
+  items: DiaryEntry[];
+  createdAt: string;
+  [k: string]: any;
+}
+
 export interface WeighInEntry {
   date: string; // yyyy-mm-dd
   weight: number; // kg

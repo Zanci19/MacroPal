@@ -25,6 +25,7 @@ import {
   IonInput,
   IonThumbnail,
   IonText,
+  IonAlert,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -45,8 +46,12 @@ import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
 import {
   doc,
+  addDoc,
+  collection,
   getDoc,
   onSnapshot,
+  orderBy,
+  query,
   runTransaction,
   updateDoc,
   setDoc,
@@ -64,6 +69,7 @@ import type {
   Macros,
   DiaryEntry,
   DayDiaryDoc,
+  MealTemplate,
   WorkoutDayDoc,
   WorkoutEntry,
 } from "../../types";
@@ -172,6 +178,13 @@ const Home: React.FC = () => {
 
   const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
   const [dayMenuOpen, setDayMenuOpen] = useState(false);
+  const [templateMenuMeal, setTemplateMenuMeal] = useState<MealKey | null>(null);
+  const [mealTemplates, setMealTemplates] = useState<
+    { id: string; data: MealTemplate }[]
+  >([]);
+  const [templatePromptOpen, setTemplatePromptOpen] = useState(false);
+  const [templateTargetMeal, setTemplateTargetMeal] = useState<MealKey | null>(null);
+  const [templateName, setTemplateName] = useState("");
   const [foodMenuEntry, setFoodMenuEntry] = useState<{
     meal: MealKey;
     index: number;
@@ -469,6 +482,22 @@ const Home: React.FC = () => {
 
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
 
+  useEffect(() => {
+    if (!uid) return;
+
+    const templatesRef = collection(db, "users", uid, "mealTemplates");
+    const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(templatesQuery, (snapshot) => {
+      const next = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        data: docSnap.data() as MealTemplate,
+      }));
+      setMealTemplates(next);
+    });
+
+    return () => unsubscribe();
+  }, [uid]);
+
   const mealIcon: Record<MealKey, string> = {
     breakfast: sunnyOutline,
     lunch: restaurantOutline,
@@ -698,6 +727,96 @@ const Home: React.FC = () => {
       });
     } finally {
       setCopyMenuMeal(null);
+    }
+  };
+
+  const saveMealAsTemplate = async (meal: MealKey, name: string) => {
+    if (!uid) return;
+
+    const items = dayData[meal] || [];
+    if (!items.length) {
+      setToast({ open: true, message: "This meal has no foods to save." });
+      return;
+    }
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setToast({ open: true, message: "Please provide a template name." });
+      return;
+    }
+
+    trackEvent("meal_template_save_attempt", { uid, meal, name: trimmedName });
+
+    try {
+      await addDoc(collection(db, "users", uid, "mealTemplates"), {
+        name: trimmedName,
+        items,
+        createdAt: new Date().toISOString(),
+      } satisfies MealTemplate);
+      setToast({ open: true, message: `Saved template: ${trimmedName}.` });
+      trackEvent("meal_template_save_success", { uid, meal, name: trimmedName });
+    } catch (error) {
+      setToast({ open: true, message: "Failed to save template." });
+      trackEvent("meal_template_save_error", {
+        uid,
+        meal,
+        name: trimmedName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const applyTemplateToMeal = async (meal: MealKey, template: MealTemplate) => {
+    if (!uid) return;
+    const dayKey = activeDateKey;
+    const baseTime = Date.now();
+    const items = (template.items || []).map((item, index) => ({
+      ...item,
+      addedAt: new Date(baseTime + index).toISOString(),
+    })) as DiaryEntry[];
+
+    if (!items.length) {
+      setToast({ open: true, message: "This template has no foods." });
+      return;
+    }
+
+    trackEvent("meal_template_apply_attempt", {
+      uid,
+      meal,
+      template: template.name,
+    });
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", dayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const current: DiaryEntry[] = [...(data[meal] || [])];
+        const updated = [...current, ...items];
+        tx.set(ref, { [meal]: updated }, { merge: true });
+      });
+
+      setDayData((prev) => ({
+        ...prev,
+        [meal]: [...(prev[meal] || []), ...items],
+      }));
+      setToast({
+        open: true,
+        message: `Added template "${template.name}" to ${pretty(meal)}.`,
+      });
+      trackEvent("meal_template_apply_success", {
+        uid,
+        meal,
+        template: template.name,
+      });
+    } catch (error) {
+      setToast({ open: true, message: "Failed to add template." });
+      trackEvent("meal_template_apply_error", {
+        uid,
+        meal,
+        template: template.name,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -1830,6 +1949,23 @@ const Home: React.FC = () => {
               },
             },
             {
+              text: "Add from template",
+              handler: () => {
+                if (copyMenuMeal) {
+                  setTemplateMenuMeal(copyMenuMeal);
+                }
+              },
+            },
+            {
+              text: "Save this meal as template",
+              handler: () => {
+                if (!copyMenuMeal) return;
+                setTemplateTargetMeal(copyMenuMeal);
+                setTemplateName(`${pretty(copyMenuMeal)} - ${activeDateKey}`);
+                setTemplatePromptOpen(true);
+              },
+            },
+            {
               text: "Remove all foods from this meal",
               role: "destructive",
               handler: () => {
@@ -1839,6 +1975,41 @@ const Home: React.FC = () => {
               },
             },
 
+            {
+              text: "Cancel",
+              role: "cancel",
+            },
+          ]}
+        />
+
+        <IonActionSheet
+          isOpen={templateMenuMeal !== null}
+          onDidDismiss={() => {
+            setTemplateMenuMeal(null);
+          }}
+          header={
+            templateMenuMeal
+              ? `Add template to ${pretty(templateMenuMeal)}`
+              : undefined
+          }
+          buttons={[
+            ...(mealTemplates.length
+              ? mealTemplates.map((template) => ({
+                  text: template.data.name,
+                  handler: () => {
+                    if (templateMenuMeal) {
+                      applyTemplateToMeal(templateMenuMeal, template.data);
+                    }
+                    setTemplateMenuMeal(null);
+                  },
+                }))
+              : [
+                  {
+                    text: "No templates saved yet",
+                    cssClass: "action-sheet-disabled",
+                    handler: () => false,
+                  },
+                ]),
             {
               text: "Cancel",
               role: "cancel",
@@ -1880,6 +2051,45 @@ const Home: React.FC = () => {
               role: "cancel",
             },
           ]}
+        />
+
+        <IonAlert
+          isOpen={templatePromptOpen}
+          header="Save meal as template"
+          inputs={[
+            {
+              name: "templateName",
+              type: "text",
+              placeholder: "Template name",
+              value: templateName,
+            },
+          ]}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setTemplatePromptOpen(false);
+              },
+            },
+            {
+              text: "Save",
+              handler: (data) => {
+                if (!templateTargetMeal) return;
+                const name =
+                  typeof data?.templateName === "string"
+                    ? data.templateName
+                    : templateName;
+                void saveMealAsTemplate(templateTargetMeal, name);
+                setTemplatePromptOpen(false);
+                setTemplateTargetMeal(null);
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setTemplatePromptOpen(false);
+            setTemplateTargetMeal(null);
+          }}
         />
 
         <IonToast
