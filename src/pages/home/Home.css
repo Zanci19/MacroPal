@@ -89,6 +89,14 @@ ion-card:hover {
   padding-bottom: 8px;
 }
 
+.fs-summary__swiper {
+  width: 100%;
+}
+
+.fs-summary__slide {
+  padding-bottom: 8px;
+}
+
 .fs-summary__hdr {
   padding: 12px 16px;
   background: transparent;
@@ -193,6 +201,31 @@ ion-card:hover {
   gap: 10px;
   padding: 8px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
+}
+
+.fs-summary__nutrition {
+  padding-top: 4px;
+}
+
+.fs-summary__nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.fs-summary__nutrition-item {
+  display: grid;
+  gap: 4px;
+}
+
+.fs-summary__nutrition-label {
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-summary__nutrition-value {
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 .fs-tip-card {
