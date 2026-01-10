@@ -15,6 +15,7 @@ import {
   IonSpinner,
   isPlatform,
 } from "@ionic/react";
+import { Capacitor } from "@capacitor/core";
 import {
   logoGoogle,
 } from "ionicons/icons";
@@ -209,7 +210,7 @@ const Register: React.FC = () => {
     if (busy) return;
     setBusy(true);
     try {
-      if (isPlatform("hybrid")) {
+      if (Capacitor.isNativePlatform()) {
         trackEvent("register_google_start", {
           method: "social_login",
         });
