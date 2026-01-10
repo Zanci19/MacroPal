@@ -219,6 +219,11 @@ const Login: React.FC = () => {
     try {
       const provider = new GoogleAuthProvider();
       const useRedirect = isPlatform("hybrid");
+      const popupFallbackCodes = new Set([
+        "auth/operation-not-supported-in-this-environment",
+        "auth/popup-blocked",
+        "auth/cancelled-popup-request",
+      ]);
       trackEvent("login_google_start", {
         method: useRedirect ? "redirect" : "popup",
       });
@@ -228,17 +233,27 @@ const Login: React.FC = () => {
         return;
       }
 
-      const result = await signInWithPopup(auth, provider);
-      trackEvent("login_google_success", { uid: result.user.uid });
-      showToast("Signed in with Google.", "success");
-      history.replace("/auth-loading");
+      try {
+        const result = await signInWithPopup(auth, provider);
+        trackEvent("login_google_success", { uid: result.user.uid });
+        showToast("Signed in with Google.", "success");
+        history.replace("/auth-loading");
+      } catch (err: any) {
+        const code = err?.code || "unknown";
+        if (popupFallbackCodes.has(code)) {
+          trackEvent("login_google_popup_fallback_redirect", { code });
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        if (code === "auth/popup-closed-by-user") {
+          showToast("Google sign-in cancelled.", "warning");
+          return;
+        }
+        throw err;
+      }
     } catch (err: any) {
       trackEvent("login_google_error", { code: err?.code || "unknown" });
-      if (!isPlatform("hybrid") && err?.code === "auth/popup-closed-by-user") {
-        showToast("Google sign-in cancelled.", "warning");
-      } else {
-        showToast(handleError("login", err));
-      }
+      showToast(handleError("login", err));
     } finally {
       setBusy(false);
     }
