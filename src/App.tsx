@@ -14,7 +14,7 @@ import {
 import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
-import { useLocation } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import {
   homeOutline,
   home,
@@ -82,6 +82,7 @@ const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
+  const history = useHistory();
   const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
   const lastDirectionRef = useRef<"forward" | "back" | null>(null);
 
@@ -98,6 +99,14 @@ const TabsShell: React.FC = () => {
   };
 
   const activeTab = getActiveTab();
+  const isTabRootRoute = (path: string) =>
+    [
+      "/app/analytics",
+      "/app/planner",
+      "/app/home",
+      "/app/workout",
+      "/app/settings",
+    ].includes(path);
 
   const getTabIndex = (tabName: string) => TAB_ORDER.indexOf(tabName);
 
@@ -215,6 +224,44 @@ const TabsShell: React.FC = () => {
       previousTabIndexRef.current = currentTabIndex;
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    const handler = (event: CustomEvent) => {
+      if (!isTabRootRoute(location.pathname)) return;
+      if (!("detail" in event) || typeof event.detail?.register !== "function") return;
+
+      event.detail.register(10, () => {
+        if (location.pathname !== "/app/home") {
+          lastDirectionRef.current = "back";
+          router.push("/app/home", "root", "replace");
+        }
+      });
+    };
+
+    document.addEventListener("ionBackButton", handler as EventListener);
+
+    return () => {
+      document.removeEventListener("ionBackButton", handler as EventListener);
+    };
+  }, [location.pathname, router]);
+
+  useEffect(() => {
+    const unblock = history.block((_nextLocation, action) => {
+      if (action !== "POP") return;
+      if (!isTabRootRoute(history.location.pathname)) return;
+
+      if (history.location.pathname !== "/app/home") {
+        lastDirectionRef.current = "back";
+        router.push("/app/home", "root", "replace");
+      }
+
+      return false;
+    });
+
+    return () => {
+      unblock();
+    };
+  }, [history, router]);
 
   return (
     <IonTabs>
