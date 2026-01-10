@@ -97,7 +97,7 @@ const Settings: React.FC = () => {
   const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
   const [smartDietStyle, setSmartDietStyle] = React.useState<SmartDietStyle>("none");
   const [smartMacroFocus, setSmartMacroFocus] = React.useState<SmartMacroFocus>("balanced");
-  const [showWellnessTipEnabled, setShowWellnessTipEnabled] = React.useState(true);
+  const [showRandomQuoteEnabled, setShowRandomQuoteEnabled] = React.useState(true);
   const [showAchievementsEnabled, setShowAchievementsEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
@@ -403,7 +403,7 @@ const Settings: React.FC = () => {
           }
         }
 
-        setShowWellnessTipEnabled(
+        setShowRandomQuoteEnabled(
           typeof (profile as any).showWellnessTip === "boolean"
             ? (profile as any).showWellnessTip
             : true
@@ -690,10 +690,10 @@ const Settings: React.FC = () => {
                   <IonLabel>Show random quote</IonLabel>
                   <IonToggle
                     slot="end"
-                    checked={showWellnessTipEnabled}
+                    checked={showRandomQuoteEnabled}
                     onIonChange={async (e) => {
                       const checked = e.detail.checked;
-                      setShowWellnessTipEnabled(checked);
+                      setShowRandomQuoteEnabled(checked);
 
                       const current = auth.currentUser;
                       if (!current) return;
@@ -705,12 +705,12 @@ const Settings: React.FC = () => {
                           "profile.showWellnessTip": checked,
                         });
 
-                        trackEvent("settings_show_wellness_tip_toggle", {
+                        trackEvent("settings_show_random_quote_toggle", {
                           uid: current.uid,
                           enabled: checked,
                         });
                       } catch (err: any) {
-                        console.error("Failed to save showWellnessTip:", err);
+                        console.error("Failed to save showRandomQuote:", err);
                         setToast({
                           show: true,
                           message:
