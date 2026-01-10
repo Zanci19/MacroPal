@@ -42,6 +42,11 @@ import {
   chevronDownOutline,
   chevronUpOutline,
 } from "ionicons/icons";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import type { Swiper as SwiperClass } from "swiper";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
 import {
@@ -352,6 +357,7 @@ const Home: React.FC = () => {
   });
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
+  const summarySwiperRef = useRef<SwiperClass | null>(null);
 
   // Prefer stored caloriesTarget from profile; fall back to formula if missing
   const caloriesNeeded = useMemo(() => {
@@ -1257,6 +1263,96 @@ const Home: React.FC = () => {
   const streakMilestones = [3, 7, 14, 30];
   const nextStreakTarget = streakMilestones.find((target) => streak < target) ?? null;
 
+  const nutritionTotals = useMemo(() => {
+    const aggregated: Record<string, number> = {};
+    Object.values(dayData).forEach((items) => {
+      items.forEach((entry) => {
+        Object.entries(entry.total || {}).forEach(([key, value]) => {
+          if (key === "calories" || typeof value !== "number") return;
+          if (!Number.isFinite(value)) return;
+          aggregated[key] = (aggregated[key] ?? 0) + value;
+        });
+      });
+    });
+    return aggregated;
+  }, [dayData]);
+
+  const nutritionLabels: Record<string, { label: string; unit?: string }> = {
+    carbs: { label: "Carbohydrates", unit: "g" },
+    protein: { label: "Protein", unit: "g" },
+    fat: { label: "Fat", unit: "g" },
+    sugar: { label: "Sugar", unit: "g" },
+    fiber: { label: "Fiber", unit: "g" },
+    saturatedFat: { label: "Saturated fat", unit: "g" },
+    salt: { label: "Salt", unit: "g" },
+    sodium: { label: "Sodium", unit: "g" },
+    "vitamin-a_100g": { label: "Vitamin A", unit: "µg" },
+    "vitamin-c_100g": { label: "Vitamin C", unit: "mg" },
+    "vitamin-d_100g": { label: "Vitamin D", unit: "µg" },
+    "vitamin-e_100g": { label: "Vitamin E", unit: "mg" },
+    "vitamin-k_100g": { label: "Vitamin K", unit: "µg" },
+    "vitamin-b1_100g": { label: "Vitamin B1", unit: "mg" },
+    "vitamin-b2_100g": { label: "Vitamin B2", unit: "mg" },
+    "vitamin-b6_100g": { label: "Vitamin B6", unit: "mg" },
+    "vitamin-b12_100g": { label: "Vitamin B12", unit: "µg" },
+    "vitamin-b9_100g": { label: "Vitamin B9", unit: "µg" },
+  };
+
+  const nutritionEntries = useMemo(() => {
+    const entries = Object.entries(nutritionTotals)
+      .filter(([, value]) => value > 0)
+      .map(([key, value]) => ({ key, value }));
+    const priority = [
+      "carbs",
+      "protein",
+      "fat",
+      "sugar",
+      "fiber",
+      "saturatedFat",
+      "salt",
+      "sodium",
+    ];
+
+    entries.sort((a, b) => {
+      const aIndex = priority.indexOf(a.key);
+      const bIndex = priority.indexOf(b.key);
+      if (aIndex === -1 && bIndex === -1) {
+        return a.key.localeCompare(b.key);
+      }
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+
+    return entries;
+  }, [nutritionTotals]);
+
+  const formatNutritionLabel = (key: string) => {
+    if (nutritionLabels[key]?.label) return nutritionLabels[key].label;
+    const cleaned = key.replace(/_100g|_serving/g, "").replace(/[_-]+/g, " ");
+    return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const formatNutritionValue = (value: number) => {
+    if (value < 1) return value.toFixed(2);
+    if (value < 10) return value.toFixed(1);
+    return value.toFixed(0);
+  };
+
+  useEffect(() => {
+    if (!summarySwiperRef.current) return;
+    summarySwiperRef.current.updateAutoHeight(300);
+    summarySwiperRef.current.update();
+  }, [
+    profile,
+    caloriesNeeded,
+    macroTargets,
+    totals.day,
+    nutritionEntries,
+    streak,
+    showWellnessTip,
+  ]);
+
 
   return (
     <IonPage>
@@ -1311,291 +1407,350 @@ const Home: React.FC = () => {
         </div>
 
         <IonCard className="fs-summary">
-          <IonCardHeader className="fs-summary__hdr">
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
-              {streak > 1 && (
-                <IonChip color="success" style={{ marginInlineStart: 8 }}>
-                  <IonIcon icon={flameOutline} />
-                  <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
-                </IonChip>
-              )}
-            </div>
-          </IonCardHeader>
-
-          <IonCardContent className="fs-summary__row">
-            {!profile || caloriesNeeded == null ? (
-              <div className="ion-text-center" style={{ padding: 24 }}>
-                <IonSpinner name="dots" />
-              </div>
-            ) : (
-              <>
-                <div className="fs-summary__left" style={{ color: ringColor }}>
-                  <ProgressRing size={64} stroke={8} progress={progress} />
-                </div>
-                <div className="fs-summary__mid">
-                  <div className="fs-metric-title">
-                    {summaryDifferenceLabel}
+          <Swiper
+            modules={[Pagination]}
+            pagination={{ clickable: true }}
+            slidesPerView={1}
+            autoHeight
+            className="fs-summary__swiper"
+            observer
+            observeParents
+            observeSlideChildren
+            onSwiper={(swiper) => {
+              summarySwiperRef.current = swiper;
+            }}
+          >
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
+                    {streak > 1 && (
+                      <IonChip color="success" style={{ marginInlineStart: 8 }}>
+                        <IonIcon icon={flameOutline} />
+                        <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+                      </IonChip>
+                    )}
                   </div>
-                  <div className="fs-metric-title">Calories Consumed</div>
-                </div>
-                <div className="fs-summary__right">
-                  <div className="fs-metric-value">
-                    {summaryDifferenceValue}
-                  </div>
-                  <div className="fs-metric-value">{kcalConsumed}</div>
-                </div>
-              </>
-            )}
-          </IonCardContent>
+                </IonCardHeader>
 
-          {profile && caloriesNeeded != null && (
-            <div className="fs-summary__meta">
-              <div>
-                <div className="fs-summary__meta-label">Base goal</div>
-                <div className="fs-summary__meta-value">{baseKcalGoal}</div>
-              </div>
-              {workoutCalories > 0 && (
-                <>
-                  <div>
-                    <div className="fs-summary__meta-label">Activity bonus</div>
-                    <div className="fs-summary__meta-value">
-                      +{workoutCalories} kcal
+                <IonCardContent className="fs-summary__row">
+                  {!profile || caloriesNeeded == null ? (
+                    <div className="ion-text-center" style={{ padding: 24 }}>
+                      <IonSpinner name="dots" />
                     </div>
-                  </div>
-                  <div>
-                    <div className="fs-summary__meta-label">Adjusted goal</div>
-                    <div className="fs-summary__meta-value">{kcalGoal}</div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+                  ) : (
+                    <>
+                      <div className="fs-summary__left" style={{ color: ringColor }}>
+                        <ProgressRing size={64} stroke={8} progress={progress} />
+                      </div>
+                      <div className="fs-summary__mid">
+                        <div className="fs-metric-title">
+                          {summaryDifferenceLabel}
+                        </div>
+                        <div className="fs-metric-title">Calories Consumed</div>
+                      </div>
+                      <div className="fs-summary__right">
+                        <div className="fs-metric-value">
+                          {summaryDifferenceValue}
+                        </div>
+                        <div className="fs-metric-value">{kcalConsumed}</div>
+                      </div>
+                    </>
+                  )}
+                </IonCardContent>
 
-          {profile && caloriesNeeded != null && macroTargets && (
-            <div
-              className="fs-macro-bars"
-              style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-            >
-              {[
-                {
-                  k: "fat",
-                  g: totals.day.fat,
-                  tg: macroTargets.fatG,
-                  l: "Fat",
-                },
-                {
-                  k: "carbs",
-                  g: totals.day.carbs,
-                  tg: macroTargets.carbsG,
-                  l: "Carbohydrates",
-                },
-                {
-                  k: "protein",
-                  g: totals.day.protein,
-                  tg: macroTargets.proteinG,
-                  l: "Protein",
-                },
-              ].map(({ k, g, tg, l }) => {
-                const pct = tg ? Math.min(1, g / tg) : 0;
-                const baseBarStyle = {
-                  height: 8,
-                  background: "rgba(148, 163, 184, 0.35)",
-                  borderRadius: 9999,
-                  overflow: "hidden",
-                } as const;
-
-                const fillStyle = {
-                  width: `${pct * 100}%`,
-                  height: "100%",
-                  transition: "width 0.2s ease-out",
-                } as const;
-
-                const macroBars =
-                  k === "fat"
-                    ? (() => {
-                        const total = Math.max(0, totals.day.fat);
-                        const sat = Math.min(
-                          total,
-                          Math.max(0, totals.day.saturatedFat)
-                        );
-                        const rest = Math.max(0, total - sat);
-                        const satPct = total > 0 ? sat / total : 0;
-                        const restPct = total > 0 ? rest / total : 0;
-                        return (
-                          <div style={{ display: "flex", height: "100%" }}>
-                            {rest > 0 && (
-                              <div
-                                style={{
-                                  width: `${restPct * 100}%`,
-                                  background: "var(--ion-color-primary)",
-                                }}
-                              />
-                            )}
-                            {sat > 0 && (
-                              <div
-                                style={{
-                                  width: `${satPct * 100}%`,
-                                  background: "var(--ion-color-warning)",
-                                }}
-                              />
-                            )}
+                {profile && caloriesNeeded != null && (
+                  <div className="fs-summary__meta">
+                    <div>
+                      <div className="fs-summary__meta-label">Base goal</div>
+                      <div className="fs-summary__meta-value">{baseKcalGoal}</div>
+                    </div>
+                    {workoutCalories > 0 && (
+                      <>
+                        <div>
+                          <div className="fs-summary__meta-label">
+                            Activity bonus
                           </div>
-                        );
-                      })()
-                    : k === "carbs"
-                      ? (() => {
-                          const total = Math.max(0, totals.day.carbs);
-                          const sugar = Math.min(
-                            total,
-                            Math.max(0, totals.day.sugar)
-                          );
-                          const fiber = Math.min(
-                            total - sugar,
-                            Math.max(0, totals.day.fiber)
-                          );
-                          const rest = Math.max(0, total - sugar - fiber);
-                          const sugarPct = total > 0 ? sugar / total : 0;
-                          const fiberPct = total > 0 ? fiber / total : 0;
-                          const restPct = total > 0 ? rest / total : 0;
-                          return (
-                            <div style={{ display: "flex", height: "100%" }}>
-                              {rest > 0 && (
+                          <div className="fs-summary__meta-value">
+                            +{workoutCalories} kcal
+                          </div>
+                        </div>
+                        <div>
+                          <div className="fs-summary__meta-label">Adjusted goal</div>
+                          <div className="fs-summary__meta-value">{kcalGoal}</div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {profile && caloriesNeeded != null && macroTargets && (
+                  <div
+                    className="fs-macro-bars"
+                    style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
+                  >
+                    {[
+                      {
+                        k: "fat",
+                        g: totals.day.fat,
+                        tg: macroTargets.fatG,
+                        l: "Fat",
+                      },
+                      {
+                        k: "carbs",
+                        g: totals.day.carbs,
+                        tg: macroTargets.carbsG,
+                        l: "Carbohydrates",
+                      },
+                      {
+                        k: "protein",
+                        g: totals.day.protein,
+                        tg: macroTargets.proteinG,
+                        l: "Protein",
+                      },
+                    ].map(({ k, g, tg, l }) => {
+                      const pct = tg ? Math.min(1, g / tg) : 0;
+                      const baseBarStyle = {
+                        height: 8,
+                        background: "rgba(148, 163, 184, 0.35)",
+                        borderRadius: 9999,
+                        overflow: "hidden",
+                      } as const;
+
+                      const fillStyle = {
+                        width: `${pct * 100}%`,
+                        height: "100%",
+                        transition: "width 0.2s ease-out",
+                      } as const;
+
+                      const macroBars =
+                        k === "fat"
+                          ? (() => {
+                              const total = Math.max(0, totals.day.fat);
+                              const sat = Math.min(
+                                total,
+                                Math.max(0, totals.day.saturatedFat)
+                              );
+                              const rest = Math.max(0, total - sat);
+                              const satPct = total > 0 ? sat / total : 0;
+                              const restPct = total > 0 ? rest / total : 0;
+                              return (
+                                <div style={{ display: "flex", height: "100%" }}>
+                                  {rest > 0 && (
+                                    <div
+                                      style={{
+                                        width: `${restPct * 100}%`,
+                                        background: "var(--ion-color-primary)",
+                                      }}
+                                    />
+                                  )}
+                                  {sat > 0 && (
+                                    <div
+                                      style={{
+                                        width: `${satPct * 100}%`,
+                                        background: "var(--ion-color-warning)",
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })()
+                          : k === "carbs"
+                            ? (() => {
+                                const total = Math.max(0, totals.day.carbs);
+                                const sugar = Math.min(
+                                  total,
+                                  Math.max(0, totals.day.sugar)
+                                );
+                                const fiber = Math.min(
+                                  total - sugar,
+                                  Math.max(0, totals.day.fiber)
+                                );
+                                const rest = Math.max(0, total - sugar - fiber);
+                                const sugarPct = total > 0 ? sugar / total : 0;
+                                const fiberPct = total > 0 ? fiber / total : 0;
+                                const restPct = total > 0 ? rest / total : 0;
+                                return (
+                                  <div style={{ display: "flex", height: "100%" }}>
+                                    {rest > 0 && (
+                                      <div
+                                        style={{
+                                          width: `${restPct * 100}%`,
+                                          background: "var(--ion-color-primary)",
+                                        }}
+                                      />
+                                    )}
+                                    {sugar > 0 && (
+                                      <div
+                                        style={{
+                                          width: `${sugarPct * 100}%`,
+                                          background: "var(--ion-color-warning)",
+                                        }}
+                                      />
+                                    )}
+                                    {fiber > 0 && (
+                                      <div
+                                        style={{
+                                          width: `${fiberPct * 100}%`,
+                                          background: "var(--ion-color-success)",
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })()
+                            : (
                                 <div
                                   style={{
-                                    width: `${restPct * 100}%`,
+                                    ...fillStyle,
                                     background: "var(--ion-color-primary)",
                                   }}
                                 />
-                              )}
-                              {sugar > 0 && (
-                                <div
-                                  style={{
-                                    width: `${sugarPct * 100}%`,
-                                    background: "var(--ion-color-warning)",
-                                  }}
-                                />
-                              )}
-                              {fiber > 0 && (
-                                <div
-                                  style={{
-                                    width: `${fiberPct * 100}%`,
-                                    background: "var(--ion-color-success)",
-                                  }}
-                                />
-                              )}
-                            </div>
-                          );
-                        })()
-                      : (
+                              );
+
+                      return (
+                        <div key={k} style={{ display: "grid", gap: 4 }}>
                           <div
                             style={{
-                              ...fillStyle,
-                              background: "var(--ion-color-primary)",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              fontSize: 12,
                             }}
-                          />
-                        );
-
-                return (
-                  <div key={k} style={{ display: "grid", gap: 4 }}>
+                          >
+                            <span>{l}</span>
+                            <span>
+                              {g.toFixed(0)} / {tg} g
+                            </span>
+                          </div>
+                          <div style={baseBarStyle}>
+                            <div style={fillStyle}>{macroBars}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                     <div
                       style={{
                         display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 12,
+                        flexWrap: "wrap",
+                        gap: "6px 12px",
+                        alignItems: "center",
+                        fontSize: 11,
+                        color: "var(--ion-color-medium)",
                       }}
                     >
-                      <span>{l}</span>
-                      <span>
-                        {g.toFixed(0)} / {tg} g
-                      </span>
-                    </div>
-                    <div style={baseBarStyle}>
-                      <div style={fillStyle}>{macroBars}</div>
+                      {[
+                        { label: "Saturated fat (in fat)", color: "#facc15" },
+                        { label: "Sugar (in carbohydrates)", color: "#facc15" },
+                        { label: "Fiber (in carbohydrates)", color: "#22c55e" },
+                        { label: "Remaining carbs/fat/protein", color: "#3b82f6" },
+                      ].map(({ label, color }) => (
+                        <span
+                          key={label}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 9999,
+                              background: color,
+                              display: "inline-block",
+                            }}
+                          />
+                          <span>{label}</span>
+                        </span>
+                      ))}
                     </div>
                   </div>
-                );
-              })}
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "6px 12px",
-                  alignItems: "center",
-                  fontSize: 11,
-                  color: "var(--ion-color-medium)",
-                }}
-              >
-                {[
-                  { label: "Saturated fat (in fat)", color: "#facc15" },
-                  { label: "Sugar (in carbohydrates)", color: "#facc15" },
-                  { label: "Fiber (in carbohydrates)", color: "#22c55e" },
-                  { label: "Remaining carbs/fat/protein", color: "#3b82f6" },
-                ].map(({ label, color }) => (
-                  <span
-                    key={label}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-                  >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 9999,
-                        background: color,
-                        display: "inline-block",
-                      }}
-                    />
-                    <span>{label}</span>
-                  </span>
-                ))}
+                )}
               </div>
-            </div>
-          )}
-        </IonCard>
+            </SwiperSlide>
 
-        <IonCard className="fs-achievements">
-          <IonCardHeader>
-            <IonCardTitle>Achievements</IonCardTitle>
-          </IonCardHeader>
-          <IonCardContent>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {streakMilestones.map((target) => (
-                <IonChip key={target} color={streak >= target ? "success" : "medium"}>
-                  {target}-day streak
-                </IonChip>
-              ))}
-            </div>
-            {nextStreakTarget ? (
-              <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                {nextStreakTarget - streak} more day
-                {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
-                {nextStreakTarget}-day badge.
-              </IonText>
-            ) : (
-              <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                You’ve unlocked all streak badges 🎉
-              </IonText>
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Nutrition breakdown</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent className="fs-summary__nutrition">
+                  {nutritionEntries.length ? (
+                    <div className="fs-summary__nutrition-grid">
+                      {nutritionEntries.map(({ key, value }) => {
+                        const unit = nutritionLabels[key]?.unit;
+                        return (
+                          <div key={key} className="fs-summary__nutrition-item">
+                            <span className="fs-summary__nutrition-label">
+                              {formatNutritionLabel(key)}
+                            </span>
+                            <span className="fs-summary__nutrition-value">
+                              {formatNutritionValue(value)}
+                              {unit ? ` ${unit}` : ""}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <IonText color="medium">
+                      No nutrition data logged yet.
+                    </IonText>
+                  )}
+                </IonCardContent>
+              </div>
+            </SwiperSlide>
+
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Achievements</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {streakMilestones.map((target) => (
+                      <IonChip
+                        key={target}
+                        color={streak >= target ? "success" : "medium"}
+                      >
+                        {target}-day streak
+                      </IonChip>
+                    ))}
+                  </div>
+                  {nextStreakTarget ? (
+                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                      {nextStreakTarget - streak} more day
+                      {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
+                      {nextStreakTarget}-day badge.
+                    </IonText>
+                  ) : (
+                    <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                      You’ve unlocked all streak badges 🎉
+                    </IonText>
+                  )}
+                </IonCardContent>
+              </div>
+            </SwiperSlide>
+
+            {showWellnessTip && (
+              <SwiperSlide>
+                <div className="fs-summary__slide">
+                  <IonCardHeader className="fs-tip-card__hdr">
+                    <div className="fs-tip-card__title">
+                      <IonIcon icon={bulbOutline} aria-hidden="true" />
+                      <IonCardTitle>Wellness tip</IonCardTitle>
+                    </div>
+                  </IonCardHeader>
+                  <IonCardContent className="fs-tip-card__content">
+                    <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
+                    <IonButton size="small" fill="outline" onClick={shuffleTip}>
+                      New tip
+                    </IonButton>
+                  </IonCardContent>
+                </div>
+              </SwiperSlide>
             )}
-          </IonCardContent>
+          </Swiper>
         </IonCard>
-
-        {showWellnessTip && (
-          <IonCard className="fs-tip-card">
-            <IonCardHeader className="fs-tip-card__hdr">
-              <div className="fs-tip-card__title">
-                <IonIcon icon={bulbOutline} aria-hidden="true" />
-                <IonCardTitle>Wellness tip</IonCardTitle>
-              </div>
-            </IonCardHeader>
-            <IonCardContent className="fs-tip-card__content">
-              <p className="fs-tip-card__text">{WELLNESS_TIPS[tipIndex]}</p>
-              <IonButton size="small" fill="outline" onClick={shuffleTip}>
-                New tip
-              </IonButton>
-            </IonCardContent>
-          </IonCard>
-        )}
 
         {loading && (
           <div className="ion-text-center" style={{ padding: 24 }}>

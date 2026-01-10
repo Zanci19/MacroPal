@@ -89,6 +89,14 @@ ion-card:hover {
   padding-bottom: 8px;
 }
 
+.fs-summary__swiper {
+  width: 100%;
+}
+
+.fs-summary__slide {
+  padding-bottom: 8px;
+}
+
 .fs-summary__hdr {
   padding: 12px 16px;
   background: transparent;
@@ -193,6 +201,31 @@ ion-card:hover {
   gap: 10px;
   padding: 8px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
+}
+
+.fs-summary__nutrition {
+  padding: 6px 16px 12px;
+}
+
+.fs-summary__nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.fs-summary__nutrition-item {
+  display: grid;
+  gap: 4px;
+}
+
+.fs-summary__nutrition-label {
+  font-size: 0.75rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-summary__nutrition-value {
+  font-weight: 700;
+  font-size: 0.9rem;
 }
 
 .fs-tip-card {
@@ -337,8 +370,8 @@ body.dark ion-tab-bar {
   --padding-start: 0;
   --padding-end: 0;
   --border-radius: 9999px;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   background: transparent !important;
@@ -346,7 +379,7 @@ body.dark ion-tab-bar {
 }
 
 .fs-meal__add ion-icon {
-  font-size: 20px;
+  font-size: 24px;
   opacity: 0.95;
   color: var(--mp-ring-accent);
 }
@@ -364,7 +397,7 @@ body.dark ion-tab-bar {
 }
 
 .fs-meal__chevron {
-  font-size: 18px;
+  font-size: 22px;
   opacity: 0.7;
   margin-inline-end: 4px;
   transition: transform 0.2s ease;
