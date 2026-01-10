@@ -204,15 +204,6 @@ const Home: React.FC = () => {
   const longPressTimerRef = useRef<number | null>(null);
   const longPressTriggeredRef = useRef(false);
 
-  const [collapsedMeals, setCollapsedMeals] = useState<
-    Record<MealKey, boolean>
-  >({
-    breakfast: false,
-    lunch: false,
-    dinner: false,
-    snacks: false,
-  });
-
   const [tipIndex, setTipIndex] = useState(() =>
     Math.floor(Math.random() * WELLNESS_TIPS.length)
   );
@@ -1097,22 +1088,6 @@ const Home: React.FC = () => {
     }
   };
 
-  const toggleMealCollapsed = (meal: MealKey) => {
-    setCollapsedMeals((prev) => {
-      const nextState = !prev[meal];
-      trackEvent("meal_toggle_collapsed", {
-        uid,
-        date: activeDateKey,
-        meal,
-        collapsed: nextState,
-      });
-      return {
-        ...prev,
-        [meal]: nextState,
-      };
-    });
-  };
-
   const anyItems =
     dayData.breakfast.length +
     dayData.lunch.length +
@@ -1643,7 +1618,7 @@ const Home: React.FC = () => {
           MEALS.map((meal) => {
             const items = dayData[meal] || [];
             const hasItems = items.length > 0;
-            const isCollapsed = collapsedMeals[meal];
+            const isCollapsed = !hasItems;
 
             const mealTotals = totals.perMeal[meal];
             const hasMealTotals =
@@ -1663,8 +1638,6 @@ const Home: React.FC = () => {
                     lines="none"
                     className="fs-meal__row"
                     detail={false}
-                    button
-                    onClick={() => toggleMealCollapsed(meal)}
                   >
                     <IonIcon
                       slot="start"
@@ -1715,7 +1688,7 @@ const Home: React.FC = () => {
                   </IonItem>
                 </IonCardHeader>
 
-                {hasItems && !isCollapsed && (
+                {!isCollapsed && (
                   <IonCardContent>
                     <IonButton
                       size="small"
@@ -1733,8 +1706,9 @@ const Home: React.FC = () => {
                       More options
                     </IonButton>
 
-                    <IonList>
-                      {items.map((it, idx) => {
+                    {hasItems && (
+                      <IonList>
+                        {items.map((it, idx) => {
                           const t = it.total || {
                             calories: 0,
                             carbs: 0,
@@ -1850,7 +1824,8 @@ const Home: React.FC = () => {
                             </IonItem>
                           );
                         })}
-                    </IonList>
+                      </IonList>
+                    )}
                   </IonCardContent>
                 )}
               </IonCard>
