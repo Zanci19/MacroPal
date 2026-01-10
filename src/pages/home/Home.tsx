@@ -1797,14 +1797,6 @@ const Home: React.FC = () => {
                   <IonCardContent className="fs-tip-card__content">
                     <p className="fs-tip-card__text">“{quote.quote}”</p>
                     <IonText color="medium">— {quote.author}</IonText>
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={refreshQuote}
-                      disabled={quoteLoading}
-                    >
-                      {quoteLoading ? "Loading..." : "New quote"}
-                    </IonButton>
                   </IonCardContent>
                 </div>
               </SwiperSlide>
