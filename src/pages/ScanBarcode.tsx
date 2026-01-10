@@ -190,6 +190,7 @@ const ScanBarcode: React.FC = () => {
           if (!result) return;
 
           try {
+            decodeInProgressRef.current = true;
             const video = videoRef.current;
             if (video) {
               setHighlightBox(getHighlightBox(result, video));
@@ -199,7 +200,6 @@ const ScanBarcode: React.FC = () => {
             }
 
             setHighlightActive(true);
-            decodeInProgressRef.current = true;
             await new Promise<void>((resolve) => {
               highlightTimeoutRef.current = window.setTimeout(() => {
                 setHighlightActive(false);
