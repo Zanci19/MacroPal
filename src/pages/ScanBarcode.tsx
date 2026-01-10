@@ -10,8 +10,10 @@ import {
   IonButton,
   IonText,
   IonSpinner,
+  IonIcon,
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
+import { cameraReverseOutline } from "ionicons/icons";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result, ResultPoint } from "@zxing/library";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
@@ -50,6 +52,8 @@ const ScanBarcode: React.FC = () => {
 
   const [starting, setStarting] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [activeDeviceId, setActiveDeviceId] = useState<string | null>(null);
   const [highlightBox, setHighlightBox] = useState<{
     left: number;
     top: number;
@@ -74,6 +78,7 @@ const ScanBarcode: React.FC = () => {
     decodeInProgressRef.current = false;
     setHighlightActive(false);
     setHighlightBox(null);
+    setActiveDeviceId(null);
     if (highlightTimeoutRef.current) {
       window.clearTimeout(highlightTimeoutRef.current);
       highlightTimeoutRef.current = null;
@@ -147,7 +152,7 @@ const ScanBarcode: React.FC = () => {
     };
   };
 
-  const start = async () => {
+  const start = async (preferredDeviceId?: string | null) => {
     setError(null);
     setStarting(true);
     setHighlightBox(null);
@@ -172,15 +177,25 @@ const ScanBarcode: React.FC = () => {
       }
 
       const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+      setDevices(devices);
       trackEvent("barcode_scan_devices_listed", {
         count: devices.length,
       });
 
-      let devId = devices[0]?.deviceId;
-      const back = devices.find((d) =>
-        /back|rear|environment/i.test(d.label || "")
+      const preferredDevice = devices.find(
+        (device) => device.deviceId === preferredDeviceId
       );
-      if (back) devId = back.deviceId;
+      let devId = preferredDevice?.deviceId ?? devices[0]?.deviceId;
+      if (!preferredDevice) {
+        const back = devices.find((d) =>
+          /back|rear|environment/i.test(d.label || "")
+        );
+        if (back) devId = back.deviceId;
+      }
+      if (!devId) {
+        throw new Error("No camera devices available.");
+      }
+      setActiveDeviceId(devId);
 
       await reader.decodeFromVideoDevice(
         devId,
@@ -268,6 +283,22 @@ const ScanBarcode: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const rotateCamera = () => {
+    if (!devices.length) return;
+    const currentIndex = devices.findIndex(
+      (device) => device.deviceId === activeDeviceId
+    );
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % devices.length : 0;
+    const nextDevice = devices[nextIndex];
+    if (!nextDevice) return;
+    trackEvent("barcode_scan_rotate_camera", {
+      from: activeDeviceId,
+      to: nextDevice.deviceId,
+    });
+    stop();
+    start(nextDevice.deviceId);
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -299,6 +330,23 @@ const ScanBarcode: React.FC = () => {
               muted
               style={{ width: "100%", background: "#000" }}
             />
+
+            <IonButton
+              fill="solid"
+              size="small"
+              onClick={rotateCamera}
+              disabled={starting || devices.length < 2}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                zIndex: 5,
+                "--padding-start": "10px",
+                "--padding-end": "10px",
+              }}
+            >
+              <IonIcon slot="icon-only" icon={cameraReverseOutline} />
+            </IonButton>
 
             {/* Frame hint */}
             <div
