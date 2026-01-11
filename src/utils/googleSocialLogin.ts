@@ -17,11 +17,7 @@ type SocialLoginPlugin = {
       forceRefreshToken?: boolean;
     };
   }) => Promise<Record<string, any>>;
-<<<<<<< HEAD
-  logout?: (options: { provider: "google" }) => Promise<void>;
-=======
   logout?: () => Promise<void>;
->>>>>>> codex/fix-google-sign-in-error-16]
 };
 
 const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
@@ -78,71 +74,9 @@ const getTokenValue = (
   return undefined;
 };
 
-const getErrorValue = (
-  sources: Array<Record<string, any> | null | undefined>,
-  keys: string[]
-) => {
-  const visited = new Set<unknown>();
-  const queue: Array<Record<string, any>> = sources.filter(
-    (source): source is Record<string, any> => !!source
-  );
-
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current || visited.has(current)) continue;
-    visited.add(current);
-
-    for (const key of keys) {
-      const value = current[key];
-      if (typeof value === "string" && value.length > 0) {
-        return value;
-      }
-    }
-
-    for (const value of Object.values(current)) {
-      if (value && typeof value === "object") {
-        queue.push(value as Record<string, any>);
-      }
-    }
-  }
-
-  return undefined;
-};
-
-const createSocialLoginError = (
-  message: string,
-  code: string,
-  details?: Record<string, any>
-) => {
-  const error = new Error(message) as Error & {
-    code?: string;
-    details?: Record<string, any>;
-  };
-  error.code = code;
-  error.details = details;
-  return error;
-};
-
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
   await initializeSocialLogin();
 
-<<<<<<< HEAD
-  const safeLogout = async () => {
-    if (typeof SocialLogin.logout === "function") {
-      try {
-        await SocialLogin.logout({ provider: "google" });
-      } catch (err) {
-        console.warn("SocialLogin logout failed:", err);
-      }
-    }
-  };
-
-  await safeLogout();
-
-  let response = await SocialLogin.login({
-    provider: "google",
-  });
-=======
   const logoutIfPossible = async (reason: string) => {
     if (typeof SocialLogin.logout !== "function") return;
     try {
@@ -151,7 +85,6 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       console.warn(`[googleSocialLogin] logout failed (${reason})`, logoutError);
     }
   };
->>>>>>> codex/fix-google-sign-in-error-16]
 
   const loginWithTokens = async () => {
     const response = await SocialLogin.login({
@@ -164,24 +97,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       },
     });
 
-<<<<<<< HEAD
-  let providerError = getErrorValue(candidates, [
-    "errorMessage",
-    "error",
-    "message",
-    "error_description",
-  ]);
-
-  if (providerError && /account reauth failed/i.test(providerError)) {
-    await safeLogout();
-    response = await SocialLogin.login({
-      provider: "google",
-    });
-
-    const retryCandidates = [
-=======
     const candidates = [
->>>>>>> codex/fix-google-sign-in-error-16]
       response,
       response?.result,
       response?.response,
@@ -189,39 +105,6 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       response?.result?.authentication,
       response?.authentication,
     ];
-<<<<<<< HEAD
-
-    providerError = getErrorValue(retryCandidates, [
-      "errorMessage",
-      "error",
-      "message",
-      "error_description",
-    ]);
-
-    if (!providerError) {
-      candidates.splice(0, candidates.length, ...retryCandidates);
-    }
-  }
-  if (providerError) {
-    throw createSocialLoginError(
-      providerError,
-      "social_login_provider_error",
-      { provider: "google" }
-    );
-  }
-
-  const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
-  const accessToken = getTokenValue(candidates, ["accessToken", "access_token"]);
-
-  if (!idToken && !accessToken) {
-    throw createSocialLoginError(
-      "Google sign-in did not return an auth token.",
-      "social_login_missing_tokens",
-      {
-        provider: "google",
-      }
-    );
-=======
 
     const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
     const accessToken = getTokenValue(candidates, [
@@ -262,6 +145,5 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     await initializeSocialLogin();
 
     return loginWithTokens();
->>>>>>> codex/fix-google-sign-in-error-16]
   }
 };
