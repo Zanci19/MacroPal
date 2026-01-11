@@ -28,10 +28,9 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: false, // Works on Android 14 and below
     },
-  },
-  // @ts-ignore - SystemBars is available in Capacitor 8 but may not be in all type definitions
-  SystemBars: {
-    insetsHandling: 'css', // Injects CSS variables for Android 15+
+    SystemBars: {
+      insetsHandling: 'css', // Injects CSS variables for Android 15+
+    },
   },
 };
 ```
@@ -39,7 +38,7 @@ const config: CapacitorConfig = {
 **Key points:**
 - `SystemBars.insetsHandling: 'css'` tells Capacitor to inject `--safe-area-inset-*` CSS variables
 - This is the **only** way to handle edge-to-edge on Android 15+
-- The `@ts-ignore` comment is needed because some type definitions may not include SystemBars yet
+- SystemBars is configured inside the `plugins` object
 
 ### 2. Runtime StatusBar Configuration (Android 14 and below)
 In `src/utils/platformSetup.ts`:
