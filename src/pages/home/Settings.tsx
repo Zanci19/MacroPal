@@ -904,12 +904,6 @@ const Settings: React.FC = () => {
                     </IonNote>
                   )}
                 </IonItem>
-                <IonItem lines="none">
-                  <IonButton color="danger" onClick={() => setConfirmDelete(true)}>
-                    <IonIcon slot="start" icon={warningOutline} />
-                    Delete account
-                  </IonButton>
-                </IonItem>
               </IonList>
             </IonCardContent>
           </IonCard>
