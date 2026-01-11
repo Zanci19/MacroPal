@@ -87,9 +87,11 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   };
 
   const loginWithTokens = async () => {
+    console.log("[googleSocialLogin] Starting login...");
     const response = await SocialLogin.login({
       provider: "google",
     });
+    console.log("[googleSocialLogin] Login response received:", JSON.stringify(response, null, 2));
 
     const candidates = [
       response,
@@ -106,6 +108,8 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       "access_token",
     ]);
 
+    console.log("[googleSocialLogin] Tokens extracted - idToken:", !!idToken, "accessToken:", !!accessToken);
+
     if (!idToken && !accessToken) {
       throw new Error("Google sign-in did not return an auth token.");
     }
@@ -115,12 +119,14 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       accessToken ?? undefined
     );
 
+    console.log("[googleSocialLogin] Signing in with Firebase...");
     return signInWithCredential(auth, credential);
   };
 
   try {
     return await loginWithTokens();
   } catch (err: any) {
+    console.error("[googleSocialLogin] Error during sign-in:", err);
     const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
     const message = String(err?.message ?? "").toLowerCase();
     const isReauthFailure =
@@ -132,6 +138,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       throw err;
     }
 
+    console.log("[googleSocialLogin] Detected Error 16, retrying...");
     await logoutIfPossible("reauth");
 
     initPromise = null;
