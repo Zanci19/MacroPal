@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -832,7 +832,7 @@ const AddFood: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
-  const ensureResultsVisible = async () => {
+  const ensureResultsVisible = useCallback(async () => {
     const firstResult = results[0];
     const firstKey = firstResult?.code || firstResult?.product_name || null;
     const changed =
@@ -858,7 +858,7 @@ const AddFood: React.FC = () => {
     }
     prevResultsLengthRef.current = results.length;
     prevResultsKeyRef.current = firstKey;
-  };
+  }, [results]);
 
   useEffect(() => {
     if (!loading) {
@@ -1163,7 +1163,7 @@ const AddFood: React.FC = () => {
     trackEvent("recent_queries_cleared");
   };
 
-  const hideKeyboard = async () => {
+  const hideKeyboard = useCallback(async () => {
     try {
       await Keyboard.hide();
     } catch (err) {
@@ -1177,7 +1177,7 @@ const AddFood: React.FC = () => {
         console.warn("Input blur failed", err);
       }
     }
-  };
+  }, []);
 
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
     const raw = (q || "").trim();
@@ -1506,7 +1506,7 @@ const AddFood: React.FC = () => {
     };
   };
 
-  const handlePhotoChange = (file?: File | null) => {
+  const handlePhotoChange = useCallback((file?: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -1518,16 +1518,16 @@ const AddFood: React.FC = () => {
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const clearPhoto = () => {
+  const clearPhoto = useCallback(() => {
     setPhotoPreview(null);
     setPhotoName("");
     setPhotoRemoved(true);
     if (photoInputRef.current) {
       photoInputRef.current.value = "";
     }
-  };
+  }, []);
 
   const addFoodToMeal = async () => {
     const user = auth.currentUser;
@@ -2297,7 +2297,7 @@ const AddFood: React.FC = () => {
 
   const modalTitle = editEntry?.item?.name || selectedFood?.product_name || "(no name)";
 
-  const handleChangeMeal = (next: MealKey) => {
+  const handleChangeMeal = useCallback((next: MealKey) => {
     if (next === meal) return;
 
     trackEvent("add_food_meal_change", {
@@ -2316,7 +2316,7 @@ const AddFood: React.FC = () => {
     });
 
     setShowMealPicker(false);
-  };
+  }, [meal, dateKey, location.search, history]);
 
   const recommendation = useMemo(() => {
     if (!targets || !dayTotals) return null;
