@@ -124,7 +124,6 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   };
 
   try {
-    await logoutIfPossible("pre-login");
     return await loginWithTokens();
   } catch (err: any) {
     const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
