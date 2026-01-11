@@ -15,11 +15,26 @@ import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import "./AuthLoading.css";
 
+// Progress stage constants for better maintainability
+const PROGRESS_STAGES = {
+  INITIAL: 0,
+  LOADING_PROFILE: 0.3,
+  PROFILE_LOADED: 0.6,
+  CREATING_PROFILE: 0.7,
+  CHECKING_DETAILS: 0.8,
+  COMPLETE: 1.0,
+  MAX_SIMULATED: 0.9, // Cap simulated progress until actual completion
+};
+
+const PROGRESS_INTERVAL_MS = 800;
+const TIMEOUT_MS = 10000;
+const SLOW_CONNECTION_MESSAGE = "This may take longer on slow connections";
+
 const AuthLoading: React.FC = () => {
   const history = useHistory();
   const [message, setMessage] = useState("Checking your account…");
   const [timedOut, setTimedOut] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(PROGRESS_STAGES.INITIAL);
 
   useEffect(() => {
     // Check offline status immediately
@@ -28,27 +43,30 @@ const AuthLoading: React.FC = () => {
       return;
     }
 
+    let progressInterval: NodeJS.Timeout | null = null;
+    let timeoutId: NodeJS.Timeout | null = null;
+
     // Simulate progress for better UX feedback
-    const progressInterval = setInterval(() => {
+    progressInterval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 0.9) return prev; // Cap at 90% until actual completion
+        if (prev >= PROGRESS_STAGES.MAX_SIMULATED) return prev; // Cap at 90% until actual completion
         return prev + 0.1;
       });
-    }, 800);
+    }, PROGRESS_INTERVAL_MS);
 
     // Set a timeout to prevent infinite loading on slow connections
-    const timeoutId = setTimeout(() => {
-      clearInterval(progressInterval);
+    timeoutId = setTimeout(() => {
+      if (progressInterval) clearInterval(progressInterval);
       setTimedOut(true);
       setMessage("Taking longer than usual. Please check your connection…");
-    }, 10000); // 10 second timeout
+    }, TIMEOUT_MS);
 
     const run = async () => {
       const user = auth.currentUser;
 
       if (!user) {
-        clearTimeout(timeoutId);
-        clearInterval(progressInterval);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
         setMessage("You're not logged in. Sending you to login…");
         setTimeout(() => history.replace("/login"), 1500);
         return;
@@ -56,20 +74,20 @@ const AuthLoading: React.FC = () => {
 
       try {
         setMessage("Loading your MacroPal profile…");
-        setProgress(0.3);
+        setProgress(PROGRESS_STAGES.LOADING_PROFILE);
 
         const userRef = doc(db, "users", user.uid);
         const snap = await getDoc(userRef);
 
-        clearTimeout(timeoutId);
-        clearInterval(progressInterval);
-        setProgress(0.6);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
+        setProgress(PROGRESS_STAGES.PROFILE_LOADED);
 
         let targetRoute = "/onboarding-profile";
 
         if (snap.exists()) {
           setMessage("Checking your profile details…");
-          setProgress(0.8);
+          setProgress(PROGRESS_STAGES.CHECKING_DETAILS);
 
           const data: any = snap.data();
           const p = data.profile;
@@ -96,7 +114,7 @@ const AuthLoading: React.FC = () => {
           }
         } else {
           setMessage("Creating your MacroPal profile…");
-          setProgress(0.7);
+          setProgress(PROGRESS_STAGES.CREATING_PROFILE);
 
           await setDoc(
             userRef,
@@ -113,11 +131,11 @@ const AuthLoading: React.FC = () => {
           setMessage("Profile created. Please review the terms…");
         }
 
-        setProgress(1);
+        setProgress(PROGRESS_STAGES.COMPLETE);
         history.replace(targetRoute);
       } catch (e) {
-        clearTimeout(timeoutId);
-        clearInterval(progressInterval);
+        if (timeoutId) clearTimeout(timeoutId);
+        if (progressInterval) clearInterval(progressInterval);
         console.error("AuthLoading error:", e);
 
         if (!navigator.onLine) {
@@ -134,15 +152,15 @@ const AuthLoading: React.FC = () => {
 
     // Listen for offline events
     const handleOffline = () => {
-      clearTimeout(timeoutId);
-      clearInterval(progressInterval);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (progressInterval) clearInterval(progressInterval);
       history.replace("/offline");
     };
 
     window.addEventListener("offline", handleOffline);
     return () => {
-      clearTimeout(timeoutId);
-      clearInterval(progressInterval);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (progressInterval) clearInterval(progressInterval);
       window.removeEventListener("offline", handleOffline);
     };
   }, [history]);
@@ -181,7 +199,7 @@ const AuthLoading: React.FC = () => {
                   display: "block"
                 }}
               >
-                {Math.round(progress * 100)}% • This may take longer on slow connections
+                {Math.round(progress * 100)}% • {SLOW_CONNECTION_MESSAGE}
               </IonText>
             </>
           )}
