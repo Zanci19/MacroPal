@@ -14,6 +14,7 @@ type SocialLoginPlugin = {
       scopes?: string[];
     };
   }) => Promise<Record<string, any>>;
+  logout?: () => Promise<void>;
 };
 
 const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
@@ -118,7 +119,19 @@ const createSocialLoginError = (
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
   await initializeSocialLogin();
 
-  const response = await SocialLogin.login({
+  const safeLogout = async () => {
+    if (typeof SocialLogin.logout === "function") {
+      try {
+        await SocialLogin.logout();
+      } catch (err) {
+        console.warn("SocialLogin logout failed:", err);
+      }
+    }
+  };
+
+  await safeLogout();
+
+  let response = await SocialLogin.login({
     provider: "google",
   });
 
@@ -131,12 +144,39 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     response?.authentication,
   ];
 
-  const providerError = getErrorValue(candidates, [
+  let providerError = getErrorValue(candidates, [
     "errorMessage",
     "error",
     "message",
     "error_description",
   ]);
+
+  if (providerError && /account reauth failed/i.test(providerError)) {
+    await safeLogout();
+    response = await SocialLogin.login({
+      provider: "google",
+    });
+
+    const retryCandidates = [
+      response,
+      response?.result,
+      response?.response,
+      response?.data,
+      response?.result?.authentication,
+      response?.authentication,
+    ];
+
+    providerError = getErrorValue(retryCandidates, [
+      "errorMessage",
+      "error",
+      "message",
+      "error_description",
+    ]);
+
+    if (!providerError) {
+      candidates.splice(0, candidates.length, ...retryCandidates);
+    }
+  }
   if (providerError) {
     throw createSocialLoginError(
       providerError,
