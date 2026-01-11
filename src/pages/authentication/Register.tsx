@@ -23,7 +23,6 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
-  signOut,
   GoogleAuthProvider,
   getRedirectResult,
   signInWithPopup,
@@ -170,17 +169,11 @@ const Register: React.FC = () => {
         has_display_name: !!cleanName,
       });
 
-      await signOut(auth);
-      trackEvent("register_signed_out_unverified", {
-        uid: cred.user.uid,
-      });
-
       showToast(
         "Verification email sent. Please check your inbox.",
         "success"
       );
-
-      setTimeout(() => history.push("/login"), 900);
+      history.replace("/verify-email");
     } catch (err: any) {
       const code = err?.code || "unknown";
       trackEvent("register_error", { code });
