@@ -96,6 +96,12 @@ ion-card:hover {
   padding-bottom: 8px;
 }
 
+.fs-meal {
+  content-visibility: auto;
+  contain: layout paint;
+  contain-intrinsic-size: 1px 320px;
+}
+
 .fs-summary__swiper {
   width: 100%;
 }
