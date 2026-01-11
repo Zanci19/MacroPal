@@ -599,6 +599,7 @@ const AddFood: React.FC = () => {
     (async () => {
       try {
         const ref = doc(db, "users", user.uid);
+        // Prioritize cache for faster loading on mobile
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileFromFirestore } | undefined;
         const p = data?.profile;
@@ -914,63 +915,75 @@ const AddFood: React.FC = () => {
     });
   }, [location, history]);
 
+  // Defer favorites loading to avoid congestion on mobile
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
 
-    setFavoritesLoading(true);
-    const ref = collection(db, "users", user.uid, "favorites");
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const list: FavoriteFood[] = snap.docs.map((d) => {
-          const data = d.data() as Omit<FavoriteFood, "id">;
+    // Delay loading favorites by 300ms to prioritize critical data
+    const timer = setTimeout(() => {
+      setFavoritesLoading(true);
+      const ref = collection(db, "users", user.uid, "favorites");
+      const unsub = onSnapshot(
+        ref,
+        (snap) => {
+          const list: FavoriteFood[] = snap.docs.map((d) => {
+            const data = d.data() as Omit<FavoriteFood, "id">;
+            return { id: d.id, ...data };
+          });
+          setFavorites(list);
+          setFavoritesLoading(false);
+          trackEvent("favorites_loaded", {
+            uid: user.uid,
+            count: list.length,
+          });
+        },
+        (err) => {
+          console.error(err);
+          setFavoritesLoading(false);
+          setToast({
+            show: true,
+            message: "Error loading favorites",
+            color: "danger",
+          });
+          trackEvent("favorites_load_error", {
+            uid: user.uid,
+            error: err?.message || String(err),
+          });
+        }
+      );
+      return () => unsub();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Defer recent foods loading to avoid congestion on mobile
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Delay loading recent foods by 500ms
+    const timer = setTimeout(() => {
+      const ref = collection(db, "users", user.uid, "recentFoods");
+      const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
+
+      const unsub = onSnapshot(q, (snap) => {
+        const list: RecentFood[] = snap.docs.map((d) => {
+          const data = d.data() as Omit<RecentFood, "id">;
           return { id: d.id, ...data };
         });
-        setFavorites(list);
-        setFavoritesLoading(false);
-        trackEvent("favorites_loaded", {
+        setRecent(list);
+        trackEvent("recent_off_loaded", {
           uid: user.uid,
           count: list.length,
         });
-      },
-      (err) => {
-        console.error(err);
-        setFavoritesLoading(false);
-        setToast({
-          show: true,
-          message: "Error loading favorites",
-          color: "danger",
-        });
-        trackEvent("favorites_load_error", {
-          uid: user.uid,
-          error: err?.message || String(err),
-        });
-      }
-    );
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const ref = collection(db, "users", user.uid, "recentFoods");
-    const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
-
-    const unsub = onSnapshot(q, (snap) => {
-      const list: RecentFood[] = snap.docs.map((d) => {
-        const data = d.data() as Omit<RecentFood, "id">;
-        return { id: d.id, ...data };
       });
-      setRecent(list);
-      trackEvent("recent_off_loaded", {
-        uid: user.uid,
-        count: list.length,
-      });
-    });
 
-    return () => unsub();
+      return () => unsub();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -1039,40 +1052,47 @@ const AddFood: React.FC = () => {
     };
   }, []);
 
+  // Defer meal presets loading to avoid congestion on mobile
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
-    setMealPresetsLoading(true);
-    const ref = collection(db, "users", user.uid, "mealPresets");
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const list: CustomMealPreset[] = snap.docs.map((d) => {
-          const data = d.data() as Omit<CustomMealPreset, "id">;
-          return { id: d.id, ...data };
-        });
-        setMealPresets(list);
-        setMealPresetsLoading(false);
-        trackEvent("meal_presets_loaded", {
-          uid: user.uid,
-          count: list.length,
-        });
-      },
-      (err) => {
-        console.error(err);
-        setMealPresetsLoading(false);
-        setToast({
-          show: true,
-          message: "Error loading custom meals",
-          color: "danger",
-        });
-        trackEvent("meal_presets_load_error", {
-          uid: user.uid,
-          error: err?.message || String(err),
-        });
-      }
-    );
-    return () => unsub();
+    
+    // Delay loading meal presets by 700ms
+    const timer = setTimeout(() => {
+      setMealPresetsLoading(true);
+      const ref = collection(db, "users", user.uid, "mealPresets");
+      const unsub = onSnapshot(
+        ref,
+        (snap) => {
+          const list: CustomMealPreset[] = snap.docs.map((d) => {
+            const data = d.data() as Omit<CustomMealPreset, "id">;
+            return { id: d.id, ...data };
+          });
+          setMealPresets(list);
+          setMealPresetsLoading(false);
+          trackEvent("meal_presets_loaded", {
+            uid: user.uid,
+            count: list.length,
+          });
+        },
+        (err) => {
+          console.error(err);
+          setMealPresetsLoading(false);
+          setToast({
+            show: true,
+            message: "Error loading custom meals",
+            color: "danger",
+          });
+          trackEvent("meal_presets_load_error", {
+            uid: user.uid,
+            error: err?.message || String(err),
+          });
+        }
+      );
+      return () => unsub();
+    }, 700);
+
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
