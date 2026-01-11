@@ -14,7 +14,7 @@ type SocialLoginPlugin = {
       scopes?: string[];
     };
   }) => Promise<Record<string, any>>;
-  logout?: () => Promise<void>;
+  logout?: (options: { provider: "google" }) => Promise<void>;
 };
 
 const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
@@ -122,7 +122,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   const safeLogout = async () => {
     if (typeof SocialLogin.logout === "function") {
       try {
-        await SocialLogin.logout();
+        await SocialLogin.logout({ provider: "google" });
       } catch (err) {
         console.warn("SocialLogin logout failed:", err);
       }
