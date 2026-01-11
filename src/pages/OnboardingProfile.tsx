@@ -143,6 +143,11 @@ const OnboardingProfile: React.FC = () => {
     color: "success" | "danger" | "warning" = "danger"
   ) => setToast({ show: true, message, color });
 
+  // Ensure step resets to 0 when component mounts (fixes multi-account setup issue)
+  useEffect(() => {
+    setStep(0);
+  }, []);
+
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) return;
@@ -180,7 +185,9 @@ const OnboardingProfile: React.FC = () => {
           typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
             ? (p as { photoUrl?: string }).photoUrl!
             : null;
-        setProfilePhotoUrl(storedPhoto ?? user.photoURL ?? null);
+        // Use stored photo first, then Google profile photo, then null
+        const photoToUse = storedPhoto || user.photoURL || null;
+        setProfilePhotoUrl(photoToUse);
       } catch (e) {
         console.error("Error loading profile:", e);
         trackEvent("onboarding_profile_load_error", {

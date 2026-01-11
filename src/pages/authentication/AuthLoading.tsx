@@ -18,11 +18,17 @@ const AuthLoading: React.FC = () => {
   const [message, setMessage] = useState("Checking your account…");
 
   useEffect(() => {
+    // Check offline status immediately
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      history.replace("/offline");
+      return;
+    }
+
     const run = async () => {
       const user = auth.currentUser;
 
       if (!user) {
-        setMessage("You’re not logged in. Sending you to login…");
+        setMessage("You're not logged in. Sending you to login…");
         setTimeout(() => history.replace("/login"), 1500);
         return;
       }
@@ -94,6 +100,16 @@ const AuthLoading: React.FC = () => {
     };
 
     run();
+
+    // Listen for offline events
+    const handleOffline = () => {
+      history.replace("/offline");
+    };
+
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+    };
   }, [history]);
 
   return (

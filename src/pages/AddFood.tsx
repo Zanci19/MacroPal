@@ -847,7 +847,9 @@ const AddFood: React.FC = () => {
         const alreadyInView =
           visibleHeight >= Math.min(listRect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
-          const targetTop = Math.max(listEl.offsetTop - 12, 0);
+          // Leave space for the upper bar (header, search, buttons, etc.)
+          // Estimate ~60-80px for spacing
+          const targetTop = Math.max(listEl.offsetTop - 80, 0);
           requestAnimationFrame(() => {
             void contentRef.current?.scrollToPoint(0, targetTop, 350);
           });

@@ -22,9 +22,9 @@ const CheckLogin: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const startCheck = () => {
-    // If we're offline, don't even try – show the offline state
+    // If we're offline, redirect to offline page immediately
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setPhase("offline");
+      history.replace("/offline");
       return;
     }
 
@@ -37,9 +37,9 @@ const CheckLogin: React.FC = () => {
         // We only care about the first value
         unsub?.();
 
-        // If we lost connection in the meantime, bounce back to offline
+        // If we lost connection in the meantime, redirect to offline
         if (typeof navigator !== "undefined" && !navigator.onLine) {
-          setPhase("offline");
+          history.replace("/offline");
           return;
         }
 
@@ -86,7 +86,7 @@ const CheckLogin: React.FC = () => {
     };
 
     const handleOffline = () => {
-      setPhase("offline");
+      history.replace("/offline");
     };
 
     window.addEventListener("online", handleOnline);
