@@ -59,6 +59,15 @@ const getTokenValue = (
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
   await initializeSocialLogin();
 
+  const logoutIfPossible = async (reason: string) => {
+    if (typeof SocialLogin.logout !== "function") return;
+    try {
+      await SocialLogin.logout();
+    } catch (logoutError) {
+      console.warn(`[googleSocialLogin] logout failed (${reason})`, logoutError);
+    }
+  };
+
   const loginWithTokens = async () => {
     const response = await SocialLogin.login({
       provider: "google",
@@ -95,6 +104,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   };
 
   try {
+    await logoutIfPossible("pre-login");
     return await loginWithTokens();
   } catch (err: any) {
     const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
@@ -108,13 +118,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       throw err;
     }
 
-    if (typeof SocialLogin.logout === "function") {
-      try {
-        await SocialLogin.logout();
-      } catch (logoutError) {
-        console.warn("[googleSocialLogin] logout failed", logoutError);
-      }
-    }
+    await logoutIfPossible("reauth");
 
     initPromise = null;
     await initializeSocialLogin();
