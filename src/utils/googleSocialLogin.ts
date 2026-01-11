@@ -12,9 +12,16 @@ type SocialLoginPlugin = {
     provider: "google";
     options?: {
       scopes?: string[];
+      filterByAuthorizedAccounts?: boolean;
+      autoSelectEnabled?: boolean;
+      forceRefreshToken?: boolean;
     };
   }) => Promise<Record<string, any>>;
+<<<<<<< HEAD
   logout?: (options: { provider: "google" }) => Promise<void>;
+=======
+  logout?: () => Promise<void>;
+>>>>>>> codex/fix-google-sign-in-error-16]
 };
 
 const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
@@ -119,6 +126,7 @@ const createSocialLoginError = (
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
   await initializeSocialLogin();
 
+<<<<<<< HEAD
   const safeLogout = async () => {
     if (typeof SocialLogin.logout === "function") {
       try {
@@ -134,16 +142,29 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   let response = await SocialLogin.login({
     provider: "google",
   });
+=======
+  const logoutIfPossible = async (reason: string) => {
+    if (typeof SocialLogin.logout !== "function") return;
+    try {
+      await SocialLogin.logout();
+    } catch (logoutError) {
+      console.warn(`[googleSocialLogin] logout failed (${reason})`, logoutError);
+    }
+  };
+>>>>>>> codex/fix-google-sign-in-error-16]
 
-  const candidates = [
-    response,
-    response?.result,
-    response?.response,
-    response?.data,
-    response?.result?.authentication,
-    response?.authentication,
-  ];
+  const loginWithTokens = async () => {
+    const response = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["profile", "email"],
+        filterByAuthorizedAccounts: false,
+        autoSelectEnabled: false,
+        forceRefreshToken: true,
+      },
+    });
 
+<<<<<<< HEAD
   let providerError = getErrorValue(candidates, [
     "errorMessage",
     "error",
@@ -158,6 +179,9 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     });
 
     const retryCandidates = [
+=======
+    const candidates = [
+>>>>>>> codex/fix-google-sign-in-error-16]
       response,
       response?.result,
       response?.response,
@@ -165,6 +189,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       response?.result?.authentication,
       response?.authentication,
     ];
+<<<<<<< HEAD
 
     providerError = getErrorValue(retryCandidates, [
       "errorMessage",
@@ -196,12 +221,47 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
         provider: "google",
       }
     );
+=======
+
+    const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
+    const accessToken = getTokenValue(candidates, [
+      "accessToken",
+      "access_token",
+    ]);
+
+    if (!idToken && !accessToken) {
+      throw new Error("Google sign-in did not return an auth token.");
+    }
+
+    const credential = GoogleAuthProvider.credential(
+      idToken ?? undefined,
+      accessToken ?? undefined
+    );
+
+    return signInWithCredential(auth, credential);
+  };
+
+  try {
+    await logoutIfPossible("pre-login");
+    return await loginWithTokens();
+  } catch (err: any) {
+    const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
+    const message = String(err?.message ?? "").toLowerCase();
+    const isReauthFailure =
+      code === 16 ||
+      code === "16" ||
+      message.includes("account reauth failed");
+
+    if (!isReauthFailure) {
+      throw err;
+    }
+
+    await logoutIfPossible("reauth");
+
+    initPromise = null;
+    await initializeSocialLogin();
+
+    return loginWithTokens();
+>>>>>>> codex/fix-google-sign-in-error-16]
   }
-
-  const credential = GoogleAuthProvider.credential(
-    idToken ?? undefined,
-    accessToken ?? undefined
-  );
-
-  return signInWithCredential(auth, credential);
 };
