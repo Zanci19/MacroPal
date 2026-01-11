@@ -91,7 +91,13 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     const response = await SocialLogin.login({
       provider: "google",
     });
-    console.log("[googleSocialLogin] Login response received:", JSON.stringify(response, null, 2));
+    console.log("[googleSocialLogin] Login response received (structure):", {
+      hasResult: !!response?.result,
+      hasResponse: !!response?.response,
+      hasData: !!response?.data,
+      hasAuthentication: !!(response?.result?.authentication || response?.authentication),
+      topLevelKeys: response ? Object.keys(response) : []
+    });
 
     const candidates = [
       response,
