@@ -599,7 +599,6 @@ const AddFood: React.FC = () => {
     (async () => {
       try {
         const ref = doc(db, "users", user.uid);
-        // Prioritize cache for faster loading on mobile
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileFromFirestore } | undefined;
         const p = data?.profile;

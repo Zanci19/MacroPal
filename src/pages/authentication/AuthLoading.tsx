@@ -141,8 +141,8 @@ const AuthLoading: React.FC = () => {
           </IonText>
           {timedOut && (
             <div style={{ marginTop: "1rem" }}>
-              <IonButton onClick={() => history.replace("/app/home")}>
-                Continue Anyway
+              <IonButton onClick={() => history.replace("/login")}>
+                Go to Login
               </IonButton>
               <IonButton fill="outline" onClick={() => window.location.reload()}>
                 Retry
