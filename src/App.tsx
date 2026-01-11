@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Suspense, lazy } from "react";
+import React, { useEffect, useRef, Suspense, lazy, useMemo } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -177,61 +177,40 @@ const TabsShell: React.FC = () => {
     router.push(href, "forward", "push");
   };
 
-  const tabAnimation: AnimationBuilder = (_baseEl, opts) => {
-    const currentTabIndex = getTabIndex(getActiveTab());
-    const previousTabIndex = previousTabIndexRef.current;
+  // Memoize the animation builder to prevent unnecessary recreation on every render
+  const tabAnimation: AnimationBuilder = useMemo(
+    () => (_baseEl, opts) => {
+      const currentTabIndex = getTabIndex(getActiveTab());
+      const previousTabIndex = previousTabIndexRef.current;
 
-    const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
-    const clickDirection = lastDirectionRef.current;
-    const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
-    const isForward =
-      clickDirection === "forward"
-        ? true
-        : clickDirection === "back"
-          ? false
-          : hasValidIndices
-            ? currentTabIndex > previousTabIndex
-            : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
-    lastDirectionRef.current = null;
+      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+      const clickDirection = lastDirectionRef.current;
+      const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
+      const isForward =
+        clickDirection === "forward"
+          ? true
+          : clickDirection === "back"
+            ? false
+            : hasValidIndices
+              ? currentTabIndex > previousTabIndex
+              : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
+      lastDirectionRef.current = null;
 
-    const enteringEl = opts.enteringEl;
-    const leavingEl = opts.leavingEl;
-    const directionFactor = isForward ? 1 : -1;
+      const enteringEl = opts.enteringEl;
+      const leavingEl = opts.leavingEl;
+      const directionFactor = isForward ? 1 : -1;
 
-    const enteringStartOpacity = isForward ? ENTER_MIN_OPACITY : 1;
-    const leavingEndOpacity = isForward ? LEAVE_MIN_OPACITY : 1;
-    const enteringZIndex = isForward ? "101" : "102";
-    const leavingZIndex = isForward ? "100" : "99";
+      const enteringStartOpacity = isForward ? ENTER_MIN_OPACITY : 1;
+      const leavingEndOpacity = isForward ? LEAVE_MIN_OPACITY : 1;
+      const enteringZIndex = isForward ? "101" : "102";
+      const leavingZIndex = isForward ? "100" : "99";
 
-    const enteringAnimation = createAnimation()
-      .addElement(enteringEl)
-      .duration(ANIMATION_DURATION_MS)
-      .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-      .beforeStyles({
-        zIndex: enteringZIndex,
-        position: "absolute",
-        top: "0",
-        left: "0",
-        right: "0",
-        bottom: "0",
-        width: "100%",
-        height: "100%",
-        willChange: "transform",
-      })
-      .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-      .beforeRemoveClass("ion-page-invisible")
-      .fromTo("transform", `translateX(${directionFactor * 100}%) translateZ(0)`, "translateX(0) translateZ(0)")
-      //.fromTo("opacity", enteringStartOpacity, 1);
-
-    const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
-    let leavingAnimation: Animation | undefined;
-    if (leavingEl) {
-      leavingAnimation = createAnimation()
-        .addElement(leavingEl)
+      const enteringAnimation = createAnimation()
+        .addElement(enteringEl)
         .duration(ANIMATION_DURATION_MS)
         .easing("cubic-bezier(0.4, 0, 0.2, 1)")
         .beforeStyles({
-          zIndex: leavingZIndex,
+          zIndex: enteringZIndex,
           position: "absolute",
           top: "0",
           left: "0",
@@ -239,21 +218,46 @@ const TabsShell: React.FC = () => {
           bottom: "0",
           width: "100%",
           height: "100%",
-          willChange: "transform, opacity",
+          willChange: "transform",
         })
         .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-        .fromTo("transform", "translateX(0) translateZ(0)", `translateX(${leaveOffset}%) translateZ(0)`)
-        .fromTo("opacity", 1, leavingEndOpacity);
-    }
+        .beforeRemoveClass("ion-page-invisible")
+        .fromTo("transform", `translateX(${directionFactor * 100}%) translateZ(0)`, "translateX(0) translateZ(0)")
+        //.fromTo("opacity", enteringStartOpacity, 1);
 
-    const animation = createAnimation().addAnimation(enteringAnimation);
+      const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
+      let leavingAnimation: Animation | undefined;
+      if (leavingEl) {
+        leavingAnimation = createAnimation()
+          .addElement(leavingEl)
+          .duration(ANIMATION_DURATION_MS)
+          .easing("cubic-bezier(0.4, 0, 0.2, 1)")
+          .beforeStyles({
+            zIndex: leavingZIndex,
+            position: "absolute",
+            top: "0",
+            left: "0",
+            right: "0",
+            bottom: "0",
+            width: "100%",
+            height: "100%",
+            willChange: "transform, opacity",
+          })
+          .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
+          .fromTo("transform", "translateX(0) translateZ(0)", `translateX(${leaveOffset}%) translateZ(0)`)
+          .fromTo("opacity", 1, leavingEndOpacity);
+      }
 
-    if (leavingAnimation) {
-      animation.addAnimation(leavingAnimation);
-    }
+      const animation = createAnimation().addAnimation(enteringAnimation);
 
-    return animation;
-  };
+      if (leavingAnimation) {
+        animation.addAnimation(leavingAnimation);
+      }
+
+      return animation;
+    },
+    [] // Empty dependency array - animation logic doesn't change
+  );
 
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
