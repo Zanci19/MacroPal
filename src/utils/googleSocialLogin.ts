@@ -90,7 +90,6 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     const response = await SocialLogin.login({
       provider: "google",
       options: {
-        scopes: ["profile", "email"],
         filterByAuthorizedAccounts: false,
         autoSelectEnabled: false,
         forceRefreshToken: true,
