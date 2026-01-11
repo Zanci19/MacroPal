@@ -117,7 +117,8 @@ const Settings: React.FC = () => {
     if (stored && VALID_THEMES.includes(stored as ThemeMode)) {
       return stored as ThemeMode;
     }
-    return "macropal";
+    // Default to "system" theme
+    return "system";
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);

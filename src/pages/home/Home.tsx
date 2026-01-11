@@ -263,12 +263,13 @@ const Home: React.FC = () => {
   });
   const collapsedInitKeyRef = useRef<string | null>(null);
 
-  const [quote, setQuote] = useState<InspirationalQuote>(() => {
+  const [quote, setQuote] = useState<InspirationalQuote | null>(() => {
     const stored = readStoredQuote();
     if (stored?.date === todayDateKey()) {
       return { quote: stored.quote, author: stored.author };
     }
-    return getFallbackQuote();
+    // Start with null to show loading state
+    return null;
   });
   const [quoteDateKey, setQuoteDateKey] = useState<string | null>(() => {
     const stored = readStoredQuote();
@@ -470,7 +471,8 @@ const Home: React.FC = () => {
     }
     quoteHasLoadedRef.current = false;
     if (quoteDateKey) {
-      setQuote(getFallbackQuote());
+      // Reset to null to show loading when changing days
+      setQuote(null);
       setQuoteDateKey(null);
       try {
         localStorage.removeItem(QUOTE_STORAGE_KEY);
@@ -1914,8 +1916,19 @@ const Home: React.FC = () => {
                     </div>
                   </IonCardHeader>
                   <IonCardContent className="fs-tip-card__content">
-                    <p className="fs-tip-card__text">“{quote.quote}”</p>
-                    <IonText color="medium">— {quote.author}</IonText>
+                    {quote ? (
+                      <>
+                        <p className="fs-tip-card__text">"{quote.quote}"</p>
+                        <IonText color="medium">— {quote.author}</IonText>
+                      </>
+                    ) : (
+                      <div style={{ textAlign: "center", padding: "20px 0" }}>
+                        <IonSpinner name="dots" />
+                        <IonText color="medium" style={{ display: "block", marginTop: 12 }}>
+                          Loading quote...
+                        </IonText>
+                      </div>
+                    )}
                   </IonCardContent>
                 </div>
               </SwiperSlide>
