@@ -43,16 +43,76 @@ const getTokenValue = (
   sources: Array<Record<string, any> | null | undefined>,
   keys: string[]
 ) => {
-  for (const source of sources) {
-    if (!source) continue;
+  const visited = new Set<unknown>();
+  const queue: Array<Record<string, any>> = sources.filter(
+    (source): source is Record<string, any> => !!source
+  );
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+
     for (const key of keys) {
-      const value = source[key];
+      const value = current[key];
       if (typeof value === "string" && value.length > 0) {
         return value;
       }
     }
+
+    for (const value of Object.values(current)) {
+      if (value && typeof value === "object") {
+        queue.push(value as Record<string, any>);
+      }
+    }
   }
+
   return undefined;
+};
+
+const getErrorValue = (
+  sources: Array<Record<string, any> | null | undefined>,
+  keys: string[]
+) => {
+  const visited = new Set<unknown>();
+  const queue: Array<Record<string, any>> = sources.filter(
+    (source): source is Record<string, any> => !!source
+  );
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current || visited.has(current)) continue;
+    visited.add(current);
+
+    for (const key of keys) {
+      const value = current[key];
+      if (typeof value === "string" && value.length > 0) {
+        return value;
+      }
+    }
+
+    for (const value of Object.values(current)) {
+      if (value && typeof value === "object") {
+        queue.push(value as Record<string, any>);
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const createSocialLoginError = (
+  message: string,
+  code: string,
+  details?: Record<string, any>
+) => {
+  const error = new Error(message) as Error & {
+    code?: string;
+    details?: Record<string, any>;
+  };
+  error.code = code;
+  error.details = details;
+  return error;
 };
 
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
@@ -74,11 +134,31 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     response?.authentication,
   ];
 
+  const providerError = getErrorValue(candidates, [
+    "errorMessage",
+    "error",
+    "message",
+    "error_description",
+  ]);
+  if (providerError) {
+    throw createSocialLoginError(
+      providerError,
+      "social_login_provider_error",
+      { provider: "google" }
+    );
+  }
+
   const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
   const accessToken = getTokenValue(candidates, ["accessToken", "access_token"]);
 
   if (!idToken && !accessToken) {
-    throw new Error("Google sign-in did not return an auth token.");
+    throw createSocialLoginError(
+      "Google sign-in did not return an auth token.",
+      "social_login_missing_tokens",
+      {
+        provider: "google",
+      }
+    );
   }
 
   const credential = GoogleAuthProvider.credential(

@@ -265,7 +265,18 @@ const Register: React.FC = () => {
         throw err;
       }
     } catch (err: any) {
-      trackEvent("register_google_error", { code: err?.code || "unknown" });
+      const code = err?.code || "unknown";
+      trackEvent("register_google_error", { code });
+      if (code === "social_login_missing_tokens") {
+        showToast(
+          "Google sign-up didn't return tokens. Double-check your Web client ID and Android SHA-1/256, then rebuild the app."
+        );
+        return;
+      }
+      if (code === "social_login_provider_error") {
+        showToast("Google sign-up failed. Please try again.");
+        return;
+      }
       showToast(handleError("register", err));
     } finally {
       setBusy(false);

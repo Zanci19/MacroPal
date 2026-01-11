@@ -274,7 +274,18 @@ const Login: React.FC = () => {
         throw err;
       }
     } catch (err: any) {
-      trackEvent("login_google_error", { code: err?.code || "unknown" });
+      const code = err?.code || "unknown";
+      trackEvent("login_google_error", { code });
+      if (code === "social_login_missing_tokens") {
+        showToast(
+          "Google sign-in didn't return tokens. Double-check your Web client ID and Android SHA-1/256, then rebuild the app."
+        );
+        return;
+      }
+      if (code === "social_login_provider_error") {
+        showToast("Google sign-in failed. Please try again.");
+        return;
+      }
       showToast(handleError("login", err));
     } finally {
       setBusy(false);
