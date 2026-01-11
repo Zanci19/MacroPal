@@ -121,7 +121,7 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
   const response = await SocialLogin.login({
     provider: "google",
     options: {
-      scopes: ["profile", "email"],
+      scopes: ["profile", "email", "openid"],
     },
   });
 

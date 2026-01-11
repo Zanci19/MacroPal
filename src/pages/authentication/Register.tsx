@@ -267,6 +267,24 @@ const Register: React.FC = () => {
     } catch (err: any) {
       const code = err?.code || "unknown";
       trackEvent("register_google_error", { code });
+      if (code === "auth/invalid-credential") {
+        showToast(
+          "Google sign-up was rejected. Confirm your Android SHA-1/256 and the Web client ID, then rebuild the app."
+        );
+        return;
+      }
+      if (code === "auth/account-exists-with-different-credential") {
+        showToast("An account already exists with a different sign-in method.");
+        return;
+      }
+      if (code === "auth/user-disabled") {
+        showToast("This account has been disabled. Contact support.");
+        return;
+      }
+      if (code === "auth/network-request-failed") {
+        showToast("Network error. Check your connection and try again.");
+        return;
+      }
       if (code === "social_login_missing_tokens") {
         showToast(
           "Google sign-up didn't return tokens. Double-check your Web client ID and Android SHA-1/256, then rebuild the app."
