@@ -150,7 +150,7 @@ const Planner: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen className="home-content">
+      <IonContent fullscreen className="home-content tabbed-content">
         <div className="planner-content">
           <IonCard className="planner-hero">
           <IonCardHeader>
