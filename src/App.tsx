@@ -88,6 +88,16 @@ const RouteLoader: React.FC = () => (
   </div>
 );
 
+// Wrapper for lazy loaded routes with individual Suspense boundaries
+const LazyRoute: React.FC<{ component: React.ComponentType<any>; [key: string]: any }> = ({ 
+  component: Component, 
+  ...props 
+}) => (
+  <Suspense fallback={<RouteLoader />}>
+    <Component {...props} />
+  </Suspense>
+);
+
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
@@ -292,18 +302,16 @@ const TabsShell: React.FC = () => {
   return (
     <IonTabs>
       <IonRouterOutlet id="tabs" animation={tabAnimation}>
-        <Suspense fallback={<RouteLoader />}>
-          <Route exact path="/app/analytics" component={Analytics} />
-          <Route exact path="/app/planner" component={Planner} />
-          <Route exact path="/app/home" component={Home} />
-          <Route exact path="/app/workout" component={Workout} />
-          <Route exact path="/app/settings" component={Settings} />
-          <Route exact path="/app/energy-needs" component={EnergyNeeds} />
-          <Route exact path="/app/units" component={Units} />
-          <Route exact path="/app/reminders" component={Reminders} />
-          <Route exact path="/app/data-privacy" component={DataPrivacy} />
-          <Redirect exact from="/app" to="/app/home" />
-        </Suspense>
+        <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
+        <Route exact path="/app/planner" render={(props) => <LazyRoute component={Planner} {...props} />} />
+        <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
+        <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />
+        <Route exact path="/app/settings" render={(props) => <LazyRoute component={Settings} {...props} />} />
+        <Route exact path="/app/energy-needs" render={(props) => <LazyRoute component={EnergyNeeds} {...props} />} />
+        <Route exact path="/app/units" render={(props) => <LazyRoute component={Units} {...props} />} />
+        <Route exact path="/app/reminders" render={(props) => <LazyRoute component={Reminders} {...props} />} />
+        <Route exact path="/app/data-privacy" render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
+        <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 
       <IonTabBar slot="bottom" className="mp-tabbar">
@@ -485,27 +493,25 @@ const App: React.FC = () => {
       <ErrorBoundary>
         <IonReactRouter>
           <UpdateGate>
-            <Suspense fallback={<RouteLoader />}>
-              <IonRouterOutlet id="root">
-                <Route exact path="/login" component={Login} />
-                <Route exact path="/register" component={Register} />
-                <Route exact path="/verify-email" component={EmailVerification} />
-                <Route exact path="/add-food" component={AddFood} />
-                <Route exact path="/onboarding-terms" component={OnboardingTerms} />
-                <Route exact path="/onboarding-profile" component={OnboardingProfile} />
-                <Route exact path="/setup-profile" component={SetupProfile} />
-                <Route exact path="/check-login" component={CheckLogin} />
-                <Route exact path="/start" component={Start} />
-                <Route exact path="/reset-password" component={ResetPassword} />
-                <Route exact path="/scan-barcode" component={ScanBarcode} />
-                <Route exact path="/auth-loading" component={AuthLoading} />
-                <Route exact path="/offline" component={Offline} />
+            <IonRouterOutlet id="root">
+              <Route exact path="/login" render={(props) => <LazyRoute component={Login} {...props} />} />
+              <Route exact path="/register" render={(props) => <LazyRoute component={Register} {...props} />} />
+              <Route exact path="/verify-email" render={(props) => <LazyRoute component={EmailVerification} {...props} />} />
+              <Route exact path="/add-food" render={(props) => <LazyRoute component={AddFood} {...props} />} />
+              <Route exact path="/onboarding-terms" render={(props) => <LazyRoute component={OnboardingTerms} {...props} />} />
+              <Route exact path="/onboarding-profile" render={(props) => <LazyRoute component={OnboardingProfile} {...props} />} />
+              <Route exact path="/setup-profile" render={(props) => <LazyRoute component={SetupProfile} {...props} />} />
+              <Route exact path="/check-login" render={(props) => <LazyRoute component={CheckLogin} {...props} />} />
+              <Route exact path="/start" render={(props) => <LazyRoute component={Start} {...props} />} />
+              <Route exact path="/reset-password" render={(props) => <LazyRoute component={ResetPassword} {...props} />} />
+              <Route exact path="/scan-barcode" render={(props) => <LazyRoute component={ScanBarcode} {...props} />} />
+              <Route exact path="/auth-loading" render={(props) => <LazyRoute component={AuthLoading} {...props} />} />
+              <Route exact path="/offline" render={(props) => <LazyRoute component={Offline} {...props} />} />
 
-                <Route path="/app" component={TabsShell} />
+              <Route path="/app" component={TabsShell} />
 
-                <Redirect exact from="/" to="/check-login" />
-              </IonRouterOutlet>
-            </Suspense>
+              <Redirect exact from="/" to="/check-login" />
+            </IonRouterOutlet>
           </UpdateGate>
         </IonReactRouter>
       </ErrorBoundary>
