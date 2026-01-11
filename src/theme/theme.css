@@ -365,3 +365,60 @@ body.macropal-theme ion-alert .alert-button {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--mp-text-muted);
 }
+
+/* Performance optimizations */
+/* Enable GPU acceleration for animations */
+.ion-page {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Optimize rendering for tab transitions */
+ion-router-outlet ion-page {
+  contain: layout style paint;
+}
+
+/* Reduce paint operations on tab bar */
+ion-tab-bar {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* Optimize list rendering */
+ion-list {
+  contain: layout style;
+}
+
+/* Optimize card rendering */
+ion-card {
+  contain: layout style paint;
+}
+
+/* Reduce repaints for fixed elements */
+ion-header,
+ion-footer,
+ion-toolbar {
+  contain: layout style;
+}
+
+/* Enable smooth scrolling with containment */
+ion-content {
+  contain: size layout style;
+}
+
+/* Optimize image rendering */
+img {
+  will-change: auto;
+  transform: translateZ(0);
+}
+
+/* For reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -7,7 +7,12 @@ import { defineConfig } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      // Enable Fast Refresh for development
+      fastRefresh: true,
+      // Use automatic JSX runtime (React 17+)
+      jsxRuntime: 'automatic',
+    }),
     legacy()
   ],
   build: {
@@ -33,7 +38,13 @@ export default defineConfig({
       }
     },
     // Increase chunk size warning limit for better splitting
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Target modern browsers for smaller bundles
+    target: 'es2020',
+    // Optimize CSS
+    cssMinify: true,
+    // Enable source maps only for debugging (disable in production)
+    sourcemap: false
   },
   test: {
     globals: true,

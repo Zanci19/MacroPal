@@ -58,13 +58,16 @@ type LocalNotificationsPlugin = {
 
 const LocalNotifications = registerPlugin<LocalNotificationsPlugin>("LocalNotifications");
 
-const normalizeTime = (value: string | null | undefined) => {
+const normalizeTime = (value: string | string[] | null | undefined): string => {
   if (!value) return "";
-  if (value.includes("T")) {
-    const time = value.split("T")[1];
+  // Handle array case - take first value
+  const stringValue = Array.isArray(value) ? value[0] : value;
+  if (!stringValue) return "";
+  if (stringValue.includes("T")) {
+    const time = stringValue.split("T")[1];
     return time ? time.slice(0, 5) : "";
   }
-  return value.slice(0, 5);
+  return stringValue.slice(0, 5);
 };
 
 const parseTime = (value: string) => {
