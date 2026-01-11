@@ -16,6 +16,7 @@ import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useHistory, useLocation } from "react-router-dom";
+import type { RouteComponentProps } from "react-router-dom";
 import {
   homeOutline,
   home,
@@ -89,10 +90,7 @@ const RouteLoader: React.FC = () => (
 );
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
-const LazyRoute: React.FC<{ component: React.ComponentType<any> }> = ({ 
-  component: Component, 
-  ...props 
-}) => (
+const LazyRoute = ({ component: Component, ...props }: any) => (
   <Suspense fallback={<RouteLoader />}>
     <Component {...props} />
   </Suspense>
