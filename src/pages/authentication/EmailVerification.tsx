@@ -1,0 +1,163 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  IonButton,
+  IonContent,
+  IonHeader,
+  IonPage,
+  IonSpinner,
+  IonText,
+  IonTitle,
+  IonToast,
+  IonToolbar,
+} from "@ionic/react";
+import { useHistory } from "react-router-dom";
+import { sendEmailVerification } from "firebase/auth";
+import { auth, trackEvent } from "../../firebase";
+import "./EmailVerification.css";
+
+const EmailVerification: React.FC = () => {
+  const history = useHistory();
+  const [checking, setChecking] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    color?: string;
+  }>({
+    show: false,
+    message: "",
+    color: "success",
+  });
+
+  const userEmail = useMemo(() => auth.currentUser?.email ?? null, []);
+
+  const showToast = (
+    message: string,
+    color: "success" | "danger" | "warning" = "danger"
+  ) => setToast({ show: true, message, color });
+
+  const checkVerification = useCallback(
+    async (silent = false) => {
+      const user = auth.currentUser;
+      if (!user) {
+        history.replace("/login");
+        return;
+      }
+
+      if (!silent) {
+        setChecking(true);
+      }
+
+      try {
+        await user.reload();
+        if (user.emailVerified) {
+          trackEvent("verification_email_confirmed", { uid: user.uid });
+          history.replace("/onboarding-profile");
+          return;
+        }
+        if (!silent) {
+          showToast("Still waiting on email verification.", "warning");
+        }
+      } catch (error: any) {
+        if (!silent) {
+          showToast(
+            error?.message || "Could not check verification status.",
+            "danger"
+          );
+        }
+      } finally {
+        if (!silent) {
+          setChecking(false);
+        }
+      }
+    },
+    [history]
+  );
+
+  const resendVerification = async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      history.replace("/login");
+      return;
+    }
+
+    setChecking(true);
+    try {
+      await sendEmailVerification(user);
+      trackEvent("verification_email_resent", { uid: user.uid });
+      showToast("Verification email resent.", "success");
+    } catch (error: any) {
+      showToast(error?.message || "Could not resend verification email.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!auth.currentUser) {
+      history.replace("/login");
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void checkVerification(true);
+    }, 8000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [checkVerification, history]);
+
+  return (
+    <IonPage>
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Verify your email</IonTitle>
+        </IonToolbar>
+      </IonHeader>
+      <IonContent className="ion-padding verification-page">
+        <div className="verification-card">
+          <IonText className="verification-title">
+            <h2>We sent you a verification email</h2>
+          </IonText>
+          <IonText color="medium">
+            <p>
+              {userEmail
+                ? `Check ${userEmail} and click the link to verify your account.`
+                : "Check your inbox and click the link to verify your account."}
+            </p>
+          </IonText>
+
+          <div className="verification-actions">
+            <IonButton expand="block" onClick={() => checkVerification()}>
+              {checking ? <IonSpinner name="dots" /> : "I've verified"}
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="outline"
+              onClick={resendVerification}
+              disabled={checking}
+            >
+              Resend email
+            </IonButton>
+          </div>
+
+          <IonText color="medium" className="verification-hint">
+            <p>
+              We’ll keep checking automatically while this screen is open.
+            </p>
+          </IonText>
+        </div>
+
+        <IonToast
+          isOpen={toast.show}
+          onDidDismiss={() => setToast((s) => ({ ...s, show: false }))}
+          message={toast.message}
+          color={toast.color}
+          duration={2400}
+        />
+      </IonContent>
+    </IonPage>
+  );
+};
+
+export default EmailVerification;

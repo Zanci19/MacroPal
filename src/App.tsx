@@ -31,6 +31,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 import Login from "./pages/authentication/Login";
 import Register from "./pages/authentication/Register";
+import EmailVerification from "./pages/authentication/EmailVerification";
 import AddFood from "./pages/AddFood";
 import SetupProfile from "./pages/SetupProfile";
 import OnboardingProfile from "./pages/OnboardingProfile";
@@ -460,6 +461,7 @@ const App: React.FC = () => {
             <IonRouterOutlet id="root">
               <Route exact path="/login" component={Login} />
               <Route exact path="/register" component={Register} />
+              <Route exact path="/verify-email" component={EmailVerification} />
               <Route exact path="/add-food" component={AddFood} />
               <Route exact path="/onboarding-terms" component={OnboardingTerms} />
               <Route exact path="/onboarding-profile" component={OnboardingProfile} />
