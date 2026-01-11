@@ -14,6 +14,7 @@ type SocialLoginPlugin = {
       scopes?: string[];
     };
   }) => Promise<Record<string, any>>;
+  logout?: () => Promise<void>;
 };
 
 const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
@@ -58,33 +59,60 @@ const getTokenValue = (
 export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
   await initializeSocialLogin();
 
-  const response = await SocialLogin.login({
-    provider: "google",
-    options: {
-      scopes: ["profile", "email"],
-    },
-  });
+  const loginWithTokens = async () => {
+    const response = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["profile", "email"],
+      },
+    });
 
-  const candidates = [
-    response,
-    response?.result,
-    response?.response,
-    response?.data,
-    response?.result?.authentication,
-    response?.authentication,
-  ];
+    const candidates = [
+      response,
+      response?.result,
+      response?.response,
+      response?.data,
+      response?.result?.authentication,
+      response?.authentication,
+    ];
 
-  const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
-  const accessToken = getTokenValue(candidates, ["accessToken", "access_token"]);
+    const idToken = getTokenValue(candidates, ["idToken", "id_token"]);
+    const accessToken = getTokenValue(candidates, [
+      "accessToken",
+      "access_token",
+    ]);
 
-  if (!idToken && !accessToken) {
-    throw new Error("Google sign-in did not return an auth token.");
+    if (!idToken && !accessToken) {
+      throw new Error("Google sign-in did not return an auth token.");
+    }
+
+    const credential = GoogleAuthProvider.credential(
+      idToken ?? undefined,
+      accessToken ?? undefined
+    );
+
+    return signInWithCredential(auth, credential);
+  };
+
+  try {
+    return await loginWithTokens();
+  } catch (err: any) {
+    const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
+    const message = String(err?.message ?? "").toLowerCase();
+    const isReauthFailure =
+      code === 16 ||
+      code === "16" ||
+      message.includes("account reauth failed") ||
+      message.includes("reauth");
+
+    if (!isReauthFailure) {
+      throw err;
+    }
+
+    if (typeof SocialLogin.logout === "function") {
+      await SocialLogin.logout();
+    }
+
+    return loginWithTokens();
   }
-
-  const credential = GoogleAuthProvider.credential(
-    idToken ?? undefined,
-    accessToken ?? undefined
-  );
-
-  return signInWithCredential(auth, credential);
 };
