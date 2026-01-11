@@ -52,6 +52,20 @@
   height: 140px;
   object-fit: contain;
   margin-bottom: 0.5rem;
+  filter: drop-shadow(0 0 24px rgba(53, 123, 228, 0.6)) 
+          drop-shadow(0 0 48px rgba(79, 140, 248, 0.4));
+  animation: logo-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes logo-glow {
+  from {
+    filter: drop-shadow(0 0 24px rgba(53, 123, 228, 0.6)) 
+            drop-shadow(0 0 48px rgba(79, 140, 248, 0.4));
+  }
+  to {
+    filter: drop-shadow(0 0 32px rgba(53, 123, 228, 0.8)) 
+            drop-shadow(0 0 64px rgba(79, 140, 248, 0.6));
+  }
 }
 
 .start-title {

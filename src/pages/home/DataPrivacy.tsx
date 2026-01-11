@@ -12,12 +12,16 @@ import {
   IonTitle,
   IonToolbar,
   IonToast,
+  IonAlert,
+  IonInput,
+  IonText,
 } from "@ionic/react";
-import { analyticsOutline, shieldCheckmarkOutline, trashOutline } from "ionicons/icons";
+import { analyticsOutline, shieldCheckmarkOutline, trashOutline, warningOutline } from "ionicons/icons";
 import { useHistory } from "react-router";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 import { shareOrDownload } from "../../utils/exportUtils";
+import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "firebase/auth";
 
 const DataPrivacy: React.FC = () => {
   const history = useHistory();
@@ -27,6 +31,12 @@ const DataPrivacy: React.FC = () => {
     message: "",
     color: "success",
   });
+  
+  const [showDeleteStep1, setShowDeleteStep1] = useState(false);
+  const [showDeleteStep2, setShowDeleteStep2] = useState(false);
+  const [password, setPassword] = useState("");
+  const [usernameConfirm, setUsernameConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const exportFullData = async () => {
     const user = auth.currentUser;
@@ -95,6 +105,69 @@ const DataPrivacy: React.FC = () => {
     }
   };
 
+  const handleDeleteStep1 = () => {
+    setPassword("");
+    setUsernameConfirm("");
+    setShowDeleteStep1(true);
+  };
+
+  const handleDeleteStep2 = async () => {
+    const user = auth.currentUser;
+    if (!user || !user.email) {
+      setToast({ open: true, message: "No user logged in.", color: "danger" });
+      return;
+    }
+
+    // Verify password
+    try {
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      
+      // Password correct, proceed to step 2
+      setShowDeleteStep1(false);
+      setShowDeleteStep2(true);
+    } catch (e: any) {
+      setToast({
+        open: true,
+        message: "Incorrect password. Please try again.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleDeleteFinal = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const expectedUsername = user.displayName || user.email || "DELETE";
+    if (usernameConfirm.trim() !== expectedUsername) {
+      setToast({
+        open: true,
+        message: "Username does not match. Please type it exactly as shown.",
+        color: "danger",
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await deleteUser(user);
+      setToast({ open: true, message: "Account deleted.", color: "success" });
+      setTimeout(() => {
+        history.replace("/login");
+      }, 1500);
+    } catch (e: any) {
+      setDeleting(false);
+      setToast({
+        open: true,
+        message:
+          e?.message ||
+          "Deletion failed. You may need to log out and back in, then try again.",
+        color: "danger",
+      });
+    }
+  };
+
   return (
     <IonPage>
       <IonHeader>
@@ -122,19 +195,23 @@ const DataPrivacy: React.FC = () => {
         </IonButton>
 
         <IonItem lines="full">
-          <IonIcon slot="start" icon={trashOutline} />
+          <IonIcon slot="start" icon={warningOutline} color="danger" />
           <IonLabel>
-            <h2>Delete your account</h2>
-            <p>Remove your account and all stored data permanently.</p>
+            <h2>Account deletion</h2>
+            <p>Permanently delete your account and all stored data.</p>
+            <IonText color="danger" style={{ display: "block", marginTop: 8, fontWeight: 600 }}>
+              ⚠️ This CANNOT be undone
+            </IonText>
           </IonLabel>
         </IonItem>
         <IonButton
           expand="block"
           color="danger"
           className="ion-margin-bottom"
-          onClick={() => history.push("/app/settings")}
+          onClick={handleDeleteStep1}
         >
-          Go to account deletion
+          <IonIcon slot="start" icon={trashOutline} />
+          Delete my account
         </IonButton>
 
         <IonItem lines="full">
@@ -163,6 +240,82 @@ const DataPrivacy: React.FC = () => {
             </p>
           </IonLabel>
         </IonItem>
+        
+        <IonAlert
+          isOpen={showDeleteStep1}
+          header="Confirm your password"
+          message="To delete your account, first enter your password."
+          inputs={[
+            {
+              name: "password",
+              type: "password",
+              placeholder: "Your password",
+            },
+          ]}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setShowDeleteStep1(false);
+                setPassword("");
+              },
+            },
+            {
+              text: "Next",
+              handler: (data: any) => {
+                setPassword(data?.password || "");
+                handleDeleteStep2();
+                return false; // Prevent auto-dismiss
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            if (!showDeleteStep2) {
+              setShowDeleteStep1(false);
+              setPassword("");
+            }
+          }}
+        />
+
+        <IonAlert
+          isOpen={showDeleteStep2}
+          header="Type your username to confirm"
+          message={`To permanently delete your MacroPal account, type: "${auth.currentUser?.displayName || auth.currentUser?.email || "DELETE"}"`}
+          inputs={[
+            {
+              name: "username",
+              type: "text",
+              placeholder: auth.currentUser?.displayName || auth.currentUser?.email || "DELETE",
+            },
+          ]}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setShowDeleteStep2(false);
+                setPassword("");
+                setUsernameConfirm("");
+              },
+            },
+            {
+              text: deleting ? "Deleting..." : "Delete Forever",
+              role: "destructive",
+              handler: (data: any) => {
+                setUsernameConfirm(data?.username || "");
+                handleDeleteFinal();
+                return false; // Prevent auto-dismiss until deletion completes
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setShowDeleteStep2(false);
+            setPassword("");
+            setUsernameConfirm("");
+          }}
+        />
+
         <IonToast
           isOpen={toast.open}
           onDidDismiss={() => setToast((prev) => ({ ...prev, open: false }))}
