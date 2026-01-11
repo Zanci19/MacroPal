@@ -8,8 +8,8 @@
       "type": "image/x-icon"
     },
     {
-      "src": "assets/icons/icon-512.png",
-      "type": "image/png",
+      "src": "assets/icons/icon-512.webp",
+      "type": "image/webp",
       "sizes": "512x512",
       "purpose": "maskable"
     }
