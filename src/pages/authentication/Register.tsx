@@ -266,6 +266,7 @@ const Register: React.FC = () => {
       }
     } catch (err: any) {
       const code = err?.code || "unknown";
+      const message = typeof err?.message === "string" ? err.message : "";
       trackEvent("register_google_error", { code });
       if (code === "auth/invalid-credential") {
         showToast(
@@ -293,6 +294,10 @@ const Register: React.FC = () => {
       }
       if (code === "social_login_provider_error") {
         showToast("Google sign-up failed. Please try again.");
+        return;
+      }
+      if (message) {
+        showToast(message);
         return;
       }
       showToast(handleError("register", err));
