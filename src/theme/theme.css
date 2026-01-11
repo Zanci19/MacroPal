@@ -246,7 +246,7 @@ ion-tab-bar {
   transition: background 0.3s ease, box-shadow 0.3s ease;
   /* Handle Android navigation bar overlap - supports both approaches */
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
-  padding-bottom: max(var(--safe-area-inset-bottom), env(safe-area-inset-bottom, 0px));
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
 }
 
 body.dark ion-tab-bar,
