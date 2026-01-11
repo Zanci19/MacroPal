@@ -185,6 +185,8 @@ const ProgressRing: React.FC<{
   );
 });
 
+ProgressRing.displayName = 'ProgressRing';
+
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
