@@ -216,16 +216,6 @@ ion-textarea:focus-within {
   border-color: var(--mp-primary);
 }
 
-ion-datetime {
-  --background: var(--mp-surface);
-  --title-color: var(--mp-text);
-  --calendar-day-color: var(--mp-text);
-  --calendar-day-color-disabled: var(--mp-text-muted);
-  --calendar-day-color-adjacent: var(--mp-text-muted);
-  --time-color: var(--mp-text);
-  color: var(--mp-text);
-}
-
 ion-item {
   --background: var(--mp-surface);
   --border-color: var(--mp-border);
