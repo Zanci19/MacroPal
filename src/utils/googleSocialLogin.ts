@@ -102,15 +102,18 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     const isReauthFailure =
       code === 16 ||
       code === "16" ||
-      message.includes("account reauth failed") ||
-      message.includes("reauth");
+      message.includes("account reauth failed");
 
     if (!isReauthFailure) {
       throw err;
     }
 
     if (typeof SocialLogin.logout === "function") {
-      await SocialLogin.logout();
+      try {
+        await SocialLogin.logout();
+      } catch (logoutError) {
+        console.warn("[googleSocialLogin] logout failed", logoutError);
+      }
     }
 
     return loginWithTokens();
