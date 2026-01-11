@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { enableIndexedDbPersistence, initializeFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 import {
   getAnalytics,
   isSupported,
@@ -24,6 +25,7 @@ export const auth = getAuth(app);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
+export const storage = getStorage(app);
 
 if (typeof window !== "undefined") {
   enableIndexedDbPersistence(db).catch((err) => {
