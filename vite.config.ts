@@ -8,8 +8,6 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [
     react({
-      // Enable Fast Refresh for development
-      fastRefresh: true,
       // Use automatic JSX runtime (React 17+)
       jsxRuntime: 'automatic',
     }),
