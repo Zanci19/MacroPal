@@ -12,6 +12,9 @@ type SocialLoginPlugin = {
     provider: "google";
     options?: {
       scopes?: string[];
+      filterByAuthorizedAccounts?: boolean;
+      autoSelectEnabled?: boolean;
+      forceRefreshToken?: boolean;
     };
   }) => Promise<Record<string, any>>;
   logout?: () => Promise<void>;
@@ -73,6 +76,9 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       provider: "google",
       options: {
         scopes: ["profile", "email"],
+        filterByAuthorizedAccounts: false,
+        autoSelectEnabled: false,
+        forceRefreshToken: true,
       },
     });
 
