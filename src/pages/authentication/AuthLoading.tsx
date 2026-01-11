@@ -8,6 +8,7 @@ import {
   IonToolbar,
   IonTitle,
   IonButton,
+  IonProgressBar,
 } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { auth, db } from "../../firebase";
@@ -18,6 +19,7 @@ const AuthLoading: React.FC = () => {
   const history = useHistory();
   const [message, setMessage] = useState("Checking your account…");
   const [timedOut, setTimedOut] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     // Check offline status immediately
@@ -26,8 +28,17 @@ const AuthLoading: React.FC = () => {
       return;
     }
 
+    // Simulate progress for better UX feedback
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 0.9) return prev; // Cap at 90% until actual completion
+        return prev + 0.1;
+      });
+    }, 800);
+
     // Set a timeout to prevent infinite loading on slow connections
     const timeoutId = setTimeout(() => {
+      clearInterval(progressInterval);
       setTimedOut(true);
       setMessage("Taking longer than usual. Please check your connection…");
     }, 10000); // 10 second timeout
@@ -37,6 +48,7 @@ const AuthLoading: React.FC = () => {
 
       if (!user) {
         clearTimeout(timeoutId);
+        clearInterval(progressInterval);
         setMessage("You're not logged in. Sending you to login…");
         setTimeout(() => history.replace("/login"), 1500);
         return;
@@ -44,16 +56,20 @@ const AuthLoading: React.FC = () => {
 
       try {
         setMessage("Loading your MacroPal profile…");
+        setProgress(0.3);
 
         const userRef = doc(db, "users", user.uid);
         const snap = await getDoc(userRef);
 
         clearTimeout(timeoutId);
+        clearInterval(progressInterval);
+        setProgress(0.6);
 
         let targetRoute = "/onboarding-profile";
 
         if (snap.exists()) {
           setMessage("Checking your profile details…");
+          setProgress(0.8);
 
           const data: any = snap.data();
           const p = data.profile;
@@ -80,6 +96,7 @@ const AuthLoading: React.FC = () => {
           }
         } else {
           setMessage("Creating your MacroPal profile…");
+          setProgress(0.7);
 
           await setDoc(
             userRef,
@@ -96,9 +113,11 @@ const AuthLoading: React.FC = () => {
           setMessage("Profile created. Please review the terms…");
         }
 
+        setProgress(1);
         history.replace(targetRoute);
       } catch (e) {
         clearTimeout(timeoutId);
+        clearInterval(progressInterval);
         console.error("AuthLoading error:", e);
 
         if (!navigator.onLine) {
@@ -116,12 +135,14 @@ const AuthLoading: React.FC = () => {
     // Listen for offline events
     const handleOffline = () => {
       clearTimeout(timeoutId);
+      clearInterval(progressInterval);
       history.replace("/offline");
     };
 
     window.addEventListener("offline", handleOffline);
     return () => {
       clearTimeout(timeoutId);
+      clearInterval(progressInterval);
       window.removeEventListener("offline", handleOffline);
     };
   }, [history]);
@@ -139,6 +160,31 @@ const AuthLoading: React.FC = () => {
           <IonText color={timedOut ? "warning" : "medium"}>
             <p style={{ marginTop: "1rem" }}>{message}</p>
           </IonText>
+          {!timedOut && (
+            <>
+              <IonProgressBar 
+                value={progress} 
+                style={{ 
+                  marginTop: "1rem", 
+                  width: "80%", 
+                  maxWidth: "300px",
+                  marginLeft: "auto",
+                  marginRight: "auto"
+                }}
+              />
+              <IonText 
+                color="medium" 
+                style={{ 
+                  marginTop: "0.5rem", 
+                  fontSize: "0.75rem", 
+                  opacity: 0.7,
+                  display: "block"
+                }}
+              >
+                {Math.round(progress * 100)}% • This may take longer on slow connections
+              </IonText>
+            </>
+          )}
           {timedOut && (
             <div style={{ marginTop: "1rem" }}>
               <IonButton onClick={() => history.replace("/login")}>

@@ -8,6 +8,7 @@ import {
   IonSpinner,
   IonText,
   IonButton,
+  IonProgressBar,
 } from "@ionic/react";
 import { useHistory } from "react-router";
 import { auth } from "../firebase";
@@ -118,6 +119,24 @@ const CheckLogin: React.FC = () => {
             style={{ marginTop: 12, display: "block" }}
           >
             Checking your account…
+          </IonText>
+          <IonProgressBar 
+            type="indeterminate" 
+            style={{ 
+              marginTop: "1rem", 
+              width: "80%", 
+              maxWidth: "300px" 
+            }}
+          />
+          <IonText 
+            color="medium" 
+            style={{ 
+              marginTop: "0.5rem", 
+              fontSize: "0.75rem", 
+              opacity: 0.7 
+            }}
+          >
+            This may take longer on slow connections
           </IonText>
         </>
       );
