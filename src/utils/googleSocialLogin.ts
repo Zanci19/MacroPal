@@ -116,6 +116,9 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
       }
     }
 
+    initPromise = null;
+    await initializeSocialLogin();
+
     return loginWithTokens();
   }
 };
