@@ -89,7 +89,7 @@ const RouteLoader: React.FC = () => (
 );
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
-const LazyRoute: React.FC<{ component: React.ComponentType<any>; [key: string]: any }> = ({ 
+const LazyRoute: React.FC<{ component: React.ComponentType<any> }> = ({ 
   component: Component, 
   ...props 
 }) => (
@@ -109,9 +109,15 @@ const LEAVE_MIN_OPACITY = 0.4;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
-// Detect reduced motion preference
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const ANIMATION_DURATION_MS = prefersReducedMotion ? REDUCED_ANIMATION_DURATION_MS : DEFAULT_ANIMATION_DURATION_MS;
+// Detect reduced motion preference safely
+const getPrefersReducedMotion = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
+  ? REDUCED_ANIMATION_DURATION_MS 
+  : DEFAULT_ANIMATION_DURATION_MS;
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
