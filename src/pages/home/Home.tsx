@@ -150,7 +150,7 @@ const ProgressRing: React.FC<{
   size?: number;
   stroke?: number;
   progress: number;
-}> = ({ size = 64, stroke = 8, progress }) => {
+}> = React.memo(({ size = 64, stroke = 8, progress }) => {
   const r = (size - stroke) / 2;
   const C = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress || 0));
@@ -183,7 +183,7 @@ const ProgressRing: React.FC<{
       </div>
     </div>
   );
-};
+});
 
 const Home: React.FC = () => {
   const history = useHistory();

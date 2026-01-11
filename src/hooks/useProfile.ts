@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
@@ -54,5 +54,5 @@ export function useProfile() {
     };
   }, []);
 
-  return { uid, profile, loading };
+  return useMemo(() => ({ uid, profile, loading }), [uid, profile, loading]);
 }

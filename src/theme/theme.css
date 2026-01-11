@@ -368,3 +368,25 @@ body.macropal-theme ion-alert .alert-button {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--mp-text-muted);
 }
+
+/* Performance optimizations: CSS containment for layout performance */
+ion-page,
+ion-content,
+ion-card,
+ion-item,
+ion-list,
+ion-toolbar,
+ion-tab-bar {
+  contain: layout style paint;
+}
+
+/* Remove containment for interactive elements */
+ion-button,
+ion-input,
+ion-textarea,
+ion-select,
+ion-toggle,
+ion-checkbox,
+ion-radio {
+  contain: none;
+}

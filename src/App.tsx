@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, Suspense, lazy } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -7,6 +7,7 @@ import {
   IonTabButton,
   IonIcon,
   IonLabel,
+  IonSpinner,
   setupIonicReact,
   createAnimation,
   useIonRouter,
@@ -29,28 +30,29 @@ import {
 } from "ionicons/icons";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
-import Login from "./pages/authentication/Login";
-import Register from "./pages/authentication/Register";
-import EmailVerification from "./pages/authentication/EmailVerification";
-import AddFood from "./pages/AddFood";
-import SetupProfile from "./pages/SetupProfile";
-import OnboardingProfile from "./pages/OnboardingProfile";
-import OnboardingTerms from "./pages/OnboardingTerms";
-import CheckLogin from "./pages/CheckLogin";
-import Start from "./pages/Start";
-import ResetPassword from "./pages/ResetPassword";
-import AuthLoading from "./pages/authentication/AuthLoading";
-import Offline from "./pages/Offline";
-import Home from "./pages/home/Home";
-import Analytics from "./pages/home/Analytics";
-import Settings from "./pages/home/Settings";
-import EnergyNeeds from "./pages/home/EnergyNeeds";
-import Units from "./pages/home/Units";
-import Reminders from "./pages/home/Reminders";
-import DataPrivacy from "./pages/home/DataPrivacy";
-import Planner from "./pages/home/Planner";
-import Workout from "./pages/home/Workout";
-import ScanBarcode from "./pages/ScanBarcode";
+// Lazy load route components
+const Login = lazy(() => import("./pages/authentication/Login"));
+const Register = lazy(() => import("./pages/authentication/Register"));
+const EmailVerification = lazy(() => import("./pages/authentication/EmailVerification"));
+const AddFood = lazy(() => import("./pages/AddFood"));
+const SetupProfile = lazy(() => import("./pages/SetupProfile"));
+const OnboardingProfile = lazy(() => import("./pages/OnboardingProfile"));
+const OnboardingTerms = lazy(() => import("./pages/OnboardingTerms"));
+const CheckLogin = lazy(() => import("./pages/CheckLogin"));
+const Start = lazy(() => import("./pages/Start"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const AuthLoading = lazy(() => import("./pages/authentication/AuthLoading"));
+const Offline = lazy(() => import("./pages/Offline"));
+const Home = lazy(() => import("./pages/home/Home"));
+const Analytics = lazy(() => import("./pages/home/Analytics"));
+const Settings = lazy(() => import("./pages/home/Settings"));
+const EnergyNeeds = lazy(() => import("./pages/home/EnergyNeeds"));
+const Units = lazy(() => import("./pages/home/Units"));
+const Reminders = lazy(() => import("./pages/home/Reminders"));
+const DataPrivacy = lazy(() => import("./pages/home/DataPrivacy"));
+const Planner = lazy(() => import("./pages/home/Planner"));
+const Workout = lazy(() => import("./pages/home/Workout"));
+const ScanBarcode = lazy(() => import("./pages/ScanBarcode"));
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
@@ -70,15 +72,36 @@ import "./theme/variables.css";
 import { trackEvent } from "./firebase";
 import UpdateGate from "./UpdateGate";
 
+// Loading fallback component
+const RouteLoader: React.FC = () => (
+  <div style={{
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "1rem"
+  }}>
+    <IonSpinner name="crescent" />
+  </div>
+);
+
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
-const ANIMATION_DURATION_MS = 350;
+const DEFAULT_ANIMATION_DURATION_MS = 350;
+const REDUCED_ANIMATION_DURATION_MS = 150;
 const ENTER_MIN_OPACITY = 0.2;
 const LEAVE_TRANSLATE_PERCENT = 30;
 const LEAVE_MIN_OPACITY = 0.4;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
+
+// Detect reduced motion preference
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ANIMATION_DURATION_MS = prefersReducedMotion ? REDUCED_ANIMATION_DURATION_MS : DEFAULT_ANIMATION_DURATION_MS;
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
@@ -179,10 +202,11 @@ const TabsShell: React.FC = () => {
         bottom: "0",
         width: "100%",
         height: "100%",
+        willChange: "transform",
       })
-      .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
+      .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
       .beforeRemoveClass("ion-page-invisible")
-      .fromTo("transform", `translateX(${directionFactor * 100}%)`, "translateX(0)")
+      .fromTo("transform", `translateX(${directionFactor * 100}%) translateZ(0)`, "translateX(0) translateZ(0)")
       //.fromTo("opacity", enteringStartOpacity, 1);
 
     const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
@@ -201,9 +225,10 @@ const TabsShell: React.FC = () => {
           bottom: "0",
           width: "100%",
           height: "100%",
+          willChange: "transform, opacity",
         })
-        .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height"])
-        .fromTo("transform", "translateX(0)", `translateX(${leaveOffset}%)`)
+        .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
+        .fromTo("transform", "translateX(0) translateZ(0)", `translateX(${leaveOffset}%) translateZ(0)`)
         .fromTo("opacity", 1, leavingEndOpacity);
     }
 
@@ -267,16 +292,18 @@ const TabsShell: React.FC = () => {
   return (
     <IonTabs>
       <IonRouterOutlet id="tabs" animation={tabAnimation}>
-        <Route exact path="/app/analytics" component={Analytics} />
-        <Route exact path="/app/planner" component={Planner} />
-        <Route exact path="/app/home" component={Home} />
-        <Route exact path="/app/workout" component={Workout} />
-        <Route exact path="/app/settings" component={Settings} />
-        <Route exact path="/app/energy-needs" component={EnergyNeeds} />
-        <Route exact path="/app/units" component={Units} />
-        <Route exact path="/app/reminders" component={Reminders} />
-        <Route exact path="/app/data-privacy" component={DataPrivacy} />
-        <Redirect exact from="/app" to="/app/home" />
+        <Suspense fallback={<RouteLoader />}>
+          <Route exact path="/app/analytics" component={Analytics} />
+          <Route exact path="/app/planner" component={Planner} />
+          <Route exact path="/app/home" component={Home} />
+          <Route exact path="/app/workout" component={Workout} />
+          <Route exact path="/app/settings" component={Settings} />
+          <Route exact path="/app/energy-needs" component={EnergyNeeds} />
+          <Route exact path="/app/units" component={Units} />
+          <Route exact path="/app/reminders" component={Reminders} />
+          <Route exact path="/app/data-privacy" component={DataPrivacy} />
+          <Redirect exact from="/app" to="/app/home" />
+        </Suspense>
       </IonRouterOutlet>
 
       <IonTabBar slot="bottom" className="mp-tabbar">
@@ -458,25 +485,27 @@ const App: React.FC = () => {
       <ErrorBoundary>
         <IonReactRouter>
           <UpdateGate>
-            <IonRouterOutlet id="root">
-              <Route exact path="/login" component={Login} />
-              <Route exact path="/register" component={Register} />
-              <Route exact path="/verify-email" component={EmailVerification} />
-              <Route exact path="/add-food" component={AddFood} />
-              <Route exact path="/onboarding-terms" component={OnboardingTerms} />
-              <Route exact path="/onboarding-profile" component={OnboardingProfile} />
-              <Route exact path="/setup-profile" component={SetupProfile} />
-              <Route exact path="/check-login" component={CheckLogin} />
-              <Route exact path="/start" component={Start} />
-              <Route exact path="/reset-password" component={ResetPassword} />
-              <Route exact path="/scan-barcode" component={ScanBarcode} />
-              <Route exact path="/auth-loading" component={AuthLoading} />
-              <Route exact path="/offline" component={Offline} />
+            <Suspense fallback={<RouteLoader />}>
+              <IonRouterOutlet id="root">
+                <Route exact path="/login" component={Login} />
+                <Route exact path="/register" component={Register} />
+                <Route exact path="/verify-email" component={EmailVerification} />
+                <Route exact path="/add-food" component={AddFood} />
+                <Route exact path="/onboarding-terms" component={OnboardingTerms} />
+                <Route exact path="/onboarding-profile" component={OnboardingProfile} />
+                <Route exact path="/setup-profile" component={SetupProfile} />
+                <Route exact path="/check-login" component={CheckLogin} />
+                <Route exact path="/start" component={Start} />
+                <Route exact path="/reset-password" component={ResetPassword} />
+                <Route exact path="/scan-barcode" component={ScanBarcode} />
+                <Route exact path="/auth-loading" component={AuthLoading} />
+                <Route exact path="/offline" component={Offline} />
 
-              <Route path="/app" component={TabsShell} />
+                <Route path="/app" component={TabsShell} />
 
-              <Redirect exact from="/" to="/check-login" />
-            </IonRouterOutlet>
+                <Redirect exact from="/" to="/check-login" />
+              </IonRouterOutlet>
+            </Suspense>
           </UpdateGate>
         </IonReactRouter>
       </ErrorBoundary>
