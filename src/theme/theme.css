@@ -219,6 +219,10 @@ ion-textarea:focus-within {
 ion-datetime {
   --background: var(--mp-surface);
   --title-color: var(--mp-text);
+  --calendar-day-color: var(--mp-text);
+  --calendar-day-color-disabled: var(--mp-text-muted);
+  --calendar-day-color-adjacent: var(--mp-text-muted);
+  --time-color: var(--mp-text);
   color: var(--mp-text);
 }
 
