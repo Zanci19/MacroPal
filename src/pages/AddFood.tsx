@@ -3194,15 +3194,28 @@ const AddFood: React.FC = () => {
                             </div>
                           )}
 
-                          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              marginTop: 12,
+                              justifyContent: photoPreview ? "stretch" : "center",
+                            }}
+                          >
                             <IonButton
                               expand="block"
                               onClick={() => photoInputRef.current?.click()}
+                              style={{ flex: photoPreview ? 1 : "0 1 220px" }}
                             >
                               {photoPreview ? "Replace photo" : "Add photo"}
                             </IonButton>
                             {photoPreview && (
-                              <IonButton expand="block" fill="outline" onClick={clearPhoto}>
+                              <IonButton
+                                expand="block"
+                                fill="outline"
+                                onClick={clearPhoto}
+                                style={{ flex: 1 }}
+                              >
                                 Remove
                               </IonButton>
                             )}

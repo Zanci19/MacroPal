@@ -176,11 +176,11 @@ const OnboardingProfile: React.FC = () => {
         setGoal((p.goal as Goal) || "maintain");
         setGender((p.gender as Gender) || null);
         setActivity((p.activity as Activity) || "sedentary");
-        setProfilePhotoUrl(
+        const storedPhoto =
           typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
             ? (p as { photoUrl?: string }).photoUrl!
-            : null
-        );
+            : null;
+        setProfilePhotoUrl(storedPhoto ?? user.photoURL ?? null);
       } catch (e) {
         console.error("Error loading profile:", e);
         trackEvent("onboarding_profile_load_error", {
