@@ -187,6 +187,227 @@ const ProgressRing: React.FC<{
 
 ProgressRing.displayName = 'ProgressRing';
 
+// Memoized meal card component to prevent unnecessary re-renders
+const MealCard: React.FC<{
+  meal: MealKey;
+  items: DiaryEntry[];
+  isCollapsed: boolean;
+  mealTotals: Macros;
+  mealIcon: string;
+  onToggleCollapse: () => void;
+  onAddFood: () => void;
+  onMoreOptions: () => void;
+  onStartLongPress: (meal: MealKey, index: number, name: string) => void;
+  onStopLongPress: () => void;
+  onEditItem: (meal: MealKey, index: number, item: DiaryEntry) => void;
+}> = React.memo(({
+  meal,
+  items,
+  isCollapsed,
+  mealTotals,
+  mealIcon: mealIconProp,
+  onToggleCollapse,
+  onAddFood,
+  onMoreOptions,
+  onStartLongPress,
+  onStopLongPress,
+  onEditItem,
+}) => {
+  const hasItems = items.length > 0;
+  const hasMealTotals =
+    mealTotals &&
+    (mealTotals.calories > 0 ||
+      mealTotals.carbs > 0 ||
+      mealTotals.protein > 0 ||
+      mealTotals.fat > 0);
+
+  const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
+
+  return (
+    <IonCard
+      className={`fs-meal ${!isCollapsed ? "is-open" : ""}`}
+    >
+      <IonCardHeader className="fs-meal__hdr">
+        <IonItem
+          lines="none"
+          className="fs-meal__row"
+          detail={false}
+          button
+          aria-expanded={!isCollapsed}
+          onClick={onToggleCollapse}
+        >
+          <IonIcon
+            slot="start"
+            className="fs-meal__icon"
+            icon={mealIconProp}
+            aria-hidden="true"
+          />
+
+          <div className="fs-meal__title">
+            <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+
+            {hasMealTotals && !isCollapsed && (
+              <div className="fs-meal__totals">
+                {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
+                {mealTotals.carbs.toFixed(0)} g · Protein{" "}
+                {mealTotals.protein.toFixed(0)} g · Fat{" "}
+                {mealTotals.fat.toFixed(0)} g
+              </div>
+            )}
+          </div>
+
+          <IonIcon
+            slot="end"
+            className="fs-meal__chevron"
+            icon={chevronDownOutline}
+            aria-hidden="true"
+          />
+
+          <IonButton
+            slot="end"
+            className="fs-meal__add"
+            fill="clear"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddFood();
+            }}
+            aria-label={`Add to ${meal}`}
+          >
+            <IonIcon icon={addCircleOutline} />
+          </IonButton>
+        </IonItem>
+      </IonCardHeader>
+
+      {!isCollapsed && (
+        <IonCardContent>
+          <IonButton
+            size="small"
+            fill="outline"
+            onClick={onMoreOptions}
+            style={{ marginBottom: 8 }}
+          >
+            More options
+          </IonButton>
+
+          {hasItems && (
+            <IonList>
+              {items.map((it, idx) => {
+                const t = it.total || {
+                  calories: 0,
+                  carbs: 0,
+                  protein: 0,
+                  fat: 0,
+                };
+                const kcal = Math.round(t.calories || 0);
+                const carbs =
+                  typeof t.carbs === "number" ? t.carbs : 0;
+                const protein =
+                  typeof t.protein === "number" ? t.protein : 0;
+                const fat =
+                  typeof t.fat === "number" ? t.fat : 0;
+
+                const sugar =
+                  typeof t.sugar === "number" ? t.sugar : null;
+                const fiber =
+                  typeof t.fiber === "number" ? t.fiber : null;
+                const satFat =
+                  typeof t.saturatedFat === "number"
+                    ? t.saturatedFat
+                    : null;
+                const salt =
+                  typeof t.salt === "number" ? t.salt : null;
+
+                const hasMicros =
+                  sugar !== null ||
+                  fiber !== null ||
+                  satFat !== null ||
+                  salt !== null;
+
+                return (
+                  <IonItem
+                    key={`${it.addedAt}-${idx}`}
+                    className="meal-item"
+                    button
+                    detail={false}
+                    onPointerDown={() => onStartLongPress(meal, idx, it.name)}
+                    onPointerUp={onStopLongPress}
+                    onPointerLeave={onStopLongPress}
+                    onPointerCancel={onStopLongPress}
+                    onClick={() => onEditItem(meal, idx, it)}
+                  >
+                    {it.photoUrl && (
+                      <IonThumbnail slot="start">
+                        <img src={it.photoUrl} alt={it.photoName || it.name} />
+                      </IonThumbnail>
+                    )}
+                    <IonLabel>
+                      <h2>
+                        {it.name}
+                        {it.brand ? ` · ${it.brand}` : ""}
+                      </h2>
+                      <p className="meal-item-macros">
+                        Carbs {carbs.toFixed(1)} g · Protein{" "}
+                        {protein.toFixed(1)} g · Fat{" "}
+                        {fat.toFixed(1)} g
+                      </p>
+                      {hasMicros && (
+                        <p className="meal-item-micros">
+                          {sugar !== null && (
+                            <span>Sugar {sugar.toFixed(1)} g</span>
+                          )}
+                          {fiber !== null && (
+                            <span>
+                              {" "}
+                              · Fiber {fiber.toFixed(1)} g
+                            </span>
+                          )}
+                          {satFat !== null && (
+                            <span>
+                              {" "}
+                              · Sat. fat {satFat.toFixed(1)} g
+                            </span>
+                          )}
+                          {salt !== null && (
+                            <span>
+                              {" "}
+                              · Salt {salt.toFixed(1)} g
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </IonLabel>
+
+                    <div className="kcal-badge" slot="end">
+                      {kcal} kcal
+                    </div>
+                  </IonItem>
+                );
+              })}
+            </IonList>
+          )}
+        </IonCardContent>
+      )}
+    </IonCard>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent unnecessary re-renders
+  return (
+    prevProps.meal === nextProps.meal &&
+    prevProps.isCollapsed === nextProps.isCollapsed &&
+    prevProps.items.length === nextProps.items.length &&
+    prevProps.mealTotals.calories === nextProps.mealTotals.calories &&
+    prevProps.mealTotals.carbs === nextProps.mealTotals.carbs &&
+    prevProps.mealTotals.protein === nextProps.mealTotals.protein &&
+    prevProps.mealTotals.fat === nextProps.mealTotals.fat &&
+    // Check if items array changed by comparing first and last items' addedAt
+    (prevProps.items.length === 0 || 
+      (prevProps.items[0]?.addedAt === nextProps.items[0]?.addedAt &&
+       prevProps.items[prevProps.items.length - 1]?.addedAt === nextProps.items[nextProps.items.length - 1]?.addedAt))
+  );
+});
+
+MealCard.displayName = 'MealCard';
+
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
@@ -570,7 +791,7 @@ const Home: React.FC = () => {
     );
 
     return { perMeal, day };
-  }, [dayData, dayDataSignature]);
+  }, [dayData]);
 
   const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
   const baseKcalGoal = caloriesNeeded ?? 0;
@@ -1498,8 +1719,12 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!summarySwiperRef.current) return;
-    summarySwiperRef.current.updateAutoHeight(300);
-    summarySwiperRef.current.update();
+    // Debounce Swiper updates to avoid excessive re-renders
+    const timeoutId = setTimeout(() => {
+      summarySwiperRef.current?.updateAutoHeight(300);
+      summarySwiperRef.current?.update();
+    }, 100);
+    return () => clearTimeout(timeoutId);
   }, [
     profile,
     caloriesNeeded,
@@ -1978,226 +2203,68 @@ const Home: React.FC = () => {
         {!loading &&
           MEALS.map((meal) => {
             const items = dayData[meal] || [];
-            const hasItems = items.length > 0;
             const isCollapsed = collapsedMeals[meal];
-
             const mealTotals = totals.perMeal[meal];
-            const hasMealTotals =
-              mealTotals &&
-              (mealTotals.calories > 0 ||
-                mealTotals.carbs > 0 ||
-                mealTotals.protein > 0 ||
-                mealTotals.fat > 0);
 
             return (
-              <IonCard
+              <MealCard
                 key={meal}
-                className={`fs-meal ${!isCollapsed ? "is-open" : ""}`}
-              >
-                <IonCardHeader className="fs-meal__hdr">
-                  <IonItem
-                    lines="none"
-                    className="fs-meal__row"
-                    detail={false}
-                    button
-                    aria-expanded={!isCollapsed}
-                    onClick={() => {
-                      setCollapsedMeals((prev) => ({
-                        ...prev,
-                        [meal]: !prev[meal],
-                      }));
-                    }}
-                  >
-                    <IonIcon
-                      slot="start"
-                      className="fs-meal__icon"
-                      icon={mealIcon[meal]}
-                      aria-hidden="true"
-                    />
+                meal={meal}
+                items={items}
+                isCollapsed={isCollapsed}
+                mealTotals={mealTotals}
+                mealIcon={mealIcon[meal]}
+                onToggleCollapse={() => {
+                  setCollapsedMeals((prev) => ({
+                    ...prev,
+                    [meal]: !prev[meal],
+                  }));
+                }}
+                onAddFood={() => {
+                  trackEvent("navigate_add_food", {
+                    uid,
+                    date: activeDateKey,
+                    meal,
+                    has_items: items.length > 0,
+                  });
+                  history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
+                }}
+                onMoreOptions={() => {
+                  setCopyMenuMeal(meal);
+                  trackEvent("meal_more_options_open", {
+                    uid,
+                    date: activeDateKey,
+                    meal,
+                  });
+                }}
+                onStartLongPress={startLongPress}
+                onStopLongPress={stopLongPress}
+                onEditItem={(meal, idx, it) => {
+                  if (longPressTriggeredRef.current) {
+                    longPressTriggeredRef.current = false;
+                    return;
+                  }
+                  trackEvent("meal_item_edit_via_add_food", {
+                    uid,
+                    date: activeDateKey,
+                    meal,
+                    index: idx,
+                    name: it.name,
+                  });
 
-                    {/* TITLE + TOTALS STACK */}
-                    <div className="fs-meal__title">
-                      <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
-
-                      {hasMealTotals && !isCollapsed && (
-                        <div className="fs-meal__totals">
-                          {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
-                          {mealTotals.carbs.toFixed(0)} g · Protein{" "}
-                          {mealTotals.protein.toFixed(0)} g · Fat{" "}
-                          {mealTotals.fat.toFixed(0)} g
-                        </div>
-                      )}
-                    </div>
-
-                    <IonIcon
-                      slot="end"
-                      className="fs-meal__chevron"
-                      icon={chevronDownOutline}
-                      aria-hidden="true"
-                    />
-
-                    <IonButton
-                      slot="end"
-                      className="fs-meal__add"
-                      fill="clear"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        trackEvent("navigate_add_food", {
-                          uid,
-                          date: activeDateKey,
-                          meal,
-                          has_items: hasItems,
-                        });
-                        history.push(`/add-food?meal=${meal}&date=${activeDateKey}`);
-                      }}
-                      aria-label={`Add to ${meal}`}
-                    >
-                      <IonIcon icon={addCircleOutline} />
-                    </IonButton>
-                  </IonItem>
-                </IonCardHeader>
-
-                {!isCollapsed && (
-                  <IonCardContent>
-                    <IonButton
-                      size="small"
-                      fill="outline"
-                      onClick={() => {
-                        setCopyMenuMeal(meal);
-                        trackEvent("meal_more_options_open", {
-                          uid,
-                          date: activeDateKey,
-                          meal,
-                        });
-                      }}
-                      style={{ marginBottom: 8 }}
-                    >
-                      More options
-                    </IonButton>
-
-                    {hasItems && (
-                      <IonList>
-                        {items.map((it, idx) => {
-                          const t = it.total || {
-                            calories: 0,
-                            carbs: 0,
-                            protein: 0,
-                            fat: 0,
-                          };
-                          const kcal = Math.round(t.calories || 0);
-                          const carbs =
-                            typeof t.carbs === "number" ? t.carbs : 0;
-                          const protein =
-                            typeof t.protein === "number" ? t.protein : 0;
-                          const fat =
-                            typeof t.fat === "number" ? t.fat : 0;
-
-                          const sugar =
-                            typeof t.sugar === "number" ? t.sugar : null;
-                          const fiber =
-                            typeof t.fiber === "number" ? t.fiber : null;
-                          const satFat =
-                            typeof t.saturatedFat === "number"
-                              ? t.saturatedFat
-                              : null;
-                          const salt =
-                            typeof t.salt === "number" ? t.salt : null;
-
-                          const hasMicros =
-                            sugar !== null ||
-                            fiber !== null ||
-                            satFat !== null ||
-                            salt !== null;
-
-                          return (
-                            <IonItem
-                              key={`${it.addedAt}-${idx}`}
-                              className="meal-item"
-                              button
-                              detail={false}
-                              onPointerDown={() => startLongPress(meal, idx, it.name)}
-                              onPointerUp={stopLongPress}
-                              onPointerLeave={stopLongPress}
-                              onPointerCancel={stopLongPress}
-                              onClick={() => {
-                                if (longPressTriggeredRef.current) {
-                                  longPressTriggeredRef.current = false;
-                                  return;
-                                }
-                                trackEvent("meal_item_edit_via_add_food", {
-                                  uid,
-                                  date: activeDateKey,
-                                  meal,
-                                  index: idx,
-                                  name: it.name,
-                                });
-
-                                history.push({
-                                  pathname: "/add-food",
-                                  search: `?meal=${meal}&date=${activeDateKey}`,
-                                  state: {
-                                    editEntry: {
-                                      meal,
-                                      index: idx,
-                                      item: it,
-                                    },
-                                  },
-                                });
-                              }}
-                            >
-                              {it.photoUrl && (
-                                <IonThumbnail slot="start">
-                                  <img src={it.photoUrl} alt={it.photoName || it.name} />
-                                </IonThumbnail>
-                              )}
-                              <IonLabel>
-                                <h2>
-                                  {it.name}
-                                  {it.brand ? ` · ${it.brand}` : ""}
-                                </h2>
-                                <p className="meal-item-macros">
-                                  Carbs {carbs.toFixed(1)} g · Protein{" "}
-                                  {protein.toFixed(1)} g · Fat{" "}
-                                  {fat.toFixed(1)} g
-                                </p>
-                                {hasMicros && (
-                                  <p className="meal-item-micros">
-                                    {sugar !== null && (
-                                      <span>Sugar {sugar.toFixed(1)} g</span>
-                                    )}
-                                    {fiber !== null && (
-                                      <span>
-                                        {" "}
-                                        · Fiber {fiber.toFixed(1)} g
-                                      </span>
-                                    )}
-                                    {satFat !== null && (
-                                      <span>
-                                        {" "}
-                                        · Sat. fat {satFat.toFixed(1)} g
-                                      </span>
-                                    )}
-                                    {salt !== null && (
-                                      <span>
-                                        {" "}
-                                        · Salt {salt.toFixed(1)} g
-                                      </span>
-                                    )}
-                                  </p>
-                                )}
-                              </IonLabel>
-
-                              <div className="kcal-badge" slot="end">
-                                {kcal} kcal
-                              </div>
-                            </IonItem>
-                          );
-                        })}
-                      </IonList>
-                    )}
-                  </IonCardContent>
-                )}
-              </IonCard>
+                  history.push({
+                    pathname: "/add-food",
+                    search: `?meal=${meal}&date=${activeDateKey}`,
+                    state: {
+                      editEntry: {
+                        meal,
+                        index: idx,
+                        item: it,
+                      },
+                    },
+                  });
+                }}
+              />
             );
           })}
 

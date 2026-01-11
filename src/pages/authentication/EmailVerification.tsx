@@ -11,7 +11,7 @@ import {
   IonToolbar,
 } from "@ionic/react";
 import { useHistory } from "react-router-dom";
-import { sendEmailVerification } from "firebase/auth";
+import { sendEmailVerification, signOut } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import "./EmailVerification.css";
 
@@ -92,6 +92,20 @@ const EmailVerification: React.FC = () => {
     }
   };
 
+  const handleBackToLogin = async () => {
+    try {
+      setChecking(true);
+      await signOut(auth);
+      trackEvent("verification_back_to_login");
+      history.replace("/login");
+    } catch (error: any) {
+      console.error("Error signing out:", error);
+      showToast(error?.message || "Could not sign out.", "danger");
+    } finally {
+      setChecking(false);
+    }
+  };
+
   useEffect(() => {
     if (!auth.currentUser) {
       history.replace("/login");
@@ -138,6 +152,15 @@ const EmailVerification: React.FC = () => {
               disabled={checking}
             >
               Resend email
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="clear"
+              onClick={handleBackToLogin}
+              disabled={checking}
+              color="medium"
+            >
+              Back to login
             </IonButton>
           </div>
 

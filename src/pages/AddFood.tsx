@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -33,7 +33,7 @@ import {
 
 import { Keyboard } from "@capacitor/keyboard";
 import { useLocation, useHistory } from "react-router";
-import { auth, db, trackEvent } from "../firebase";
+import { auth, db, storage, trackEvent } from "../firebase";
 import {
   doc,
   setDoc,
@@ -49,6 +49,7 @@ import {
   runTransaction,
   getDocs,
 } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 import { calendarOutline, starOutline, trashOutline } from "ionicons/icons";
 import {
@@ -832,7 +833,7 @@ const AddFood: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foodsSearch is intentionally excluded to prevent re-running on every render
   }, [location.search, history, meal, dateKey]);
 
-  const ensureResultsVisible = async () => {
+  const ensureResultsVisible = useCallback(async () => {
     const firstResult = results[0];
     const firstKey = firstResult?.code || firstResult?.product_name || null;
     const changed =
@@ -858,7 +859,7 @@ const AddFood: React.FC = () => {
     }
     prevResultsLengthRef.current = results.length;
     prevResultsKeyRef.current = firstKey;
-  };
+  }, [results]);
 
   useEffect(() => {
     if (!loading) {
@@ -1163,7 +1164,7 @@ const AddFood: React.FC = () => {
     trackEvent("recent_queries_cleared");
   };
 
-  const hideKeyboard = async () => {
+  const hideKeyboard = useCallback(async () => {
     try {
       await Keyboard.hide();
     } catch (err) {
@@ -1177,7 +1178,7 @@ const AddFood: React.FC = () => {
         console.warn("Input blur failed", err);
       }
     }
-  };
+  }, []);
 
   const foodsSearch = async (q: string, pageNumber = 1): Promise<number> => {
     const raw = (q || "").trim();
@@ -1506,7 +1507,7 @@ const AddFood: React.FC = () => {
     };
   };
 
-  const handlePhotoChange = (file?: File | null) => {
+  const handlePhotoChange = useCallback((file?: File | null) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -1518,16 +1519,53 @@ const AddFood: React.FC = () => {
       }
     };
     reader.readAsDataURL(file);
-  };
+  }, []);
 
-  const clearPhoto = () => {
+  const clearPhoto = useCallback(() => {
     setPhotoPreview(null);
     setPhotoName("");
     setPhotoRemoved(true);
     if (photoInputRef.current) {
       photoInputRef.current.value = "";
     }
-  };
+  }, []);
+
+  const uploadPhotoToStorage = useCallback(async (base64Data: string, fileName: string): Promise<string | null> => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return null;
+
+      // Convert base64 to blob
+      const base64Response = await fetch(base64Data);
+      const blob = await base64Response.blob();
+
+      // Create a unique filename
+      const timestamp = Date.now();
+      const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `users/${user.uid}/food-photos/${timestamp}_${sanitizedFileName}`;
+      
+      // Upload to Firebase Storage
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, blob);
+      
+      // Get the download URL
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      trackEvent("photo_uploaded_to_storage", {
+        uid: user.uid,
+        fileName: sanitizedFileName,
+        size: blob.size,
+      });
+      
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading photo to storage:", error);
+      trackEvent("photo_upload_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }, []);
 
   const addFoodToMeal = async () => {
     const user = auth.currentUser;
@@ -1619,12 +1657,34 @@ const AddFood: React.FC = () => {
           newSel.note = `${safeNum(newValue, 0)} g`;
         }
 
+        // Upload photo to Storage if it's a new base64 photo
+        let finalPhotoUrl = photoRemoved ? null : (item.photoUrl ?? null);
+        let finalPhotoName = photoRemoved ? null : (item.photoName || null);
+        
+        if (photoPreview && photoPreview.startsWith('data:')) {
+          // This is a new base64 photo that needs to be uploaded
+          const uploadedUrl = await uploadPhotoToStorage(photoPreview, photoName || 'food-photo.jpg');
+          if (uploadedUrl) {
+            finalPhotoUrl = uploadedUrl;
+            finalPhotoName = photoName || 'food-photo.jpg';
+          } else {
+            // Upload failed, show warning but continue
+            console.warn("Photo upload failed, meal will be saved without photo");
+            finalPhotoUrl = null;
+            finalPhotoName = null;
+          }
+        } else if (photoPreview) {
+          // This is an existing URL from Firebase Storage
+          finalPhotoUrl = photoPreview;
+          finalPhotoName = photoName;
+        }
+
         const updated: DiaryEntryDoc = {
           ...item,
           total: newTotal,
           selection: newSel,
-          photoUrl: photoRemoved ? null : photoPreview ?? item.photoUrl ?? null,
-          photoName: photoRemoved ? null : photoName || item.photoName || null,
+          photoUrl: finalPhotoUrl,
+          photoName: finalPhotoName,
         };
 
         const userRef = doc(db, "users", user.uid, "foods", dateKey);
@@ -1693,6 +1753,22 @@ const AddFood: React.FC = () => {
 
       const totalClean = stripUndefined(total);
 
+      // Upload photo to Storage if it's a base64 photo
+      let finalPhotoUrl: string | null = null;
+      let finalPhotoName: string | null = null;
+      
+      if (photoPreview && photoPreview.startsWith('data:')) {
+        // This is a base64 photo that needs to be uploaded
+        const uploadedUrl = await uploadPhotoToStorage(photoPreview, photoName || 'food-photo.jpg');
+        if (uploadedUrl) {
+          finalPhotoUrl = uploadedUrl;
+          finalPhotoName = photoName || 'food-photo.jpg';
+        } else {
+          // Upload failed, show warning but continue
+          console.warn("Photo upload failed, meal will be saved without photo");
+        }
+      }
+
       const item = {
         code: selectedFood.code,
         name: selectedFood.product_name || "(no name)",
@@ -1707,8 +1783,8 @@ const AddFood: React.FC = () => {
         },
         perBase: perBaseClean,
         total: totalClean,
-        photoUrl: photoPreview ?? null,
-        photoName: photoName || null,
+        photoUrl: finalPhotoUrl,
+        photoName: finalPhotoName,
         addedAt: new Date().toISOString(),
       };
 
@@ -2297,7 +2373,7 @@ const AddFood: React.FC = () => {
 
   const modalTitle = editEntry?.item?.name || selectedFood?.product_name || "(no name)";
 
-  const handleChangeMeal = (next: MealKey) => {
+  const handleChangeMeal = useCallback((next: MealKey) => {
     if (next === meal) return;
 
     trackEvent("add_food_meal_change", {
@@ -2316,7 +2392,7 @@ const AddFood: React.FC = () => {
     });
 
     setShowMealPicker(false);
-  };
+  }, [meal, dateKey, location.search, history]);
 
   const recommendation = useMemo(() => {
     if (!targets || !dayTotals) return null;
