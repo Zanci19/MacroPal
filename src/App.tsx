@@ -205,7 +205,7 @@ const TabsShell: React.FC = () => {
         .duration(ANIMATION_DURATION_MS)
         .easing("cubic-bezier(0.32, 0.72, 0, 1)");
 
-      // Entering page slides in from the direction of travel
+      // Entering page slides in from the direction of travel (overlaps leaving page)
       rootAnimation
         .addAnimation(
           createAnimation()
@@ -227,7 +227,7 @@ const TabsShell: React.FC = () => {
             )
         );
 
-      // Leaving page slides out completely in sync with entering page
+      // Leaving page slides out 50% for iPhone-style parallax effect (overlapped by entering page)
       if (leavingEl) {
         rootAnimation.addAnimation(
           createAnimation()
@@ -244,7 +244,7 @@ const TabsShell: React.FC = () => {
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 100}%, 0, 0)` // Full slide out
+              `translate3d(${-directionFactor * 50}%, 0, 0)` // 50% slide for parallax effect
             )
         );
       }
