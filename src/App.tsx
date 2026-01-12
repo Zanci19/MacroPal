@@ -9,8 +9,8 @@ import {
   IonLabel,
   IonSpinner,
   setupIonicReact,
+  createAnimation,
   useIonRouter,
-  mdTransitionAnimation,
 } from "@ionic/react";
 import type { AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
@@ -174,17 +174,63 @@ const TabsShell: React.FC = () => {
     router.push(href, "forward", "push");
   };
 
-  // Use Ionic's optimized Material Design transition for Android performance
-  // This is hardware-accelerated and uses simple transforms without expensive opacity changes
+  // Optimized sliding animation for Android - hardware accelerated, no opacity changes
+  // Uses only translate3d transforms which are GPU-accelerated and performant
   const tabAnimation: AnimationBuilder = useMemo(
-    () => (baseEl, opts) => {
-      // Use Ionic's built-in MD transition which is optimized for Android
-      const animation = mdTransitionAnimation(baseEl, opts);
+    () => (_baseEl, opts) => {
+      const currentTabIndex = getTabIndex(getActiveTab());
+      const previousTabIndex = previousTabIndexRef.current;
+
+      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+      const clickDirection = lastDirectionRef.current;
+      const fallbackForward = opts.direction !== "back";
+      const isForward =
+        clickDirection === "forward"
+          ? true
+          : clickDirection === "back"
+            ? false
+            : hasValidIndices
+              ? currentTabIndex > previousTabIndex
+              : fallbackForward;
+      lastDirectionRef.current = null;
+
+      const enteringEl = opts.enteringEl;
+      const leavingEl = opts.leavingEl;
       
-      // Override the duration to match the 350ms requirement (or 150ms for reduced motion)
-      animation.duration(ANIMATION_DURATION_MS);
+      // Direction: 1 for forward (right to left), -1 for back (left to right)
+      const directionFactor = isForward ? 1 : -1;
+
+      // Entering page slides in from the direction of travel
+      const enteringAnimation = createAnimation()
+        .addElement(enteringEl)
+        .duration(ANIMATION_DURATION_MS)
+        .easing("cubic-bezier(0.32, 0.72, 0, 1)") // Optimized easing for mobile
+        .fromTo(
+          "transform",
+          `translate3d(${directionFactor * 100}%, 0, 0)`,
+          "translate3d(0, 0, 0)"
+        );
+
+      // Leaving page slides out (optional - can be removed for even better performance)
+      const leavingAnimation = leavingEl
+        ? createAnimation()
+            .addElement(leavingEl)
+            .duration(ANIMATION_DURATION_MS)
+            .easing("cubic-bezier(0.32, 0.72, 0, 1)")
+            .fromTo(
+              "transform",
+              "translate3d(0, 0, 0)",
+              `translate3d(${-directionFactor * 20}%, 0, 0)` // Subtle parallax
+            )
+        : undefined;
+
+      const rootAnimation = createAnimation().addAnimation(enteringAnimation);
       
-      return animation;
+      if (leavingAnimation) {
+        rootAnimation.addAnimation(leavingAnimation);
+      }
+
+      return rootAnimation;
     },
     [] // Empty dependency array - animation logic doesn't change
   );
