@@ -444,8 +444,6 @@ ion-router-outlet {
 
 /* Optimize scrolling performance on Android */
 ion-content {
-  /* Enable hardware-accelerated scrolling */
-  -webkit-overflow-scrolling: touch;
   /* Optimize scroll events */
   overflow-anchor: none;
 }

@@ -73,10 +73,10 @@ All implemented in `src/theme/theme.css`:
    - On devices ≤768px, backdrop filters are disabled
    - Reduces paint complexity significantly
 
-5. **Hardware-Accelerated Scrolling**
+5. **Optimized Scrolling**
    ```css
    ion-content {
-     -webkit-overflow-scrolling: touch;
+     overflow-anchor: none;
    }
    ```
 

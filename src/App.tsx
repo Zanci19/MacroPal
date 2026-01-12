@@ -389,7 +389,9 @@ const TabsShell: React.FC = () => {
       return rootAnimation;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [animationsEnabled] // Re-create animation when preference changes. getActiveTab is called at animation runtime, not memoization time
+    // Note: getActiveTab is called at animation runtime (inside the returned function), not during memoization
+    // We only want to recreate the animation function when animationsEnabled changes
+    [animationsEnabled]
   );
 
   const tabClass = (tabName: string) =>
@@ -582,7 +584,8 @@ const App: React.FC = () => {
       return rawHeight ? rawHeight / dpr : window.innerHeight;
     };
 
-    let resizeTimeout: NodeJS.Timeout | null = null;
+    // Store timeout ID in object to allow mutation within closure
+    const timeoutRef = { current: null as NodeJS.Timeout | null };
     
     const updateSoftkeyPadding = () => {
       const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
@@ -609,12 +612,12 @@ const App: React.FC = () => {
     
     // Debounced version for resize events to improve performance
     const debouncedUpdate = () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
-      resizeTimeout = setTimeout(() => {
+      timeoutRef.current = setTimeout(() => {
         updateSoftkeyPadding();
-        resizeTimeout = null;
+        timeoutRef.current = null;
       }, 100); // 100ms debounce
     };
 
@@ -629,8 +632,8 @@ const App: React.FC = () => {
     window.addEventListener("orientationchange", updateSoftkeyPadding);
 
     return () => {
-      if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
       setSoftkeyInset(0);
       resizeSource?.removeEventListener("resize", debouncedUpdate);
