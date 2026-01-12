@@ -12,7 +12,7 @@ import {
   useIonRouter,
   mdTransitionAnimation,
 } from "@ionic/react";
-import type { Animation, AnimationBuilder } from "@ionic/react";
+import type { AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useHistory, useLocation } from "react-router-dom";
