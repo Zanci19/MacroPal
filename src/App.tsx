@@ -200,34 +200,53 @@ const TabsShell: React.FC = () => {
       // Direction: 1 for forward (right to left), -1 for back (left to right)
       const directionFactor = isForward ? 1 : -1;
 
-      // Entering page slides in from the direction of travel
-      const enteringAnimation = createAnimation()
-        .addElement(enteringEl)
+      // Create the main animation that will run both entering and leaving in parallel
+      const rootAnimation = createAnimation()
         .duration(ANIMATION_DURATION_MS)
-        .easing("cubic-bezier(0.32, 0.72, 0, 1)") // Optimized easing for mobile
-        .fromTo(
-          "transform",
-          `translate3d(${directionFactor * 100}%, 0, 0)`,
-          "translate3d(0, 0, 0)"
+        .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+
+      // Entering page slides in from the direction of travel
+      rootAnimation
+        .addAnimation(
+          createAnimation()
+            .addElement(enteringEl)
+            .beforeStyles({
+              position: "absolute",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              zIndex: "10",
+            })
+            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+            .beforeRemoveClass("ion-page-invisible")
+            .fromTo(
+              "transform",
+              `translate3d(${directionFactor * 100}%, 0, 0)`,
+              "translate3d(0, 0, 0)"
+            )
         );
 
       // Leaving page slides out completely in sync with entering page
-      const leavingAnimation = leavingEl
-        ? createAnimation()
+      if (leavingEl) {
+        rootAnimation.addAnimation(
+          createAnimation()
             .addElement(leavingEl)
-            .duration(ANIMATION_DURATION_MS)
-            .easing("cubic-bezier(0.32, 0.72, 0, 1)")
+            .beforeStyles({
+              position: "absolute",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              zIndex: "9",
+            })
+            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
               `translate3d(${-directionFactor * 100}%, 0, 0)` // Full slide out
             )
-        : undefined;
-
-      const rootAnimation = createAnimation().addAnimation(enteringAnimation);
-      
-      if (leavingAnimation) {
-        rootAnimation.addAnimation(leavingAnimation);
+        );
       }
 
       return rootAnimation;
