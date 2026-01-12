@@ -150,8 +150,7 @@ const Settings: React.FC = () => {
     return getAnimationPreference();
   });
   const [debugOverlayEnabled, setDebugOverlayEnabled] = React.useState<boolean>(() => {
-    const stored = localStorage.getItem("mp_debug_overlay");
-    return stored === "on";
+    return getDebugOverlayPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
