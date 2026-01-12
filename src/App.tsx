@@ -9,8 +9,8 @@ import {
   IonLabel,
   IonSpinner,
   setupIonicReact,
-  createAnimation,
   useIonRouter,
+  mdTransitionAnimation,
 } from "@ionic/react";
 import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
@@ -101,9 +101,6 @@ setupIonicReact();
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
 const DEFAULT_ANIMATION_DURATION_MS = 350;
 const REDUCED_ANIMATION_DURATION_MS = 150;
-const ENTER_MIN_OPACITY = 0.2;
-const LEAVE_TRANSLATE_PERCENT = 30;
-const LEAVE_MIN_OPACITY = 0.4;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
@@ -177,83 +174,16 @@ const TabsShell: React.FC = () => {
     router.push(href, "forward", "push");
   };
 
-  // Memoize the animation builder to prevent unnecessary recreation on every render
+  // Use Ionic's optimized Material Design transition for Android performance
+  // This is hardware-accelerated and uses simple transforms without expensive opacity changes
   const tabAnimation: AnimationBuilder = useMemo(
-    () => (_baseEl, opts) => {
-      const currentTabIndex = getTabIndex(getActiveTab());
-      const previousTabIndex = previousTabIndexRef.current;
-
-      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
-      const clickDirection = lastDirectionRef.current;
-      const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
-      const isForward =
-        clickDirection === "forward"
-          ? true
-          : clickDirection === "back"
-            ? false
-            : hasValidIndices
-              ? currentTabIndex > previousTabIndex
-              : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
-      lastDirectionRef.current = null;
-
-      const enteringEl = opts.enteringEl;
-      const leavingEl = opts.leavingEl;
-      const directionFactor = isForward ? 1 : -1;
-
-      const enteringStartOpacity = isForward ? ENTER_MIN_OPACITY : 1;
-      const leavingEndOpacity = isForward ? LEAVE_MIN_OPACITY : 1;
-      const enteringZIndex = isForward ? "101" : "102";
-      const leavingZIndex = isForward ? "100" : "99";
-
-      const enteringAnimation = createAnimation()
-        .addElement(enteringEl)
-        .duration(ANIMATION_DURATION_MS)
-        .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-        .beforeStyles({
-          zIndex: enteringZIndex,
-          position: "absolute",
-          top: "0",
-          left: "0",
-          right: "0",
-          bottom: "0",
-          width: "100%",
-          height: "100%",
-          willChange: "transform",
-        })
-        .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-        .beforeRemoveClass("ion-page-invisible")
-        .fromTo("transform", `translateX(${directionFactor * 100}%) translateZ(0)`, "translateX(0) translateZ(0)")
-        //.fromTo("opacity", enteringStartOpacity, 1);
-
-      const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
-      let leavingAnimation: Animation | undefined;
-      if (leavingEl) {
-        leavingAnimation = createAnimation()
-          .addElement(leavingEl)
-          .duration(ANIMATION_DURATION_MS)
-          .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-          .beforeStyles({
-            zIndex: leavingZIndex,
-            position: "absolute",
-            top: "0",
-            left: "0",
-            right: "0",
-            bottom: "0",
-            width: "100%",
-            height: "100%",
-            willChange: "transform, opacity",
-          })
-          .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-          .fromTo("transform", "translateX(0) translateZ(0)", `translateX(${leaveOffset}%) translateZ(0)`)
-          .fromTo("opacity", 1, leavingEndOpacity);
-      }
-
-      const animation = createAnimation().addAnimation(enteringAnimation);
-
-      if (leavingAnimation) {
-        animation.addAnimation(leavingAnimation);
-      }
-
+    () => (baseEl, opts) => {
+      // Use Ionic's built-in MD transition which is optimized for Android
+      const animation = mdTransitionAnimation(baseEl, opts);
+      
+      // Override the duration to match the 350ms requirement (or 150ms for reduced motion)
+      animation.duration(ANIMATION_DURATION_MS);
+      
       return animation;
     },
     [] // Empty dependency array - animation logic doesn't change
