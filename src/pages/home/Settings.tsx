@@ -93,6 +93,19 @@ export const getAnimationPreference = (): boolean => {
   return stored !== "disabled"; // Default to enabled
 };
 
+// Apply debug overlay preference
+export const applyDebugOverlayPreference = (enabled: boolean) => {
+  localStorage.setItem("mp_debug_overlay", enabled ? "on" : "off");
+  // Dispatch custom event to notify DebugOverlay component
+  window.dispatchEvent(new CustomEvent("mp_debug_overlay_change", { detail: { enabled } }));
+};
+
+// Get debug overlay preference
+export const getDebugOverlayPreference = (): boolean => {
+  const stored = localStorage.getItem("mp_debug_overlay");
+  return stored === "on"; // Default to disabled
+};
+
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -135,6 +148,9 @@ const Settings: React.FC = () => {
   });
   const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() => {
     return getAnimationPreference();
+  });
+  const [debugOverlayEnabled, setDebugOverlayEnabled] = React.useState<boolean>(() => {
+    return getDebugOverlayPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -476,6 +492,17 @@ const Settings: React.FC = () => {
           // Fallback to localStorage if not in profile
           const localPref = getAnimationPreference();
           setTabAnimationsEnabled(localPref);
+        }
+
+        // Load debug overlay preference from Firebase or localStorage
+        const savedDebugOverlayPref = (profile as any)?.debugOverlayEnabled;
+        if (typeof savedDebugOverlayPref === "boolean") {
+          setDebugOverlayEnabled(savedDebugOverlayPref);
+          applyDebugOverlayPreference(savedDebugOverlayPref);
+        } else {
+          // Fallback to localStorage if not in profile
+          const localPref = getDebugOverlayPreference();
+          setDebugOverlayEnabled(localPref);
         }
 
         setSmartRecommendationEnabled(enabled);
@@ -970,6 +997,55 @@ const Settings: React.FC = () => {
                       Clearing…
                     </IonNote>
                   )}
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
+
+          <IonCard>
+            <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Advanced settings</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem lines="full">
+                  <IonLabel>
+                    <h2>Debug overlay</h2>
+                    <p>Show performance metrics overlay</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={debugOverlayEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setDebugOverlayEnabled(checked);
+                      applyDebugOverlayPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.debugOverlayEnabled": checked,
+                        });
+
+                        trackEvent("settings_debug_overlay_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save debug overlay preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update debug overlay setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
                 </IonItem>
               </IonList>
             </IonCardContent>

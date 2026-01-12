@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./DebugOverlay.css";
 
 type OverlayMetrics = {
@@ -99,13 +99,26 @@ const useDebugOverlayMetrics = () => {
 const isOverlayEnabled = () => {
   if (typeof window === "undefined") return false;
   const stored = window.localStorage.getItem("mp_debug_overlay");
-  if (stored === null) return true;
-  return stored !== "off";
+  if (stored === null) return false; // Default to disabled
+  return stored === "on";
 };
 
 const DebugOverlay = () => {
-  const enabled = useMemo(isOverlayEnabled, []);
+  const [enabled, setEnabled] = useState(isOverlayEnabled);
   const metrics = useDebugOverlayMetrics();
+
+  useEffect(() => {
+    const handlePreferenceChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      setEnabled(customEvent.detail.enabled);
+    };
+
+    window.addEventListener("mp_debug_overlay_change", handlePreferenceChange);
+
+    return () => {
+      window.removeEventListener("mp_debug_overlay_change", handlePreferenceChange);
+    };
+  }, []);
 
   if (!enabled) return null;
 
