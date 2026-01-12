@@ -211,7 +211,7 @@ const TabsShell: React.FC = () => {
           "translate3d(0, 0, 0)"
         );
 
-      // Leaving page slides out (optional - can be removed for even better performance)
+      // Leaving page slides out completely in sync with entering page
       const leavingAnimation = leavingEl
         ? createAnimation()
             .addElement(leavingEl)
@@ -220,7 +220,7 @@ const TabsShell: React.FC = () => {
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 20}%, 0, 0)` // Subtle parallax
+              `translate3d(${-directionFactor * 100}%, 0, 0)` // Full slide out
             )
         : undefined;
 
