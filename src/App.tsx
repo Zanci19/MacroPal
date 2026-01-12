@@ -11,6 +11,7 @@ import {
   setupIonicReact,
   useIonRouter,
 } from "@ionic/react";
+import type { AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useHistory, useLocation } from "react-router-dom";
@@ -98,6 +99,21 @@ const LazyRoute = ({ component: Component, ...props }: any) => (
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
+const DEFAULT_ANIMATION_DURATION_MS = 350;
+const REDUCED_ANIMATION_DURATION_MS = 150;
+const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
+const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
+
+// Detect reduced motion preference safely
+const getPrefersReducedMotion = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
+  ? REDUCED_ANIMATION_DURATION_MS 
+  : DEFAULT_ANIMATION_DURATION_MS;
+
 const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
@@ -154,6 +170,86 @@ const TabsShell: React.FC = () => {
     });
     router.push(href, "forward", "push");
   };
+
+  // Optimized sliding animation for Android - hardware accelerated, no opacity changes
+  // Uses only translate3d transforms which are GPU-accelerated and performant
+  const tabAnimation: AnimationBuilder = useMemo(
+    () => (_baseEl, opts) => {
+      const currentTabIndex = getTabIndex(getActiveTab());
+      const previousTabIndex = previousTabIndexRef.current;
+
+      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
+      const clickDirection = lastDirectionRef.current;
+      const fallbackForward = opts.direction !== "back";
+      const isForward =
+        clickDirection === "forward"
+          ? true
+          : clickDirection === "back"
+            ? false
+            : hasValidIndices
+              ? currentTabIndex > previousTabIndex
+              : fallbackForward;
+      lastDirectionRef.current = null;
+
+      const enteringEl = opts.enteringEl;
+      const leavingEl = opts.leavingEl;
+      
+      // Direction: 1 for forward (right to left), -1 for back (left to right)
+      const directionFactor = isForward ? 1 : -1;
+
+      // Create the main animation that will run both entering and leaving in parallel
+      const rootAnimation = createAnimation()
+        .duration(ANIMATION_DURATION_MS)
+        .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+
+      // Entering page slides in from the direction of travel (overlaps leaving page)
+      rootAnimation
+        .addAnimation(
+          createAnimation()
+            .addElement(enteringEl)
+            .beforeStyles({
+              position: "absolute",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              zIndex: "10",
+            })
+            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+            .beforeRemoveClass("ion-page-invisible")
+            .fromTo(
+              "transform",
+              `translate3d(${directionFactor * 100}%, 0, 0)`,
+              "translate3d(0, 0, 0)"
+            )
+        );
+
+      // Leaving page slides out 50% for iPhone-style parallax effect (overlapped by entering page)
+      if (leavingEl) {
+        rootAnimation.addAnimation(
+          createAnimation()
+            .addElement(leavingEl)
+            .beforeStyles({
+              position: "absolute",
+              top: "0",
+              left: "0",
+              right: "0",
+              bottom: "0",
+              zIndex: "9",
+            })
+            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+            .fromTo(
+              "transform",
+              "translate3d(0, 0, 0)",
+              `translate3d(${-directionFactor * 50}%, 0, 0)` // 50% slide for parallax effect
+            )
+        );
+      }
+
+      return rootAnimation;
+    },
+    [] // Empty dependency array - animation logic doesn't change
+  );
 
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
