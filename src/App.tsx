@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Suspense, lazy, useMemo } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -9,10 +9,8 @@ import {
   IonLabel,
   IonSpinner,
   setupIonicReact,
-  createAnimation,
   useIonRouter,
 } from "@ionic/react";
-import type { Animation, AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
 import { Route, Redirect } from "react-router";
 import { useHistory, useLocation } from "react-router-dom";
@@ -100,30 +98,10 @@ const LazyRoute = ({ component: Component, ...props }: any) => (
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
-const DEFAULT_ANIMATION_DURATION_MS = 350;
-const REDUCED_ANIMATION_DURATION_MS = 150;
-const ENTER_MIN_OPACITY = 0.2;
-const LEAVE_TRANSLATE_PERCENT = 30;
-const LEAVE_MIN_OPACITY = 0.4;
-const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
-const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
-
-// Detect reduced motion preference safely
-const getPrefersReducedMotion = () => {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-};
-
-const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
-  ? REDUCED_ANIMATION_DURATION_MS 
-  : DEFAULT_ANIMATION_DURATION_MS;
-
 const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
   const history = useHistory();
-  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
-  const lastDirectionRef = useRef<"forward" | "back" | null>(null);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -169,7 +147,6 @@ const TabsShell: React.FC = () => {
           : "back"
         : "forward";
 
-    lastDirectionRef.current = direction;
     trackEvent("tab_navigation", {
       from: currentTab,
       to: tabName,
@@ -178,97 +155,8 @@ const TabsShell: React.FC = () => {
     router.push(href, "forward", "push");
   };
 
-  // Memoize the animation builder to prevent unnecessary recreation on every render
-  const tabAnimation: AnimationBuilder = useMemo(
-    () => (_baseEl, opts) => {
-      const currentTabIndex = getTabIndex(getActiveTab());
-      const previousTabIndex = previousTabIndexRef.current;
-
-      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
-      const clickDirection = lastDirectionRef.current;
-      const fallbackForward = opts.direction !== "back"; // opts.direction may be undefined on initial load; default to forward.
-      const isForward =
-        clickDirection === "forward"
-          ? true
-          : clickDirection === "back"
-            ? false
-            : hasValidIndices
-              ? currentTabIndex > previousTabIndex
-              : fallbackForward; // Use router-provided direction when tab indices are unavailable (initial load/non-tab routes).
-      lastDirectionRef.current = null;
-
-      const enteringEl = opts.enteringEl;
-      const leavingEl = opts.leavingEl;
-      const directionFactor = isForward ? 1 : -1;
-
-      const enteringStartOpacity = isForward ? ENTER_MIN_OPACITY : 1;
-      const leavingEndOpacity = isForward ? LEAVE_MIN_OPACITY : 1;
-      const enteringZIndex = isForward ? "101" : "102";
-      const leavingZIndex = isForward ? "100" : "99";
-
-      const enteringAnimation = createAnimation()
-        .addElement(enteringEl)
-        .duration(ANIMATION_DURATION_MS)
-        .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-        .beforeStyles({
-          zIndex: enteringZIndex,
-          position: "absolute",
-          top: "0",
-          left: "0",
-          right: "0",
-          bottom: "0",
-          width: "100%",
-          height: "100%",
-          willChange: "transform",
-        })
-        .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-        .beforeRemoveClass("ion-page-invisible")
-        .fromTo("transform", `translateX(${directionFactor * 100}%) translateZ(0)`, "translateX(0) translateZ(0)")
-        //.fromTo("opacity", enteringStartOpacity, 1);
-
-      const leaveOffset = -directionFactor * LEAVE_TRANSLATE_PERCENT;
-      let leavingAnimation: Animation | undefined;
-      if (leavingEl) {
-        leavingAnimation = createAnimation()
-          .addElement(leavingEl)
-          .duration(ANIMATION_DURATION_MS)
-          .easing("cubic-bezier(0.4, 0, 0.2, 1)")
-          .beforeStyles({
-            zIndex: leavingZIndex,
-            position: "absolute",
-            top: "0",
-            left: "0",
-            right: "0",
-            bottom: "0",
-            width: "100%",
-            height: "100%",
-            willChange: "transform, opacity",
-          })
-          .afterClearStyles(["z-index", "position", "top", "left", "right", "bottom", "width", "height", "will-change"])
-          .fromTo("transform", "translateX(0) translateZ(0)", `translateX(${leaveOffset}%) translateZ(0)`)
-          .fromTo("opacity", 1, leavingEndOpacity);
-      }
-
-      const animation = createAnimation().addAnimation(enteringAnimation);
-
-      if (leavingAnimation) {
-        animation.addAnimation(leavingAnimation);
-      }
-
-      return animation;
-    },
-    [] // Empty dependency array - animation logic doesn't change
-  );
-
   const tabClass = (tabName: string) =>
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
-
-  useEffect(() => {
-    const currentTabIndex = getTabIndex(activeTab);
-    if (currentTabIndex !== -1) {
-      previousTabIndexRef.current = currentTabIndex;
-    }
-  }, [activeTab]);
 
   useEffect(() => {
     const handler = (event: CustomEvent) => {
@@ -277,7 +165,6 @@ const TabsShell: React.FC = () => {
 
       event.detail.register(10, () => {
         if (location.pathname !== "/app/home") {
-          lastDirectionRef.current = "back";
           router.push("/app/home", "root", "replace");
         }
       });
@@ -296,7 +183,6 @@ const TabsShell: React.FC = () => {
       if (!isTabRootRoute(history.location.pathname)) return;
 
       if (history.location.pathname !== "/app/home") {
-        lastDirectionRef.current = "back";
         router.push("/app/home", "root", "replace");
       }
 
@@ -310,7 +196,7 @@ const TabsShell: React.FC = () => {
 
   return (
     <IonTabs>
-      <IonRouterOutlet id="tabs" animation={tabAnimation}>
+      <IonRouterOutlet id="tabs">
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
         <Route exact path="/app/planner" render={(props) => <LazyRoute component={Planner} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
