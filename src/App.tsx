@@ -72,6 +72,7 @@ import "./theme/variables.css";
 
 import { trackEvent } from "./firebase";
 import UpdateGate from "./UpdateGate";
+import DebugOverlay from "./components/DebugOverlay";
 
 // Loading fallback component
 const RouteLoader: React.FC = () => (
@@ -498,6 +499,7 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
+      <DebugOverlay />
       <ErrorBoundary>
         <IonReactRouter>
           <UpdateGate>
