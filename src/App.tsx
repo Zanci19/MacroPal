@@ -388,7 +388,8 @@ const TabsShell: React.FC = () => {
 
       return rootAnimation;
     },
-    [animationsEnabled] // Re-create animation when preference changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [animationsEnabled] // Re-create animation when preference changes. getActiveTab is called at animation runtime, not memoization time
   );
 
   const tabClass = (tabName: string) =>
