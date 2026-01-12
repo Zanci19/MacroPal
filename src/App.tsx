@@ -100,7 +100,7 @@ const LazyRoute = ({ component: Component, ...props }: any) => (
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
-const DEFAULT_ANIMATION_DURATION_MS = 350;
+const DEFAULT_ANIMATION_DURATION_MS = 425;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
@@ -285,7 +285,7 @@ const TabsShell: React.FC = () => {
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 50}%, 0, 0)` // 50% slide for parallax effect
+              `translate3d(${-directionFactor * 35}%, 0, 0)` // 35% slide for parallax effect
             )
         );
       }
