@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, Suspense, lazy, useMemo } from "react";
+import React, { useEffect, Suspense, lazy } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -9,7 +9,6 @@ import {
   IonLabel,
   IonSpinner,
   setupIonicReact,
-  createAnimation,
   useIonRouter,
 } from "@ionic/react";
 import type { AnimationBuilder } from "@ionic/react";
@@ -72,6 +71,7 @@ import "./theme/variables.css";
 
 import { trackEvent } from "./firebase";
 import UpdateGate from "./UpdateGate";
+import DebugOverlay from "./components/DebugOverlay";
 
 // Loading fallback component
 const RouteLoader: React.FC = () => (
@@ -118,8 +118,6 @@ const TabsShell: React.FC = () => {
   const location = useLocation();
   const router = useIonRouter();
   const history = useHistory();
-  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
-  const lastDirectionRef = useRef<"forward" | "back" | null>(null);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -165,7 +163,6 @@ const TabsShell: React.FC = () => {
           : "back"
         : "forward";
 
-    lastDirectionRef.current = direction;
     trackEvent("tab_navigation", {
       from: currentTab,
       to: tabName,
@@ -258,20 +255,12 @@ const TabsShell: React.FC = () => {
     activeTab === tabName ? "mp-tab-btn mp-tab-btn--active" : "mp-tab-btn";
 
   useEffect(() => {
-    const currentTabIndex = getTabIndex(activeTab);
-    if (currentTabIndex !== -1) {
-      previousTabIndexRef.current = currentTabIndex;
-    }
-  }, [activeTab]);
-
-  useEffect(() => {
     const handler = (event: CustomEvent) => {
       if (!isTabRootRoute(location.pathname)) return;
       if (!("detail" in event) || typeof event.detail?.register !== "function") return;
 
       event.detail.register(10, () => {
         if (location.pathname !== "/app/home") {
-          lastDirectionRef.current = "back";
           router.push("/app/home", "root", "replace");
         }
       });
@@ -290,7 +279,6 @@ const TabsShell: React.FC = () => {
       if (!isTabRootRoute(history.location.pathname)) return;
 
       if (history.location.pathname !== "/app/home") {
-        lastDirectionRef.current = "back";
         router.push("/app/home", "root", "replace");
       }
 
@@ -304,7 +292,7 @@ const TabsShell: React.FC = () => {
 
   return (
     <IonTabs>
-      <IonRouterOutlet id="tabs" animation={tabAnimation}>
+      <IonRouterOutlet id="tabs">
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
         <Route exact path="/app/planner" render={(props) => <LazyRoute component={Planner} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
@@ -493,6 +481,7 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
+      <DebugOverlay />
       <ErrorBoundary>
         <IonReactRouter>
           <UpdateGate>

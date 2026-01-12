@@ -1,0 +1,40 @@
+.debug-overlay {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(20, 20, 24, 0.88);
+  color: #f5f5f7;
+  font-family: "SF Mono", "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  min-width: 200px;
+  pointer-events: none;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.debug-overlay__title {
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+.debug-overlay__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.debug-overlay__label {
+  opacity: 0.75;
+}
+
+.debug-overlay__value {
+  font-variant-numeric: tabular-nums;
+}
