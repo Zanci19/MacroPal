@@ -403,3 +403,60 @@ ion-checkbox,
 ion-radio {
   contain: none;
 }
+
+/* Android-specific performance optimizations */
+/* Use GPU acceleration hints for smoother animations on Android devices */
+ion-page {
+  /* Promote to compositing layer for better animation performance */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Prevent flicker during animations */
+  -webkit-perspective: 1000;
+  perspective: 1000;
+}
+
+/* Optimize tab bar for Android - prevent repaints during animations */
+ion-tab-bar {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Optimize router outlets for smoother page transitions on Android */
+ion-router-outlet {
+  /* Create stacking context for efficient animation layering */
+  isolation: isolate;
+}
+
+/* Reduce paint complexity on Android by simplifying backdrop filters on low-end devices */
+@media (max-width: 768px) {
+  ion-toolbar {
+    /* Simpler background for mobile devices */
+    --backdrop-filter: none;
+  }
+  
+  ion-tab-bar {
+    /* Reduce blur complexity on mobile */
+    backdrop-filter: none;
+  }
+}
+
+/* Optimize scrolling performance on Android */
+ion-content {
+  /* Enable hardware-accelerated scrolling */
+  -webkit-overflow-scrolling: touch;
+  /* Optimize scroll events */
+  overflow-anchor: none;
+}
+
+/* Reduce animation complexity on older/low-end Android devices */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

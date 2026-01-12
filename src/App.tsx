@@ -127,6 +127,7 @@ setupIonicReact();
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const REDUCED_ANIMATION_DURATION_MS = 150;
+const ANDROID_ANIMATION_DURATION_MS = 250; // Shorter duration for Android
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
@@ -136,9 +137,31 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
+// Detect if running on Android
+const isAndroid = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android/i.test(window.navigator.userAgent || "");
+};
+
+// Detect low-end Android devices based on hardware concurrency and memory
+const isLowEndDevice = () => {
+  if (!isAndroid()) return false;
+  
+  // Check hardware concurrency (CPU cores)
+  const cores = navigator.hardwareConcurrency || 4;
+  
+  // Check device memory if available (in GB)
+  const memory = (navigator as any).deviceMemory;
+  
+  // Consider it low-end if: fewer than 4 cores OR less than 2GB RAM
+  return cores < 4 || (memory && memory < 2);
+};
+
 const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
   ? REDUCED_ANIMATION_DURATION_MS 
-  : DEFAULT_ANIMATION_DURATION_MS;
+  : isAndroid()
+    ? ANDROID_ANIMATION_DURATION_MS
+    : DEFAULT_ANIMATION_DURATION_MS;
 
 const TabsShell: React.FC = () => {
   const location = useLocation();
@@ -224,8 +247,9 @@ const TabsShell: React.FC = () => {
     router.push(href, "forward", "push");
   };
 
-  // Optimized sliding animation for Android - hardware accelerated, no opacity changes
-  // Uses only translate3d transforms which are GPU-accelerated and performant
+  // Optimized sliding animation - hardware accelerated, performant on Android
+  // Uses only translate3d transforms which are GPU-accelerated
+  // On Android (especially low-end devices), simplifies to single-element animation
   const tabAnimation: AnimationBuilder = useMemo(
     () => (_baseEl, opts) => {
       // If animations are disabled, return instant transition
@@ -265,54 +289,101 @@ const TabsShell: React.FC = () => {
       
       // Direction: 1 for forward (right to left), -1 for back (left to right)
       const directionFactor = isForward ? 1 : -1;
+      
+      // Detect if we should use simplified animation (Android, especially low-end)
+      const useSimplifiedAnimation = isLowEndDevice();
+      const androidDevice = isAndroid();
 
-      // Create the main animation that will run both entering and leaving in parallel
+      // Create the main animation
       const rootAnimation = createAnimation()
         .duration(ANIMATION_DURATION_MS)
-        .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+        .easing(androidDevice ? "ease-out" : "cubic-bezier(0.32, 0.72, 0, 1)");
 
-      // Entering page slides in from the direction of travel (overlaps leaving page)
-      rootAnimation
-        .addAnimation(
-          createAnimation()
-            .addElement(enteringEl)
-            .beforeStyles({
-              position: "absolute",
-              top: "0",
-              left: "0",
-              right: "0",
-              bottom: "0",
-              zIndex: "10",
-            })
-            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
-            .beforeRemoveClass("ion-page-invisible")
-            .fromTo(
-              "transform",
-              `translate3d(${directionFactor * 100}%, 0, 0)`,
-              "translate3d(0, 0, 0)"
-            )
+      // Entering page slides in from the direction of travel
+      const enterAnimation = createAnimation()
+        .addElement(enteringEl)
+        .beforeStyles({
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          zIndex: "10",
+          // Add will-change hint for better GPU optimization
+          willChange: "transform",
+        })
+        .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index", "will-change"])
+        .beforeRemoveClass("ion-page-invisible")
+        .fromTo(
+          "transform",
+          `translate3d(${directionFactor * 100}%, 0, 0)`,
+          "translate3d(0, 0, 0)"
         );
+      
+      rootAnimation.addAnimation(enterAnimation);
 
-      // Leaving page slides out 50% for iPhone-style parallax effect (overlapped by entering page)
+      // For low-end devices, skip the leaving page animation entirely (just hide it)
+      // This reduces GPU load by animating only one element instead of two
       if (leavingEl) {
-        rootAnimation.addAnimation(
-          createAnimation()
-            .addElement(leavingEl)
-            .beforeStyles({
-              position: "absolute",
-              top: "0",
-              left: "0",
-              right: "0",
-              bottom: "0",
-              zIndex: "9",
-            })
-            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
-            .fromTo(
-              "transform",
-              "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 35}%, 0, 0)` // 35% slide for parallax effect
-            )
-        );
+        if (useSimplifiedAnimation) {
+          // On low-end devices: instantly hide leaving page, no animation
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(leavingEl)
+              .beforeStyles({
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                bottom: "0",
+                zIndex: "9",
+                opacity: "0",
+              })
+              .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index", "opacity"])
+          );
+        } else if (androidDevice) {
+          // On Android (not low-end): simplified parallax with less movement (20% instead of 35%)
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(leavingEl)
+              .beforeStyles({
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                bottom: "0",
+                zIndex: "9",
+                willChange: "transform",
+              })
+              .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index", "will-change"])
+              .fromTo(
+                "transform",
+                "translate3d(0, 0, 0)",
+                `translate3d(${-directionFactor * 20}%, 0, 0)` // Reduced from 35% to 20% for Android
+              )
+          );
+        } else {
+          // iOS and desktop: full parallax effect (35% slide)
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(leavingEl)
+              .beforeStyles({
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                bottom: "0",
+                zIndex: "9",
+                willChange: "transform",
+              })
+              .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index", "will-change"])
+              .fromTo(
+                "transform",
+                "translate3d(0, 0, 0)",
+                `translate3d(${-directionFactor * 35}%, 0, 0)`
+              )
+          );
+        }
       }
 
       return rootAnimation;
@@ -510,6 +581,8 @@ const App: React.FC = () => {
       return rawHeight ? rawHeight / dpr : window.innerHeight;
     };
 
+    let resizeTimeout: NodeJS.Timeout | null = null;
+    
     const updateSoftkeyPadding = () => {
       const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
       const layoutViewportHeight = window.innerHeight;
@@ -532,18 +605,35 @@ const App: React.FC = () => {
 
       document.body.classList.toggle("has-softkeys", clampedSoftkeyHeight > 16);
     };
+    
+    // Debounced version for resize events to improve performance
+    const debouncedUpdate = () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = setTimeout(() => {
+        updateSoftkeyPadding();
+        resizeTimeout = null;
+      }, 100); // 100ms debounce
+    };
 
+    // Initial update without debounce
     updateSoftkeyPadding();
 
     const resizeSource = window.visualViewport;
-    resizeSource?.addEventListener("resize", updateSoftkeyPadding);
-    window.addEventListener("resize", updateSoftkeyPadding);
+    // Use debounced version for resize events
+    resizeSource?.addEventListener("resize", debouncedUpdate);
+    window.addEventListener("resize", debouncedUpdate);
+    // Orientation change should update immediately
     window.addEventListener("orientationchange", updateSoftkeyPadding);
 
     return () => {
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
       setSoftkeyInset(0);
-      resizeSource?.removeEventListener("resize", updateSoftkeyPadding);
-      window.removeEventListener("resize", updateSoftkeyPadding);
+      resizeSource?.removeEventListener("resize", debouncedUpdate);
+      window.removeEventListener("resize", debouncedUpdate);
       window.removeEventListener("orientationchange", updateSoftkeyPadding);
     };
   }, []);
