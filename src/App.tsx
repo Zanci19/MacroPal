@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy, useMemo, useRef } from "react";
+import React, { useEffect, Suspense, lazy, useMemo, useRef, useState } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -123,6 +123,25 @@ const TabsShell: React.FC = () => {
   // Refs for tracking tab navigation state across renders
   const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
   const lastDirectionRef = useRef<"forward" | "back" | null>(null);
+  
+  // Track animation preference
+  const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => {
+    const stored = localStorage.getItem("mp_tab_animations");
+    return stored !== "disabled"; // Default to enabled
+  });
+
+  // Listen for animation preference changes
+  useEffect(() => {
+    const handleAnimationChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      setAnimationsEnabled(customEvent.detail.enabled);
+    };
+
+    window.addEventListener("mp_animation_preference_change", handleAnimationChange);
+    return () => {
+      window.removeEventListener("mp_animation_preference_change", handleAnimationChange);
+    };
+  }, []);
 
   const getActiveTab = () => {
     const path = location.pathname || "";
@@ -184,6 +203,22 @@ const TabsShell: React.FC = () => {
   // Uses only translate3d transforms which are GPU-accelerated and performant
   const tabAnimation: AnimationBuilder = useMemo(
     () => (_baseEl, opts) => {
+      // If animations are disabled, return instant transition
+      if (!animationsEnabled) {
+        const rootAnimation = createAnimation()
+          .duration(0);
+        
+        if (opts.enteringEl) {
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(opts.enteringEl)
+              .beforeRemoveClass("ion-page-invisible")
+          );
+        }
+        
+        return rootAnimation;
+      }
+
       const currentTabIndex = getTabIndex(getActiveTab());
       const previousTabIndex = previousTabIndexRef.current;
 
@@ -257,7 +292,7 @@ const TabsShell: React.FC = () => {
 
       return rootAnimation;
     },
-    [] // Empty dependency array - animation logic doesn't change
+    [animationsEnabled] // Re-create animation when preference changes
   );
 
   const tabClass = (tabName: string) =>

@@ -140,6 +140,19 @@ body.macropal-theme ion-toolbar {
   border-color: var(--mp-border);
 }
 
+/* Opaque toolbars for tabbed pages to prevent overlap during animations */
+.tabbed-content ion-toolbar {
+  --background: rgb(255, 255, 255);
+}
+
+body.dark .tabbed-content ion-toolbar {
+  --background: rgb(8, 12, 20);
+}
+
+body.macropal-theme .tabbed-content ion-toolbar {
+  --background: rgb(10, 15, 26);
+}
+
 ion-title {
   color: var(--mp-text) !important;
   font-weight: 700;

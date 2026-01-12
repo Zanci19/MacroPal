@@ -80,6 +80,19 @@ export const applyTheme = (mode: ThemeMode) => {
   localStorage.setItem("mp_theme", mode);
 };
 
+// Apply animation preference
+export const applyAnimationPreference = (enabled: boolean) => {
+  localStorage.setItem("mp_tab_animations", enabled ? "enabled" : "disabled");
+  // Dispatch custom event to notify App.tsx
+  window.dispatchEvent(new CustomEvent("mp_animation_preference_change", { detail: { enabled } }));
+};
+
+// Get animation preference
+export const getAnimationPreference = (): boolean => {
+  const stored = localStorage.getItem("mp_tab_animations");
+  return stored !== "disabled"; // Default to enabled
+};
+
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -119,6 +132,9 @@ const Settings: React.FC = () => {
     }
     // Default to "system" theme
     return "system";
+  });
+  const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() => {
+    return getAnimationPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -449,6 +465,17 @@ const Settings: React.FC = () => {
         if (savedTheme && VALID_THEMES.includes(savedTheme as ThemeMode)) {
           setThemeMode(savedTheme as ThemeMode);
           applyTheme(savedTheme as ThemeMode);
+        }
+
+        // Load tab animations preference from Firebase or localStorage
+        const savedAnimationPref = (profile as any)?.tabAnimationsEnabled;
+        if (typeof savedAnimationPref === "boolean") {
+          setTabAnimationsEnabled(savedAnimationPref);
+          applyAnimationPreference(savedAnimationPref);
+        } else {
+          // Fallback to localStorage if not in profile
+          const localPref = getAnimationPreference();
+          setTabAnimationsEnabled(localPref);
         }
 
         setSmartRecommendationEnabled(enabled);
@@ -860,6 +887,46 @@ const Settings: React.FC = () => {
                     <IonSelectOption value="dark">Dark</IonSelectOption>
                     <IonSelectOption value="macropal">MacroPal Theme</IonSelectOption>
                   </IonSelect>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={colorPaletteOutline} />
+                  <IonLabel>
+                    <h2>Tab sliding animations</h2>
+                    <p>Enable smooth animations when switching between tabs</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={tabAnimationsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setTabAnimationsEnabled(checked);
+                      applyAnimationPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.tabAnimationsEnabled": checked,
+                        });
+
+                        trackEvent("settings_tab_animations_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save tab animations preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update animation setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
                 </IonItem>
                 <IonItem lines="full">
                   <IonIcon slot="start" icon={logoGoogle} />
