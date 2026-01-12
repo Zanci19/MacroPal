@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy } from "react";
+import React, { useEffect, Suspense, lazy, useMemo, useRef } from "react";
 import {
   IonApp,
   IonRouterOutlet,
@@ -10,6 +10,7 @@ import {
   IonSpinner,
   setupIonicReact,
   useIonRouter,
+  createAnimation,
 } from "@ionic/react";
 import type { AnimationBuilder } from "@ionic/react";
 import { IonReactRouter } from "@ionic/react-router";
@@ -119,6 +120,10 @@ const TabsShell: React.FC = () => {
   const router = useIonRouter();
   const history = useHistory();
 
+  // Refs for tracking tab navigation state across renders
+  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
+  const lastDirectionRef = useRef<"forward" | "back" | null>(null);
+
   const getActiveTab = () => {
     const path = location.pathname || "";
 
@@ -162,6 +167,10 @@ const TabsShell: React.FC = () => {
           ? "forward"
           : "back"
         : "forward";
+
+    // Update refs for animation
+    previousTabIndexRef.current = currentTabIndex;
+    lastDirectionRef.current = direction;
 
     trackEvent("tab_navigation", {
       from: currentTab,
@@ -292,7 +301,7 @@ const TabsShell: React.FC = () => {
 
   return (
     <IonTabs>
-      <IonRouterOutlet id="tabs">
+      <IonRouterOutlet id="tabs" animation={tabAnimation}>
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
         <Route exact path="/app/planner" render={(props) => <LazyRoute component={Planner} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
