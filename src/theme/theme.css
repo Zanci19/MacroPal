@@ -30,7 +30,7 @@
   --ion-text-color: var(--mp-text);
   --ion-item-background: var(--mp-surface);
   --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgba(255, 255, 255, 0.6);
+  --ion-toolbar-background: rgb(255, 255, 255);
   --ion-tab-bar-background: rgba(255, 255, 255, 0.75);
 
   color-scheme: light;
@@ -59,34 +59,8 @@ body.dark {
   --ion-text-color: var(--mp-text);
   --ion-item-background: var(--mp-surface);
   --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgba(8, 12, 20, 0.7);
+  --ion-toolbar-background: rgb(8, 12, 20);
   --ion-tab-bar-background: rgba(8, 12, 20, 0.85);
-
-  color-scheme: dark;
-}
-
-/* MacroPal Theme - Premium blue accent theme */
-body.macropal-theme {
-  --mp-bg: #0a0f1a;
-  --mp-surface: rgba(16, 24, 40, 0.85);
-  --mp-surface-muted: #111827;
-  --mp-surface-glow: 
-    radial-gradient(ellipse 800px 500px at 10% 0%, rgba(53, 123, 228, 0.25), transparent 50%),
-    radial-gradient(ellipse 600px 400px at 90% 10%, rgba(79, 140, 248, 0.2), transparent 45%),
-    radial-gradient(ellipse 500px 300px at 50% 100%, rgba(123, 178, 255, 0.12), transparent 40%);
-  --mp-text: #e7edf6;
-  --mp-text-muted: #9fb1c9;
-  --mp-border: rgba(53, 123, 228, 0.2);
-  --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.4);
-  --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.6);
-  --mp-chip-bg: rgba(31, 41, 55, 0.9);
-
-  --ion-background-color: var(--mp-bg);
-  --ion-text-color: var(--mp-text);
-  --ion-item-background: var(--mp-surface);
-  --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgba(10, 15, 26, 0.78);
-  --ion-tab-bar-background: rgba(10, 15, 26, 0.88);
 
   color-scheme: dark;
 }
@@ -127,30 +101,24 @@ ion-content::part(background) {
 }
 
 ion-toolbar {
-  --background: rgba(255, 255, 255, 0.6);
-  --backdrop-filter: blur(18px);
+  --background: var(--ion-toolbar-background);
   --color: var(--mp-text);
   border-bottom: 1px solid var(--mp-border);
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-body.dark ion-toolbar,
-body.macropal-theme ion-toolbar {
-  --background: rgba(8, 12, 20, 0.7);
+body.dark ion-toolbar {
+  --background: var(--ion-toolbar-background);
   border-color: var(--mp-border);
 }
 
 /* Opaque toolbars for tabbed pages to prevent overlap during animations */
 .tabbed-content ion-toolbar {
-  --background: rgb(255, 255, 255);
+  --background: var(--ion-toolbar-background);
 }
 
 body.dark .tabbed-content ion-toolbar {
-  --background: rgb(8, 12, 20);
-}
-
-body.macropal-theme .tabbed-content ion-toolbar {
-  --background: rgb(10, 15, 26);
+  --background: var(--ion-toolbar-background);
 }
 
 ion-title {
@@ -282,8 +250,7 @@ ion-tab-bar {
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
 }
 
-body.dark ion-tab-bar,
-body.macropal-theme ion-tab-bar {
+body.dark ion-tab-bar {
   --background: rgba(8, 12, 20, 0.85);
   box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.45);
 }
@@ -371,15 +338,11 @@ ion-alert {
 
 body.dark ion-alert .alert-title,
 body.dark ion-alert .alert-sub-title,
-body.dark ion-alert .alert-message,
-body.macropal-theme ion-alert .alert-title,
-body.macropal-theme ion-alert .alert-sub-title,
-body.macropal-theme ion-alert .alert-message {
+body.dark ion-alert .alert-message {
   color: var(--mp-text) !important;
 }
 
-body.dark ion-alert .alert-button,
-body.macropal-theme ion-alert .alert-button {
+body.dark ion-alert .alert-button {
   color: var(--mp-primary) !important;
 }
 

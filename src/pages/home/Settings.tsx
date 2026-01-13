@@ -873,7 +873,6 @@ const Settings: React.FC = () => {
                     <IonSelectOption value="system">System Default</IonSelectOption>
                     <IonSelectOption value="light">Light</IonSelectOption>
                     <IonSelectOption value="dark">Dark</IonSelectOption>
-                    <IonSelectOption value="macropal">MacroPal Theme</IonSelectOption>
                   </IonSelect>
                 </IonItem>
                 <IonItem lines="full">

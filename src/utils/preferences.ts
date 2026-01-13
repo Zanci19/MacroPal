@@ -1,4 +1,4 @@
-export const THEME_MODES = ["system", "light", "dark", "macropal"] as const;
+export const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
 export const getStoredThemeMode = (): ThemeMode => {
@@ -13,16 +13,13 @@ export const applyTheme = (mode: ThemeMode) => {
   if (typeof window === "undefined") return;
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-  document.body.classList.remove("dark", "macropal-theme");
+  document.body.classList.remove("dark");
 
   switch (mode) {
     case "dark":
       document.body.classList.add("dark");
       break;
     case "light":
-      break;
-    case "macropal":
-      document.body.classList.add("macropal-theme");
       break;
     case "system":
     default:
@@ -124,7 +121,13 @@ export const applyProfilePreferences = (profile?: Record<string, unknown>) => {
     applyDebugOverlayPreference(prefs.debugOverlayEnabled);
   }
   if (typeof prefs.lazyLoadEnabled === "boolean") {
-    applyLazyLoadPreference(prefs.lazyLoadEnabled);
+    const storedPreference =
+      typeof window === "undefined"
+        ? null
+        : window.localStorage.getItem("mp_lazy_load");
+    if (storedPreference === null) {
+      applyLazyLoadPreference(prefs.lazyLoadEnabled);
+    }
   }
   return prefs;
 };

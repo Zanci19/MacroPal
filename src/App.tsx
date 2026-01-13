@@ -23,8 +23,6 @@ import {
   settingsOutline,
   settings,
   analytics,
-  calendarOutline,
-  calendar,
   fitnessOutline,
   fitness,
   analyticsSharp,
@@ -55,7 +53,6 @@ const importEnergyNeeds = () => import("./pages/home/EnergyNeeds");
 const importUnits = () => import("./pages/home/Units");
 const importReminders = () => import("./pages/home/Reminders");
 const importDataPrivacy = () => import("./pages/home/DataPrivacy");
-const importPlanner = () => import("./pages/home/Planner");
 const importWorkout = () => import("./pages/home/Workout");
 const importScanBarcode = () => import("./pages/ScanBarcode");
 
@@ -78,7 +75,6 @@ const EnergyNeeds = lazy(importEnergyNeeds);
 const Units = lazy(importUnits);
 const Reminders = lazy(importReminders);
 const DataPrivacy = lazy(importDataPrivacy);
-const Planner = lazy(importPlanner);
 const Workout = lazy(importWorkout);
 const ScanBarcode = lazy(importScanBarcode);
 
@@ -102,7 +98,6 @@ const LAZY_ROUTE_IMPORTS = [
   importUnits,
   importReminders,
   importDataPrivacy,
-  importPlanner,
   importWorkout,
   importScanBarcode,
 ];
@@ -180,7 +175,7 @@ const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
 
 setupIonicReact();
 
-const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
+const TAB_ORDER = ["analytics", "home", "workout", "settings"];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
@@ -236,7 +231,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     const path = location.pathname || "";
 
     if (path.startsWith("/app/analytics")) return "analytics";
-    if (path.startsWith("/app/planner")) return "planner";
     if (path.startsWith("/app/home")) return "home";
     if (path.startsWith("/app/workout")) return "workout";
     if (path.startsWith("/app/settings")) return "settings";
@@ -248,7 +242,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   const isTabRootRoute = (path: string) =>
     [
       "/app/analytics",
-      "/app/planner",
       "/app/home",
       "/app/workout",
       "/app/settings",
@@ -427,7 +420,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     <IonTabs>
       <IonRouterOutlet id="tabs" animation={tabAnimation}>
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
-        <Route exact path="/app/planner" render={(props) => <LazyRoute component={Planner} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
         <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />
         <Route exact path="/app/settings" render={(props) => <LazyRoute component={Settings} {...props} />} />
@@ -450,19 +442,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             icon={activeTab === "analytics" ? analyticsSharp : analytics}
           />
           <IonLabel>Analytics</IonLabel>
-        </IonTabButton>
-
-        <IonTabButton
-          tab="planner"
-          href="/app/planner"
-          onClick={(event) => navigateToTab(event, "planner", "/app/planner")}
-          className={tabClass("planner")}
-        >
-          <IonIcon
-            aria-hidden="true"
-            icon={activeTab === "planner" ? calendar : calendarOutline}
-          />
-          <IonLabel>Planner</IonLabel>
         </IonTabButton>
 
         <IonTabButton
@@ -541,7 +520,6 @@ const App: React.FC = () => {
       const currentTheme = getStoredThemeMode();
       if (currentTheme !== "system") return;
       document.body.classList.toggle("dark", event.matches);
-      document.body.classList.remove("macropal-theme");
     };
 
     prefersDark.addEventListener("change", listener);
