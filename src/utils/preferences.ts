@@ -72,8 +72,10 @@ export const applyLazyLoadPreference = (enabled: boolean) => {
 };
 
 export const getLazyLoadPreference = (): boolean => {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") return true;
   const stored = window.localStorage.getItem("mp_lazy_load");
+  // Default to true (lazy loading enabled) if not explicitly set
+  if (stored === null) return true;
   return stored === "on";
 };
 
