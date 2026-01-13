@@ -153,6 +153,13 @@ const Analytics: React.FC = () => {
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const unitSystem = getUnitSystem(profile?.units);
+  const chartAnimationsEnabled = useMemo(() => {
+    if (typeof window === "undefined") return true;
+    const prefersReducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const isAndroid = /Android/i.test(window.navigator.userAgent || "");
+    return !prefersReducedMotion && !isAndroid;
+  }, []);
 
   // Fetch last 60 days whenever we have a uid and auth has settled
   const fetchDays = useCallback(async () => {
@@ -684,6 +691,7 @@ const Analytics: React.FC = () => {
                                 stroke={palette[4]}
                                 dot={false}
                                 strokeWidth={2}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                             </LineChart>
                           </ResponsiveContainer>
@@ -756,6 +764,7 @@ const Analytics: React.FC = () => {
                                       paddingAngle={2}
                                       cx="50%"
                                       cy="50%"
+                                      isAnimationActive={chartAnimationsEnabled}
                                     >
                                       {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
                                         (_, i) => (
@@ -850,6 +859,7 @@ const Analytics: React.FC = () => {
                                 fill={palette[0]}
                                 stroke={palette[0]}
                                 opacity={0.25}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                               <Line
                                 type="monotone"
@@ -858,6 +868,7 @@ const Analytics: React.FC = () => {
                                 stroke={palette[1]}
                                 dot={false}
                                 strokeWidth={2}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                             </ComposedChart>
                           </ResponsiveContainer>
@@ -893,18 +904,21 @@ const Analytics: React.FC = () => {
                                 stackId="a"
                                 name="Carbohydrates kcal"
                                 fill={palette[0]}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                               <Bar
                                 dataKey="proteinK"
                                 stackId="a"
                                 name="Protein kcal"
                                 fill={palette[1]}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                               <Bar
                                 dataKey="fatK"
                                 stackId="a"
                                 name="Fat kcal"
                                 fill={palette[2]}
+                                isAnimationActive={chartAnimationsEnabled}
                               />
                             </BarChart>
                           </ResponsiveContainer>
@@ -942,6 +956,7 @@ const Analytics: React.FC = () => {
                                       paddingAngle={1}
                                       cx="50%"
                                       cy="50%"
+                                      isAnimationActive={chartAnimationsEnabled}
                                     >
                                       {macroDonut.map((_, i) => (
                                         <Cell
@@ -1028,6 +1043,7 @@ const Analytics: React.FC = () => {
                                       stroke={palette[0]}
                                       fill={palette[0]}
                                       fillOpacity={0.35}
+                                      isAnimationActive={chartAnimationsEnabled}
                                     />
                                     <Legend />
                                     <Tooltip />
@@ -1076,11 +1092,13 @@ const Analytics: React.FC = () => {
                                   dataKey="average"
                                   name="Current avg (kcal)"
                                   fill={palette[0]}
+                                  isAnimationActive={chartAnimationsEnabled}
                                 />
                                 <Bar
                                   dataKey="target"
                                   name="Target (kcal)"
                                   fill={palette[3]}
+                                  isAnimationActive={chartAnimationsEnabled}
                                 />
                               </BarChart>
                             </ResponsiveContainer>
@@ -1139,11 +1157,13 @@ const Analytics: React.FC = () => {
                                   dataKey="average"
                                   name="Current avg (g)"
                                   fill={palette[0]}
+                                  isAnimationActive={chartAnimationsEnabled}
                                 />
                                 <Bar
                                   dataKey="target"
                                   name="Target (g)"
                                   fill={palette[1]}
+                                  isAnimationActive={chartAnimationsEnabled}
                                 />
                               </BarChart>
                             </ResponsiveContainer>

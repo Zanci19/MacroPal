@@ -182,6 +182,7 @@ setupIonicReact();
 
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
+const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
@@ -192,9 +193,16 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
-const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
-  ? REDUCED_ANIMATION_DURATION_MS 
-  : DEFAULT_ANIMATION_DURATION_MS;
+const getIsAndroid = () => {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent || "");
+};
+
+const ANIMATION_DURATION_MS = getPrefersReducedMotion()
+  ? REDUCED_ANIMATION_DURATION_MS
+  : getIsAndroid()
+    ? ANDROID_ANIMATION_DURATION_MS
+    : DEFAULT_ANIMATION_DURATION_MS;
 
 const TabsShell: React.FC<RouteComponentProps> = () => {
   const location = useLocation();
