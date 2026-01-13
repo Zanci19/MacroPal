@@ -158,12 +158,19 @@ const OnboardingProfile: React.FC = () => {
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileData } | undefined;
         const p = data?.profile;
+        const googlePhoto =
+          typeof user.photoURL === "string" && user.photoURL.length > 0
+            ? user.photoURL
+            : null;
 
         trackEvent("onboarding_profile_load", {
           has_profile: !!p,
         });
 
-        if (!p) return;
+        if (!p) {
+          setProfilePhotoUrl(googlePhoto);
+          return;
+        }
 
         setAge(p.age ?? null);
         const resolvedUnits = getUnitSystem(p.units);
@@ -186,7 +193,7 @@ const OnboardingProfile: React.FC = () => {
             ? (p as { photoUrl?: string }).photoUrl!
             : null;
         // Use stored photo first, then Google profile photo, then null
-        const photoToUse = storedPhoto || user.photoURL || null;
+        const photoToUse = storedPhoto || googlePhoto || null;
         setProfilePhotoUrl(photoToUse);
       } catch (e) {
         console.error("Error loading profile:", e);
@@ -296,6 +303,12 @@ const OnboardingProfile: React.FC = () => {
         });
       }
 
+      const photoToSave =
+        profilePhotoUrl ||
+        (typeof user.photoURL === "string" && user.photoURL.length > 0
+          ? user.photoURL
+          : null);
+
       await setDoc(
         userRef,
         {
@@ -307,7 +320,7 @@ const OnboardingProfile: React.FC = () => {
             gender,
             activity,
             units: unitSystem,
-            ...(profilePhotoUrl ? { photoUrl: profilePhotoUrl } : {}),
+            ...(photoToSave ? { photoUrl: photoToSave } : {}),
             ...(targets && {
               caloriesTarget: targets.calories,
               macroTargets: {
