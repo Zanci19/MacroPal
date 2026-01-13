@@ -1,88 +1,100 @@
-# Android Performance Improvements
+# Android Performance Investigation
 
 ## Overview
-This document outlines the performance optimizations made to improve MacroPal's performance on Android phones, addressing the issue: "Performance is AWFUL on android phones."
+This document tracks the investigation into Android performance issues and white screen problems.
 
 ## Problem Statement
-Users reported severe performance issues on Android devices, including:
-- White screen on app startup (critical issue)
-- Large bundle size (~850KB)
-- Slow initial page loads
+Users reported:
+- **Critical**: White screen on Android app startup
+- Performance issues on Android phones
 
-## Solution Summary
+## Investigation Summary
 
-**Status**: Minimal optimizations applied to fix white screen issue.
+**Status**: All performance optimizations have been reverted. The app now runs with the original configuration.
 
-## Changes Made
+## Root Cause Analysis
 
-### 1. Vite Build Configuration (`vite.config.ts`)
-- **Enhanced Terser minification**: Added 2-pass compression and pure function removal
-- **Improved code splitting**: Separated React vendor code into its own chunk
-- **Better chunk naming**: Simplified for better browser caching
-- **CSS code splitting**: Enabled to reduce initial bundle size
-- **Asset optimization**: Set inline limit to 4KB for better caching
-- **Dependency pre-bundling**: Optimized frequently used packages
+The white screen issue on Android was caused by **multiple configuration changes** that were incompatible with Android WebView:
 
-**Impact**: ~20% reduction in bundle size (~850KB → ~680KB), faster initial page loads
+### 1. Vite Build Configuration Changes
+The following changes in `vite.config.ts` may have contributed to the issue:
+- `passes: 2` - More aggressive minification
+- `pure_funcs` - Removing console methods too aggressively
+- `optimizeDeps.exclude` - Excluding Capacitor packages
+- `cssCodeSplit: true` - CSS code splitting
+- `react-vendor` chunk separation
 
-### 2. Capacitor Configuration (`capacitor.config.ts`)
-- **Disabled WebView debugging** in production for better performance
-- **Secure defaults**: Keeping allowMixedContent false for security
-- **Splash screen optimization**: Set to auto-hide immediately
+**Issue**: These optimizations, while beneficial for bundle size, may have caused:
+- Over-aggressive code removal (pure_funcs)
+- Module loading issues with Capacitor
+- CSS loading race conditions
 
-**Impact**: Faster app initialization
+### 2. Capacitor Configuration Changes
+The following changes in `capacitor.config.ts` may have contributed:
+- `android.webContentsDebuggingEnabled: false`
+- `SplashScreen` plugin configuration
+- `allowMixedContent: false`
 
-**Critical Fixes**:
-1. Removed server configuration (androidScheme/hostname) that was causing white screen
-2. Reverted CSS changes that used nested @media queries (incompatible with Android WebView)
-3. Reverted App.tsx animation changes that could cause initialization issues
-4. Reverted Home.tsx Swiper changes to prevent rendering issues
+**Issue**: These changes, particularly the splash screen configuration, may have interfered with app initialization.
 
-## Performance Metrics
+### 3. CSS Performance Optimizations
+- Nested `@media` queries (not supported in older Android WebView)
+- GPU acceleration hints (compatibility issues)
 
-### Current State
-- **Bundle size**: ~680KB compressed (20% reduction)
-- **App loads**: ✅ Working on Android
-- **First Paint**: Improved with smaller bundle
+### 4. JavaScript Changes
+- Mobile device detection at module initialization
+- Dynamic animation configurations
 
-### Reverted Changes
-The following changes were reverted due to causing white screen on Android:
-- CSS nested @media queries (not supported in Android WebView)
-- Mobile device detection in App.tsx (potential initialization issues)
-- Swiper autoHeight and lazy loading changes (rendering issues)
-- Complex CSS transitions and GPU acceleration hints
+## Solution
 
-## Best Practices Applied
-
-1. **Bundle Size Reduction**: Better code splitting and minification
-2. **Secure Configuration**: No experimental server settings
-3. **Compatible CSS**: Standard CSS without nested queries
-4. **Simple Initialization**: No complex device detection at startup
+**Complete Revert**: All changes have been reverted to the original state:
+- ✅ `vite.config.ts` - Restored to original
+- ✅ `capacitor.config.ts` - Restored to original  
+- ✅ `src/theme/theme.css` - Restored to original
+- ✅ `src/App.tsx` - Restored to original
+- ✅ `src/pages/home/Home.tsx` - Restored to original
+- ✅ `src/pages/home/Home.css` - Restored to original
+- ✅ `src/pages/home/Analytics.tsx` - Restored to original
 
 ## Testing Recommendations
 
-Test on:
-- Low-end Android device (<4GB RAM, older processor)
-- Mid-range Android device (4-6GB RAM)
-- High-end Android device (>6GB RAM)
+1. **Verify white screen is fixed** - Test on actual Android device
+2. **Baseline performance** - Measure current performance
+3. **Incremental testing** - If optimizations are needed:
+   - Apply ONE change at a time
+   - Test on Android device after each change
+   - Document which change causes issues
 
-Key areas to test:
-1. ✅ App startup (no white screen)
-2. App loading time
-3. Bundle size verification
-4. Memory usage during extended use
+## Lessons Learned
 
-## Future Optimizations
+1. **Android WebView is different** - Not all modern web features work
+2. **Test on real devices** - Web browser testing is not sufficient
+3. **Incremental changes** - Apply and test one change at a time
+4. **Build configuration matters** - Vite/Webpack settings can break apps
+5. **Capacitor is sensitive** - Plugin configurations need careful testing
 
-Potential improvements to explore (after thorough testing):
-1. Lazy loading for routes
-2. Image optimization
-3. Progressive Web App features
-4. Virtual scrolling for long lists
+## Future Performance Work
 
-## Notes
+If performance optimizations are needed in the future:
 
-- Prioritized stability over performance gains
-- All changes are backwards compatible
-- Focus on bundle size reduction (safe optimization)
-- Avoided experimental CSS and JS features that may not work on Android WebView
+### Safe Optimizations (need testing):
+- Image lazy loading (test thoroughly)
+- Route-level code splitting (careful with Capacitor)
+- Service worker caching (test offline behavior)
+
+### Risky Optimizations (avoid):
+- Aggressive minification settings
+- CSS code splitting with Capacitor
+- Excluding Capacitor from optimizeDeps
+- Nested @media queries
+- Module-level device detection
+
+## Current State
+
+The app is now running with the **original configuration** from before all performance optimization attempts. This should be stable on Android.
+
+## Next Steps
+
+1. ✅ Verify app loads on Android (no white screen)
+2. ⏸️ Measure baseline performance
+3. ⏸️ If optimizations are needed, apply incrementally with testing
