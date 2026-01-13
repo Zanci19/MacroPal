@@ -27,7 +27,7 @@ describe('Lazy Load Preferences', () => {
       expect(result).toBe(false);
     });
 
-    it('should return true for any other stored value', () => {
+    it('should return false for invalid stored values', () => {
       localStorage.setItem('mp_lazy_load', 'invalid');
       const result = getLazyLoadPreference();
       expect(result).toBe(false);
