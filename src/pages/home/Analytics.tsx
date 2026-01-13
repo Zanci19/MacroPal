@@ -677,7 +677,7 @@ const Analytics: React.FC = () => {
                               <YAxis />
                               <Tooltip />
                               <Legend />
-                              <Line isAnimationActive={false}
+                              <Line
                                 type="monotone"
                                 dataKey="weight"
                                 name={`Weight (${weightLabel(unitSystem)})`}

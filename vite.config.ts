@@ -32,14 +32,10 @@ export default defineConfig({
           'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           'recharts': ['recharts'],
           'swiper': ['swiper'],
-          'framer-motion': ['framer-motion'],
           'react-vendor': ['react', 'react-dom', 'react-router', 'react-router-dom'],
         },
         // Optimize chunk sizes for better caching
-        chunkFileNames: (chunkInfo) => {
-          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').slice(-1)[0] : 'chunk';
-          return `assets/[name]-[hash].js`;
-        },
+        chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash][extname]',
         entryFileNames: 'assets/[name]-[hash].js',
       },
