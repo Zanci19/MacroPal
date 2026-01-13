@@ -21,6 +21,7 @@ const CheckLogin: React.FC = () => {
   const history = useHistory();
   const [phase, setPhase] = useState<Phase>("checking");
   const [errorMsg, setErrorMsg] = useState<string>("");
+  const [showSlowMessage, setShowSlowMessage] = useState(false);
 
   const startCheck = () => {
     // If we're offline, redirect to offline page immediately
@@ -100,6 +101,21 @@ const CheckLogin: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (phase !== "checking") {
+      setShowSlowMessage(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowSlowMessage(true);
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [phase]);
+
   const handleRetry = () => {
     // IMPORTANT: do NOT switch to "checking" if still offline
     if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -128,16 +144,19 @@ const CheckLogin: React.FC = () => {
               maxWidth: "300px" 
             }}
           />
-          <IonText 
-            color="medium" 
-            style={{ 
-              marginTop: "0.5rem", 
-              fontSize: "0.75rem", 
-              opacity: 0.7 
-            }}
-          >
-            This may take longer on slow connections
-          </IonText>
+          {showSlowMessage && (
+            <IonText
+              color="medium"
+              style={{
+                marginTop: "1.5rem",
+                fontSize: "0.75rem",
+                opacity: 0.7,
+                textAlign: "center",
+              }}
+            >
+              This may take longer on slow connections
+            </IonText>
+          )}
         </>
       );
     }

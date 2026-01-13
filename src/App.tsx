@@ -30,30 +30,86 @@ import {
   analyticsSharp,
 } from "ionicons/icons";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import {
+  applyTheme,
+  getLazyLoadPreference,
+  getStoredThemeMode,
+} from "./utils/preferences";
 
-// Lazy load route components
-const Login = lazy(() => import("./pages/authentication/Login"));
-const Register = lazy(() => import("./pages/authentication/Register"));
-const EmailVerification = lazy(() => import("./pages/authentication/EmailVerification"));
-const AddFood = lazy(() => import("./pages/AddFood"));
-const SetupProfile = lazy(() => import("./pages/SetupProfile"));
-const OnboardingProfile = lazy(() => import("./pages/OnboardingProfile"));
-const OnboardingTerms = lazy(() => import("./pages/OnboardingTerms"));
-const CheckLogin = lazy(() => import("./pages/CheckLogin"));
-const Start = lazy(() => import("./pages/Start"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
-const AuthLoading = lazy(() => import("./pages/authentication/AuthLoading"));
-const Offline = lazy(() => import("./pages/Offline"));
-const Home = lazy(() => import("./pages/home/Home"));
-const Analytics = lazy(() => import("./pages/home/Analytics"));
-const Settings = lazy(() => import("./pages/home/Settings"));
-const EnergyNeeds = lazy(() => import("./pages/home/EnergyNeeds"));
-const Units = lazy(() => import("./pages/home/Units"));
-const Reminders = lazy(() => import("./pages/home/Reminders"));
-const DataPrivacy = lazy(() => import("./pages/home/DataPrivacy"));
-const Planner = lazy(() => import("./pages/home/Planner"));
-const Workout = lazy(() => import("./pages/home/Workout"));
-const ScanBarcode = lazy(() => import("./pages/ScanBarcode"));
+const importLogin = () => import("./pages/authentication/Login");
+const importRegister = () => import("./pages/authentication/Register");
+const importEmailVerification = () => import("./pages/authentication/EmailVerification");
+const importAddFood = () => import("./pages/AddFood");
+const importSetupProfile = () => import("./pages/SetupProfile");
+const importOnboardingProfile = () => import("./pages/OnboardingProfile");
+const importOnboardingTerms = () => import("./pages/OnboardingTerms");
+const importCheckLogin = () => import("./pages/CheckLogin");
+const importStart = () => import("./pages/Start");
+const importResetPassword = () => import("./pages/ResetPassword");
+const importAuthLoading = () => import("./pages/authentication/AuthLoading");
+const importOffline = () => import("./pages/Offline");
+const importHome = () => import("./pages/home/Home");
+const importAnalytics = () => import("./pages/home/Analytics");
+const importSettings = () => import("./pages/home/Settings");
+const importEnergyNeeds = () => import("./pages/home/EnergyNeeds");
+const importUnits = () => import("./pages/home/Units");
+const importReminders = () => import("./pages/home/Reminders");
+const importDataPrivacy = () => import("./pages/home/DataPrivacy");
+const importPlanner = () => import("./pages/home/Planner");
+const importWorkout = () => import("./pages/home/Workout");
+const importScanBarcode = () => import("./pages/ScanBarcode");
+
+const Login = lazy(importLogin);
+const Register = lazy(importRegister);
+const EmailVerification = lazy(importEmailVerification);
+const AddFood = lazy(importAddFood);
+const SetupProfile = lazy(importSetupProfile);
+const OnboardingProfile = lazy(importOnboardingProfile);
+const OnboardingTerms = lazy(importOnboardingTerms);
+const CheckLogin = lazy(importCheckLogin);
+const Start = lazy(importStart);
+const ResetPassword = lazy(importResetPassword);
+const AuthLoading = lazy(importAuthLoading);
+const Offline = lazy(importOffline);
+const Home = lazy(importHome);
+const Analytics = lazy(importAnalytics);
+const Settings = lazy(importSettings);
+const EnergyNeeds = lazy(importEnergyNeeds);
+const Units = lazy(importUnits);
+const Reminders = lazy(importReminders);
+const DataPrivacy = lazy(importDataPrivacy);
+const Planner = lazy(importPlanner);
+const Workout = lazy(importWorkout);
+const ScanBarcode = lazy(importScanBarcode);
+
+const LAZY_ROUTE_IMPORTS = [
+  importLogin,
+  importRegister,
+  importEmailVerification,
+  importAddFood,
+  importSetupProfile,
+  importOnboardingProfile,
+  importOnboardingTerms,
+  importCheckLogin,
+  importStart,
+  importResetPassword,
+  importAuthLoading,
+  importOffline,
+  importHome,
+  importAnalytics,
+  importSettings,
+  importEnergyNeeds,
+  importUnits,
+  importReminders,
+  importDataPrivacy,
+  importPlanner,
+  importWorkout,
+  importScanBarcode,
+];
+
+const preloadLazyRoutes = async () => {
+  await Promise.allSettled(LAZY_ROUTE_IMPORTS.map((loader) => loader()));
+};
 
 import "@ionic/react/css/core.css";
 import "@ionic/react/css/normalize.css";
@@ -446,48 +502,38 @@ const TabsShell: React.FC = () => {
 
 
 const App: React.FC = () => {
-  useEffect(() => {
-    // Valid theme values
-    const validThemes = ["system", "light", "dark", "macropal"];
-    
-    // Check for saved theme preference first
-    const savedTheme = localStorage.getItem("mp_theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+  const [lazyLoadEnabled, setLazyLoadEnabled] = useState<boolean>(() => {
+    return getLazyLoadPreference();
+  });
 
-    const applyThemeFromStorage = () => {
-      document.body.classList.remove("dark", "macropal-theme");
-      
-      // Validate saved theme before applying
-      if (savedTheme && validThemes.includes(savedTheme)) {
-        if (savedTheme === "dark") {
-          document.body.classList.add("dark");
-        } else if (savedTheme === "light") {
-          // Light mode - no class needed
-        } else if (savedTheme === "macropal") {
-          document.body.classList.add("macropal-theme");
-        } else if (savedTheme === "system") {
-          // System default
-          if (prefersDark.matches) {
-            document.body.classList.add("dark");
-          }
-        }
-      } else {
-        // No valid preference saved - use system default
-        if (prefersDark.matches) {
-          document.body.classList.add("dark");
-        }
-      }
+  useEffect(() => {
+    const handleLazyLoadChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      setLazyLoadEnabled(customEvent.detail.enabled);
     };
 
-    applyThemeFromStorage();
+    window.addEventListener("mp_lazy_load_change", handleLazyLoadChange);
+    return () => {
+      window.removeEventListener("mp_lazy_load_change", handleLazyLoadChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!lazyLoadEnabled) {
+      void preloadLazyRoutes();
+    }
+  }, [lazyLoadEnabled]);
+
+  useEffect(() => {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+    applyTheme(getStoredThemeMode());
 
     // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {
-      const currentTheme = localStorage.getItem("mp_theme");
-      if (!currentTheme || currentTheme === "system" || !validThemes.includes(currentTheme)) {
-        document.body.classList.toggle("dark", event.matches);
-        document.body.classList.remove("macropal-theme");
-      }
+      const currentTheme = getStoredThemeMode();
+      if (currentTheme !== "system") return;
+      document.body.classList.toggle("dark", event.matches);
+      document.body.classList.remove("macropal-theme");
     };
 
     prefersDark.addEventListener("change", listener);

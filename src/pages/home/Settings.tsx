@@ -47,65 +47,20 @@ import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import "./Settings.css";
 import { ensureGoogleFitAccess, isGoogleFitSupported } from "../../utils/googleFit";
-
-export type ThemeMode = "system" | "light" | "dark" | "macropal";
+import {
+  applyAnimationPreference,
+  applyDebugOverlayPreference,
+  applyLazyLoadPreference,
+  applyTheme,
+  getAnimationPreference,
+  getDebugOverlayPreference,
+  getLazyLoadPreference,
+  getStoredThemeMode,
+  THEME_MODES,
+  type ThemeMode,
+} from "../../utils/preferences";
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
-
-export const applyTheme = (mode: ThemeMode) => {
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-  // Remove all theme classes first
-  document.body.classList.remove("dark", "macropal-theme");
-
-  switch (mode) {
-    case "dark":
-      document.body.classList.add("dark");
-      break;
-    case "light":
-      // No class needed for light mode
-      break;
-    case "macropal":
-      document.body.classList.add("macropal-theme");
-      break;
-    case "system":
-    default:
-      if (prefersDark) {
-        document.body.classList.add("dark");
-      }
-      break;
-  }
-
-  // Store in localStorage for quick load on next visit
-  localStorage.setItem("mp_theme", mode);
-};
-
-// Apply animation preference
-export const applyAnimationPreference = (enabled: boolean) => {
-  localStorage.setItem("mp_tab_animations", enabled ? "enabled" : "disabled");
-  // Dispatch custom event to notify App.tsx
-  window.dispatchEvent(new CustomEvent("mp_animation_preference_change", { detail: { enabled } }));
-};
-
-// Get animation preference
-export const getAnimationPreference = (): boolean => {
-  const stored = localStorage.getItem("mp_tab_animations");
-  return stored !== "disabled"; // Default to enabled
-};
-
-// Apply debug overlay preference
-export const applyDebugOverlayPreference = (enabled: boolean) => {
-  localStorage.setItem("mp_debug_overlay", enabled ? "on" : "off");
-  // Dispatch custom event to notify DebugOverlay component
-  window.dispatchEvent(new CustomEvent("mp_debug_overlay_change", { detail: { enabled } }));
-};
-
-// Get debug overlay preference
-export const getDebugOverlayPreference = (): boolean => {
-  const stored = localStorage.getItem("mp_debug_overlay");
-  return stored === "on"; // Default to disabled
-};
-
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -136,21 +91,17 @@ const Settings: React.FC = () => {
   const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
   const googleFitSupported = isGoogleFitSupported();
   
-  const VALID_THEMES: ThemeMode[] = ["system", "light", "dark", "macropal"];
-  
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => {
-    const stored = localStorage.getItem("mp_theme");
-    if (stored && VALID_THEMES.includes(stored as ThemeMode)) {
-      return stored as ThemeMode;
-    }
-    // Default to "system" theme
-    return "system";
+    return getStoredThemeMode();
   });
   const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() => {
     return getAnimationPreference();
   });
   const [debugOverlayEnabled, setDebugOverlayEnabled] = React.useState<boolean>(() => {
     return getDebugOverlayPreference();
+  });
+  const [lazyLoadEnabled, setLazyLoadEnabled] = React.useState<boolean>(() => {
+    return getLazyLoadPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -478,7 +429,7 @@ const Settings: React.FC = () => {
 
         // Load theme preference from Firebase
         const savedTheme = (profile as any)?.themeMode as string | undefined;
-        if (savedTheme && VALID_THEMES.includes(savedTheme as ThemeMode)) {
+        if (savedTheme && THEME_MODES.includes(savedTheme as ThemeMode)) {
           setThemeMode(savedTheme as ThemeMode);
           applyTheme(savedTheme as ThemeMode);
         }
@@ -505,6 +456,16 @@ const Settings: React.FC = () => {
           setDebugOverlayEnabled(localPref);
         }
 
+        // Load lazy load preference from Firebase or localStorage
+        const savedLazyLoadPref = (profile as any)?.lazyLoadEnabled;
+        if (typeof savedLazyLoadPref === "boolean") {
+          setLazyLoadEnabled(savedLazyLoadPref);
+          applyLazyLoadPreference(savedLazyLoadPref);
+        } else {
+          const localPref = getLazyLoadPreference();
+          setLazyLoadEnabled(localPref);
+        }
+
         setSmartRecommendationEnabled(enabled);
       } catch (e) {
         console.error("Failed to load smartRecommendationEnabled:", e);
@@ -512,7 +473,7 @@ const Settings: React.FC = () => {
     };
 
     load();
-  }, [VALID_THEMES]);
+  }, []);
 
   if (!user) {
     return (
@@ -1041,6 +1002,45 @@ const Settings: React.FC = () => {
                           message:
                             err?.message ||
                             "Could not update debug overlay setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>
+                    <h2>Lazy load routes</h2>
+                    <p>Load screens only when you visit them.</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={lazyLoadEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setLazyLoadEnabled(checked);
+                      applyLazyLoadPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.lazyLoadEnabled": checked,
+                        });
+
+                        trackEvent("settings_lazy_load_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save lazy load preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update lazy load setting.",
                           color: "danger",
                         });
                       }

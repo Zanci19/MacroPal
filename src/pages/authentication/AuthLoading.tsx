@@ -13,13 +13,15 @@ import {
 import { useHistory } from "react-router-dom";
 import { auth, db } from "../../firebase";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { applyProfilePreferences } from "../../utils/preferences";
 import "./AuthLoading.css";
 
 // Progress stage constants for better maintainability
 const PROGRESS_STAGES = {
   INITIAL: 0,
   LOADING_PROFILE: 0.3,
-  PROFILE_LOADED: 0.6,
+  PROFILE_LOADED: 0.45,
+  PREFERENCES_APPLIED: 0.6,
   CREATING_PROFILE: 0.7,
   CHECKING_DETAILS: 0.8,
   COMPLETE: 1.0,
@@ -35,6 +37,7 @@ const AuthLoading: React.FC = () => {
   const [message, setMessage] = useState("Checking your account…");
   const [timedOut, setTimedOut] = useState(false);
   const [progress, setProgress] = useState(PROGRESS_STAGES.INITIAL);
+  const [showSlowMessage, setShowSlowMessage] = useState(false);
 
   useEffect(() => {
     // Check offline status immediately
@@ -45,6 +48,11 @@ const AuthLoading: React.FC = () => {
 
     let progressInterval: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
+    let slowMessageTimer: NodeJS.Timeout | null = null;
+
+    slowMessageTimer = setTimeout(() => {
+      setShowSlowMessage(true);
+    }, 3000);
 
     // Simulate progress for better UX feedback
     progressInterval = setInterval(() => {
@@ -86,10 +94,13 @@ const AuthLoading: React.FC = () => {
         let targetRoute = "/onboarding-profile";
 
         if (snap.exists()) {
+          const data: any = snap.data();
+          const profile = data.profile as Record<string, unknown> | undefined;
+          applyProfilePreferences(profile);
+          setProgress(PROGRESS_STAGES.PREFERENCES_APPLIED);
           setMessage("Checking your profile details…");
           setProgress(PROGRESS_STAGES.CHECKING_DETAILS);
 
-          const data: any = snap.data();
           const p = data.profile;
           const hasAcceptedTerms = Boolean(data.termsAcceptedAt);
 
@@ -161,6 +172,7 @@ const AuthLoading: React.FC = () => {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (progressInterval) clearInterval(progressInterval);
+      if (slowMessageTimer) clearTimeout(slowMessageTimer);
       window.removeEventListener("offline", handleOffline);
     };
   }, [history]);
@@ -190,17 +202,31 @@ const AuthLoading: React.FC = () => {
                   marginRight: "auto"
                 }}
               />
-              <IonText 
-                color="medium" 
-                style={{ 
-                  marginTop: "0.5rem", 
-                  fontSize: "0.75rem", 
+              <IonText
+                color="medium"
+                style={{
+                  marginTop: "0.5rem",
+                  fontSize: "0.75rem",
                   opacity: 0.7,
-                  display: "block"
+                  display: "block",
                 }}
               >
-                {Math.round(progress * 100)}% • {SLOW_CONNECTION_MESSAGE}
+                {Math.round(progress * 100)}%
               </IonText>
+              {showSlowMessage && (
+                <IonText
+                  color="medium"
+                  style={{
+                    marginTop: "1.5rem",
+                    fontSize: "0.75rem",
+                    opacity: 0.7,
+                    display: "block",
+                    textAlign: "center",
+                  }}
+                >
+                  {SLOW_CONNECTION_MESSAGE}
+                </IonText>
+              )}
             </>
           )}
           {timedOut && (
