@@ -1717,23 +1717,8 @@ const Home: React.FC = () => {
     return value.toFixed(0);
   };
 
-  useEffect(() => {
-    if (!summarySwiperRef.current) return;
-    // Debounce Swiper updates to avoid excessive re-renders
-    const timeoutId = setTimeout(() => {
-      summarySwiperRef.current?.updateAutoHeight(300);
-      summarySwiperRef.current?.update();
-    }, 100);
-    return () => clearTimeout(timeoutId);
-  }, [
-    profile,
-    caloriesNeeded,
-    macroTargets,
-    totals.day,
-    nutritionEntries,
-    streak,
-    showWellnessTip,
-  ]);
+  // Removed autoHeight update effect for better performance
+  // Swiper now uses fixed height instead of auto for smoother scrolling
 
 
   return (
@@ -1793,11 +1778,13 @@ const Home: React.FC = () => {
             modules={[Pagination]}
             pagination={{ clickable: true }}
             slidesPerView={1}
-            autoHeight
+            autoHeight={false}
             className="fs-summary__swiper"
-            observer
-            observeParents
-            observeSlideChildren
+            speed={300}
+            lazy={{
+              loadPrevNext: true,
+              loadPrevNextAmount: 1,
+            }}
             onSwiper={(swiper) => {
               summarySwiperRef.current = swiper;
               handleSummarySlideChange(swiper);

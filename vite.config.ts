@@ -18,6 +18,11 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
+        passes: 2,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.trace'],
+      },
+      mangle: {
+        safari10: true,
       },
     },
     rollupOptions: {
@@ -27,9 +32,36 @@ export default defineConfig({
           'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           'recharts': ['recharts'],
           'swiper': ['swiper'],
+          'framer-motion': ['framer-motion'],
+          'react-vendor': ['react', 'react-dom', 'react-router', 'react-router-dom'],
         },
+        // Optimize chunk sizes for better caching
+        chunkFileNames: (chunkInfo) => {
+          const facadeModuleId = chunkInfo.facadeModuleId ? chunkInfo.facadeModuleId.split('/').slice(-1)[0] : 'chunk';
+          return `assets/[name]-[hash].js`;
+        },
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        entryFileNames: 'assets/[name]-[hash].js',
       },
     },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Optimize assets
+    assetsInlineLimit: 4096,
+  },
+  // Optimize dependencies pre-bundling
+  optimizeDeps: {
+    include: [
+      '@ionic/react',
+      '@ionic/react-router',
+      'react',
+      'react-dom',
+      'react-router',
+      'react-router-dom',
+    ],
+    exclude: ['@capacitor/core', '@capacitor/android'],
   },
   test: {
     globals: true,

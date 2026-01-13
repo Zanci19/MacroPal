@@ -97,17 +97,28 @@ ion-card:hover {
 }
 
 .fs-meal {
+  /* Improved content-visibility for better rendering performance */
   content-visibility: auto;
-  contain: layout paint;
-  contain-intrinsic-size: 1px 320px;
+  contain: layout style paint;
+  contain-intrinsic-size: auto 320px;
+  /* GPU acceleration */
+  will-change: contents;
+  transform: translateZ(0);
 }
 
 .fs-summary__swiper {
   width: 100%;
+  /* Fixed height to avoid layout shifts and improve performance */
+  min-height: 400px;
+  /* GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .fs-summary__slide {
   padding-bottom: 8px;
+  /* Ensure consistent height across slides */
+  min-height: 380px;
 }
 
 .fs-summary__hdr {
