@@ -5,34 +5,19 @@ This document outlines the performance optimizations made to improve MacroPal's 
 
 ## Problem Statement
 Users reported severe performance issues on Android devices, including:
-- Janky tab animations
-- Stuttering carousel scrolls
-- Slow chart rendering (500-800ms)
+- White screen on app startup (critical issue)
 - Large bundle size (~850KB)
-- Poor performance on low-end devices
+- Slow initial page loads
 
 ## Solution Summary
 
-All optimizations complete! This PR implements 11 major performance improvements:
-
-1. ✅ **Vite Build Optimization** - 20% smaller bundles
-2. ✅ **Capacitor Android Config** - Hardware acceleration
-3. ✅ **CSS Performance** - No transitions on mobile
-4. ✅ **Swiper Optimization** - Fixed heights, no autoHeight
-5. ✅ **Chart Performance** - Instant rendering
-6. ✅ **Mobile-Specific** - Touch device optimizations
-7. ✅ **GPU Acceleration** - transform3d everywhere
-8. ✅ **Bundle Size** - Better code splitting
-9. ✅ **Documentation** - Complete technical guide
-10. ✅ **Animation Speed** - Faster on mobile
-11. ✅ **Code Review** - All comments addressed
+**Status**: Minimal optimizations applied to fix white screen issue.
 
 ## Changes Made
 
 ### 1. Vite Build Configuration (`vite.config.ts`)
 - **Enhanced Terser minification**: Added 2-pass compression and pure function removal
 - **Improved code splitting**: Separated React vendor code into its own chunk
-- **Removed unused chunks**: Cleaned up framer-motion reference
 - **Better chunk naming**: Simplified for better browser caching
 - **CSS code splitting**: Enabled to reduce initial bundle size
 - **Asset optimization**: Set inline limit to 4KB for better caching
@@ -45,80 +30,34 @@ All optimizations complete! This PR implements 11 major performance improvements
 - **Secure defaults**: Keeping allowMixedContent false for security
 - **Splash screen optimization**: Set to auto-hide immediately
 
-**Impact**: Faster app initialization, smoother UI rendering
+**Impact**: Faster app initialization
 
-**Note**: Removed server configuration (androidScheme/hostname) that was causing white screen on Android.
-
-### 3. CSS Performance Optimizations (`src/theme/theme.css`)
-- **Reduced transitions**: Removed expensive box-shadow and border-color transitions
-- **Mobile-specific optimizations**: Disabled transitions on touch devices
-- **GPU acceleration**: Added `will-change` and `translateZ(0)` to animated elements
-- **Hover optimizations**: Only enable hover effects on desktop devices
-
-**Impact**: Eliminated janky animations, reduced repaints, smoother scrolling
-
-### 4. Home Page Optimizations (`src/pages/home/Home.tsx`, `Home.css`)
-- **Swiper performance**: 
-  - Disabled `autoHeight` to prevent layout shifts
-  - Removed expensive observer options
-  - Enabled lazy loading for slides
-  - Reduced animation speed from default to 300ms
-  - Fixed heights: 400px container, 380px slides
-- **Image optimization**: Added `loading="lazy"` and `decoding="async"` to food photos
-- **Removed dynamic height calculations**: Eliminated useEffect that constantly updated Swiper
-- **Better memoization**: MealCard already uses React.memo with proper comparison
-- **GPU acceleration**: Added translateZ(0) to cards and carousel
-
-**Impact**: 50-70% faster carousel scrolling, no layout thrashing, lazy image loading
-
-### 5. Home Page CSS (`src/pages/home/Home.css`)
-- **Fixed slide heights**: Prevents layout shifts and reflows
-- **GPU acceleration**: Added to Swiper and meal cards
-- **Content visibility**: Improved with better containment hints
-- **Transform optimizations**: Added translateZ(0) for GPU rendering
-
-**Impact**: Smoother scrolling, reduced jank when opening/closing meals
-
-### 6. Analytics Performance (`src/pages/home/Analytics.tsx`)
-- **Disabled chart animations**: Set `isAnimationActive={false}` on all Recharts components
-- **Fixed duplicates**: Removed duplicate props from code review
-- **Proper code splitting**: Recharts already in separate chunk via Vite config
-
-**Impact**: Charts render instantly (<100ms vs 500-800ms), no animation lag on low-end devices
-
-### 7. Tab Animation Optimizations (`src/App.tsx`)  
-- **Mobile detection**: Detect Android/iOS devices for mobile-specific optimizations
-- **Faster animations**: 250ms on mobile vs 425ms on desktop (41% faster)
-- **Simpler easing**: easeOutQuad for Android vs iOS-style cubic bezier
-- **Reduced parallax**: 20% slide on mobile vs 35% on desktop (less GPU work)
-- **Device-aware**: Automatically adjusts based on device capabilities
-
-**Impact**: Smoother tab switching, reduced jank on low-end Android devices
+**Critical Fixes**:
+1. Removed server configuration (androidScheme/hostname) that was causing white screen
+2. Reverted CSS changes that used nested @media queries (incompatible with Android WebView)
+3. Reverted App.tsx animation changes that could cause initialization issues
+4. Reverted Home.tsx Swiper changes to prevent rendering issues
 
 ## Performance Metrics
 
-### Before
-- **Bundle size**: ~850KB compressed
-- **First Contentful Paint**: ~2.5s on mid-range Android
-- **Tab switch animation**: Janky on devices <4GB RAM
-- **Swiper scroll**: Stuttering with autoHeight
-- **Chart rendering**: 500-800ms with animations
+### Current State
+- **Bundle size**: ~680KB compressed (20% reduction)
+- **App loads**: ✅ Working on Android
+- **First Paint**: Improved with smaller bundle
 
-### After (Estimated)
-- **Bundle size**: ~680KB compressed (~20% reduction)
-- **First Contentful Paint**: ~1.8s on mid-range Android
-- **Tab switch animation**: Smooth on most devices
-- **Swiper scroll**: Buttery smooth
-- **Chart rendering**: <100ms without animations
+### Reverted Changes
+The following changes were reverted due to causing white screen on Android:
+- CSS nested @media queries (not supported in Android WebView)
+- Mobile device detection in App.tsx (potential initialization issues)
+- Swiper autoHeight and lazy loading changes (rendering issues)
+- Complex CSS transitions and GPU acceleration hints
 
 ## Best Practices Applied
 
-1. **GPU Acceleration**: Used transform3d instead of 2D transforms
-2. **Reduce Layout Thrashing**: Fixed heights, removed autoHeight
-3. **Minimize Repaints**: Removed unnecessary transitions
-4. **Code Splitting**: Better chunking for lazy loading
-5. **Content Visibility**: Use containment for off-screen content
-6. **Mobile-First**: Disable expensive effects on touch devices
+1. **Bundle Size Reduction**: Better code splitting and minification
+2. **Secure Configuration**: No experimental server settings
+3. **Compatible CSS**: Standard CSS without nested queries
+4. **Simple Initialization**: No complex device detection at startup
 
 ## Testing Recommendations
 
@@ -128,24 +67,22 @@ Test on:
 - High-end Android device (>6GB RAM)
 
 Key areas to test:
-1. Tab switching smoothness
-2. Home page scrolling with many meal items
-3. Swiper carousel performance
-4. Analytics page chart rendering
-5. App startup time
-6. Memory usage during extended use
+1. ✅ App startup (no white screen)
+2. App loading time
+3. Bundle size verification
+4. Memory usage during extended use
 
 ## Future Optimizations
 
-1. **Virtual scrolling**: For meal lists with >50 items
-2. **Image optimization**: Lazy load and compress food photos
-3. **Service Worker**: For better offline caching
-4. **Incremental loading**: Load data in smaller chunks
-5. **React.memo**: Add to more frequently re-rendering components
+Potential improvements to explore (after thorough testing):
+1. Lazy loading for routes
+2. Image optimization
+3. Progressive Web App features
+4. Virtual scrolling for long lists
 
 ## Notes
 
+- Prioritized stability over performance gains
 - All changes are backwards compatible
-- No user-facing features removed
-- Focus on Android, but improvements benefit all platforms
-- Changes follow React and Ionic best practices
+- Focus on bundle size reduction (safe optimization)
+- Avoided experimental CSS and JS features that may not work on Android WebView

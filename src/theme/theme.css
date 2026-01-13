@@ -91,15 +91,10 @@ body.macropal-theme {
   color-scheme: dark;
 }
 
-/* Performance-optimized theme transitions - reduced to essential properties */
+/* Smooth theme transitions */
 html,
 body,
-ion-app {
-  /* Only transition background and color - avoid expensive properties */
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Remove transitions from frequently updated elements for better performance */
+ion-app,
 ion-content,
 ion-toolbar,
 ion-card,
@@ -107,14 +102,7 @@ ion-item,
 ion-tab-bar,
 ion-chip,
 ion-badge {
-  /* No transitions on Android for better performance */
-  @media (hover: none) and (pointer: coarse) {
-    transition: none;
-  }
-  /* Minimal transitions on desktop */
-  @media (hover: hover) and (pointer: fine) {
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 html,
@@ -178,16 +166,7 @@ ion-card {
   box-shadow: var(--mp-shadow-soft);
   backdrop-filter: blur(12px);
   overflow: hidden;
-  /* GPU acceleration for transforms */
-  will-change: transform;
-  transform: translateZ(0);
-  /* Optimize transitions for Android - only transform */
-  @media (hover: none) and (pointer: coarse) {
-    transition: transform 0.15s ease;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
 }
 
 ion-card-header {
@@ -210,23 +189,11 @@ ion-button {
   --box-shadow: 0 10px 30px rgba(53, 123, 228, 0.35);
   --color: #ffffff;
   font-weight: 700;
-  /* GPU acceleration */
-  will-change: transform;
-  transform: translateZ(0);
-  /* Faster transitions on mobile */
-  @media (hover: none) and (pointer: coarse) {
-    transition: transform 0.1s ease;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 ion-button:hover {
-  /* Only apply hover on desktop to avoid tap delays on mobile */
-  @media (hover: hover) and (pointer: fine) {
-    transform: translateY(-1px);
-  }
+  transform: translateY(-1px);
 }
 
 ion-button.button-outline,
@@ -253,13 +220,7 @@ ion-textarea {
   --highlight-color-focused: var(--ion-color-primary);
   border: none;
   box-shadow: none;
-  /* Faster transitions on mobile */
-  @media (hover: none) and (pointer: coarse) {
-    transition: none;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    transition: border-color 0.2s ease;
-  }
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 ion-input:focus-within,
@@ -273,13 +234,7 @@ ion-item {
   --border-color: var(--mp-border);
   --color: var(--mp-text);
   border-radius: 14px;
-  /* Disable transitions on mobile for performance */
-  @media (hover: none) and (pointer: coarse) {
-    transition: none;
-  }
-  @media (hover: hover) and (pointer: fine) {
-    transition: background 0.2s ease;
-  }
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 ion-item:hover {

@@ -37,7 +37,7 @@ import {
 import { db, trackEvent } from "../../firebase";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 
-// Recharts - keep standard imports but tree-shake what we don't use
+// Recharts
 import {
   LineChart,
   Line,
@@ -684,7 +684,6 @@ const Analytics: React.FC = () => {
                                 stroke={palette[4]}
                                 dot={false}
                                 strokeWidth={2}
-                                isAnimationActive={false}
                               />
                             </LineChart>
                           </ResponsiveContainer>
@@ -740,7 +739,7 @@ const Analytics: React.FC = () => {
                               <div style={{ width: "100%", height: 260 }}>
                                 <ResponsiveContainer>
                                   <PieChart>
-                                    <Pie isAnimationActive={false}
+                                    <Pie
                                       data={[
                                         {
                                           name: "Breakfast",
@@ -844,7 +843,7 @@ const Analytics: React.FC = () => {
                               <YAxis />
                               <Tooltip />
                               <Legend />
-                              <Area isAnimationActive={false}
+                              <Area
                                 type="monotone"
                                 dataKey="kcal"
                                 name="Calories"
@@ -852,7 +851,7 @@ const Analytics: React.FC = () => {
                                 stroke={palette[0]}
                                 opacity={0.25}
                               />
-                              <Line isAnimationActive={false}
+                              <Line
                                 type="monotone"
                                 dataKey="ma7"
                                 name="MA7"
@@ -889,19 +888,19 @@ const Analytics: React.FC = () => {
                               <YAxis />
                               <Tooltip />
                               <Legend />
-                              <Bar isAnimationActive={false}
+                              <Bar
                                 dataKey="carbsK"
                                 stackId="a"
                                 name="Carbohydrates kcal"
                                 fill={palette[0]}
                               />
-                              <Bar isAnimationActive={false}
+                              <Bar
                                 dataKey="proteinK"
                                 stackId="a"
                                 name="Protein kcal"
                                 fill={palette[1]}
                               />
-                              <Bar isAnimationActive={false}
+                              <Bar
                                 dataKey="fatK"
                                 stackId="a"
                                 name="Fat kcal"
@@ -934,7 +933,7 @@ const Analytics: React.FC = () => {
                               <div style={{ width: "100%", height: 260 }}>
                                 <ResponsiveContainer>
                                   <PieChart>
-                                    <Pie isAnimationActive={false}
+                                    <Pie
                                       data={macroDonut}
                                       dataKey="value"
                                       nameKey="name"
@@ -1023,7 +1022,7 @@ const Analytics: React.FC = () => {
                                     <PolarGrid />
                                     <PolarAngleAxis dataKey="metric" />
                                     <PolarRadiusAxis />
-                                    <Radar isAnimationActive={false}
+                                    <Radar
                                       name="Avg g"
                                       dataKey="g"
                                       stroke={palette[0]}
@@ -1073,12 +1072,12 @@ const Analytics: React.FC = () => {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Bar isAnimationActive={false}
+                                <Bar
                                   dataKey="average"
                                   name="Current avg (kcal)"
                                   fill={palette[0]}
                                 />
-                                <Bar isAnimationActive={false}
+                                <Bar
                                   dataKey="target"
                                   name="Target (kcal)"
                                   fill={palette[3]}
@@ -1136,12 +1135,12 @@ const Analytics: React.FC = () => {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Bar isAnimationActive={false}
+                                <Bar
                                   dataKey="average"
                                   name="Current avg (g)"
                                   fill={palette[0]}
                                 />
-                                <Bar isAnimationActive={false}
+                                <Bar
                                   dataKey="target"
                                   name="Target (g)"
                                   fill={palette[1]}

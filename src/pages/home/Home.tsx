@@ -337,12 +337,7 @@ const MealCard: React.FC<{
                   >
                     {it.photoUrl && (
                       <IonThumbnail slot="start">
-                        <img 
-                          src={it.photoUrl} 
-                          alt={it.photoName || it.name}
-                          loading="lazy"
-                          decoding="async"
-                        />
+                        <img src={it.photoUrl} alt={it.photoName || it.name} />
                       </IonThumbnail>
                     )}
                     <IonLabel>
@@ -1722,8 +1717,23 @@ const Home: React.FC = () => {
     return value.toFixed(0);
   };
 
-  // Removed autoHeight update effect for better performance
-  // Swiper now uses fixed height instead of auto for smoother scrolling
+  useEffect(() => {
+    if (!summarySwiperRef.current) return;
+    // Debounce Swiper updates to avoid excessive re-renders
+    const timeoutId = setTimeout(() => {
+      summarySwiperRef.current?.updateAutoHeight(300);
+      summarySwiperRef.current?.update();
+    }, 100);
+    return () => clearTimeout(timeoutId);
+  }, [
+    profile,
+    caloriesNeeded,
+    macroTargets,
+    totals.day,
+    nutritionEntries,
+    streak,
+    showWellnessTip,
+  ]);
 
 
   return (
@@ -1783,13 +1793,11 @@ const Home: React.FC = () => {
             modules={[Pagination]}
             pagination={{ clickable: true }}
             slidesPerView={1}
-            autoHeight={false}
+            autoHeight
             className="fs-summary__swiper"
-            speed={300}
-            lazy={{
-              loadPrevNext: true,
-              loadPrevNextAmount: 1,
-            }}
+            observer
+            observeParents
+            observeSlideChildren
             onSwiper={(swiper) => {
               summarySwiperRef.current = swiper;
               handleSummarySlideChange(swiper);
