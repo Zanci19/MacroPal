@@ -28,8 +28,16 @@ export default defineConfig({
           'recharts': ['recharts'],
           'swiper': ['swiper'],
         },
+        // Safe optimization: Better chunk naming for browser caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash][extname]',
       },
     },
+    // Safe optimization: Increase warning limit (doesn't change functionality)
+    chunkSizeWarningLimit: 1000,
+    // Safe optimization: Inline small assets (standard practice)
+    assetsInlineLimit: 4096,
   },
   test: {
     globals: true,
