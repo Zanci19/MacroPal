@@ -183,6 +183,7 @@ setupIonicReact();
 const TAB_ORDER = ["analytics", "planner", "home", "workout", "settings"];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const REDUCED_ANIMATION_DURATION_MS = 150;
+const MOBILE_ANIMATION_DURATION_MS = 250; // Faster for mobile devices
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 
@@ -192,9 +193,18 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
+// Detect if running on mobile device
+const isMobileDevice = () => {
+  if (typeof window === 'undefined') return false;
+  return /Android|iPhone|iPad|iPod/i.test(window.navigator.userAgent);
+};
+
+// Use faster animations on mobile for better performance
 const ANIMATION_DURATION_MS = getPrefersReducedMotion() 
   ? REDUCED_ANIMATION_DURATION_MS 
-  : DEFAULT_ANIMATION_DURATION_MS;
+  : isMobileDevice()
+    ? MOBILE_ANIMATION_DURATION_MS
+    : DEFAULT_ANIMATION_DURATION_MS;
 
 const TabsShell: React.FC<RouteComponentProps> = () => {
   const location = useLocation();
@@ -323,9 +333,14 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       const directionFactor = isForward ? 1 : -1;
 
       // Create the main animation that will run both entering and leaving in parallel
+      // Use faster easing on mobile for snappier feel
+      const easing = isMobileDevice() 
+        ? "cubic-bezier(0.25, 0.46, 0.45, 0.94)" // easeOutQuad - faster, simpler
+        : "cubic-bezier(0.32, 0.72, 0, 1)"; // iOS-style easing
+      
       const rootAnimation = createAnimation()
         .duration(ANIMATION_DURATION_MS)
-        .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+        .easing(easing);
 
       // Entering page slides in from the direction of travel (overlaps leaving page)
       rootAnimation
@@ -366,7 +381,8 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 35}%, 0, 0)` // 35% slide for parallax effect
+              // Reduce parallax on mobile for better performance
+              `translate3d(${-directionFactor * (isMobileDevice() ? 20 : 35)}%, 0, 0)`
             )
         );
       }

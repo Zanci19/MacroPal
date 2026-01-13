@@ -337,7 +337,12 @@ const MealCard: React.FC<{
                   >
                     {it.photoUrl && (
                       <IonThumbnail slot="start">
-                        <img src={it.photoUrl} alt={it.photoName || it.name} />
+                        <img 
+                          src={it.photoUrl} 
+                          alt={it.photoName || it.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
                       </IonThumbnail>
                     )}
                     <IonLabel>
