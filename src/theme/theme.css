@@ -196,6 +196,26 @@ ion-button:hover {
   transform: translateY(-1px);
 }
 
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  html,
+  body,
+  ion-app,
+  ion-content,
+  ion-toolbar,
+  ion-card,
+  ion-item,
+  ion-tab-bar,
+  ion-chip,
+  ion-badge,
+  ion-button {
+    transition: none !important;
+  }
+
+  ion-button:hover {
+    transform: none;
+  }
+}
+
 ion-button.button-outline,
 ion-button[fill="outline"] {
   --color: var(--mp-text);
