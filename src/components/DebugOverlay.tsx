@@ -4,7 +4,7 @@ import { subscribeRenderProfile } from "./renderProfiler";
 
 type RenderProfileSnapshot = {
   id: string;
-  phase: "mount" | "update";
+  phase: "mount" | "update" | "nested-update";
   actualDuration: number;
   baseDuration: number;
   startTime: number;

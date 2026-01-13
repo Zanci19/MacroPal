@@ -196,7 +196,7 @@ const ANIMATION_DURATION_MS = getPrefersReducedMotion()
   ? REDUCED_ANIMATION_DURATION_MS 
   : DEFAULT_ANIMATION_DURATION_MS;
 
-const TabsShell: React.FC = () => {
+const TabsShell: React.FC<RouteComponentProps> = () => {
   const location = useLocation();
   const router = useIonRouter();
   const history = useHistory();
