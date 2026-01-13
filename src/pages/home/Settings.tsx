@@ -32,7 +32,6 @@ import {
   warningOutline,
   cafeOutline,
   trashOutline,
-  logoGoogle,
   colorPaletteOutline,
   informationCircleOutline,
 } from "ionicons/icons";
@@ -46,7 +45,6 @@ import {
 import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 import "./Settings.css";
-import { ensureGoogleFitAccess, isGoogleFitSupported } from "../../utils/googleFit";
 import {
   applyAnimationPreference,
   applyDebugOverlayPreference,
@@ -86,11 +84,6 @@ const Settings: React.FC = () => {
   const [clearingRecent, setClearingRecent] = React.useState(false);
   const [showPhotoActions, setShowPhotoActions] = React.useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = React.useState<string | null>(null);
-  const [googleFitAutoImport, setGoogleFitAutoImport] = React.useState(false);
-  const [checkingGoogleFit, setCheckingGoogleFit] = React.useState(false);
-  const [googleFitStatus, setGoogleFitStatus] = React.useState<string>("");
-  const googleFitSupported = isGoogleFitSupported();
-  
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => {
     return getStoredThemeMode();
   });
@@ -302,59 +295,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleGoogleFitToggle = async (checked: boolean) => {
-    const current = auth.currentUser;
-    if (!current) return;
-
-    let nextStatus = "";
-
-    if (checked) {
-      setCheckingGoogleFit(true);
-      const status = await ensureGoogleFitAccess();
-      setCheckingGoogleFit(false);
-
-      if (!status.ready) {
-        const message =
-          status.reason === "unavailable"
-            ? "Google Fit works on Android native builds with the plugin installed."
-            : status.reason === "not_installed"
-              ? "Please install Google Fit to turn on auto-import."
-              : status.reason === "denied"
-                ? "Permission denied. Please allow Google Fit access."
-                : "Couldn't connect to Google Fit right now.";
-
-        setToast({ show: true, message, color: "warning" });
-        setGoogleFitAutoImport(false);
-        return;
-      }
-
-      nextStatus = "Connected to Google Fit. Calories will auto-import.";
-    }
-
-    try {
-      const ref = doc(db, "users", current.uid);
-      await updateDoc(ref, {
-        "profile.googleFitAutoImport": checked,
-      });
-
-      setGoogleFitAutoImport(checked);
-      setGoogleFitStatus(nextStatus);
-      trackEvent("settings_google_fit_auto_import_toggle", {
-        uid: current.uid,
-        enabled: checked,
-      });
-    } catch (err: any) {
-      console.error("Failed to save Google Fit auto import:", err);
-      setToast({
-        show: true,
-        message: err?.message || "Could not update Google Fit setting.",
-        color: "danger",
-      });
-      setGoogleFitAutoImport((prev) => !checked ? prev : false);
-      setGoogleFitStatus((prev) => (checked ? prev : "Connected to Google Fit."));
-    }
-  };
-
   React.useEffect(() => {
     const load = async () => {
       const current = auth.currentUser;
@@ -414,17 +354,6 @@ const Settings: React.FC = () => {
 
         setProfilePhotoUrl(
           typeof (profile as any)?.photoUrl === "string" ? (profile as any).photoUrl : null
-        );
-
-        const googleFitEnabled =
-          typeof (profile as any).googleFitAutoImport === "boolean"
-            ? (profile as any).googleFitAutoImport
-            : false;
-        setGoogleFitAutoImport(googleFitEnabled);
-        setGoogleFitStatus(
-          googleFitEnabled
-            ? "Auto-import is on. We'll pull calories from Google Fit when available."
-            : ""
         );
 
         // Load theme preference from Firebase
@@ -913,25 +842,6 @@ const Settings: React.FC = () => {
                         });
                       }
                     }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={logoGoogle} />
-                  <IonLabel>
-                    <h2>Google Fit calories</h2>
-                    <p>Automatically import burned calories into workouts.</p>
-                    <IonNote color="medium">
-                      {googleFitSupported
-                        ? googleFitStatus ||
-                          "Requires Google Fit on Android. We'll sync once it's enabled."
-                        : "Requires the Android app with the Google Fit plugin installed."}
-                    </IonNote>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    disabled={!googleFitSupported || checkingGoogleFit}
-                    checked={googleFitAutoImport}
-                    onIonChange={(e) => void handleGoogleFitToggle(e.detail.checked)}
                   />
                 </IonItem>
               </IonList>
