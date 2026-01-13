@@ -42,11 +42,12 @@ All optimizations complete! This PR implements 11 major performance improvements
 
 ### 2. Capacitor Configuration (`capacitor.config.ts`)
 - **Disabled WebView debugging** in production for better performance
-- **Hardware acceleration**: Enabled for smoother scrolling and animations
-- **HTTPS scheme**: Using https:// for better security and performance
+- **Secure defaults**: Keeping allowMixedContent false for security
 - **Splash screen optimization**: Set to auto-hide immediately
 
 **Impact**: Faster app initialization, smoother UI rendering
+
+**Note**: Removed server configuration (androidScheme/hostname) that was causing white screen on Android.
 
 ### 3. CSS Performance Optimizations (`src/theme/theme.css`)
 - **Reduced transitions**: Removed expensive box-shadow and border-color transitions

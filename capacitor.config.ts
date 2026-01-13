@@ -6,17 +6,10 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   // Android-specific optimizations
   android: {
-    // Use WKWebView for better performance
+    // Disable WebView debugging in production for better performance
     webContentsDebuggingEnabled: false,
-    // Enable hardware acceleration
+    // Prevent mixed content (keep default secure behavior)
     allowMixedContent: false,
-  },
-  // Server configuration for better loading
-  server: {
-    // Allow cleartext for local development only
-    androidScheme: 'https',
-    // Enable hostname for better routing
-    hostname: 'macropal.app',
   },
   plugins: {
     StatusBar: {
