@@ -69,6 +69,7 @@ import type {
   WeighInEntry,
 } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
+import { getChartAnimationPreference } from "../../utils/preferences";
 import { useHistory } from "react-router";
 import { fromMetricWeight, getUnitSystem, weightLabel } from "../../utils/units";
 
@@ -153,12 +154,25 @@ const Analytics: React.FC = () => {
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const unitSystem = getUnitSystem(profile?.units);
-  const chartAnimationsEnabled = useMemo(() => {
+  const [chartAnimationsEnabled, setChartAnimationsEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     const prefersReducedMotion =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const isAndroid = /Android/i.test(window.navigator.userAgent || "");
-    return !prefersReducedMotion && !isAndroid;
+    return getChartAnimationPreference() && !prefersReducedMotion;
+  });
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      const prefersReducedMotion =
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      setChartAnimationsEnabled(customEvent.detail.enabled && !prefersReducedMotion);
+    };
+
+    window.addEventListener("mp_chart_animation_change", handler);
+    return () => {
+      window.removeEventListener("mp_chart_animation_change", handler);
+    };
   }, []);
 
   // Fetch last 60 days whenever we have a uid and auth has settled

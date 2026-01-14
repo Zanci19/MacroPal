@@ -76,11 +76,27 @@ export const getLazyLoadPreference = (): boolean => {
   return stored === "on";
 };
 
+export const applyChartAnimationPreference = (enabled: boolean) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem("mp_chart_animations", enabled ? "on" : "off");
+  window.dispatchEvent(
+    new CustomEvent("mp_chart_animation_change", { detail: { enabled } })
+  );
+};
+
+export const getChartAnimationPreference = (): boolean => {
+  if (typeof window === "undefined") return true;
+  const stored = window.localStorage.getItem("mp_chart_animations");
+  if (stored === null) return true;
+  return stored === "on";
+};
+
 export type ProfilePreferences = {
   themeMode?: ThemeMode;
   tabAnimationsEnabled?: boolean;
   debugOverlayEnabled?: boolean;
   lazyLoadEnabled?: boolean;
+  chartAnimationsEnabled?: boolean;
 };
 
 export const getProfilePreferences = (profile?: Record<string, unknown>): ProfilePreferences => {
@@ -106,6 +122,10 @@ export const getProfilePreferences = (profile?: Record<string, unknown>): Profil
       typeof profile.lazyLoadEnabled === "boolean"
         ? profile.lazyLoadEnabled
         : undefined,
+    chartAnimationsEnabled:
+      typeof profile.chartAnimationsEnabled === "boolean"
+        ? profile.chartAnimationsEnabled
+        : undefined,
   };
 };
 
@@ -128,6 +148,9 @@ export const applyProfilePreferences = (profile?: Record<string, unknown>) => {
     if (storedPreference === null) {
       applyLazyLoadPreference(prefs.lazyLoadEnabled);
     }
+  }
+  if (typeof prefs.chartAnimationsEnabled === "boolean") {
+    applyChartAnimationPreference(prefs.chartAnimationsEnabled);
   }
   return prefs;
 };

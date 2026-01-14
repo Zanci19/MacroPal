@@ -14,8 +14,8 @@
   padding: 24px 20px 20px;
   border-radius: 18px;
   background: #121212;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  backdrop-filter: none;
+  box-shadow: none;
   color: var(--ion-text-color, #f9fafb);
 }
 

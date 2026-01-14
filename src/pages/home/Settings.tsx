@@ -47,10 +47,12 @@ import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase
 import "./Settings.css";
 import {
   applyAnimationPreference,
+  applyChartAnimationPreference,
   applyDebugOverlayPreference,
   applyLazyLoadPreference,
   applyTheme,
   getAnimationPreference,
+  getChartAnimationPreference,
   getDebugOverlayPreference,
   getLazyLoadPreference,
   getStoredThemeMode,
@@ -89,6 +91,9 @@ const Settings: React.FC = () => {
   });
   const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() => {
     return getAnimationPreference();
+  });
+  const [chartAnimationsEnabled, setChartAnimationsEnabled] = React.useState<boolean>(() => {
+    return getChartAnimationPreference();
   });
   const [debugOverlayEnabled, setDebugOverlayEnabled] = React.useState<boolean>(() => {
     return getDebugOverlayPreference();
@@ -277,6 +282,61 @@ const Settings: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleCopyDiagnostics = async () => {
+    const payload = {
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      theme: getStoredThemeMode(),
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setToast({ show: true, message: "Diagnostics copied to clipboard.", color: "success" });
+    } catch (err: any) {
+      console.error("Failed to copy diagnostics:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not copy diagnostics.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleClearCachedPreferences = () => {
+    if (typeof window === "undefined") return;
+    const keys = [
+      "mp_theme",
+      "mp_tab_animations",
+      "mp_debug_overlay",
+      "mp_lazy_load",
+      "mp_chart_animations",
+    ];
+    keys.forEach((key) => window.localStorage.removeItem(key));
+
+    const theme = getStoredThemeMode();
+    applyTheme(theme);
+    const animations = getAnimationPreference();
+    const chartAnimations = getChartAnimationPreference();
+    const debugOverlay = getDebugOverlayPreference();
+    const lazyLoad = getLazyLoadPreference();
+    applyAnimationPreference(animations);
+    applyChartAnimationPreference(chartAnimations);
+    applyDebugOverlayPreference(debugOverlay);
+    applyLazyLoadPreference(lazyLoad);
+
+    setTabAnimationsEnabled(animations);
+    setChartAnimationsEnabled(chartAnimations);
+    setDebugOverlayEnabled(debugOverlay);
+    setLazyLoadEnabled(lazyLoad);
+    setToast({
+      show: true,
+      message: "Cached preferences cleared.",
+      color: "success",
+    });
+  };
+
   const handleRemovePhoto = async () => {
     if (!auth.currentUser) return;
     try {
@@ -372,6 +432,15 @@ const Settings: React.FC = () => {
           // Fallback to localStorage if not in profile
           const localPref = getAnimationPreference();
           setTabAnimationsEnabled(localPref);
+        }
+
+        const savedChartAnimationPref = (profile as any)?.chartAnimationsEnabled;
+        if (typeof savedChartAnimationPref === "boolean") {
+          setChartAnimationsEnabled(savedChartAnimationPref);
+          applyChartAnimationPreference(savedChartAnimationPref);
+        } else {
+          const localPref = getChartAnimationPreference();
+          setChartAnimationsEnabled(localPref);
         }
 
         // Load debug overlay preference from Firebase or localStorage
@@ -844,6 +913,46 @@ const Settings: React.FC = () => {
                     }}
                   />
                 </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={colorPaletteOutline} />
+                  <IonLabel>
+                    <h2>Animate charts</h2>
+                    <p>Enable animations for analytics charts.</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={chartAnimationsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setChartAnimationsEnabled(checked);
+                      applyChartAnimationPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.chartAnimationsEnabled": checked,
+                        });
+
+                        trackEvent("settings_chart_animations_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save chart animations preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update chart animation setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
               </IonList>
             </IonCardContent>
           </IonCard>
@@ -878,6 +987,18 @@ const Settings: React.FC = () => {
             </IonCardHeader>
             <IonCardContent>
               <IonList>
+                <IonItem lines="full" button onClick={() => void handleCopyDiagnostics()}>
+                  <IonLabel>
+                    <h2>Copy diagnostics</h2>
+                    <p>Copy device and app info for support.</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem lines="full" button onClick={handleClearCachedPreferences}>
+                  <IonLabel>
+                    <h2>Clear cached preferences</h2>
+                    <p>Reset theme, animation, and lazy-load settings.</p>
+                  </IonLabel>
+                </IonItem>
                 <IonItem lines="full">
                   <IonLabel>
                     <h2>Debug overlay</h2>

@@ -9,7 +9,7 @@
   border-radius: 18px;
   background: var(--mp-surface);
   border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
+  box-shadow: none;
   text-align: center;
 }
 

@@ -2,29 +2,22 @@
   --mp-primary: #1f2937;
   --mp-primary-strong: #111827;
   --mp-primary-soft: rgba(31, 41, 55, 0.12);
-  --mp-primary-gradient: linear-gradient(
-    120deg,
-    #1f2937 0%,
-    #374151 45%,
-    #4b5563 100%
-  );
+  --mp-primary-gradient: var(--ion-color-primary);
 
-  --mp-bg: #f5f6f8;
+  --mp-bg: #ffffff;
   --mp-surface: #ffffff;
-  --mp-surface-muted: #eef0f3;
+  --mp-surface-muted: #f5f5f5;
 
-  --mp-surface-glow:
-    radial-gradient(circle at 20% 20%, rgba(0, 0, 0, 0.04), transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(0, 0, 0, 0.03), transparent 35%);
+  --mp-surface-glow: none;
 
-  --mp-text: #0f172a;
-  --mp-text-muted: #4b5563;
-  --mp-border: rgba(15, 23, 42, 0.08);
+  --mp-text: #121212;
+  --mp-text-muted: #5f6368;
+  --mp-border: #e0e0e0;
 
-  --mp-shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.08);
-  --mp-shadow-strong: 0 24px 70px rgba(0, 0, 0, 0.14);
+  --mp-shadow-soft: none;
+  --mp-shadow-strong: none;
 
-  --mp-chip-bg: rgba(245, 246, 248, 0.9);
+  --mp-chip-bg: #f5f5f5;
 
   --ion-background-color: var(--mp-bg);
   --ion-text-color: var(--mp-text);
@@ -37,23 +30,20 @@
 }
 
 body.dark {
-  --mp-bg: #080a0f;
-  --mp-surface: rgba(14, 17, 24, 0.85);
-  --mp-surface-muted: #0f131b;
+  --mp-bg: #121212;
+  --mp-surface: #121212;
+  --mp-surface-muted: #1e1e1e;
 
-  --mp-surface-glow:
-    radial-gradient(circle at 15% 15%, rgba(255, 255, 255, 0.04), transparent 36%),
-    radial-gradient(circle at 95% 5%, rgba(255, 255, 255, 0.03), transparent 30%),
-    radial-gradient(circle at 50% 90%, rgba(255, 255, 255, 0.02), transparent 30%);
+  --mp-surface-glow: none;
 
-  --mp-text: #e5e7eb;
-  --mp-text-muted: #9ca3af;
-  --mp-border: rgba(255, 255, 255, 0.08);
+  --mp-text: #e6e6e6;
+  --mp-text-muted: #a0a0a0;
+  --mp-border: #2a2a2a;
 
-  --mp-shadow-soft: 0 16px 50px rgba(0, 0, 0, 0.35);
-  --mp-shadow-strong: 0 26px 75px rgba(0, 0, 0, 0.55);
+  --mp-shadow-soft: none;
+  --mp-shadow-strong: none;
 
-  --mp-chip-bg: rgba(31, 41, 55, 0.9);
+  --mp-chip-bg: #1e1e1e;
 
   --ion-background-color: var(--mp-bg);
   --ion-text-color: var(--mp-text);
@@ -90,14 +80,14 @@ ion-router-outlet {
 }
 
 body {
-  background: var(--mp-surface-glow), var(--mp-bg);
+  background: var(--mp-bg);
   min-height: 100vh;
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 ion-content::part(background) {
-  background: var(--mp-surface-glow), var(--mp-bg);
+  background: var(--mp-bg);
 }
 
 ion-toolbar {
@@ -131,10 +121,9 @@ ion-card {
   --color: var(--mp-text);
   border-radius: 18px;
   border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
-  backdrop-filter: blur(12px);
+  box-shadow: none;
   overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;
+  transition: border-color 0.2s ease, background-color 0.3s ease;
 }
 
 ion-card-header {
@@ -151,13 +140,13 @@ ion-card-content {
 }
 
 ion-button {
-  --background: var(--mp-primary-gradient);
-  --background-hover: linear-gradient(120deg, #2f6bc9 0%, #4f8cf8 70%);
+  --background: var(--ion-color-primary);
+  --background-hover: var(--ion-color-primary);
   --border-radius: 14px;
-  --box-shadow: 0 10px 30px rgba(53, 123, 228, 0.35);
+  --box-shadow: none;
   --color: #ffffff;
   font-weight: 700;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 ion-button:hover {
@@ -238,21 +227,20 @@ ion-label p {
 }
 
 ion-tab-bar {
-  --background: rgba(255, 255, 255, 0.75);
+  --background: var(--mp-surface);
   --color: var(--mp-text-muted);
   --color-selected: var(--mp-text);
-  backdrop-filter: blur(14px);
   border-top: 1px solid var(--mp-border);
-  box-shadow: 0 -6px 40px rgba(15, 23, 42, 0.08);
-  transition: background 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: none;
+  transition: background 0.3s ease;
   /* Handle Android navigation bar overlap - supports both approaches */
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
 }
 
 body.dark ion-tab-bar {
-  --background: rgba(8, 12, 20, 0.85);
-  box-shadow: 0 -6px 40px rgba(0, 0, 0, 0.45);
+  --background: var(--mp-surface);
+  box-shadow: none;
 }
 
 .mp-tab-btn ion-label {
@@ -280,7 +268,6 @@ ion-popover {
 
 ion-popover::part(content) {
   border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
   background: var(--mp-surface);
   color: var(--mp-text);
 }
@@ -298,11 +285,7 @@ ion-chip {
   --color: var(--mp-text);
   --border-color: var(--mp-border);
   border-radius: 999px;
-  transition: background-color 0.2s ease, transform 0.15s ease;
-}
-
-ion-chip:hover {
-  transform: scale(1.02);
+  transition: background-color 0.2s ease;
 }
 
 ion-badge {

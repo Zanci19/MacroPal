@@ -38,7 +38,7 @@
   border-radius: 16px;
   overflow: hidden;
   border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
+  box-shadow: none;
   background: color-mix(in srgb, var(--mp-surface) 94%, transparent);
 }
 

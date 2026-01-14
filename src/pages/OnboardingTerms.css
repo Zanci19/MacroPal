@@ -9,7 +9,7 @@
   background: var(--ion-color-white);
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 .onboarding-terms-intro {

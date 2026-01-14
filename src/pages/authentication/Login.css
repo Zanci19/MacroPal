@@ -14,8 +14,8 @@
   padding: 28px 22px 22px;
   border-radius: 20px;
   background: color-mix(in srgb, var(--mp-surface) 92%, transparent);
-  backdrop-filter: blur(14px);
-  box-shadow: var(--mp-shadow-soft);
+  backdrop-filter: none;
+  box-shadow: none;
   border: 1px solid var(--mp-border);
   color: var(--mp-text);
 }

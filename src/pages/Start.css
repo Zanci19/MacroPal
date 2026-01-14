@@ -1,6 +1,6 @@
 .start-content {
   --background: transparent;
-  background: var(--mp-surface-glow), linear-gradient(160deg, #0b1b33 0%, #0c1324 40%, #0b1020 100%);
+  background: var(--mp-bg);
   position: relative;
   padding: 0;
 }
@@ -30,9 +30,7 @@
 .bg-video__scrim {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(53, 123, 228, 0.22), transparent 40%),
-    radial-gradient(circle at 80% 10%, rgba(79, 140, 248, 0.18), transparent 40%),
-    linear-gradient(180deg, rgba(8, 12, 20, 0.6) 0%, rgba(8, 12, 20, 0.95) 100%);
+  background: var(--mp-bg);
 }
 
 .fixed-center {
@@ -52,20 +50,7 @@
   height: 140px;
   object-fit: contain;
   margin-bottom: 0.5rem;
-  filter: drop-shadow(0 0 24px rgba(53, 123, 228, 0.6)) 
-          drop-shadow(0 0 48px rgba(79, 140, 248, 0.4));
-  animation: logo-glow 3s ease-in-out infinite alternate;
-}
-
-@keyframes logo-glow {
-  from {
-    filter: drop-shadow(0 0 24px rgba(53, 123, 228, 0.6)) 
-            drop-shadow(0 0 48px rgba(79, 140, 248, 0.4));
-  }
-  to {
-    filter: drop-shadow(0 0 32px rgba(53, 123, 228, 0.8)) 
-            drop-shadow(0 0 64px rgba(79, 140, 248, 0.6));
-  }
+  filter: none;
 }
 
 .start-title {
@@ -73,13 +58,13 @@
   font-weight: 800;
   margin: 0;
   line-height: 1.1;
-  color: #f8fbff;
+  color: var(--mp-text);
 }
 
 .start-subtitle {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #d3dded;
+  color: var(--mp-text-muted);
   margin: 0 0 0.75rem 0;
 }
 
@@ -99,15 +84,15 @@
 }
 
 .start-btn-primary {
-  --background: var(--mp-primary-gradient);
-  --background-hover: linear-gradient(120deg, #2f6bc9 0%, #4f8cf8 80%);
-  --box-shadow: 0 12px 40px rgba(53, 123, 228, 0.35);
+  --background: var(--ion-color-primary);
+  --background-hover: var(--ion-color-primary);
+  --box-shadow: none;
 }
 
 .start-btn-secondary {
-  --border-color: color-mix(in srgb, var(--mp-primary) 22%, rgba(255, 255, 255, 0.36));
-  --background: rgba(255, 255, 255, 0.06);
-  color: #f8fbff;
+  --border-color: var(--mp-border);
+  --background: var(--mp-surface);
+  color: var(--mp-text);
 }
 
 .bg-video__media::-webkit-media-controls {
@@ -123,6 +108,6 @@
     display: none;
   }
   .bg-video__scrim {
-    background: linear-gradient(180deg, rgba(8, 12, 20, 0.72) 0%, rgba(8, 12, 20, 0.95) 100%);
+    background: var(--mp-bg);
   }
 }
