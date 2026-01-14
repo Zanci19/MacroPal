@@ -1929,14 +1929,14 @@ const Home: React.FC = () => {
                                     }}
                                   />
                                 )}
-                                {sat > 0 && (
-                                  <div
-                                    style={{
-                                      width: `${satPct * 100}%`,
-                                      background: "var(--ion-color-warning)",
-                                    }}
-                                  />
-                                )}
+                                  {sat > 0 && (
+                                    <div
+                                      style={{
+                                        width: `${satPct * 100}%`,
+                                        background: "var(--ion-color-warning-shade)",
+                                      }}
+                                    />
+                                  )}
                               </div>
                             );
                           })()

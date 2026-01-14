@@ -740,9 +740,9 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <div>Carbohydrates {avg.carbs.toFixed(0)} g</div>
-                              <div>Protein {avg.protein.toFixed(0)} g</div>
-                              <div>Fat {avg.fat.toFixed(0)} g</div>
+                              <div>Carbohydrates: {avg.carbs.toFixed(0)} g</div>
+                              <div>Protein: {avg.protein.toFixed(0)} g</div>
+                              <div>Fat: {avg.fat.toFixed(0)} g</div>
                             </IonCardContent>
                           </IonCard>
                         </IonCol>

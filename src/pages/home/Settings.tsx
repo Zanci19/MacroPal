@@ -283,12 +283,34 @@ const Settings: React.FC = () => {
   };
 
   const handleCopyDiagnostics = async () => {
+    const prefersReducedMotion =
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const prefersDark =
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+    const connection =
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } })
+            .connection
+        : undefined;
     const payload = {
       userAgent: navigator.userAgent,
       language: navigator.language,
       platform: navigator.platform,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       theme: getStoredThemeMode(),
+      prefersReducedMotion,
+      prefersDark,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+      },
+      hardwareConcurrency: navigator.hardwareConcurrency,
+      deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+      connection: {
+        effectiveType: connection?.effectiveType,
+        downlink: connection?.downlink,
+      },
     };
 
     try {
