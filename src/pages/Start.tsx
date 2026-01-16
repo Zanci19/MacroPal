@@ -48,21 +48,12 @@ const Start: React.FC = () => {
         </div>
 
         <div className="start-shell" role="main" aria-label="MacroPal Start">
-          <header className="start-header">
+          <section className="start-hero">
             <div className="start-logo-wrap">
               <img src={logo} alt="MacroPal logo" className="start-logo" />
             </div>
-            <div className="start-title-block">
-              <p className="start-kicker">MacroPal</p>
-              <h1 className="start-title">Your macros. Simplified.</h1>
-            </div>
-          </header>
-
-          <section className="start-hero">
-            <p className="start-subtitle">
-              Hit your nutrition goals with guided targets, rapid logging, and
-              weekly progress clarity.
-            </p>
+            <p className="start-kicker">MACROPAL</p>
+            <h1 className="start-title">Your macros. Simplified.</h1>
             <div className="start-highlights">
               <div className="start-highlight">Build balanced plans</div>
               <div className="start-highlight">Log meals in seconds</div>
