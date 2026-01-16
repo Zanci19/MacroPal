@@ -6,7 +6,7 @@
   color: #f7f8fb;
 }
 
-.bg-video {
+.bg-motion {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -14,21 +14,37 @@
   pointer-events: none;
 }
 
-.bg-video__media {
+.bg-motion__layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 250ms ease-out;
+  background: radial-gradient(
+      circle at 20% 20%,
+      rgba(111, 97, 255, 0.45),
+      transparent 55%
+    ),
+    radial-gradient(
+      circle at 80% 10%,
+      rgba(91, 202, 255, 0.35),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 80%,
+      rgba(255, 166, 120, 0.35),
+      transparent 60%
+    );
+  filter: blur(10px);
+  animation: bgFloat 18s ease-in-out infinite;
 }
 
-.bg-video.is-ready .bg-video__media {
-  opacity: 1;
+.bg-motion__layer--alt {
+  opacity: 0.75;
+  animation: bgFloatAlt 22s ease-in-out infinite;
+  mix-blend-mode: screen;
 }
 
-.bg-video__scrim {
+.bg-motion__scrim {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -165,12 +181,28 @@
   padding-bottom: 0.5rem;
 }
 
-.bg-video__media::-webkit-media-controls {
-  display: none !important;
+@keyframes bgFloat {
+  0% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, 6%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
 }
 
-.bg-video__media::-webkit-media-controls-enclosure {
-  display: none !important;
+@keyframes bgFloatAlt {
+  0% {
+    transform: translate3d(6%, 5%, 0) scale(1.06);
+  }
+  50% {
+    transform: translate3d(-4%, -6%, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(6%, 5%, 0) scale(1.06);
+  }
 }
 
 @media (max-width: 480px) {
@@ -180,10 +212,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bg-video__media {
-    display: none;
+  .bg-motion__layer {
+    animation: none;
   }
-  .bg-video__scrim {
+  .bg-motion__scrim {
     background: #0b0d12;
   }
 }
