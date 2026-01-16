@@ -48,36 +48,38 @@ const Start: React.FC = () => {
         </div>
 
         <div className="start-shell" role="main" aria-label="MacroPal Start">
-          <section className="start-hero">
-            <div className="start-logo-wrap">
-              <img src={logo} alt="MacroPal logo" className="start-logo" />
-            </div>
-            <p className="start-kicker">MACROPAL</p>
-            <h1 className="start-title">Your macros. Simplified.</h1>
-            <div className="start-highlights">
-              <div className="start-highlight">Build balanced plans</div>
-              <div className="start-highlight">Log meals in seconds</div>
-              <div className="start-highlight">Track trends weekly</div>
-            </div>
-          </section>
+          <div className="start-main">
+            <section className="start-hero">
+              <div className="start-logo-wrap">
+                <img src={logo} alt="MacroPal logo" className="start-logo" />
+              </div>
+              <p className="start-kicker">MACROPAL</p>
+              <h1 className="start-title">Your macros. Simplified.</h1>
+              <div className="start-highlights">
+                <div className="start-highlight">Build balanced plans</div>
+                <div className="start-highlight">Log meals in seconds</div>
+                <div className="start-highlight">Track trends weekly</div>
+              </div>
+            </section>
 
-          <section className="start-actions" aria-label="Get started">
-            <IonButton
-              size="large"
-              className="start-btn start-btn-primary"
-              onClick={() => router.push("/register")}
-            >
-              Get Started
-            </IonButton>
-            <IonButton
-              size="large"
-              fill="outline"
-              className="start-btn start-btn-secondary"
-              onClick={() => router.push("/login")}
-            >
-              I already have an account
-            </IonButton>
-          </section>
+            <section className="start-actions" aria-label="Get started">
+              <IonButton
+                size="large"
+                className="start-btn start-btn-primary"
+                onClick={() => router.push("/register")}
+              >
+                Get Started
+              </IonButton>
+              <IonButton
+                size="large"
+                fill="outline"
+                className="start-btn start-btn-secondary"
+                onClick={() => router.push("/login")}
+              >
+                I already have an account
+              </IonButton>
+            </section>
+          </div>
 
           <footer className="start-footnote">
             Trusted by macro trackers who want simple, consistent results.
