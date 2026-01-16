@@ -161,9 +161,9 @@
 }
 
 .start-btn-primary {
-  --background: #6f61ff;
-  --background-hover: #6f61ff;
-  --box-shadow: 0 18px 35px rgba(111, 97, 255, 0.35);
+  --background: #2f80ff;
+  --background-hover: #2f80ff;
+  --box-shadow: 0 18px 35px rgba(47, 128, 255, 0.35);
 }
 
 .start-btn-secondary {
