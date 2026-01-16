@@ -31,10 +31,45 @@ const Start: React.FC = () => {
           <div className="bg-video__scrim" />
         </div>
 
-        <div className="fixed-center" role="main" aria-label="MacroPal Start">
-          <img src={logo} alt="MacroPal logo" className="start-logo" />
-          <h1 className="start-title">MacroPal</h1>
-          <h2 className="start-subtitle">Your macros. Simplified.</h2>
+        <div className="start-shell" role="main" aria-label="MacroPal Start">
+          <header className="start-header">
+            <img src={logo} alt="MacroPal logo" className="start-logo" />
+            <div className="start-brand">
+              <p className="start-kicker">MacroPal</p>
+              <p className="start-tagline">Macros that move with you</p>
+            </div>
+          </header>
+
+          <section className="start-hero">
+            <h1 className="start-title">
+              Build your nutrition plan with confidence.
+            </h1>
+            <p className="start-subtitle">
+              Track meals, balance targets, and stay on pace with a streamlined
+              daily view built for your phone.
+            </p>
+
+            <div className="start-highlights" aria-label="MacroPal highlights">
+              <div className="start-highlight">
+                <span className="highlight-title">Smart targets</span>
+                <span className="highlight-body">
+                  Adaptive macros that match your goals.
+                </span>
+              </div>
+              <div className="start-highlight">
+                <span className="highlight-title">Quick logging</span>
+                <span className="highlight-body">
+                  Tap-to-add meals and saved favorites.
+                </span>
+              </div>
+              <div className="start-highlight">
+                <span className="highlight-title">Weekly insights</span>
+                <span className="highlight-body">
+                  Clear trends and progress summaries.
+                </span>
+              </div>
+            </div>
+          </section>
 
           <div className="start-actions">
             <IonButton
@@ -42,7 +77,7 @@ const Start: React.FC = () => {
               className="start-btn start-btn-primary"
               onClick={() => router.push("/login")}
             >
-              Log In
+              Log in
             </IonButton>
             <IonButton
               size="large"
@@ -52,6 +87,10 @@ const Start: React.FC = () => {
             >
               Create account
             </IonButton>
+            <p className="start-footnote">
+              By continuing, you agree to MacroPal&#39;s Terms &amp; Privacy
+              Policy.
+            </p>
           </div>
         </div>
       </IonContent>
