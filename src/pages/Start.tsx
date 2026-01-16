@@ -52,23 +52,21 @@ const Start: React.FC = () => {
             <div className="start-logo-wrap">
               <img src={logo} alt="MacroPal logo" className="start-logo" />
             </div>
-            <div>
+            <div className="start-title-block">
               <p className="start-kicker">MacroPal</p>
-              <h1 className="start-title">
-                Stay on track with smarter macro planning.
-              </h1>
+              <h1 className="start-title">Your macros. Simplified.</h1>
             </div>
           </header>
 
           <section className="start-hero">
             <p className="start-subtitle">
-              Build sustainable nutrition habits with personalized targets, fast
-              logging, and clear progress.
+              Hit your nutrition goals with guided targets, rapid logging, and
+              weekly progress clarity.
             </p>
             <div className="start-highlights">
-              <div className="start-highlight">Smart targets</div>
-              <div className="start-highlight">Quick logging</div>
-              <div className="start-highlight">Progress insights</div>
+              <div className="start-highlight">Build balanced plans</div>
+              <div className="start-highlight">Log meals in seconds</div>
+              <div className="start-highlight">Track trends weekly</div>
             </div>
           </section>
 

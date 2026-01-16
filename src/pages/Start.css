@@ -51,7 +51,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: env(safe-area-inset-top) 1.75rem calc(env(safe-area-inset-bottom) + 1.5rem);
+  padding: env(safe-area-inset-top) 1.75rem
+    calc(env(safe-area-inset-bottom) + 1.5rem);
   gap: 2rem;
 }
 
@@ -59,7 +60,7 @@
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 1.25rem;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .start-logo-wrap {
@@ -77,6 +78,10 @@
   width: 44px;
   height: 44px;
   object-fit: contain;
+}
+
+.start-title-block {
+  margin-top: 0.35rem;
 }
 
 .start-kicker {
@@ -98,6 +103,8 @@
 
 .start-hero {
   max-width: 540px;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .start-subtitle {
@@ -111,6 +118,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+  justify-content: center;
 }
 
 .start-highlight {
