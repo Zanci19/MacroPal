@@ -1,58 +1,57 @@
-import React, { useState } from "react";
+import React from "react";
 import { IonPage, IonContent, IonButton, useIonRouter } from "@ionic/react";
 import "./Start.css";
 import logo from "../assets/logo.png";
-import bgVideo from "../assets/start_bg_loop.mp4";
 
 const Start: React.FC = () => {
   const router = useIonRouter();
-  const [videoReady, setVideoReady] = useState(false);
 
   return (
     <IonPage>
-      <IonContent className="start-content ion-padding" fullscreen>
-        <div
-          className={`bg-video ${videoReady ? "is-ready" : ""}`}
-          aria-hidden="true"
-        >
-          <video
-            className="bg-video__media"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            controls={false}
-            disablePictureInPicture
-            onCanPlayThrough={() => setVideoReady(true)}
-          >
-            <source src={bgVideo} type="video/mp4" />
-          </video>
-          <div className="bg-video__scrim" />
+      <IonContent className="start-content" fullscreen>
+        <div className="bg-motion" aria-hidden="true">
+          <div className="bg-motion__layer" />
+          <div className="bg-motion__layer bg-motion__layer--alt" />
+          <div className="bg-motion__scrim" />
         </div>
 
-        <div className="fixed-center" role="main" aria-label="MacroPal Start">
-          <img src={logo} alt="MacroPal logo" className="start-logo" />
-          <h1 className="start-title">MacroPal</h1>
-          <h2 className="start-subtitle">Your macros. Simplified.</h2>
+        <div className="start-shell" role="main" aria-label="MacroPal Start">
+          <div className="start-main">
+            <section className="start-hero">
+              <div className="start-logo-wrap">
+                <img src={logo} alt="MacroPal logo" className="start-logo" />
+              </div>
+              <p className="start-kicker">MACROPAL</p>
+              <h1 className="start-title">Your macros. Simplified.</h1>
+              <div className="start-highlights">
+                <div className="start-highlight">Build balanced plans</div>
+                <div className="start-highlight">Log meals in seconds</div>
+                <div className="start-highlight">Track trends weekly</div>
+              </div>
+            </section>
 
-          <div className="start-actions">
-            <IonButton
-              size="large"
-              className="start-btn start-btn-primary"
-              onClick={() => router.push("/login")}
-            >
-              Log In
-            </IonButton>
-            <IonButton
-              size="large"
-              fill="outline"
-              className="start-btn start-btn-secondary"
-              onClick={() => router.push("/register")}
-            >
-              Create account
-            </IonButton>
+            <section className="start-actions" aria-label="Get started">
+              <IonButton
+                size="large"
+                className="start-btn start-btn-primary"
+                onClick={() => router.push("/register")}
+              >
+                Get Started
+              </IonButton>
+              <IonButton
+                size="large"
+                fill="outline"
+                className="start-btn start-btn-secondary"
+                onClick={() => router.push("/login")}
+              >
+                I already have an account
+              </IonButton>
+            </section>
           </div>
+
+          <footer className="start-footnote">
+            Trusted by macro trackers who want simple, consistent results.
+          </footer>
         </div>
       </IonContent>
     </IonPage>
