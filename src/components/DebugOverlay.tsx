@@ -194,10 +194,7 @@ const DebugOverlay = () => {
   const [renderProfile, setRenderProfile] = useState<RenderProfileSnapshot | null>(null);
 
   useEffect(() => {
-    if (!debugOverlayAllowed) {
-      setLocalPreference(false);
-      return;
-    }
+    if (!debugOverlayAllowed) return;
 
     const handlePreferenceChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;

@@ -21,6 +21,9 @@ vi.mock('./hooks/version', () => ({
 }));
 
 const DISMISSED_VERSION_KEY = 'mp_dismissed_update_version';
+type IonToastElement = HTMLElement & {
+  buttons?: Array<{ text?: string; handler?: () => void }>;
+};
 
 describe('UpdateGate - Announcement Fix', () => {
   beforeEach(() => {
@@ -59,10 +62,6 @@ describe('UpdateGate - Announcement Fix', () => {
       await waitFor(() => {
         expect(mockGetDoc).toHaveBeenCalled();
       });
-
-      type IonToastElement = HTMLElement & {
-        buttons?: Array<{ text?: string; handler?: () => void }>;
-      };
 
       const toasts = screen.getAllByTestId("update-toast");
       const toast = toasts[toasts.length - 1];

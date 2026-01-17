@@ -30,6 +30,11 @@ const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   debugOverlay: false,
 };
 
+const mergeFeatureFlags = (config?: AppConfig | null): FeatureFlags => ({
+  ...DEFAULT_FEATURE_FLAGS,
+  ...(config?.featureFlags ?? {}),
+});
+
 const defaultConfig: AppConfig = {
   featureFlags: DEFAULT_FEATURE_FLAGS,
 };
@@ -42,16 +47,11 @@ export const useRemoteConfig = () => useContext(RemoteConfigContext);
 export const isFeatureEnabled = (
   config: AppConfig | null | undefined,
   flag: keyof FeatureFlags,
-  fallback = true,
 ) => {
-  const mergedFlags = {
-    ...DEFAULT_FEATURE_FLAGS,
-    ...(config?.featureFlags ?? {}),
-  };
-
+  const mergedFlags = mergeFeatureFlags(config);
   const value = mergedFlags[flag];
   if (typeof value === "boolean") return value;
-  return fallback;
+  return false;
 };
 
 const DISMISSED_VERSION_KEY = "mp_dismissed_update_version";
@@ -110,10 +110,7 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
         const data = snap.data() as AppConfig;
         const mergedConfig: AppConfig = {
           ...data,
-          featureFlags: {
-            ...DEFAULT_FEATURE_FLAGS,
-            ...(data.featureFlags ?? {}),
-          },
+          featureFlags: mergeFeatureFlags(data),
         };
         setConfig(mergedConfig);
 
