@@ -1765,6 +1765,7 @@ const Home: React.FC = () => {
           typeof data.title !== "string" ||
           typeof data.message !== "string" ||
           typeof data.image !== "string" ||
+          typeof data.imageAlt !== "string" ||
           typeof data.buttonText !== "string" ||
           typeof data.announcementNum !== "number"
         ) {
@@ -1772,19 +1773,19 @@ const Home: React.FC = () => {
         }
 
         // Get user's current announcementNum from profile
-        const userAnnouncementNum = (profile as { announcementNum?: string })
-          ?.announcementNum;
-        const currentNum = userAnnouncementNum ? String(userAnnouncementNum) : "0";
+        const userAnnouncementNum = typeof (profile as any)?.announcementNum === "string" 
+          ? (profile as any).announcementNum 
+          : "0";
         const apiNum = String(data.announcementNum);
 
         // Show popup only if the numbers don't match
-        if (currentNum !== apiNum) {
+        if (userAnnouncementNum !== apiNum) {
           setAnnouncement(data);
           setShowAnnouncementPopup(true);
           trackEvent("announcement_shown", {
             uid,
             announcementNum: data.announcementNum,
-            userAnnouncementNum: currentNum,
+            userAnnouncementNum,
           });
         } else {
           trackEvent("announcement_already_seen", {
