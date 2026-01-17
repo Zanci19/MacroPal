@@ -1,7 +1,7 @@
 {
   "name": "MacroPal",
-  "private": true,
-  "version": "0.0.1",
+  "private": false,
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -68,5 +68,12 @@
   "overrides": {
     "rollup": "4.44.0"
   },
-  "description": "An Ionic project"
+  "description": "An app to help you track and improve your eating habits.",
+  "keywords": [
+    "health",
+    "nutrition",
+    "tracking",
+    "diet",
+    "macros"
+  ]
 }

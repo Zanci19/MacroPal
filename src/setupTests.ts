@@ -67,7 +67,7 @@ vi.mock("firebase/firestore", () => {
   const mockSnapshot = { exists: () => false, data: () => ({}) };
 
   return {
-       initializeFirestore: vi.fn(() => ({})),
+    initializeFirestore: vi.fn(() => ({})),
     doc: vi.fn(() => mockRef),
     getDoc: vi.fn(async () => mockSnapshot),
     setDoc: vi.fn(noopPromise),
