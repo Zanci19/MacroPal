@@ -244,6 +244,10 @@ body.dark ion-tab-bar {
   box-shadow: none;
 }
 
+.mp-tabbar {
+  overflow: visible;
+}
+
 .mp-tab-btn ion-label {
   opacity: 0.85;
   font-weight: 600;
@@ -259,6 +263,11 @@ body.dark ion-tab-bar {
   --ripple-color: transparent;
   position: relative;
   z-index: 2;
+  overflow: visible;
+}
+
+.mp-tab-btn--add::part(native) {
+  overflow: visible;
 }
 
 .mp-tab-btn__add-circle {
@@ -273,7 +282,7 @@ body.dark ion-tab-bar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-22px);
+  transform: translateY(-28px);
 }
 
 .mp-tab-btn__add-circle ion-icon {
