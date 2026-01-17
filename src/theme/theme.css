@@ -239,6 +239,10 @@ ion-tab-bar {
   overflow: visible;
 }
 
+ion-tab-bar::part(container) {
+  overflow: visible;
+}
+
 body.dark ion-tab-bar {
   --background: var(--mp-surface);
   box-shadow: none;
