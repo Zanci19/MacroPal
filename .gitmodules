@@ -1,0 +1,3 @@
+[submodule "website/macro.pal"]
+	path = website/macro.pal
+	url = https://github.com/Zanci19/macro.pal.git
