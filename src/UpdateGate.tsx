@@ -13,6 +13,8 @@ type AppConfig = {
   storeUrl?: string;
 };
 
+const DISMISSED_VERSION_KEY = "mp_dismissed_update_version";
+
 function cmpVersion(a: string, b: string): number {
   const parsePart = (part: string) => {
     const value = Number.parseInt(part, 10);
@@ -28,6 +30,23 @@ function cmpVersion(a: string, b: string): number {
     if (x > y) return 1;
   }
   return 0;
+}
+
+function getDismissedVersion(): string | null {
+  try {
+    return localStorage.getItem(DISMISSED_VERSION_KEY);
+  } catch (e) {
+    console.warn("Could not read dismissed version:", e);
+    return null;
+  }
+}
+
+function setDismissedVersion(version: string): void {
+  try {
+    localStorage.setItem(DISMISSED_VERSION_KEY, version);
+  } catch (e) {
+    console.warn("Could not save dismissed version:", e);
+  }
 }
 
 interface UpdateGateProps {
@@ -65,11 +84,24 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
             forceUpdate,
           });
         } else if (isBehindLatest) {
-          setShowSoftBanner(true);
-          trackEvent("update_available_banner_shown", {
-            currentVersion: APP_VERSION,
-            latest,
-          });
+          // Check if user has already dismissed this version
+          const dismissedVersion = getDismissedVersion();
+          const hasNotDismissedThisVersion = !dismissedVersion || cmpVersion(latest, dismissedVersion) > 0;
+          
+          if (hasNotDismissedThisVersion) {
+            setShowSoftBanner(true);
+            trackEvent("update_available_banner_shown", {
+              currentVersion: APP_VERSION,
+              latest,
+              dismissedVersion,
+            });
+          } else {
+            trackEvent("update_available_banner_suppressed", {
+              currentVersion: APP_VERSION,
+              latest,
+              dismissedVersion,
+            });
+          }
         } else {
           trackEvent("update_check_current", {
             currentVersion: APP_VERSION,
@@ -82,6 +114,13 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
 
     run();
   }, []);
+
+  const dismissBanner = () => {
+    if (config?.latestVersion) {
+      setDismissedVersion(config.latestVersion);
+    }
+    setShowSoftBanner(false);
+  };
 
   const update = (source: "hard_block" | "soft_banner") => {
     trackEvent("update_prompt_click", {
@@ -104,6 +143,7 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
+          alignItems: "center",
           textAlign: "center",
         }}
       >
@@ -136,14 +176,17 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
       {children}
       <IonToast
         isOpen={showSoftBanner}
-        onDidDismiss={() => setShowSoftBanner(false)}
+        onDidDismiss={dismissBanner}
         message={`A new version of MacroPal is available.`}
         duration={0}
         buttons={[
           {
             text: "Later",
             role: "cancel",
-            handler: () => trackEvent("update_prompt_dismiss", { source: "soft_banner" }),
+            handler: () => {
+              dismissBanner();
+              trackEvent("update_prompt_dismiss", { source: "soft_banner" });
+            },
           },
           {
             text: "Update",
