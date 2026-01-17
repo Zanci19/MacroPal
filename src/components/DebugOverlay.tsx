@@ -188,14 +188,15 @@ const isOverlayEnabled = () => {
 const DebugOverlay = () => {
   const remoteConfig = useRemoteConfig();
   const debugOverlayAllowed = isFeatureEnabled(remoteConfig, "debugOverlay", false);
-  const [enabled, setEnabled] = useState(() => debugOverlayAllowed && isOverlayEnabled());
-  const metrics = useDebugOverlayMetrics(enabled && debugOverlayAllowed);
+  const [localPreference, setLocalPreference] = useState(isOverlayEnabled);
+  const effectiveEnabled = debugOverlayAllowed && localPreference;
+  const metrics = useDebugOverlayMetrics(effectiveEnabled);
   const [renderProfile, setRenderProfile] = useState<RenderProfileSnapshot | null>(null);
 
   useEffect(() => {
     const handlePreferenceChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;
-      setEnabled(debugOverlayAllowed && customEvent.detail.enabled);
+      setLocalPreference(customEvent.detail.enabled);
     };
 
     window.addEventListener("mp_debug_overlay_change", handlePreferenceChange);
@@ -206,7 +207,7 @@ const DebugOverlay = () => {
   }, [debugOverlayAllowed]);
 
   useEffect(() => {
-    setEnabled(debugOverlayAllowed && isOverlayEnabled());
+    setLocalPreference(isOverlayEnabled());
   }, [debugOverlayAllowed]);
 
   useEffect(() => {
@@ -215,7 +216,7 @@ const DebugOverlay = () => {
     });
   }, []);
 
-  if (!debugOverlayAllowed || !enabled) return null;
+  if (!debugOverlayAllowed || !effectiveEnabled) return null;
 
   return (
     <div className="debug-overlay" aria-live="polite">

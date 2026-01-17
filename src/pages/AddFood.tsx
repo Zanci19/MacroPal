@@ -2585,7 +2585,7 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                disabled={!barcodeScannerEnabled}
+                color={barcodeScannerEnabled ? undefined : "medium"}
                 onClick={() => {
                   if (!barcodeScannerEnabled) {
                     setToast({
