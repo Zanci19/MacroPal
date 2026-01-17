@@ -347,7 +347,6 @@ ion-refresher-content .refresher-refreshing-icon {
 
 :root body.has-softkeys .mp-tabbar {
   padding-bottom: var(--softkey-inset);
-  overflow: visible;
 }
 
 /* Toast styling for all themes */
