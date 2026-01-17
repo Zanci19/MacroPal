@@ -106,7 +106,7 @@ const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
 const ZEN_QUOTES_ENDPOINT = "https://zenquote-wjgl4tt7ha-ew.a.run.app";
 const QUOTE_STORAGE_KEY = "mp_daily_quote";
-const ANNOUNCEMENT_API_URL = "https://zanci19.github.io/macro.pal/new-feature.json";
+const ANNOUNCEMENT_API_URL = "https://zanci19.github.io/macro.pal/app/home-popups/new-feature.json";
 
 const getFallbackQuote = (): InspirationalQuote => {
   const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);

@@ -43,7 +43,7 @@ const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
 
   const imageUrl = announcement.image.startsWith("http")
     ? announcement.image
-    : `https://zanci19.github.io/macro.pal/${announcement.image}`;
+    : "https://zanci19.github.io/macro.pal/app/home-popups/images/home-popups-image.png"
 
   return (
     <IonModal
