@@ -188,7 +188,7 @@ const isOverlayEnabled = () => {
 const DebugOverlay = () => {
   const remoteConfig = useRemoteConfig();
   const debugOverlayAllowed = isFeatureEnabled(remoteConfig, "debugOverlay", false);
-  const [localPreference, setLocalPreference] = useState(isOverlayEnabled);
+  const [localPreference, setLocalPreference] = useState(() => isOverlayEnabled());
   const effectiveEnabled = debugOverlayAllowed && localPreference;
   const metrics = useDebugOverlayMetrics(effectiveEnabled);
   const [renderProfile, setRenderProfile] = useState<RenderProfileSnapshot | null>(null);
@@ -201,13 +201,11 @@ const DebugOverlay = () => {
 
     window.addEventListener("mp_debug_overlay_change", handlePreferenceChange);
 
+    setLocalPreference(isOverlayEnabled());
+
     return () => {
       window.removeEventListener("mp_debug_overlay_change", handlePreferenceChange);
     };
-  }, [debugOverlayAllowed]);
-
-  useEffect(() => {
-    setLocalPreference(isOverlayEnabled());
   }, [debugOverlayAllowed]);
 
   useEffect(() => {
