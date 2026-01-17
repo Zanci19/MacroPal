@@ -34,6 +34,8 @@ import {
   colorPaletteOutline,
   informationCircleOutline,
   keyOutline,
+  newspaperOutline,
+  chevronDownOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
@@ -49,11 +51,13 @@ import "./Settings.css";
 import {
   applyAnimationPreference,
   applyChartAnimationPreference,
+  applyAutoExpandMealsPreference,
   applyDebugOverlayPreference,
   applyLazyLoadPreference,
   applyTheme,
   getAnimationPreference,
   getChartAnimationPreference,
+  getAutoExpandMealsPreference,
   getDebugOverlayPreference,
   getLazyLoadPreference,
   getStoredThemeMode,
@@ -102,6 +106,9 @@ const Settings: React.FC = () => {
   });
   const [lazyLoadEnabled, setLazyLoadEnabled] = React.useState<boolean>(() => {
     return getLazyLoadPreference();
+  });
+  const [autoExpandMealsEnabled, setAutoExpandMealsEnabled] = React.useState<boolean>(() => {
+    return getAutoExpandMealsPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -375,6 +382,7 @@ const Settings: React.FC = () => {
       debugOverlay: getDebugOverlayPreference(),
       lazyLoad: getLazyLoadPreference(),
       chartAnimations: getChartAnimationPreference(),
+      autoExpandMeals: getAutoExpandMealsPreference(),
     };
 
     // Get browser capabilities
@@ -490,6 +498,7 @@ const Settings: React.FC = () => {
       "mp_debug_overlay",
       "mp_lazy_load",
       "mp_chart_animations",
+      "mp_auto_expand_meals",
     ];
     keys.forEach((key) => window.localStorage.removeItem(key));
 
@@ -499,15 +508,18 @@ const Settings: React.FC = () => {
     const chartAnimations = getChartAnimationPreference();
     const debugOverlay = getDebugOverlayPreference();
     const lazyLoad = getLazyLoadPreference();
+    const autoExpand = getAutoExpandMealsPreference();
     applyAnimationPreference(animations);
     applyChartAnimationPreference(chartAnimations);
     applyDebugOverlayPreference(debugOverlay);
     applyLazyLoadPreference(lazyLoad);
+    applyAutoExpandMealsPreference(autoExpand);
 
     setTabAnimationsEnabled(animations);
     setChartAnimationsEnabled(chartAnimations);
     setDebugOverlayEnabled(debugOverlay);
     setLazyLoadEnabled(lazyLoad);
+    setAutoExpandMealsEnabled(autoExpand);
     setToast({
       show: true,
       message: "Cached preferences cleared.",
@@ -643,6 +655,15 @@ const Settings: React.FC = () => {
         } else {
           const localPref = getLazyLoadPreference();
           setLazyLoadEnabled(localPref);
+        }
+
+        const savedAutoExpandMealsPref = (profile as any)?.autoExpandMeals;
+        if (typeof savedAutoExpandMealsPref === "boolean") {
+          setAutoExpandMealsEnabled(savedAutoExpandMealsPref);
+          applyAutoExpandMealsPreference(savedAutoExpandMealsPref);
+        } else {
+          const localPref = getAutoExpandMealsPreference();
+          setAutoExpandMealsEnabled(localPref);
         }
 
         setSmartRecommendationEnabled(enabled);
@@ -1134,6 +1155,46 @@ const Settings: React.FC = () => {
                     }}
                   />
                 </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={chevronDownOutline} />
+                  <IonLabel>
+                    <h2>Auto-expand meals with food</h2>
+                    <p>Open meals that already include entries.</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={autoExpandMealsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setAutoExpandMealsEnabled(checked);
+                      applyAutoExpandMealsPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.autoExpandMeals": checked,
+                        });
+
+                        trackEvent("settings_auto_expand_meals_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save auto expand preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update auto expand setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
               </IonList>
             </IonCardContent>
           </IonCard>
@@ -1277,6 +1338,14 @@ const Settings: React.FC = () => {
                 >
                   <IonIcon slot="start" icon={cafeOutline} />
                   <IonLabel>Buy me a coffee ☕</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/app/changelog")}
+                >
+                  <IonIcon slot="start" icon={newspaperOutline} />
+                  <IonLabel>Changelog</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"

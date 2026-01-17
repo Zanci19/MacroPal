@@ -74,6 +74,7 @@ import {
   normalizeAnnouncementNum,
   shouldShowAnnouncement,
 } from "../../utils/announcement";
+import { getAutoExpandMealsPreference } from "../../utils/preferences";
 import type {
   MealKey,
   Macros,
@@ -493,6 +494,9 @@ const Home: React.FC = () => {
     snacks: true,
   });
   const collapsedInitKeyRef = useRef<string | null>(null);
+  const [autoExpandMealsEnabled, setAutoExpandMealsEnabled] = useState<boolean>(() => {
+    return getAutoExpandMealsPreference();
+  });
 
   const [quote, setQuote] = useState<InspirationalQuote | null>(() => {
     const stored = readStoredQuote();
@@ -513,6 +517,32 @@ const Home: React.FC = () => {
   const announcementFetchedRef = useRef(false);
 
   const unitSystem = getUnitSystem(profile?.units);
+
+  useEffect(() => {
+    const pref = (profile as any)?.autoExpandMeals;
+    if (typeof pref === "boolean") {
+      setAutoExpandMealsEnabled(pref);
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled: boolean }>).detail;
+      if (detail && typeof detail.enabled === "boolean") {
+        setAutoExpandMealsEnabled(detail.enabled);
+      }
+    };
+    window.addEventListener("mp_auto_expand_meals_change", handler as EventListener);
+    return () => {
+      window.removeEventListener("mp_auto_expand_meals_change", handler as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (autoExpandMealsEnabled) {
+      collapsedInitKeyRef.current = null;
+    }
+  }, [autoExpandMealsEnabled, activeDateKey]);
 
   useIonViewDidEnter(() => {
     setIsViewActive(true);
@@ -603,13 +633,15 @@ const Home: React.FC = () => {
         setDayData(nextDay);
         setDayDataSignature(nextSignature);
         if (collapsedInitKeyRef.current !== activeDateKey) {
-          setCollapsedMeals({
-            breakfast: nextDay.breakfast.length === 0,
-            lunch: nextDay.lunch.length === 0,
-            dinner: nextDay.dinner.length === 0,
-            snacks: nextDay.snacks.length === 0,
-          });
           collapsedInitKeyRef.current = activeDateKey;
+          if (autoExpandMealsEnabled) {
+            setCollapsedMeals({
+              breakfast: nextDay.breakfast.length === 0,
+              lunch: nextDay.lunch.length === 0,
+              dinner: nextDay.dinner.length === 0,
+              snacks: nextDay.snacks.length === 0,
+            });
+          }
         }
       }
       setLoading(false);
@@ -670,7 +702,7 @@ const Home: React.FC = () => {
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [activeDateKey, mealSignature, shouldTrackSnapshot, uid]);
+  }, [activeDateKey, autoExpandMealsEnabled, mealSignature, shouldTrackSnapshot, uid]);
 
   useEffect(() => {
     if (!isViewActive) return;

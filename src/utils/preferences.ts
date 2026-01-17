@@ -91,12 +91,28 @@ export const getChartAnimationPreference = (): boolean => {
   return stored === "on";
 };
 
+export const applyAutoExpandMealsPreference = (enabled: boolean) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem("mp_auto_expand_meals", enabled ? "on" : "off");
+  window.dispatchEvent(
+    new CustomEvent("mp_auto_expand_meals_change", { detail: { enabled } })
+  );
+};
+
+export const getAutoExpandMealsPreference = (): boolean => {
+  if (typeof window === "undefined") return true;
+  const stored = window.localStorage.getItem("mp_auto_expand_meals");
+  if (stored === null) return true;
+  return stored === "on";
+};
+
 export type ProfilePreferences = {
   themeMode?: ThemeMode;
   tabAnimationsEnabled?: boolean;
   debugOverlayEnabled?: boolean;
   lazyLoadEnabled?: boolean;
   chartAnimationsEnabled?: boolean;
+   autoExpandMeals?: boolean;
 };
 
 export const getProfilePreferences = (profile?: Record<string, unknown>): ProfilePreferences => {
@@ -126,6 +142,10 @@ export const getProfilePreferences = (profile?: Record<string, unknown>): Profil
       typeof profile.chartAnimationsEnabled === "boolean"
         ? profile.chartAnimationsEnabled
         : undefined,
+    autoExpandMeals:
+      typeof profile.autoExpandMeals === "boolean"
+        ? profile.autoExpandMeals
+        : undefined,
   };
 };
 
@@ -151,6 +171,9 @@ export const applyProfilePreferences = (profile?: Record<string, unknown>) => {
   }
   if (typeof prefs.chartAnimationsEnabled === "boolean") {
     applyChartAnimationPreference(prefs.chartAnimationsEnabled);
+  }
+  if (typeof prefs.autoExpandMeals === "boolean") {
+    applyAutoExpandMealsPreference(prefs.autoExpandMeals);
   }
   return prefs;
 };

@@ -432,6 +432,7 @@ const FAT_SUGGESTIONS: Record<Goal, string[]> = {
 
 const MIN_RESULTS_VISIBILITY_PX = 120;
 const RESULTS_VISIBILITY_RATIO = 0.5;
+const RESULTS_SCROLL_OFFSET = 96;
 
 function pickRandom(list: string[]): string {
   if (!list.length) return "";
@@ -446,6 +447,24 @@ const AddFood: React.FC = () => {
   const dateKey = useDateFromQuery(location);
   const remoteConfig = useRemoteConfig();
   const barcodeScannerEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner");
+  const autoMealFromQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const value = params.get("autoMeal");
+    return value === "1" || value === "true";
+  }, [location.search]);
+  const autoMealPendingRef = useRef<boolean>(autoMealFromQuery);
+  useEffect(() => {
+    autoMealPendingRef.current = autoMealFromQuery;
+  }, [autoMealFromQuery]);
+  const pickFirstEmptyMeal = useCallback(
+    (counts: Record<MealKey, number>) => {
+      for (const key of ["breakfast", "lunch", "dinner", "snacks"] as MealKey[]) {
+        if ((counts[key] ?? 0) === 0) return key;
+      }
+      return "snacks";
+    },
+    []
+  );
 
   const RECENT_QUERY_KEY = "mp_add_food_recent_queries";
   const RECENT_QUERY_LIMIT = 10;
@@ -538,6 +557,7 @@ const AddFood: React.FC = () => {
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
   const prevResultsKeyRef = useRef<string | null>(null);
+  const forceResultsScrollRef = useRef<boolean>(false);
 
   const per100g = useMemo(
     () => macrosPer100g(selectedFood?.nutriments),
@@ -661,6 +681,26 @@ const AddFood: React.FC = () => {
       ref,
       (snap) => {
         if (!snap.exists()) {
+          const emptyCounts: Record<MealKey, number> = {
+            breakfast: 0,
+            lunch: 0,
+            dinner: 0,
+            snacks: 0,
+          };
+          if (autoMealPendingRef.current) {
+            const nextMeal = pickFirstEmptyMeal(emptyCounts);
+            if (meal !== nextMeal) {
+              setMeal(nextMeal);
+            }
+            const params = new URLSearchParams(location.search);
+            params.delete("autoMeal");
+            params.set("meal", nextMeal);
+            history.replace({
+              pathname: "/add-food",
+              search: params.toString() ? `?${params}` : "",
+            });
+            autoMealPendingRef.current = false;
+          }
           setDayTotals({
             calories: 0,
             protein: 0,
@@ -671,6 +711,12 @@ const AddFood: React.FC = () => {
         }
 
         const data = snap.data() as DayDoc;
+        const counts: Record<MealKey, number> = {
+          breakfast: Array.isArray(data.breakfast) ? data.breakfast.length : 0,
+          lunch: Array.isArray(data.lunch) ? data.lunch.length : 0,
+          dinner: Array.isArray(data.dinner) ? data.dinner.length : 0,
+          snacks: Array.isArray(data.snacks) ? data.snacks.length : 0,
+        };
         let calories = 0;
         let protein = 0;
         let fat = 0;
@@ -691,6 +737,20 @@ const AddFood: React.FC = () => {
         );
 
         setDayTotals({ calories, protein, fat, carbs });
+        if (autoMealPendingRef.current) {
+          const nextMeal = pickFirstEmptyMeal(counts);
+          if (meal !== nextMeal) {
+            setMeal(nextMeal);
+          }
+          const params = new URLSearchParams(location.search);
+          params.delete("autoMeal");
+          params.set("meal", nextMeal);
+          history.replace({
+            pathname: "/add-food",
+            search: params.toString() ? `?${params}` : "",
+          });
+          autoMealPendingRef.current = false;
+        }
       },
       (err) => {
         const msg = handleError("add_food_day_totals", err);
@@ -706,7 +766,7 @@ const AddFood: React.FC = () => {
     );
 
     return () => unsub();
-  }, [dateKey]);
+  }, [dateKey, history, location.search, meal, pickFirstEmptyMeal]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -841,7 +901,8 @@ const AddFood: React.FC = () => {
     const firstKey = firstResult?.code || firstResult?.product_name || null;
     const changed =
       results.length !== prevResultsLengthRef.current || firstKey !== prevResultsKeyRef.current;
-    if (results.length > 0 && changed) {
+    const shouldForce = forceResultsScrollRef.current;
+    if (results.length > 0 && (changed || shouldForce)) {
       const listEl = resultsListRef.current as HTMLElement | null;
       const contentEl = await contentRef.current?.getScrollElement();
       if (listEl && contentEl) {
@@ -852,8 +913,8 @@ const AddFood: React.FC = () => {
           visibleHeight >= Math.min(listRect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
           // Leave space for the upper bar (header, search, buttons, etc.)
-          // Estimate ~60-80px for spacing
-          const targetTop = Math.max(listEl.offsetTop - 80, 0);
+          // Estimate ~90-100px for spacing
+          const targetTop = Math.max(listEl.offsetTop - RESULTS_SCROLL_OFFSET, 0);
           requestAnimationFrame(() => {
             void contentRef.current?.scrollToPoint(0, targetTop, 350);
           });
@@ -862,13 +923,14 @@ const AddFood: React.FC = () => {
     }
     prevResultsLengthRef.current = results.length;
     prevResultsKeyRef.current = firstKey;
+    forceResultsScrollRef.current = false;
   }, [results]);
 
   useEffect(() => {
     if (!loading) {
       void ensureResultsVisible();
     }
-  }, [loading, results]);
+  }, [ensureResultsVisible, loading, results]);
 
   useEffect(() => {
     const state = (location as any).state as
@@ -1195,6 +1257,7 @@ const AddFood: React.FC = () => {
       });
       return 0;
     }
+    forceResultsScrollRef.current = true;
 
     const normalizedQuery = normalizeText(raw);
     const queryTokens = tokenize(raw);
@@ -2388,6 +2451,7 @@ const AddFood: React.FC = () => {
     setMeal(next);
 
     const params = new URLSearchParams(location.search);
+    params.delete("autoMeal");
     params.set("meal", next);
     history.replace({
       pathname: "/add-food",

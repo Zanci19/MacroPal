@@ -23,6 +23,7 @@ import {
   settingsOutline,
   settings,
   analytics,
+  add,
   fitnessOutline,
   fitness,
   analyticsSharp,
@@ -54,6 +55,7 @@ const importUnits = () => import("./pages/home/Units");
 const importReminders = () => import("./pages/home/Reminders");
 const importDataPrivacy = () => import("./pages/home/DataPrivacy");
 const importWorkout = () => import("./pages/home/Workout");
+const importChangelog = () => import("./pages/Changelog");
 const importScanBarcode = () => import("./pages/ScanBarcode");
 
 const Login = lazy(importLogin);
@@ -76,6 +78,7 @@ const Units = lazy(importUnits);
 const Reminders = lazy(importReminders);
 const DataPrivacy = lazy(importDataPrivacy);
 const Workout = lazy(importWorkout);
+const Changelog = lazy(importChangelog);
 const ScanBarcode = lazy(importScanBarcode);
 
 const LAZY_ROUTE_IMPORTS = [
@@ -99,6 +102,7 @@ const LAZY_ROUTE_IMPORTS = [
   importReminders,
   importDataPrivacy,
   importWorkout,
+  importChangelog,
   importScanBarcode,
 ];
 
@@ -245,6 +249,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     if (path.startsWith("/app/analytics")) return "analytics";
     if (path.startsWith("/app/home")) return "home";
     if (path.startsWith("/app/workout")) return "workout";
+    if (path.startsWith("/app/changelog")) return "settings";
     if (path.startsWith("/app/settings")) return "settings";
 
     return "home";
@@ -292,6 +297,11 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     });
     router.push(href, "forward", "push");
   };
+
+  const handleQuickAddFood = useCallback(() => {
+    trackEvent("tab_quick_add_food");
+    router.push("/add-food?autoMeal=1", "forward", "push");
+  }, [router]);
 
   // Optimized sliding animation for Android - hardware accelerated, no opacity changes
   // Uses only translate3d transforms which are GPU-accelerated and performant
@@ -435,6 +445,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
         <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />
         <Route exact path="/app/settings" render={(props) => <LazyRoute component={Settings} {...props} />} />
+        <Route exact path="/app/changelog" render={(props) => <LazyRoute component={Changelog} {...props} />} />
         <Route exact path="/app/energy-needs" render={(props) => <LazyRoute component={EnergyNeeds} {...props} />} />
         <Route exact path="/app/units" render={(props) => <LazyRoute component={Units} {...props} />} />
         <Route exact path="/app/reminders" render={(props) => <LazyRoute component={Reminders} {...props} />} />
@@ -467,6 +478,22 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             icon={activeTab === "home" ? home : homeOutline}
           />
           <IonLabel>Home</IonLabel>
+        </IonTabButton>
+
+        <IonTabButton
+          tab="quick-add"
+          className="mp-tab-btn mp-tab-btn--add"
+          href="/add-food?autoMeal=1"
+          onClick={(event) => {
+            event.preventDefault();
+            handleQuickAddFood();
+          }}
+          aria-label="Quick add food"
+        >
+          <div className="mp-tab-btn__add-circle">
+            <IonIcon aria-hidden="true" icon={add} />
+          </div>
+          <IonLabel className="sr-only">Add food</IonLabel>
         </IonTabButton>
 
         <IonTabButton
