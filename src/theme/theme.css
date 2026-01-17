@@ -236,11 +236,18 @@ ion-tab-bar {
   /* Handle Android navigation bar overlap - supports both approaches */
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  overflow: visible;
 }
 
 body.dark ion-tab-bar {
   --background: var(--mp-surface);
   box-shadow: none;
+}
+
+.mp-tabbar {
+  padding-bottom: calc(
+    max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) + 8px
+  );
 }
 
 .mp-tab-btn ion-label {
@@ -262,6 +269,8 @@ body.dark ion-tab-bar {
 .mp-tab-btn__add-circle {
   width: 64px;
   height: 64px;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 64px;
   border-radius: 50%;
   background: var(--ion-color-primary);
   color: #ffffff;
@@ -269,11 +278,11 @@ body.dark ion-tab-bar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-12px);
+  transform: translateY(-16px);
 }
 
 .mp-tab-btn__add-circle ion-icon {
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .mp-tab-btn__hidden-label {
