@@ -258,6 +258,7 @@ body.dark ion-tab-bar {
   --color: #ffffff;
   --ripple-color: transparent;
   position: relative;
+  z-index: 2;
 }
 
 .mp-tab-btn__add-circle {
@@ -272,7 +273,7 @@ body.dark ion-tab-bar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-8px);
+  transform: translateY(-22px);
 }
 
 .mp-tab-btn__add-circle ion-icon {
