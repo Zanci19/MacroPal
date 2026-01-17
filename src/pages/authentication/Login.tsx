@@ -22,13 +22,15 @@ import {
 import {
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
   GoogleAuthProvider,
   getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
 } from "firebase/auth";
-import { auth, trackEvent } from "../../firebase";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
+import { auth, db, trackEvent } from "../../firebase";
 import { useHistory } from "react-router-dom";
 import { handleError } from "../../utils/handleError";
 import { signInWithGoogleSocialLogin } from "../../utils/googleSocialLogin";
@@ -61,6 +63,73 @@ const Login: React.FC = () => {
     color: "success",
   });
 
+  const emailPattern = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
+  const looksLikeEmail = (value: string) => emailPattern.test(value.trim());
+
+  const resolveIdentifierToEmail = async (identifier: string) => {
+    const cleanId = identifier.trim();
+    if (looksLikeEmail(cleanId)) return cleanId;
+
+    try {
+      const q = query(
+        collection(db, "users"),
+        where("displayName", "==", cleanId),
+        limit(1)
+      );
+      const snap = await getDocs(q);
+      const match = snap.docs[0]?.data() as { email?: unknown } | undefined;
+      const resolved =
+        typeof match?.email === "string" ? match.email.trim() : null;
+
+      if (resolved) {
+        trackEvent("login_username_resolved", { identifier: cleanId });
+      } else {
+        trackEvent("login_username_not_found", { identifier: cleanId });
+      }
+
+      return resolved || null;
+    } catch (err: any) {
+      console.error("Failed to resolve username to email:", err);
+      trackEvent("login_username_lookup_error", {
+        identifier: cleanId,
+        code: err?.code || "unknown",
+      });
+      throw err;
+    }
+  };
+
+  const ensurePasswordAccess = async (
+    email: string | null,
+    uid: string
+  ): Promise<boolean> => {
+    const user = auth.currentUser;
+    if (!user) return false;
+    const hasPasswordProvider = user.providerData.some(
+      (p) => p && p.providerId === "password"
+    );
+    if (hasPasswordProvider) return false;
+    if (!email) {
+      trackEvent("login_google_password_setup_skipped", {
+        uid,
+        reason: "missing_email",
+      });
+      return false;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      trackEvent("login_google_password_setup_email_sent", { uid });
+      return true;
+    } catch (err: any) {
+      console.error("Failed to send password setup email:", err);
+      trackEvent("login_google_password_setup_email_failed", {
+        uid,
+        code: err?.code || "unknown",
+      });
+      return false;
+    }
+  };
+
   const showToast = (
     message: string,
     color: "success" | "danger" | "warning" = "danger",
@@ -81,7 +150,16 @@ const Login: React.FC = () => {
 
         setBusy(true);
         trackEvent("login_google_success", { uid: result.user.uid });
-        showToast("Signed in with Google.", "success");
+        const sent = await ensurePasswordAccess(
+          result.user.email,
+          result.user.uid
+        );
+        showToast(
+          sent
+            ? "Signed in with Google. Check your email to set a password for email login."
+            : "Signed in with Google.",
+          "success"
+        );
         history.replace("/auth-loading");
       } catch (err: any) {
         if (!active) return;
@@ -127,13 +205,33 @@ const Login: React.FC = () => {
       trackEvent("login_validation_failed", {
         reason: "missing_credentials",
       });
-      showToast("Please enter your email and password.");
+      showToast("Please enter your email/username and password.");
       return;
     }
 
     setBusy(true);
     try {
-      const cred = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPw);
+      let loginEmail = trimmedEmail;
+
+      if (!looksLikeEmail(trimmedEmail)) {
+        try {
+          loginEmail = (await resolveIdentifierToEmail(trimmedEmail)) || "";
+        } catch {
+          showToast(
+            "Couldn't look up that username. Check the spelling and try again."
+          );
+          setBusy(false);
+          return;
+        }
+
+        if (!loginEmail) {
+          showToast("No account found with that username.");
+          setBusy(false);
+          return;
+        }
+      }
+
+      const cred = await signInWithEmailAndPassword(auth, loginEmail, trimmedPw);
 
       setFailedAttempts(0);
       setLockUntil(null);
@@ -186,7 +284,7 @@ const Login: React.FC = () => {
       ) {
         message = "Incorrect email or password.";
       } else if (err?.code === "auth/user-not-found") {
-        message = "No account found with that email.";
+        message = "No account found with that email or username.";
       } else {
         message = handleError("login", err);
       }
@@ -226,7 +324,16 @@ const Login: React.FC = () => {
 
         const result = await signInWithGoogleSocialLogin();
         trackEvent("login_google_success", { uid: result.user.uid });
-        showToast("Signed in with Google.", "success");
+        const sent = await ensurePasswordAccess(
+          result.user.email,
+          result.user.uid
+        );
+        showToast(
+          sent
+            ? "Signed in with Google. Check your email to set a password for email login."
+            : "Signed in with Google.",
+          "success"
+        );
         history.replace("/auth-loading");
         return;
       }
@@ -258,7 +365,16 @@ const Login: React.FC = () => {
       try {
         const result = await signInWithPopup(auth, provider);
         trackEvent("login_google_success", { uid: result.user.uid });
-        showToast("Signed in with Google.", "success");
+        const sent = await ensurePasswordAccess(
+          result.user.email,
+          result.user.uid
+        );
+        showToast(
+          sent
+            ? "Signed in with Google. Check your email to set a password for email login."
+            : "Signed in with Google.",
+          "success"
+        );
         history.replace("/auth-loading");
       } catch (err: any) {
         const code = err?.code || "unknown";
@@ -334,14 +450,14 @@ const Login: React.FC = () => {
 
           <div className="login-form">
             <IonItem lines="full" className="login-item">
-              <IonLabel position="stacked">Email</IonLabel>
+              <IonLabel position="stacked">Email or username</IonLabel>
               <IonInput
-                type="email"
-                inputmode="email"
-                autocomplete="email"
+                type="text"
+                inputmode="text"
+                autocomplete="username"
                 autocapitalize="off"
                 autocorrect="off"
-                placeholder="you@example.com"
+                placeholder="username or you@example.com"
                 value={email}
                 onIonInput={(e: any) => setEmail(e.detail.value ?? "")}
               />
