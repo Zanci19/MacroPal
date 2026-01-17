@@ -15,10 +15,18 @@ import {
   IonToolbar,
 } from "@ionic/react";
 import { chevronDownOutline, chevronUpOutline } from "ionicons/icons";
-import { auth, db, trackEvent } from "../firebase";
+import { auth, db, storage, trackEvent } from "../firebase";
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useHistory } from "react-router";
 import "./OnboardingProfile.css";
+import {
+  dataUrlToBlob,
+  isDataUrl,
+  normalizePhotoUrl,
+  resizeImageFile,
+  sanitizeFileName,
+} from "../utils/image";
 import {
   DEFAULT_UNIT_SYSTEM,
   fromMetricHeight,
@@ -124,6 +132,8 @@ const OnboardingProfile: React.FC = () => {
   const [goal, setGoal] = useState<Goal>("maintain");
   const [activity, setActivity] = useState<Activity>("sedentary");
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const history = useHistory();
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -158,10 +168,7 @@ const OnboardingProfile: React.FC = () => {
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileData } | undefined;
         const p = data?.profile;
-        const googlePhoto =
-          typeof user.photoURL === "string" && user.photoURL.length > 0
-            ? user.photoURL
-            : null;
+        const googlePhoto = normalizePhotoUrl(user.photoURL);
 
         trackEvent("onboarding_profile_load", {
           has_profile: !!p,
@@ -190,7 +197,7 @@ const OnboardingProfile: React.FC = () => {
         setActivity((p.activity as Activity) || "sedentary");
         const storedPhoto =
           typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
-            ? (p as { photoUrl?: string }).photoUrl!
+            ? normalizePhotoUrl((p as { photoUrl?: string }).photoUrl)
             : null;
         // Use stored photo first, then Google profile photo, then null
         const photoToUse = storedPhoto || googlePhoto || null;
@@ -205,6 +212,14 @@ const OnboardingProfile: React.FC = () => {
 
     load();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (photoPreviewUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreviewUrl);
+      }
+    };
+  }, [photoPreviewUrl]);
 
   const steps = useMemo(
     () => ["gender", "age", "weight", "height", "goal", "activity", "photo"],
@@ -303,11 +318,30 @@ const OnboardingProfile: React.FC = () => {
         });
       }
 
-      const photoToSave =
-        profilePhotoUrl ||
-        (typeof user.photoURL === "string" && user.photoURL.length > 0
-          ? user.photoURL
-          : null);
+      const timestamp = Date.now();
+      let photoToSave: string | null = null;
+
+      if (profilePhotoFile) {
+        const resizedBlob = await resizeImageFile(profilePhotoFile);
+        const storagePath = `users/${user.uid}/profile-photos/${timestamp}_${sanitizeFileName(
+          profilePhotoFile.name
+        )}.jpg`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, resizedBlob, {
+          contentType: resizedBlob.type,
+        });
+        photoToSave = await getDownloadURL(storageRef);
+      } else if (profilePhotoUrl && isDataUrl(profilePhotoUrl)) {
+        const blob = await dataUrlToBlob(profilePhotoUrl);
+        const storagePath = `users/${user.uid}/profile-photos/${timestamp}_profile-photo.jpg`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, blob, { contentType: blob.type });
+        photoToSave = await getDownloadURL(storageRef);
+      } else if (profilePhotoUrl) {
+        photoToSave = profilePhotoUrl;
+      } else if (typeof user.photoURL === "string" && user.photoURL.length > 0) {
+        photoToSave = normalizePhotoUrl(user.photoURL);
+      }
 
       await setDoc(
         userRef,
@@ -379,19 +413,20 @@ const OnboardingProfile: React.FC = () => {
 
   const handlePhotoChange = (file?: File | null) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : null;
-      if (!dataUrl) return;
-      setProfilePhotoUrl(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    if (photoPreviewUrl?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreviewUrl);
+    }
+    const preview = URL.createObjectURL(file);
+    setPhotoPreviewUrl(preview);
+    setProfilePhotoFile(file);
   };
 
   const handleBack = () => {
     setDirection("back");
     setStep((prev) => Math.max(prev - 1, 0));
   };
+
+  const displayedPhotoUrl = photoPreviewUrl ?? profilePhotoUrl;
 
   return (
     <IonPage>
@@ -614,10 +649,10 @@ const OnboardingProfile: React.FC = () => {
                   Optional. You can always change it later in Settings.
                 </p>
                 <div className="onboarding-photo-wrapper">
-                  {profilePhotoUrl ? (
+                  {displayedPhotoUrl ? (
                     <>
                       <div className="onboarding-photo-preview">
-                        <img src={profilePhotoUrl} alt="Profile preview" />
+                        <img src={displayedPhotoUrl} alt="Profile preview" />
                       </div>
                       <p className="onboarding-photo-message">
                         There! You look beautiful!
@@ -631,13 +666,20 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-photo-button"
                   onClick={() => photoInputRef.current?.click()}
                 >
-                  {profilePhotoUrl ? "Replace photo" : "Add photo"}
+                  {displayedPhotoUrl ? "Replace photo" : "Add photo"}
                 </IonButton>
-                {profilePhotoUrl && (
+                {displayedPhotoUrl && (
                   <IonButton
                     fill="clear"
                     className="onboarding-photo-remove"
-                    onClick={() => setProfilePhotoUrl(null)}
+                    onClick={() => {
+                      if (photoPreviewUrl?.startsWith("blob:")) {
+                        URL.revokeObjectURL(photoPreviewUrl);
+                      }
+                      setPhotoPreviewUrl(null);
+                      setProfilePhotoFile(null);
+                      setProfilePhotoUrl(null);
+                    }}
                   >
                     Remove photo
                   </IonButton>
