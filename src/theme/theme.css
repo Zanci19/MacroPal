@@ -259,6 +259,7 @@ body.dark ion-tab-bar {
   --color: #ffffff;
   --ripple-color: transparent;
   position: relative;
+  overflow: visible !important;
 }
 
 .mp-tab-btn__add-circle {
