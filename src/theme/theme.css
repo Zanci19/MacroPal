@@ -226,6 +226,11 @@ ion-label p {
   color: var(--mp-text-muted) !important;
 }
 
+/* Allow button to overlap the tab bar */
+ion-tabs {
+  overflow: visible;
+}
+
 ion-tab-bar {
   --background: var(--mp-surface);
   --color: var(--mp-text-muted);
@@ -406,9 +411,13 @@ ion-content,
 ion-card,
 ion-item,
 ion-list,
-ion-toolbar,
-ion-tab-bar {
+ion-toolbar {
   contain: layout style paint;
+}
+
+/* Don't contain ion-tab-bar to allow button overflow */
+ion-tab-bar {
+  contain: style paint;
 }
 
 /* Remove containment for interactive elements */
