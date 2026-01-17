@@ -35,7 +35,7 @@ import {
   colorPaletteOutline,
   informationCircleOutline,
 } from "ionicons/icons";
-import { auth, db, trackEvent } from "../../firebase";
+import { auth, db, storage, trackEvent } from "../../firebase";
 import {
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -44,6 +44,7 @@ import {
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import "./Settings.css";
 import {
   applyAnimationPreference,
@@ -59,6 +60,7 @@ import {
   THEME_MODES,
   type ThemeMode,
 } from "../../utils/preferences";
+import { resizeImageFile, sanitizeFileName } from "../../utils/image";
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
 
@@ -257,29 +259,31 @@ const Settings: React.FC = () => {
   const handlePhotoChange = async (file?: File | null) => {
     if (!file || !auth.currentUser) return;
 
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const dataUrl = typeof reader.result === "string" ? reader.result : null;
-      if (!dataUrl) return;
-
-      try {
-        const ref = doc(db, "users", auth.currentUser?.uid ?? "");
-        await updateDoc(ref, {
-          "profile.photoUrl": dataUrl,
-        });
-        setProfilePhotoUrl(dataUrl);
-        trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
-        setToast({ show: true, message: "Profile photo updated.", color: "success" });
-      } catch (err: any) {
-        console.error("Failed to save profile photo:", err);
-        setToast({
-          show: true,
-          message: err?.message || "Could not update profile photo.",
-          color: "danger",
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const resizedBlob = await resizeImageFile(file);
+      const storagePath = `users/${auth.currentUser.uid}/profile-photos/${Date.now()}_${sanitizeFileName(
+        file.name
+      )}.jpg`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, resizedBlob, {
+        contentType: resizedBlob.type,
+      });
+      const downloadURL = await getDownloadURL(storageRef);
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        "profile.photoUrl": downloadURL,
+      });
+      setProfilePhotoUrl(downloadURL);
+      trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
+      setToast({ show: true, message: "Profile photo updated.", color: "success" });
+    } catch (err: any) {
+      console.error("Failed to save profile photo:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not update profile photo.",
+        color: "danger",
+      });
+    }
   };
 
   const handleCopyDiagnostics = async () => {
