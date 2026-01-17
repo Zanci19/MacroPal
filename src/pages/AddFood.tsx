@@ -445,7 +445,7 @@ const AddFood: React.FC = () => {
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
   const remoteConfig = useRemoteConfig();
-  const barcodeScannerEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner", true);
+  const barcodeScannerEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner");
 
   const RECENT_QUERY_KEY = "mp_add_food_recent_queries";
   const RECENT_QUERY_LIMIT = 10;

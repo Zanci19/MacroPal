@@ -175,7 +175,7 @@ const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
 
 const ScanBarcodeRoute: React.FC<RouteComponentProps> = (props) => {
   const remoteConfig = useRemoteConfig();
-  const barcodeEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner", true);
+  const barcodeEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner");
 
   if (!barcodeEnabled) {
     trackEvent("barcode_route_blocked");

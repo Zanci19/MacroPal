@@ -187,7 +187,7 @@ const isOverlayEnabled = () => {
 
 const DebugOverlay = () => {
   const remoteConfig = useRemoteConfig();
-  const debugOverlayAllowed = isFeatureEnabled(remoteConfig, "debugOverlay", false);
+  const debugOverlayAllowed = isFeatureEnabled(remoteConfig, "debugOverlay");
   const [localPreference, setLocalPreference] = useState(() => isOverlayEnabled());
   const effectiveEnabled = debugOverlayAllowed && localPreference;
   const metrics = useDebugOverlayMetrics(effectiveEnabled);
