@@ -197,6 +197,7 @@ const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
+const QUICK_ADD_URL = "/add-food?autoMeal=1";
 
 // Detect reduced motion preference safely
 const getPrefersReducedMotion = () => {
@@ -300,7 +301,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
   const handleQuickAddFood = useCallback(() => {
     trackEvent("tab_quick_add_food");
-    router.push("/add-food?autoMeal=1", "forward", "push");
+    router.push(QUICK_ADD_URL, "forward", "push");
   }, [router]);
 
   // Optimized sliding animation for Android - hardware accelerated, no opacity changes
@@ -483,7 +484,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <IonTabButton
           tab="quick-add"
           className="mp-tab-btn mp-tab-btn--add"
-          href="/add-food?autoMeal=1"
+          href={QUICK_ADD_URL}
           onClick={(event) => {
             event.preventDefault();
             handleQuickAddFood();
@@ -493,7 +494,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
           <div className="mp-tab-btn__add-circle">
             <IonIcon aria-hidden="true" icon={add} />
           </div>
-          <IonLabel className="sr-only">Add food</IonLabel>
+          <span className="mp-tab-btn__hidden-label">Add food</span>
         </IonTabButton>
 
         <IonTabButton

@@ -108,6 +108,14 @@ function safeNum(n: unknown, dp = 2): number {
 }
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
+const computeCollapsedMeals = (day: DayDiaryDoc): Record<MealKey, boolean> =>
+  MEALS.reduce<Record<MealKey, boolean>>(
+    (acc, meal) => {
+      acc[meal] = (day[meal] || []).length === 0;
+      return acc;
+    },
+    { breakfast: false, lunch: false, dinner: false, snacks: false }
+  );
 
 const ZEN_QUOTES_ENDPOINT = "https://zenquote-wjgl4tt7ha-ew.a.run.app";
 const QUOTE_STORAGE_KEY = "mp_daily_quote";
@@ -519,7 +527,10 @@ const Home: React.FC = () => {
   const unitSystem = getUnitSystem(profile?.units);
 
   useEffect(() => {
-    const pref = (profile as any)?.autoExpandMeals;
+    const pref =
+      typeof profile === "object" && profile && "autoExpandMeals" in profile
+        ? (profile as { autoExpandMeals?: unknown }).autoExpandMeals
+        : undefined;
     if (typeof pref === "boolean") {
       setAutoExpandMealsEnabled(pref);
     }
@@ -635,12 +646,7 @@ const Home: React.FC = () => {
         if (collapsedInitKeyRef.current !== activeDateKey) {
           collapsedInitKeyRef.current = activeDateKey;
           if (autoExpandMealsEnabled) {
-            setCollapsedMeals({
-              breakfast: nextDay.breakfast.length === 0,
-              lunch: nextDay.lunch.length === 0,
-              dinner: nextDay.dinner.length === 0,
-              snacks: nextDay.snacks.length === 0,
-            });
+            setCollapsedMeals(computeCollapsedMeals(nextDay));
           }
         }
       }

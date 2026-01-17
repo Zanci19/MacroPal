@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import {
   IonBackButton,
   IonButtons,
@@ -21,12 +21,7 @@ type ChangelogEntry = {
 };
 
 const Changelog: React.FC = () => {
-  const entries = useMemo<ChangelogEntry[]>(() => {
-    if (Array.isArray(changelog)) {
-      return changelog as ChangelogEntry[];
-    }
-    return [changelog as ChangelogEntry];
-  }, []);
+  const entries = (changelog as ChangelogEntry[]) ?? [];
 
   return (
     <IonPage>

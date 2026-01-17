@@ -164,6 +164,13 @@ type MacroSet = {
 };
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
+const MEAL_ORDER: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
+const createEmptyMealCounts = (): Record<MealKey, number> => ({
+  breakfast: 0,
+  lunch: 0,
+  dinner: 0,
+  snacks: 0,
+});
 
 type FavoriteFood = {
   id: string;
@@ -358,11 +365,7 @@ function stripUndefined<T extends Record<string, any>>(obj: T): T {
 function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
   const params = new URLSearchParams(location.search);
   const m = (params.get("meal") || "breakfast").toLowerCase();
-  return (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).includes(
-    m as MealKey
-  )
-    ? (m as MealKey)
-    : "breakfast";
+  return MEAL_ORDER.includes(m as MealKey) ? (m as MealKey) : "breakfast";
 }
 
 function useDateFromQuery(location: ReturnType<typeof useLocation>): string {
@@ -458,7 +461,7 @@ const AddFood: React.FC = () => {
   }, [autoMealFromQuery]);
   const pickFirstEmptyMeal = useCallback(
     (counts: Record<MealKey, number>) => {
-      for (const key of ["breakfast", "lunch", "dinner", "snacks"] as MealKey[]) {
+      for (const key of MEAL_ORDER) {
         if ((counts[key] ?? 0) === 0) return key;
       }
       return "snacks";
@@ -681,12 +684,7 @@ const AddFood: React.FC = () => {
       ref,
       (snap) => {
         if (!snap.exists()) {
-          const emptyCounts: Record<MealKey, number> = {
-            breakfast: 0,
-            lunch: 0,
-            dinner: 0,
-            snacks: 0,
-          };
+          const emptyCounts = createEmptyMealCounts();
           if (autoMealPendingRef.current) {
             const nextMeal = pickFirstEmptyMeal(emptyCounts);
             if (meal !== nextMeal) {
@@ -711,30 +709,24 @@ const AddFood: React.FC = () => {
         }
 
         const data = snap.data() as DayDoc;
-        const counts: Record<MealKey, number> = {
-          breakfast: Array.isArray(data.breakfast) ? data.breakfast.length : 0,
-          lunch: Array.isArray(data.lunch) ? data.lunch.length : 0,
-          dinner: Array.isArray(data.dinner) ? data.dinner.length : 0,
-          snacks: Array.isArray(data.snacks) ? data.snacks.length : 0,
-        };
+        const counts = createEmptyMealCounts();
         let calories = 0;
         let protein = 0;
         let fat = 0;
         let carbs = 0;
 
-        (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).forEach(
-          (mealKey) => {
-            const arr = data[mealKey] || [];
-            arr.forEach((item) => {
-              const t = item.total;
-              if (!t) return;
-              calories += Number(t.calories || 0);
-              carbs += Number(t.carbs || 0);
-              protein += Number(t.protein || 0);
-              fat += Number(t.fat || 0);
-            });
-          }
-        );
+        MEAL_ORDER.forEach((mealKey) => {
+          const arr = Array.isArray(data[mealKey]) ? data[mealKey] : [];
+          counts[mealKey] = arr.length;
+          arr.forEach((item) => {
+            const t = item.total;
+            if (!t) return;
+            calories += Number(t.calories || 0);
+            carbs += Number(t.carbs || 0);
+            protein += Number(t.protein || 0);
+            fat += Number(t.fat || 0);
+          });
+        });
 
         setDayTotals({ calories, protein, fat, carbs });
         if (autoMealPendingRef.current) {
@@ -912,8 +904,7 @@ const AddFood: React.FC = () => {
         const alreadyInView =
           visibleHeight >= Math.min(listRect.height * RESULTS_VISIBILITY_RATIO, MIN_RESULTS_VISIBILITY_PX);
         if (!alreadyInView) {
-          // Leave space for the upper bar (header, search, buttons, etc.)
-          // Estimate ~90-100px for spacing
+          // Leave space (RESULTS_SCROLL_OFFSET) for the upper bar (header, search, buttons, etc.)
           const targetTop = Math.max(listEl.offsetTop - RESULTS_SCROLL_OFFSET, 0);
           requestAnimationFrame(() => {
             void contentRef.current?.scrollToPoint(0, targetTop, 350);

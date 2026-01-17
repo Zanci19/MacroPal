@@ -1,12 +1,14 @@
-{
-    "title": "Version 1.0.0 - Initial Release",
-    "date": "17.1.2025",
-    "changes": [
-        "Official launch of MacroPal app.",
-        "Added core features for tracking macronutrients.",
-        "Added analytics feature to track intake trends over time.",
-        "Improved user interface for better navigation.",
-        "Fixed minor bugs and performance improvements.",
-        "Introduced social login options for easier access."
-    ]
-}
+[
+    {
+        "title": "Version 1.0.0 - Initial Release",
+        "date": "2025-01-17",
+        "changes": [
+            "Official launch of MacroPal app.",
+            "Added core features for tracking macronutrients.",
+            "Added analytics feature to track intake trends over time.",
+            "Improved user interface for better navigation.",
+            "Fixed minor bugs and performance improvements.",
+            "Introduced social login options for easier access."
+        ]
+    }
+]

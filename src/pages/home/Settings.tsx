@@ -657,7 +657,10 @@ const Settings: React.FC = () => {
           setLazyLoadEnabled(localPref);
         }
 
-        const savedAutoExpandMealsPref = (profile as any)?.autoExpandMeals;
+        const savedAutoExpandMealsPref =
+          typeof profile === "object" && profile && "autoExpandMeals" in profile
+            ? (profile as { autoExpandMeals?: unknown }).autoExpandMeals
+            : undefined;
         if (typeof savedAutoExpandMealsPref === "boolean") {
           setAutoExpandMealsEnabled(savedAutoExpandMealsPref);
           applyAutoExpandMealsPreference(savedAutoExpandMealsPref);

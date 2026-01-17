@@ -112,7 +112,7 @@ export type ProfilePreferences = {
   debugOverlayEnabled?: boolean;
   lazyLoadEnabled?: boolean;
   chartAnimationsEnabled?: boolean;
-   autoExpandMeals?: boolean;
+  autoExpandMeals?: boolean;
 };
 
 export const getProfilePreferences = (profile?: Record<string, unknown>): ProfilePreferences => {
