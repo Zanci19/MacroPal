@@ -91,6 +91,9 @@ import {
   INSPIRATIONAL_QUOTES,
   type InspirationalQuote,
 } from "../../data/inspirationalQuotes";
+import AnnouncementPopup, {
+  type AnnouncementData,
+} from "../../components/AnnouncementPopup";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -103,6 +106,7 @@ const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
 const ZEN_QUOTES_ENDPOINT = "https://zenquote-wjgl4tt7ha-ew.a.run.app";
 const QUOTE_STORAGE_KEY = "mp_daily_quote";
+const ANNOUNCEMENT_API_URL = "https://zanci19.github.io/macro.pal/new-feature.json";
 
 const getFallbackQuote = (): InspirationalQuote => {
   const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
@@ -499,6 +503,10 @@ const Home: React.FC = () => {
     return stored?.date ?? null;
   });
   const [isViewActive, setIsViewActive] = useState(false);
+
+  const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
+  const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
+  const announcementFetchedRef = useRef(false);
 
   const unitSystem = getUnitSystem(profile?.units);
 
@@ -1735,6 +1743,97 @@ const Home: React.FC = () => {
     showWellnessTip,
   ]);
 
+  // Fetch and display announcement if needed
+  useEffect(() => {
+    if (!uid || !profile || announcementFetchedRef.current) return;
+    if (!isViewActive) return;
+
+    announcementFetchedRef.current = true;
+
+    const fetchAnnouncement = async () => {
+      try {
+        const response = await fetch(ANNOUNCEMENT_API_URL);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch announcement: ${response.status}`);
+        }
+
+        const data = (await response.json()) as AnnouncementData;
+
+        // Validate the data structure
+        if (
+          !data ||
+          typeof data.title !== "string" ||
+          typeof data.message !== "string" ||
+          typeof data.image !== "string" ||
+          typeof data.buttonText !== "string" ||
+          typeof data.announcementNum !== "number"
+        ) {
+          throw new Error("Invalid announcement data structure");
+        }
+
+        // Get user's current announcementNum from profile
+        const userAnnouncementNum = (profile as { announcementNum?: string })
+          ?.announcementNum;
+        const currentNum = userAnnouncementNum ? String(userAnnouncementNum) : "0";
+        const apiNum = String(data.announcementNum);
+
+        // Show popup only if the numbers don't match
+        if (currentNum !== apiNum) {
+          setAnnouncement(data);
+          setShowAnnouncementPopup(true);
+          trackEvent("announcement_shown", {
+            uid,
+            announcementNum: data.announcementNum,
+            userAnnouncementNum: currentNum,
+          });
+        } else {
+          trackEvent("announcement_already_seen", {
+            uid,
+            announcementNum: data.announcementNum,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch announcement:", error);
+        trackEvent("announcement_fetch_error", {
+          uid,
+          error: error instanceof Error ? error.message : "unknown",
+        });
+      }
+    };
+
+    void fetchAnnouncement();
+  }, [uid, profile, isViewActive]);
+
+  const handleAnnouncementDismiss = async () => {
+    if (!uid || !announcement) {
+      setShowAnnouncementPopup(false);
+      return;
+    }
+
+    const newAnnouncementNum = String(announcement.announcementNum);
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        announcementNum: newAnnouncementNum,
+      });
+
+      trackEvent("announcement_dismissed", {
+        uid,
+        announcementNum: announcement.announcementNum,
+      });
+    } catch (error) {
+      console.error("Failed to update announcementNum:", error);
+      trackEvent("announcement_update_error", {
+        uid,
+        announcementNum: announcement.announcementNum,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    } finally {
+      setShowAnnouncementPopup(false);
+    }
+  };
+
 
   return (
     <IonPage>
@@ -2593,6 +2692,12 @@ const Home: React.FC = () => {
           </div>
         </IonContent>
       </IonModal>
+
+      <AnnouncementPopup
+        isOpen={showAnnouncementPopup}
+        announcement={announcement}
+        onDismiss={handleAnnouncementDismiss}
+      />
     </IonPage>
   );
 };

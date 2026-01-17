@@ -1,0 +1,121 @@
+.announcement-popup {
+  --width: 90%;
+  --height: 85%;
+  --border-radius: 16px;
+  --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 768px) {
+  .announcement-popup {
+    --width: 600px;
+    --height: 80%;
+  }
+}
+
+.announcement-popup-content {
+  --background: var(--ion-background-color, #fff);
+}
+
+.announcement-popup-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+
+.announcement-popup-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 24px;
+  transition: background 0.2s ease;
+}
+
+.announcement-popup-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.announcement-popup-close ion-icon {
+  font-size: 24px;
+}
+
+.announcement-popup-image-container {
+  position: relative;
+  width: 100%;
+  flex: 0 0 60%;
+  background: var(--ion-color-light, #f4f5f8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.announcement-popup-image-loading,
+.announcement-popup-image-error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.announcement-popup-image-error p {
+  color: var(--ion-color-medium, #92949c);
+  font-size: 14px;
+}
+
+.announcement-popup-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.announcement-popup-image.loaded {
+  opacity: 1;
+}
+
+.announcement-popup-body {
+  flex: 1;
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.announcement-popup-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--ion-text-color, #000);
+  line-height: 1.3;
+}
+
+.announcement-popup-message {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ion-color-medium-shade, #808289);
+  margin: 0 0 24px 0;
+  flex: 1;
+}
+
+.announcement-popup-button {
+  margin-top: auto;
+  --border-radius: 8px;
+  font-weight: 600;
+}
