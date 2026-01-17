@@ -173,7 +173,7 @@ const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
   </React.Profiler>
 );
 
-const ScanBarcodeRoute = (props: any) => {
+const ScanBarcodeRoute: React.FC<RouteComponentProps> = (props) => {
   const remoteConfig = useRemoteConfig();
   const barcodeEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner", true);
 

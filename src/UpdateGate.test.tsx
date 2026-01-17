@@ -60,6 +60,10 @@ describe('UpdateGate - Announcement Fix', () => {
         expect(mockGetDoc).toHaveBeenCalled();
       });
 
+      type IonToastElement = HTMLElement & {
+        buttons?: Array<{ text?: string; handler?: () => void }>;
+      };
+
       const toasts = screen.getAllByTestId("update-toast");
       const toast = toasts[toasts.length - 1];
       expect(toast).toBeInTheDocument();
@@ -145,9 +149,8 @@ describe('UpdateGate - Announcement Fix', () => {
       });
 
       const toasts = screen.getAllByTestId("update-toast");
-      const toast = toasts[toasts.length - 1] as any;
-      const laterHandler =
-        Array.isArray(toast.buttons) && toast.buttons.find((btn: any) => btn.text === "Later")?.handler;
+      const toast = toasts[toasts.length - 1] as IonToastElement;
+      const laterHandler = toast.buttons?.find((btn) => btn.text === "Later")?.handler;
       expect(typeof laterHandler).toBe("function");
       act(() => {
         laterHandler?.();

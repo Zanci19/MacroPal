@@ -5,6 +5,11 @@ import { db, trackEvent } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { APP_VERSION } from "./hooks/version";
 
+type FeatureFlags = {
+  barcodeScanner?: boolean;
+  debugOverlay?: boolean;
+};
+
 type AppConfig = {
   latestVersion?: string;
   minSupportedVersion?: string;
@@ -17,14 +22,10 @@ type AppConfig = {
     ctaLabel?: string;
     ctaUrl?: string;
   };
-  featureFlags?: {
-    barcodeScanner?: boolean;
-    debugOverlay?: boolean;
-  };
+  featureFlags?: FeatureFlags;
 };
 
-type FeatureFlagKey = NonNullable<AppConfig["featureFlags"]>;
-const DEFAULT_FEATURE_FLAGS: FeatureFlagKey = {
+const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   barcodeScanner: true,
   debugOverlay: false,
 };
@@ -37,9 +38,10 @@ const RemoteConfigContext = createContext<AppConfig>(defaultConfig);
 
 export const useRemoteConfig = () => useContext(RemoteConfigContext);
 
+// Returns the resolved feature flag value; falls back when a flag is undefined or not a boolean.
 export const isFeatureEnabled = (
   config: AppConfig | null | undefined,
-  flag: keyof FeatureFlagKey,
+  flag: keyof FeatureFlags,
   fallback = true,
 ) => {
   const mergedFlags = {
