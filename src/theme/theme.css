@@ -244,12 +244,6 @@ body.dark ion-tab-bar {
   box-shadow: none;
 }
 
-.mp-tabbar {
-  padding-bottom: calc(
-    max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) + 8px
-  );
-}
-
 .mp-tab-btn ion-label {
   opacity: 0.85;
   font-weight: 600;
@@ -278,7 +272,7 @@ body.dark ion-tab-bar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-16px);
+  transform: translateY(-8px);
 }
 
 .mp-tab-btn__add-circle ion-icon {
