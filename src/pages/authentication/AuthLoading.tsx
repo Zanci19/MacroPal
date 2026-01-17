@@ -134,7 +134,7 @@ const AuthLoading: React.FC = () => {
               email: user.email ?? null,
               displayName: user.displayName ?? null,
               createdAt: serverTimestamp(),
-              announcementNum: "0",
+              announcementNum: 0,
             },
             { merge: true }
           );
