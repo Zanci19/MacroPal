@@ -33,12 +33,14 @@ import {
   trashOutline,
   colorPaletteOutline,
   informationCircleOutline,
+  keyOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
   sendEmailVerification,
   signOut,
   deleteUser,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
 import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
@@ -175,6 +177,32 @@ const Settings: React.FC = () => {
       setToast({
         show: true,
         message: e?.message || "Could not send verification email.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const email = auth.currentUser?.email || "";
+    if (!email) {
+      setToast({
+        show: true,
+        message: "No email on account.",
+        color: "danger",
+      });
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      setToast({
+        show: true,
+        message: "Password reset email sent.",
+        color: "success",
+      });
+    } catch (e: any) {
+      setToast({
+        show: true,
+        message: e?.message || "Could not send password reset email.",
         color: "danger",
       });
     }
@@ -704,6 +732,13 @@ const Settings: React.FC = () => {
                   >
                     <IonIcon slot="start" icon={mailOutline} />
                     {verified ? "Verified" : "Send link"}
+                  </IonButton>
+                </IonItem>
+                <IonItem lines="full">
+                  <IonLabel>Password</IonLabel>
+                  <IonButton onClick={handleResetPassword}>
+                    <IonIcon slot="start" icon={keyOutline} />
+                    Send reset email
                   </IonButton>
                 </IonItem>
               </IonList>
