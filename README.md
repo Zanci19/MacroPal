@@ -14,6 +14,16 @@
 
 </div>
 
+<div align="center">
+
+### ☕ Buy Me a Coffee
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20Development-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/zanci19)
+
+Your support helps keep MacroPal free and ad-free for everyone!
+
+</div>
+
 ---
 
 ## 📖 About
@@ -374,16 +384,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 💖 Support MacroPal
 
 If MacroPal has helped you on your health journey, consider supporting its development!
-
-<div align="center">
-
-### ☕ Buy Me a Coffee
-
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support%20Development-orange?style=for-the-badge&logo=buy-me-a-coffee)](https://buymeacoffee.com/zanci19)
-
-Your support helps keep MacroPal free and ad-free for everyone!
-
-</div>
 
 ### Other Ways to Support
 
