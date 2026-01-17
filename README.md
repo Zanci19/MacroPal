@@ -147,7 +147,7 @@ Visit our web app at [Coming Soon] and start tracking immediately!
    ```bash
    npm run dev
    ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+   Open [http://localhost:8100](http://localhost:8100) in your browser.
 
 5. **Build for production**
    ```bash
