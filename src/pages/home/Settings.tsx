@@ -296,24 +296,176 @@ const Settings: React.FC = () => {
         ? (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number } })
             .connection
         : undefined;
-    const payload = {
-      userAgent: navigator.userAgent,
-      language: navigator.language,
-      platform: navigator.platform,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      theme: getStoredThemeMode(),
-      prefersReducedMotion,
-      prefersDark,
+    
+    // Get localStorage size
+    let localStorageSize = 0;
+    try {
+      for (const key in localStorage) {
+        if (localStorage.hasOwnProperty(key)) {
+          localStorageSize += localStorage[key].length + key.length;
+        }
+      }
+    } catch (e) {
+      localStorageSize = -1;
+    }
+
+    // Get memory info
+    const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number; totalJSHeapSize: number } }).memory;
+    const memoryInfo = memory ? {
+      usedJSHeapSizeMB: (memory.usedJSHeapSize / (1024 * 1024)).toFixed(2),
+      jsHeapSizeLimitMB: (memory.jsHeapSizeLimit / (1024 * 1024)).toFixed(2),
+      totalJSHeapSizeMB: (memory.totalJSHeapSize / (1024 * 1024)).toFixed(2),
+    } : null;
+
+    // Get current user info
+    const currentUser = auth.currentUser;
+    const userInfo = currentUser ? {
+      uid: currentUser.uid,
+      email: currentUser.email,
+      emailVerified: currentUser.emailVerified,
+      displayName: currentUser.displayName,
+      photoURL: currentUser.photoURL ? 'set' : 'not set',
+      creationTime: currentUser.metadata.creationTime,
+      lastSignInTime: currentUser.metadata.lastSignInTime,
+      providerData: currentUser.providerData.map(p => ({
+        providerId: p.providerId,
+        uid: p.uid,
+      })),
+    } : null;
+
+    // Get performance metrics
+    const performanceMetrics = {
+      navigation: performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming,
+      resources: performance.getEntriesByType('resource').length,
+      marks: performance.getEntriesByType('mark').length,
+      measures: performance.getEntriesByType('measure').length,
+    };
+
+    // Get screen and viewport info
+    const screenInfo = {
+      screen: {
+        width: window.screen.width,
+        height: window.screen.height,
+        availWidth: window.screen.availWidth,
+        availHeight: window.screen.availHeight,
+        colorDepth: window.screen.colorDepth,
+        pixelDepth: window.screen.pixelDepth,
+        orientation: window.screen.orientation?.type,
+      },
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight,
         devicePixelRatio: window.devicePixelRatio,
       },
+      visualViewport: window.visualViewport ? {
+        width: window.visualViewport.width,
+        height: window.visualViewport.height,
+        offsetLeft: window.visualViewport.offsetLeft,
+        offsetTop: window.visualViewport.offsetTop,
+        pageLeft: window.visualViewport.pageLeft,
+        pageTop: window.visualViewport.pageTop,
+        scale: window.visualViewport.scale,
+      } : null,
+    };
+
+    // Get app preferences
+    const preferences = {
+      theme: getStoredThemeMode(),
+      tabAnimations: getAnimationPreference(),
+      debugOverlay: getDebugOverlayPreference(),
+      lazyLoad: getLazyLoadPreference(),
+      chartAnimations: getChartAnimationPreference(),
+    };
+
+    // Get browser capabilities
+    const capabilities = {
+      serviceWorker: 'serviceWorker' in navigator,
+      indexedDB: 'indexedDB' in window,
+      localStorage: typeof Storage !== 'undefined',
+      sessionStorage: typeof Storage !== 'undefined',
+      webGL: (() => {
+        try {
+          const canvas = document.createElement('canvas');
+          return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
+        } catch (e) {
+          return false;
+        }
+      })(),
+      webGL2: (() => {
+        try {
+          const canvas = document.createElement('canvas');
+          return !!canvas.getContext('webgl2');
+        } catch (e) {
+          return false;
+        }
+      })(),
+      geolocation: 'geolocation' in navigator,
+      notifications: 'Notification' in window,
+      camera: 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices,
+    };
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      appVersion: '0.0.1', // From package.json
+      currentURL: window.location.href,
+      currentPath: window.location.pathname,
+      referrer: document.referrer,
+      
+      // User info
+      user: userInfo,
+      
+      // Device info
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      languages: navigator.languages,
+      platform: navigator.platform,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      cookieEnabled: navigator.cookieEnabled,
+      onLine: navigator.onLine,
       hardwareConcurrency: navigator.hardwareConcurrency,
       deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+      
+      // Screen & viewport
+      ...screenInfo,
+      
+      // Preferences
+      preferences,
+      prefersReducedMotion,
+      prefersDark,
+      
+      // Network
       connection: {
         effectiveType: connection?.effectiveType,
         downlink: connection?.downlink,
+        rtt: (connection as any)?.rtt,
+        saveData: (connection as any)?.saveData,
+      },
+      
+      // Performance
+      memory: memoryInfo,
+      performance: {
+        navigationStart: performanceMetrics.navigation?.startTime,
+        domContentLoadedEventEnd: performanceMetrics.navigation?.domContentLoadedEventEnd,
+        loadEventEnd: performanceMetrics.navigation?.loadEventEnd,
+        resourceCount: performanceMetrics.resources,
+        marksCount: performanceMetrics.marks,
+        measuresCount: performanceMetrics.measures,
+      },
+      
+      // Storage
+      localStorageSizeBytes: localStorageSize,
+      localStorageSizeKB: (localStorageSize / 1024).toFixed(2),
+      
+      // Capabilities
+      capabilities,
+      
+      // DOM info
+      domInfo: {
+        documentElementCount: document.getElementsByTagName('*').length,
+        scriptsCount: document.scripts.length,
+        imagesCount: document.images.length,
+        linksCount: document.links.length,
+        title: document.title,
       },
     };
 
