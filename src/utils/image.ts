@@ -67,3 +67,17 @@ export const sanitizeFileName = (name: string) =>
     .replace(/\s+/g, "-")
     .replace(/[^a-zA-Z0-9.-]/g, "")
     .toLowerCase() || "profile-photo";
+
+export const normalizePhotoUrl = (value?: string | null) => {
+  if (!value) return null;
+  let url = value.trim();
+  if (!url) return null;
+  if (url.startsWith("http://")) {
+    url = `https://${url.slice("http://".length)}`;
+  }
+  if (url.includes("googleusercontent.com") && !/[?&]sz=|=s\\d+/.test(url)) {
+    const separator = url.includes("?") ? "&" : "?";
+    url = `${url}${separator}sz=256`;
+  }
+  return url;
+};

@@ -23,6 +23,7 @@ import "./OnboardingProfile.css";
 import {
   dataUrlToBlob,
   isDataUrl,
+  normalizePhotoUrl,
   resizeImageFile,
   sanitizeFileName,
 } from "../utils/image";
@@ -167,10 +168,7 @@ const OnboardingProfile: React.FC = () => {
         const snap = await getDoc(ref);
         const data = snap.data() as { profile?: ProfileData } | undefined;
         const p = data?.profile;
-        const googlePhoto =
-          typeof user.photoURL === "string" && user.photoURL.length > 0
-            ? user.photoURL
-            : null;
+        const googlePhoto = normalizePhotoUrl(user.photoURL);
 
         trackEvent("onboarding_profile_load", {
           has_profile: !!p,
@@ -199,7 +197,7 @@ const OnboardingProfile: React.FC = () => {
         setActivity((p.activity as Activity) || "sedentary");
         const storedPhoto =
           typeof (p as { photoUrl?: unknown })?.photoUrl === "string"
-            ? (p as { photoUrl?: string }).photoUrl!
+            ? normalizePhotoUrl((p as { photoUrl?: string }).photoUrl)
             : null;
         // Use stored photo first, then Google profile photo, then null
         const photoToUse = storedPhoto || googlePhoto || null;
@@ -342,7 +340,7 @@ const OnboardingProfile: React.FC = () => {
       } else if (profilePhotoUrl) {
         photoToSave = profilePhotoUrl;
       } else if (typeof user.photoURL === "string" && user.photoURL.length > 0) {
-        photoToSave = user.photoURL;
+        photoToSave = normalizePhotoUrl(user.photoURL);
       }
 
       await setDoc(

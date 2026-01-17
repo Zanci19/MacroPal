@@ -60,7 +60,7 @@ import {
   THEME_MODES,
   type ThemeMode,
 } from "../../utils/preferences";
-import { resizeImageFile, sanitizeFileName } from "../../utils/image";
+import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../utils/image";
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
 
@@ -438,9 +438,12 @@ const Settings: React.FC = () => {
             : true
         );
 
-        setProfilePhotoUrl(
-          typeof (profile as any)?.photoUrl === "string" ? (profile as any).photoUrl : null
-        );
+        const storedPhotoUrl =
+          typeof (profile as any)?.photoUrl === "string"
+            ? normalizePhotoUrl((profile as any).photoUrl)
+            : null;
+        const fallbackPhotoUrl = normalizePhotoUrl(current.photoURL);
+        setProfilePhotoUrl(storedPhotoUrl ?? fallbackPhotoUrl);
 
         // Load theme preference from Firebase
         const savedTheme = (profile as any)?.themeMode as string | undefined;
