@@ -75,9 +75,16 @@ export const normalizePhotoUrl = (value?: string | null) => {
   if (url.startsWith("http://")) {
     url = `https://${url.slice("http://".length)}`;
   }
-  if (url.includes("googleusercontent.com") && !/[?&]sz=|=s\d+/.test(url)) {
-    const separator = url.includes("?") ? "&" : "?";
-    url = `${url}${separator}sz=256`;
+  // Check if the hostname (not just anywhere in URL) is a googleusercontent.com domain
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    if (hostname.endsWith(".googleusercontent.com") && !/[?&]sz=|=s\d+/.test(url)) {
+      const separator = url.includes("?") ? "&" : "?";
+      url = `${url}${separator}sz=256`;
+    }
+  } catch {
+    // If URL parsing fails, return the URL as-is
   }
   return url;
 };

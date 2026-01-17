@@ -76,4 +76,19 @@ describe('normalizePhotoUrl', () => {
     const expected = 'https://example.com/photo.jpg';
     expect(normalizePhotoUrl(input)).toBe(expected);
   });
+
+  it('should only add size parameter to actual googleusercontent.com domains', () => {
+    // Should add sz=256 to legitimate Google URLs
+    const legitimateUrl = 'https://lh3.googleusercontent.com/a/user';
+    expect(normalizePhotoUrl(legitimateUrl)).toBe(legitimateUrl + '?sz=256');
+
+    // Should NOT add sz=256 to URLs that only contain the string in query params
+    const maliciousUrl = 'https://evil.com/photo?redirect=googleusercontent.com';
+    expect(normalizePhotoUrl(maliciousUrl)).toBe(maliciousUrl);
+  });
+
+  it('should handle invalid URLs gracefully', () => {
+    const invalidUrl = 'not-a-valid-url';
+    expect(normalizePhotoUrl(invalidUrl)).toBe(invalidUrl);
+  });
 });
