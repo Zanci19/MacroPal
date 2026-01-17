@@ -75,7 +75,7 @@ export const normalizePhotoUrl = (value?: string | null) => {
   if (url.startsWith("http://")) {
     url = `https://${url.slice("http://".length)}`;
   }
-  if (url.includes("googleusercontent.com") && !/[?&]sz=|=s\\d+/.test(url)) {
+  if (url.includes("googleusercontent.com") && !/[?&]sz=|=s\d+/.test(url)) {
     const separator = url.includes("?") ? "&" : "?";
     url = `${url}${separator}sz=256`;
   }
