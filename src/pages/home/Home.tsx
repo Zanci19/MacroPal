@@ -70,6 +70,10 @@ import {
   shiftDateKey,
   todayDateKey,
 } from "../../utils/date";
+import {
+  normalizeAnnouncementNum,
+  shouldShowAnnouncement,
+} from "../../utils/announcement";
 import type {
   MealKey,
   Macros,
@@ -416,7 +420,7 @@ const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
 
-  const { uid, profile, loading: profileLoading } = useProfile();
+  const { uid, profile, announcementNum, loading: profileLoading } = useProfile();
 
   const [loading, setLoading] = useState(true);
   const [activeDateKey, setActiveDateKey] = useState<string>(() => {
@@ -1773,13 +1777,11 @@ const Home: React.FC = () => {
         }
 
         // Get user's current announcementNum from profile
-        const userAnnouncementNum = typeof (profile as any)?.announcementNum === "string" 
-          ? (profile as any).announcementNum 
-          : "0";
-        const apiNum = String(data.announcementNum);
+        const userAnnouncementNum = normalizeAnnouncementNum(announcementNum);
+        const apiNum = data.announcementNum;
 
-        // Show popup only if the numbers don't match
-        if (userAnnouncementNum !== apiNum) {
+        // Show popup only if the user's number is lower than the latest
+        if (shouldShowAnnouncement(userAnnouncementNum, apiNum)) {
           setAnnouncement(data);
           setShowAnnouncementPopup(true);
           trackEvent("announcement_shown", {
@@ -1803,7 +1805,7 @@ const Home: React.FC = () => {
     };
 
     void fetchAnnouncement();
-  }, [uid, profile, isViewActive]);
+  }, [uid, profile, announcementNum, isViewActive]);
 
   const handleAnnouncementDismiss = async () => {
     if (!uid || !announcement) {
@@ -1811,7 +1813,7 @@ const Home: React.FC = () => {
       return;
     }
 
-    const newAnnouncementNum = String(announcement.announcementNum);
+    const newAnnouncementNum = announcement.announcementNum;
 
     try {
       const userRef = doc(db, "users", uid);

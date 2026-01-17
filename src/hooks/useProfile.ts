@@ -8,6 +8,7 @@ export function useProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [uid, setUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [announcementNum, setAnnouncementNum] = useState<unknown>(null);
 
   useEffect(() => {
     let unsubProfile: (() => void) | null = null;
@@ -38,11 +39,13 @@ export function useProfile() {
           // 🔑 take the nested "profile" field from the doc
           const p = (data.profile as Profile | undefined) ?? null;
           setProfile(p);
+          setAnnouncementNum(data.announcementNum ?? null);
           setLoading(false);
         },
         (err) => {
           console.error("Profile snapshot error:", err);
           setProfile(null);
+          setAnnouncementNum(null);
           setLoading(false);
         }
       );
@@ -54,5 +57,8 @@ export function useProfile() {
     };
   }, []);
 
-  return useMemo(() => ({ uid, profile, loading }), [uid, profile, loading]);
+  return useMemo(
+    () => ({ uid, profile, announcementNum, loading }),
+    [uid, profile, announcementNum, loading]
+  );
 }
