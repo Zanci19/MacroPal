@@ -236,6 +236,8 @@ ion-tab-bar {
   /* Handle Android navigation bar overlap - supports both approaches */
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  /* Allow the add button to overlap/stick out of the tab bar */
+  overflow: visible;
 }
 
 body.dark ion-tab-bar {
@@ -269,7 +271,10 @@ body.dark ion-tab-bar {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-12px);
+  transform: translateY(-24px);
+  /* Ensure button appears above content */
+  position: relative;
+  z-index: 10;
 }
 
 .mp-tab-btn__add-circle ion-icon {
@@ -336,8 +341,13 @@ ion-refresher-content .refresher-refreshing-icon {
   color: var(--mp-primary);
 }
 
+.mp-tabbar {
+  overflow: visible;
+}
+
 :root body.has-softkeys .mp-tabbar {
   padding-bottom: var(--softkey-inset);
+  overflow: visible;
 }
 
 /* Toast styling for all themes */
