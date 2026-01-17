@@ -34,6 +34,7 @@ import {
 import { Keyboard } from "@capacitor/keyboard";
 import { useLocation, useHistory } from "react-router";
 import { auth, db, storage, trackEvent } from "../firebase";
+import { isFeatureEnabled, useRemoteConfig } from "../UpdateGate";
 import {
   doc,
   setDoc,
@@ -443,6 +444,8 @@ const AddFood: React.FC = () => {
   const history = useHistory();
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
+  const remoteConfig = useRemoteConfig();
+  const barcodeScannerEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner", true);
 
   const RECENT_QUERY_KEY = "mp_add_food_recent_queries";
   const RECENT_QUERY_LIMIT = 10;
@@ -2582,7 +2585,17 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
+                disabled={!barcodeScannerEnabled}
                 onClick={() => {
+                  if (!barcodeScannerEnabled) {
+                    setToast({
+                      show: true,
+                      message: "Barcode scanner is temporarily unavailable.",
+                      color: "warning",
+                    });
+                    trackEvent("barcode_scanner_disabled_click", { meal, date: dateKey });
+                    return;
+                  }
                   trackEvent("navigate_to_scan_barcode", { meal, date: dateKey });
                   history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`);
                 }}

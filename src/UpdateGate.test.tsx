@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { doc, getDoc } from 'firebase/firestore';
 import UpdateGate from './UpdateGate';
 
@@ -60,8 +60,10 @@ describe('UpdateGate - Announcement Fix', () => {
         expect(mockGetDoc).toHaveBeenCalled();
       });
 
-      // Toast should NOT appear
-      expect(screen.queryByText(/A new version of MacroPal is available/i)).not.toBeInTheDocument();
+      const toasts = screen.getAllByTestId("update-toast");
+      const toast = toasts[toasts.length - 1];
+      expect(toast).toBeInTheDocument();
+      expect(toast.hasAttribute("is-open")).toBe(false);
       // App content should be visible
       expect(screen.getByText('App Content')).toBeInTheDocument();
     });
@@ -88,7 +90,8 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Wait for the toast to appear
       await waitFor(() => {
-        expect(screen.getByText(/A new version of MacroPal is available/i)).toBeInTheDocument();
+        const toasts = screen.getAllByTestId("update-toast");
+        expect(toasts[toasts.length - 1].hasAttribute("is-open")).toBe(true);
       });
     });
 
@@ -114,7 +117,8 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Wait for the toast to appear
       await waitFor(() => {
-        expect(screen.getByText(/A new version of MacroPal is available/i)).toBeInTheDocument();
+        const toasts = screen.getAllByTestId("update-toast");
+        expect(toasts[toasts.length - 1].hasAttribute("is-open")).toBe(true);
       });
     });
 
@@ -136,12 +140,18 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Wait for the toast to appear
       await waitFor(() => {
-        expect(screen.getByText(/A new version of MacroPal is available/i)).toBeInTheDocument();
+        const toasts = screen.getAllByTestId("update-toast");
+        expect(toasts[toasts.length - 1].hasAttribute("is-open")).toBe(true);
       });
 
-      // Click "Later" button
-      const laterButton = getByText('Later');
-      laterButton.click();
+      const toasts = screen.getAllByTestId("update-toast");
+      const toast = toasts[toasts.length - 1] as any;
+      const laterHandler =
+        Array.isArray(toast.buttons) && toast.buttons.find((btn: any) => btn.text === "Later")?.handler;
+      expect(typeof laterHandler).toBe("function");
+      act(() => {
+        laterHandler?.();
+      });
 
       // Wait for localStorage to be updated
       await waitFor(() => {
@@ -197,6 +207,33 @@ describe('UpdateGate - Announcement Fix', () => {
       });
 
       // App content should NOT be visible
+      expect(screen.queryByText('App Content')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Maintenance mode', () => {
+    it('should block the app when maintenance mode is enabled', async () => {
+      const mockGetDoc = vi.mocked(getDoc);
+      mockGetDoc.mockResolvedValue({
+        exists: () => true,
+        data: () => ({
+          maintenanceMode: {
+            enabled: true,
+            message: "Planned maintenance",
+          },
+        }),
+      } as any);
+
+      render(
+        <UpdateGate>
+          <div>App Content</div>
+        </UpdateGate>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/back soon/i)).toBeInTheDocument();
+      });
+
       expect(screen.queryByText('App Content')).not.toBeInTheDocument();
     });
   });

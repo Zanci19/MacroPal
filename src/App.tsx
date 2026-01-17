@@ -122,7 +122,7 @@ import "@ionic/react/css/palettes/dark.class.css";
 import "./theme/variables.css";
 
 import { trackEvent } from "./firebase";
-import UpdateGate from "./UpdateGate";
+import UpdateGate, { isFeatureEnabled, useRemoteConfig } from "./UpdateGate";
 import DebugOverlay from "./components/DebugOverlay";
 import { reportRenderProfile } from "./components/renderProfiler";
 
@@ -172,6 +172,18 @@ const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
     </Suspense>
   </React.Profiler>
 );
+
+const ScanBarcodeRoute = (props: any) => {
+  const remoteConfig = useRemoteConfig();
+  const barcodeEnabled = isFeatureEnabled(remoteConfig, "barcodeScanner", true);
+
+  if (!barcodeEnabled) {
+    trackEvent("barcode_route_blocked");
+    return <Redirect to="/app/home" />;
+  }
+
+  return <LazyRoute component={ScanBarcode} profileId="ScanBarcode" {...props} />;
+};
 
 setupIonicReact();
 
@@ -582,10 +594,10 @@ const App: React.FC = () => {
 
   return (
     <IonApp>
-      <DebugOverlay />
-      <ErrorBoundary>
-        <IonReactRouter>
-          <UpdateGate>
+      <UpdateGate>
+        <DebugOverlay />
+        <ErrorBoundary>
+          <IonReactRouter>
             <IonRouterOutlet id="root">
               <Route exact path="/login" render={(props) => (
                 <LazyRoute component={Login} profileId="Login" {...props} />
@@ -618,7 +630,7 @@ const App: React.FC = () => {
                 <LazyRoute component={ResetPassword} profileId="ResetPassword" {...props} />
               )} />
               <Route exact path="/scan-barcode" render={(props) => (
-                <LazyRoute component={ScanBarcode} profileId="ScanBarcode" {...props} />
+                <ScanBarcodeRoute {...props} />
               )} />
               <Route exact path="/auth-loading" render={(props) => (
                 <LazyRoute component={AuthLoading} profileId="AuthLoading" {...props} />
@@ -635,9 +647,9 @@ const App: React.FC = () => {
 
               <Redirect exact from="/" to="/check-login" />
             </IonRouterOutlet>
-          </UpdateGate>
-        </IonReactRouter>
-      </ErrorBoundary>
+          </IonReactRouter>
+        </ErrorBoundary>
+      </UpdateGate>
     </IonApp>
   );
 };

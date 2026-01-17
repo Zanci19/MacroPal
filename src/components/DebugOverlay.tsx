@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./DebugOverlay.css";
 import { subscribeRenderProfile } from "./renderProfiler";
+import { isFeatureEnabled, useRemoteConfig } from "../UpdateGate";
 
 type RenderProfileSnapshot = {
   id: string;
@@ -65,7 +66,7 @@ const getMemorySnapshot = () => {
   };
 };
 
-const useDebugOverlayMetrics = () => {
+const useDebugOverlayMetrics = (active: boolean) => {
   const [metrics, setMetrics] = useState<OverlayMetrics>({
     fps: 0,
     frameMs: 0,
@@ -90,6 +91,8 @@ const useDebugOverlayMetrics = () => {
   const longTaskSupportedRef = useRef(false);
 
   useEffect(() => {
+    if (!active) return;
+
     let rafId = 0;
     let longTaskObserver: PerformanceObserver | undefined;
 
@@ -170,7 +173,7 @@ const useDebugOverlayMetrics = () => {
       window.cancelAnimationFrame(rafId);
       longTaskObserver?.disconnect();
     };
-  }, []);
+  }, [active]);
 
   return metrics;
 };
@@ -183,14 +186,16 @@ const isOverlayEnabled = () => {
 };
 
 const DebugOverlay = () => {
-  const [enabled, setEnabled] = useState(isOverlayEnabled);
-  const metrics = useDebugOverlayMetrics();
+  const remoteConfig = useRemoteConfig();
+  const debugOverlayAllowed = isFeatureEnabled(remoteConfig, "debugOverlay", false);
+  const [enabled, setEnabled] = useState(() => debugOverlayAllowed && isOverlayEnabled());
+  const metrics = useDebugOverlayMetrics(enabled && debugOverlayAllowed);
   const [renderProfile, setRenderProfile] = useState<RenderProfileSnapshot | null>(null);
 
   useEffect(() => {
     const handlePreferenceChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;
-      setEnabled(customEvent.detail.enabled);
+      setEnabled(debugOverlayAllowed && customEvent.detail.enabled);
     };
 
     window.addEventListener("mp_debug_overlay_change", handlePreferenceChange);
@@ -198,7 +203,11 @@ const DebugOverlay = () => {
     return () => {
       window.removeEventListener("mp_debug_overlay_change", handlePreferenceChange);
     };
-  }, []);
+  }, [debugOverlayAllowed]);
+
+  useEffect(() => {
+    setEnabled(debugOverlayAllowed && isOverlayEnabled());
+  }, [debugOverlayAllowed]);
 
   useEffect(() => {
     return subscribeRenderProfile((snapshot) => {
@@ -206,7 +215,7 @@ const DebugOverlay = () => {
     });
   }, []);
 
-  if (!enabled) return null;
+  if (!debugOverlayAllowed || !enabled) return null;
 
   return (
     <div className="debug-overlay" aria-live="polite">

@@ -1,5 +1,5 @@
 // src/UpdateGate.tsx
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { IonToast, IonButton } from "@ionic/react";
 import { db, trackEvent } from "./firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -11,6 +11,45 @@ type AppConfig = {
   forceUpdate?: boolean;
   changelogUrl?: string;
   storeUrl?: string;
+  maintenanceMode?: {
+    enabled?: boolean;
+    message?: string;
+    ctaLabel?: string;
+    ctaUrl?: string;
+  };
+  featureFlags?: {
+    barcodeScanner?: boolean;
+    debugOverlay?: boolean;
+  };
+};
+
+type FeatureFlagKey = NonNullable<AppConfig["featureFlags"]>;
+const DEFAULT_FEATURE_FLAGS: FeatureFlagKey = {
+  barcodeScanner: true,
+  debugOverlay: false,
+};
+
+const defaultConfig: AppConfig = {
+  featureFlags: DEFAULT_FEATURE_FLAGS,
+};
+
+const RemoteConfigContext = createContext<AppConfig>(defaultConfig);
+
+export const useRemoteConfig = () => useContext(RemoteConfigContext);
+
+export const isFeatureEnabled = (
+  config: AppConfig | null | undefined,
+  flag: keyof FeatureFlagKey,
+  fallback = true,
+) => {
+  const mergedFlags = {
+    ...DEFAULT_FEATURE_FLAGS,
+    ...(config?.featureFlags ?? {}),
+  };
+
+  const value = mergedFlags[flag];
+  if (typeof value === "boolean") return value;
+  return fallback;
 };
 
 const DISMISSED_VERSION_KEY = "mp_dismissed_update_version";
@@ -56,6 +95,7 @@ interface UpdateGateProps {
 const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [hardBlocked, setHardBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState<"update" | "maintenance" | null>(null);
   const [showSoftBanner, setShowSoftBanner] = useState(false);
 
   useEffect(() => {
@@ -66,17 +106,34 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
         if (!snap.exists()) return;
 
         const data = snap.data() as AppConfig;
-        setConfig(data);
+        const mergedConfig: AppConfig = {
+          ...data,
+          featureFlags: {
+            ...DEFAULT_FEATURE_FLAGS,
+            ...(data.featureFlags ?? {}),
+          },
+        };
+        setConfig(mergedConfig);
 
-        const latest = data.latestVersion || APP_VERSION;
-        const minSupported = data.minSupportedVersion || APP_VERSION;
-        const forceUpdate = !!data.forceUpdate;
+        const latest = mergedConfig.latestVersion || APP_VERSION;
+        const minSupported = mergedConfig.minSupportedVersion || APP_VERSION;
+        const forceUpdate = !!mergedConfig.forceUpdate;
 
         const isBelowMin = cmpVersion(APP_VERSION, minSupported) < 0;
         const isBehindLatest = cmpVersion(APP_VERSION, latest) < 0;
 
+        if (mergedConfig.maintenanceMode?.enabled) {
+          setHardBlocked(true);
+          setBlockReason("maintenance");
+          trackEvent("maintenance_mode_block", {
+            currentVersion: APP_VERSION,
+          });
+          return;
+        }
+
         if (isBelowMin || forceUpdate) {
           setHardBlocked(true);
+          setBlockReason("update");
           trackEvent("update_required_block", {
             currentVersion: APP_VERSION,
             minSupported,
@@ -134,47 +191,87 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
     }
   };
 
+  const providerValue = useMemo(() => config ?? defaultConfig, [config]);
+
   if (hardBlocked && config) {
+    if (blockReason === "maintenance" && config.maintenanceMode) {
+      return (
+        <RemoteConfigContext.Provider value={providerValue}>
+          <div
+            className="ion-padding"
+            style={{
+              height: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              textAlign: "center",
+            }}
+          >
+            <h2>We&apos;ll be back soon</h2>
+            <p style={{ marginTop: 8, maxWidth: 480 }}>
+              {config.maintenanceMode.message ?? "MacroPal is undergoing maintenance. Please try again shortly."}
+            </p>
+            {config.maintenanceMode.ctaUrl && (
+              <IonButton
+                style={{ marginTop: 16 }}
+                fill="solid"
+                href={config.maintenanceMode.ctaUrl}
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => trackEvent("maintenance_cta_click")}
+              >
+                {config.maintenanceMode.ctaLabel ?? "View status"}
+              </IonButton>
+            )}
+          </div>
+        </RemoteConfigContext.Provider>
+      );
+    }
+
     return (
-      <div
-        className="ion-padding"
-        style={{
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          textAlign: "center",
-        }}
-      >
-        <h2>Update required</h2>
-        <p style={{ marginTop: 8 }}>
-          You’re using an old version of MacroPal (v{APP_VERSION}).<br />
-          Please update to the latest version to continue.
-        </p>
-        <div style={{ marginTop: 16 }}>
-          <IonButton onClick={() => update("hard_block")}>Update app</IonButton>
-          {config.changelogUrl && (
-            <IonButton
-              fill="outline"
-              href={config.changelogUrl}
-              target="_blank"
-              rel="noreferrer"
-              style={{ marginLeft: 8 }}
-              onClick={() => trackEvent("update_changelog_click", { source: "hard_block" })}
-            >
-              What&apos;s new
-            </IonButton>
-          )}
+      <RemoteConfigContext.Provider value={providerValue}>
+        <div
+          className="ion-padding"
+          style={{
+            height: "100vh",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
+          <h2>Update required</h2>
+          <p style={{ marginTop: 8 }}>
+            You’re using an old version of MacroPal (v{APP_VERSION}).<br />
+            Please update to the latest version to continue.
+          </p>
+          <div style={{ marginTop: 16 }}>
+            <IonButton onClick={() => update("hard_block")}>Update app</IonButton>
+            {config.changelogUrl && (
+              <IonButton
+                fill="outline"
+                href={config.changelogUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ marginLeft: 8 }}
+                onClick={() => trackEvent("update_changelog_click", { source: "hard_block" })}
+              >
+                What&apos;s new
+              </IonButton>
+            )}
+          </div>
         </div>
-      </div>
+      </RemoteConfigContext.Provider>
     );
   }
 
   return (
-    <>
+    <RemoteConfigContext.Provider value={providerValue}>
       {children}
       <IonToast
+        data-testid="update-toast"
         isOpen={showSoftBanner}
         onDidDismiss={dismissBanner}
         message={`A new version of MacroPal is available.`}
@@ -194,7 +291,7 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
           },
         ]}
       />
-    </>
+    </RemoteConfigContext.Provider>
   );
 };
 
