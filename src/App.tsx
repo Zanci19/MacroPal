@@ -1,4 +1,4 @@
-import React, { useEffect, Suspense, lazy, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, Suspense, lazy, useMemo, useRef, useState } from "react";
 import {
   IonApp,
   IonRouterOutlet,
