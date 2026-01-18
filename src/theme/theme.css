@@ -303,10 +303,10 @@ ion-tab-button.mp-tab-btn--add * {
 .mp-tab-btn__add-circle {
   /* Use position fixed to bypass ALL parent container clipping */
   position: fixed !important;
-  /* Position higher to ensure overlap - 56px is tab bar height, add 24px to stick out */
-  bottom: calc(56px + 24px + env(safe-area-inset-bottom, 0px));
+  /* Position at tab bar level - 56-60px range for overlap effect */
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(-12px);
   width: 64px;
   height: 64px;
   aspect-ratio: 1 / 1;
