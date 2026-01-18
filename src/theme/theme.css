@@ -254,6 +254,11 @@ body.dark ion-tab-bar {
   overflow: visible;
 }
 
+/* Ensure the ion-tab-button web component allows overflow */
+ion-tab-button {
+  overflow: visible !important;
+}
+
 .mp-tab-btn ion-label {
   opacity: 0.85;
   font-weight: 600;
@@ -414,8 +419,9 @@ ion-toolbar {
   contain: layout style paint;
 }
 
-/* Don't contain ion-tab-bar to allow button overflow */
-ion-tab-bar {
+/* Don't contain ion-tab-bar and ion-tab-button to allow button overflow */
+ion-tab-bar,
+ion-tab-button {
   contain: style paint;
 }
 
