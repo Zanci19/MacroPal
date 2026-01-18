@@ -507,7 +507,7 @@ const ScanBarcode: React.FC = () => {
 
           {!error && (
             <IonText color="medium">
-              Tip: fill the frame with the barcode. Good lighting helps.
+              Position the barcode within the frame to scan automatically.
             </IonText>
           )}
         </div>

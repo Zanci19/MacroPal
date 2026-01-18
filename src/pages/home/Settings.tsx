@@ -1181,46 +1181,6 @@ const Settings: React.FC = () => {
                   />
                 </IonItem>
                 <IonItem lines="full">
-                  <IonIcon slot="start" icon={chevronDownOutline} />
-                  <IonLabel>
-                    <h2>Auto-expand meals with food</h2>
-                    <p>Open meals that already include entries.</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={autoExpandMealsEnabled}
-                    onIonChange={async (e) => {
-                      const checked = e.detail.checked;
-                      setAutoExpandMealsEnabled(checked);
-                      applyAutoExpandMealsPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.autoExpandMeals": checked,
-                        });
-
-                        trackEvent("settings_auto_expand_meals_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (err: any) {
-                        console.error("Failed to save auto expand preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update auto expand setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
                   <IonIcon slot="start" icon={colorPaletteOutline} />
                   <IonLabel>
                     <h2>Show meal food counts</h2>
@@ -1254,6 +1214,46 @@ const Settings: React.FC = () => {
                           message:
                             err?.message ||
                             "Could not update meal counts setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={chevronDownOutline} />
+                  <IonLabel>
+                    <h2>Auto-expand meals with food</h2>
+                    <p>Open meals that already include entries.</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={autoExpandMealsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setAutoExpandMealsEnabled(checked);
+                      applyAutoExpandMealsPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.autoExpandMeals": checked,
+                        });
+
+                        trackEvent("settings_auto_expand_meals_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save auto expand preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update auto expand setting.",
                           color: "danger",
                         });
                       }
