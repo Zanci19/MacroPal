@@ -2559,7 +2559,7 @@ const AddFood: React.FC = () => {
         >
           <IonIcon icon={calendarOutline} />
           <span style={{ marginLeft: 6 }}>
-            {friendlyDate} · {meal}
+            {quickAddFromQuery ? "For which meal?" : `${friendlyDate} · ${meal}`}
           </span>
         </IonChip>
 

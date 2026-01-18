@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   IonButton,
   IonCheckbox,
@@ -10,7 +10,7 @@ import {
   IonToolbar,
   IonSpinner,
 } from "@ionic/react";
-import { useHistory } from "react-router";
+import { useHistory, useLocation } from "react-router";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, trackEvent } from "../firebase";
 import "./OnboardingTerms.css";
@@ -19,6 +19,7 @@ const TERMS_VERSION = "2024-10-01";
 
 const OnboardingTerms: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [hasRead, setHasRead] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -28,11 +29,12 @@ const OnboardingTerms: React.FC = () => {
       {
         title: "Welcome to MacroPal",
         body: [
-          "MacroPal helps you track nutrition, workouts, and wellness goals. By using MacroPal, you agree to these terms, our privacy practices, and the health and safety notices below.",
+          "MacroPal helps you track nutrition, workouts, and wellness goals. By using MacroPal, you agree to these Terms of Service, our Privacy Policy, and the health and safety notices below.",
           "If you do not agree, please do not use the app.",
         ],
       },
       {
+        id: "privacy-policy",
         title: "Data we collect",
         body: [
           "Account data: email address, display name, and authentication identifiers.",
@@ -162,6 +164,18 @@ const OnboardingTerms: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const section = params.get("section");
+    if (!section) return;
+    requestAnimationFrame(() => {
+      const target = document.getElementById(section);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }, [location.search]);
+
   const handleAgree = async () => {
     if (saving) return;
     const user = auth.currentUser;
@@ -194,7 +208,7 @@ const OnboardingTerms: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Terms & Privacy</IonTitle>
+          <IonTitle>Terms of Service</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent
@@ -205,14 +219,18 @@ const OnboardingTerms: React.FC = () => {
         <div className="onboarding-terms-card">
           <IonText color="medium">
             <p className="onboarding-terms-intro">
-              <b>Please review the full terms before continuing. You must scroll to the bottom and
-              agree to proceed.</b>
+              <b>Please review the Terms of Service and Privacy Policy before continuing. You must
+              scroll to the bottom and agree to proceed.</b>
             </p>
           </IonText>
 
           <div className="onboarding-terms-body">
             {sections.map((section) => (
-              <section key={section.title} className="onboarding-terms-section">
+              <section
+                key={section.title}
+                {...(section.id ? { id: section.id } : {})}
+                className="onboarding-terms-section"
+              >
                 <h2><b>{section.title}</b></h2>
                 {section.body.map((line) => (
                   <p key={line}>{line}</p>
@@ -228,7 +246,7 @@ const OnboardingTerms: React.FC = () => {
                 onIonChange={(event) => setAgreed(event.detail.checked)}
                 aria-label="Agree to terms"
               />
-              <span>I have read and agree to the terms and privacy practices.</span>
+              <span>I have read and agree to the Terms of Service and Privacy Policy.</span>
             </label>
 
             <IonButton

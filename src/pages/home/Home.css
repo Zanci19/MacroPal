@@ -13,7 +13,7 @@ body.dark ion-modal {
 
 body.dark .fs-datepicker {
   --background: var(--mp-bg);
-  --ion-text-color: var(--mp-text);
+  --ion-text-color: #ffffff;
   --ion-text-color-rgb: 255, 255, 255;
 
   --ion-color-step-50: #121212;

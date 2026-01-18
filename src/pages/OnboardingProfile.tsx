@@ -619,6 +619,8 @@ const OnboardingProfile: React.FC = () => {
                 <IonSelect
                   value={activity}
                   onIonChange={(e) => setActivity(e.detail.value as Activity)}
+                  interface="popover"
+                  interfaceOptions={{ cssClass: "mp-select-popover" }}
                 >
                   <IonSelectOption value="sedentary">
                     Sedentary (little/no exercise)

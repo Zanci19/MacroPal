@@ -35,6 +35,8 @@ import {
   informationCircleOutline,
   keyOutline,
   newspaperOutline,
+  documentTextOutline,
+  shieldCheckmarkOutline,
   chevronDownOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
@@ -887,6 +889,8 @@ const Settings: React.FC = () => {
                   <IonSelect
                     value={smartDietStyle}
                     disabled={!smartRecommendationEnabled}
+                    interface="popover"
+                    interfaceOptions={{ cssClass: "mp-select-popover" }}
                     onIonChange={(e) => {
                       const value = (e.detail.value || "none") as SmartDietStyle;
                       setSmartDietStyle(value);
@@ -904,6 +908,8 @@ const Settings: React.FC = () => {
                   <IonSelect
                     value={smartMacroFocus}
                     disabled={!smartRecommendationEnabled}
+                    interface="popover"
+                    interfaceOptions={{ cssClass: "mp-select-popover" }}
                     onIonChange={(e) => {
                       const value = (e.detail.value || "balanced") as SmartMacroFocus;
                       setSmartMacroFocus(value);
@@ -1411,6 +1417,22 @@ const Settings: React.FC = () => {
                 >
                   <IonIcon slot="start" icon={newspaperOutline} />
                   <IonLabel>Changelog</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/onboarding-terms")}
+                >
+                  <IonIcon slot="start" icon={documentTextOutline} />
+                  <IonLabel>Terms of Service</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => history.push("/onboarding-terms?section=privacy-policy")}
+                >
+                  <IonIcon slot="start" icon={shieldCheckmarkOutline} />
+                  <IonLabel>Privacy policy</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"

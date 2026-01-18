@@ -99,3 +99,17 @@ body.dark ion-action-sheet .action-sheet-option {
 body.dark ion-action-sheet .action-sheet-title {
   color: white !important;
 }
+
+body.dark .mp-select-popover {
+  --background: #111827;
+  --ion-text-color: #ffffff;
+  --ion-text-color-rgb: 255, 255, 255;
+}
+
+body.dark .mp-select-popover ion-item,
+body.dark .mp-select-popover ion-label,
+body.dark .mp-select-popover .select-interface-option,
+body.dark .mp-select-popover .alert-radio-label,
+body.dark .mp-select-popover .alert-checkbox-label {
+  color: #ffffff;
+}
