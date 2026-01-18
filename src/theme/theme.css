@@ -254,21 +254,21 @@ body.dark ion-tab-bar {
   overflow: visible;
 }
 
-/* Ensure the ion-tab-button web component allows overflow
+/* Ensure the add ion-tab-button web component allows overflow
    !important is required to override Shadow DOM encapsulation
-   This rule applies to all tab buttons, while .mp-tab-btn--add is specific to the add button */
-ion-tab-button {
+   This rule applies only to the add tab button via .mp-tab-btn--add */
+ion-tab-button.mp-tab-btn--add {
   overflow: visible !important;
 }
 
 /* Target the shadow DOM button-native element using ::part if available,
    or force overflow on all internal elements */
-ion-tab-button::part(native) {
+ion-tab-button.mp-tab-btn--add::part(native) {
   overflow: visible !important;
 }
 
-/* Force overflow on all shadow DOM elements within ion-tab-button */
-ion-tab-button * {
+/* Force overflow on all shadow DOM elements within the add button */
+ion-tab-button.mp-tab-btn--add * {
   overflow: visible !important;
 }
 
@@ -285,6 +285,7 @@ ion-tab-button * {
 .mp-tab-btn--add {
   --color: #ffffff;
   --ripple-color: transparent;
+  /* Make this a positioning container for the absolute circle */
   position: relative;
   overflow: visible !important;
   /* Ensure the button can extend beyond its bounds */
@@ -292,10 +293,14 @@ ion-tab-button * {
 }
 
 .mp-tab-btn__add-circle {
+  /* Position absolutely to break out of any clipping constraints */
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 64px;
   height: 64px;
   aspect-ratio: 1 / 1;
-  flex: 0 0 64px;
   border-radius: 50%;
   background: var(--ion-color-primary);
   color: #ffffff;
@@ -303,14 +308,8 @@ ion-tab-button * {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  /* Use margin instead of transform to stick out */
-  margin-top: -24px;
-  margin-bottom: 0;
-  /* Ensure button appears above content */
-  position: relative;
-  z-index: 10;
-  /* Prevent any clipping */
-  clip-path: none;
+  /* Ensure button appears above everything */
+  z-index: 999;
 }
 
 .mp-tab-btn__add-circle ion-icon {
@@ -438,9 +437,9 @@ ion-toolbar {
   contain: layout style paint;
 }
 
-/* Don't contain ion-tab-bar and ion-tab-button to allow button overflow */
+/* Don't contain ion-tab-bar and the add tab button to allow button overflow */
 ion-tab-bar,
-ion-tab-button {
+ion-tab-button.mp-tab-btn--add {
   contain: style paint;
 }
 
