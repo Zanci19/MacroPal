@@ -228,7 +228,8 @@ ion-label p {
 
 /* Allow button to overlap the tab bar */
 ion-tabs {
-  overflow: visible;
+  overflow: visible !important;
+  position: relative;
 }
 
 ion-tab-bar {
@@ -242,7 +243,10 @@ ion-tab-bar {
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
   /* Allow the add button to overlap/stick out of the tab bar */
-  overflow: visible;
+  overflow: visible !important;
+  /* Ensure tab bar doesn't create a clipping context */
+  position: relative;
+  z-index: 100;
 }
 
 body.dark ion-tab-bar {
@@ -308,8 +312,11 @@ ion-tab-button.mp-tab-btn--add * {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  /* Ensure button appears above everything */
-  z-index: 999;
+  /* Ensure button appears above everything - use !important to force */
+  z-index: 999 !important;
+  /* Ensure no clipping */
+  clip: unset;
+  clip-path: none;
 }
 
 .mp-tab-btn__add-circle ion-icon {
