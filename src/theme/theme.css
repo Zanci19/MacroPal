@@ -261,6 +261,17 @@ ion-tab-button {
   overflow: visible !important;
 }
 
+/* Target the shadow DOM button-native element using ::part if available,
+   or force overflow on all internal elements */
+ion-tab-button::part(native) {
+  overflow: visible !important;
+}
+
+/* Force overflow on all shadow DOM elements within ion-tab-button */
+ion-tab-button * {
+  overflow: visible !important;
+}
+
 .mp-tab-btn ion-label {
   opacity: 0.85;
   font-weight: 600;
@@ -276,6 +287,8 @@ ion-tab-button {
   --ripple-color: transparent;
   position: relative;
   overflow: visible !important;
+  /* Ensure the button can extend beyond its bounds */
+  contain: none !important;
 }
 
 .mp-tab-btn__add-circle {
@@ -294,6 +307,8 @@ ion-tab-button {
   /* Ensure button appears above content */
   position: relative;
   z-index: 10;
+  /* Prevent any clipping */
+  clip-path: none;
 }
 
 .mp-tab-btn__add-circle ion-icon {
