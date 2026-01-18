@@ -271,6 +271,10 @@ body.dark ion-tab-bar {
   overflow: visible !important;
 }
 
+ion-tab-button.mp-tab-btn--add::part(native) {
+  overflow: visible;
+}
+
 .mp-tab-btn__add-circle {
   width: 64px;
   height: 64px;
