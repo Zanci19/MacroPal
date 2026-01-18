@@ -226,6 +226,11 @@ ion-label p {
   color: var(--mp-text-muted) !important;
 }
 
+/* Allow button to overlap the tab bar */
+ion-tabs {
+  overflow: visible;
+}
+
 ion-tab-bar {
   --background: var(--mp-surface);
   --color: var(--mp-text-muted);
@@ -243,6 +248,10 @@ ion-tab-bar {
 body.dark ion-tab-bar {
   --background: var(--mp-surface);
   box-shadow: none;
+}
+
+.mp-tabbar {
+  overflow: visible;
 }
 
 .mp-tab-btn ion-label {
@@ -265,6 +274,8 @@ body.dark ion-tab-bar {
 .mp-tab-btn__add-circle {
   width: 64px;
   height: 64px;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 64px;
   border-radius: 50%;
   background: var(--ion-color-primary);
   color: #ffffff;
@@ -279,7 +290,7 @@ body.dark ion-tab-bar {
 }
 
 .mp-tab-btn__add-circle ion-icon {
-  font-size: 28px;
+  font-size: 34px;
 }
 
 .mp-tab-btn__hidden-label {
@@ -399,9 +410,13 @@ ion-content,
 ion-card,
 ion-item,
 ion-list,
-ion-toolbar,
-ion-tab-bar {
+ion-toolbar {
   contain: layout style paint;
+}
+
+/* Don't contain ion-tab-bar to allow button overflow */
+ion-tab-bar {
+  contain: style paint;
 }
 
 /* Remove containment for interactive elements */
