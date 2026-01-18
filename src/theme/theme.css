@@ -287,7 +287,7 @@ ion-tab-button.mp-tab-btn--add::part(native) {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-24px);
+  transform: translateY(-16px);
   /* Ensure button appears above content */
   position: relative;
   z-index: 10;
