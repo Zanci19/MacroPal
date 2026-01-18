@@ -301,10 +301,10 @@ ion-tab-button.mp-tab-btn--add * {
 }
 
 .mp-tab-btn__add-circle {
-  /* Position absolutely relative to the tab button */
-  position: absolute;
-  /* Position 24px above the bottom edge (negative bottom = upward) */
-  bottom: 24px;
+  /* Use position fixed to bypass ALL parent container clipping */
+  position: fixed !important;
+  /* Position from bottom of viewport - adjust based on tab bar height */
+  bottom: 56px;
   left: 50%;
   transform: translateX(-50%);
   width: 64px;
@@ -317,8 +317,8 @@ ion-tab-button.mp-tab-btn--add * {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  /* Ensure button appears above everything - use !important to force */
-  z-index: 999 !important;
+  /* Ensure button appears above everything */
+  z-index: 9999 !important;
   /* Ensure no clipping */
   clip: unset;
   clip-path: none;
