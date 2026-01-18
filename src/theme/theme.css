@@ -303,7 +303,9 @@ ion-tab-button * {
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  transform: translateY(-24px);
+  /* Use margin instead of transform to stick out */
+  margin-top: -24px;
+  margin-bottom: 0;
   /* Ensure button appears above content */
   position: relative;
   z-index: 10;
