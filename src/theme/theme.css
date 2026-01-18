@@ -416,7 +416,7 @@ ion-toolbar {
 
 /* Don't contain ion-tab-bar to allow button overflow */
 ion-tab-bar {
-  contain: style paint;
+  contain: style;
 }
 
 /* Remove containment for interactive elements */
