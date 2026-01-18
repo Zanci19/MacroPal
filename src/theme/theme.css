@@ -254,7 +254,9 @@ body.dark ion-tab-bar {
   overflow: visible;
 }
 
-/* Ensure the ion-tab-button web component allows overflow */
+/* Ensure the ion-tab-button web component allows overflow
+   !important is required to override Shadow DOM encapsulation
+   This rule applies to all tab buttons, while .mp-tab-btn--add is specific to the add button */
 ion-tab-button {
   overflow: visible !important;
 }
