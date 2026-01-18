@@ -54,12 +54,14 @@ import {
   applyAutoExpandMealsPreference,
   applyDebugOverlayPreference,
   applyLazyLoadPreference,
+  applyMealCountPreference,
   applyTheme,
   getAnimationPreference,
   getChartAnimationPreference,
   getAutoExpandMealsPreference,
   getDebugOverlayPreference,
   getLazyLoadPreference,
+  getMealCountPreference,
   getStoredThemeMode,
   THEME_MODES,
   type ThemeMode,
@@ -109,6 +111,9 @@ const Settings: React.FC = () => {
   });
   const [autoExpandMealsEnabled, setAutoExpandMealsEnabled] = React.useState<boolean>(() => {
     return getAutoExpandMealsPreference();
+  });
+  const [showMealCountsEnabled, setShowMealCountsEnabled] = React.useState<boolean>(() => {
+    return getMealCountPreference();
   });
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
@@ -383,6 +388,7 @@ const Settings: React.FC = () => {
       lazyLoad: getLazyLoadPreference(),
       chartAnimations: getChartAnimationPreference(),
       autoExpandMeals: getAutoExpandMealsPreference(),
+      showMealCounts: getMealCountPreference(),
     };
 
     // Get browser capabilities
@@ -499,6 +505,7 @@ const Settings: React.FC = () => {
       "mp_lazy_load",
       "mp_chart_animations",
       "mp_auto_expand_meals",
+      "mp_meal_counts",
     ];
     keys.forEach((key) => window.localStorage.removeItem(key));
 
@@ -509,17 +516,20 @@ const Settings: React.FC = () => {
     const debugOverlay = getDebugOverlayPreference();
     const lazyLoad = getLazyLoadPreference();
     const autoExpand = getAutoExpandMealsPreference();
+    const mealCounts = getMealCountPreference();
     applyAnimationPreference(animations);
     applyChartAnimationPreference(chartAnimations);
     applyDebugOverlayPreference(debugOverlay);
     applyLazyLoadPreference(lazyLoad);
     applyAutoExpandMealsPreference(autoExpand);
+    applyMealCountPreference(mealCounts);
 
     setTabAnimationsEnabled(animations);
     setChartAnimationsEnabled(chartAnimations);
     setDebugOverlayEnabled(debugOverlay);
     setLazyLoadEnabled(lazyLoad);
     setAutoExpandMealsEnabled(autoExpand);
+    setShowMealCountsEnabled(mealCounts);
     setToast({
       show: true,
       message: "Cached preferences cleared.",
@@ -667,6 +677,18 @@ const Settings: React.FC = () => {
         } else {
           const localPref = getAutoExpandMealsPreference();
           setAutoExpandMealsEnabled(localPref);
+        }
+
+        const savedMealCountsPref =
+          typeof profile === "object" && profile && "showMealCounts" in profile
+            ? (profile as { showMealCounts?: unknown }).showMealCounts
+            : undefined;
+        if (typeof savedMealCountsPref === "boolean") {
+          setShowMealCountsEnabled(savedMealCountsPref);
+          applyMealCountPreference(savedMealCountsPref);
+        } else {
+          const localPref = getMealCountPreference();
+          setShowMealCountsEnabled(localPref);
         }
 
         setSmartRecommendationEnabled(enabled);
@@ -1192,6 +1214,46 @@ const Settings: React.FC = () => {
                           message:
                             err?.message ||
                             "Could not update auto expand setting.",
+                          color: "danger",
+                        });
+                      }
+                    }}
+                  />
+                </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={colorPaletteOutline} />
+                  <IonLabel>
+                    <h2>Show meal food counts</h2>
+                    <p>Display the number of foods next to meal names.</p>
+                  </IonLabel>
+                  <IonToggle
+                    slot="end"
+                    checked={showMealCountsEnabled}
+                    onIonChange={async (e) => {
+                      const checked = e.detail.checked;
+                      setShowMealCountsEnabled(checked);
+                      applyMealCountPreference(checked);
+
+                      const current = auth.currentUser;
+                      if (!current) return;
+
+                      try {
+                        const ref = doc(db, "users", current.uid);
+                        await updateDoc(ref, {
+                          "profile.showMealCounts": checked,
+                        });
+
+                        trackEvent("settings_show_meal_counts_toggle", {
+                          uid: current.uid,
+                          enabled: checked,
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to save meal counts preference:", err);
+                        setToast({
+                          show: true,
+                          message:
+                            err?.message ||
+                            "Could not update meal counts setting.",
                           color: "danger",
                         });
                       }

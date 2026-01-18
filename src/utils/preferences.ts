@@ -106,6 +106,21 @@ export const getAutoExpandMealsPreference = (): boolean => {
   return stored === "on";
 };
 
+export const applyMealCountPreference = (enabled: boolean) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem("mp_meal_counts", enabled ? "on" : "off");
+  window.dispatchEvent(
+    new CustomEvent("mp_meal_counts_change", { detail: { enabled } })
+  );
+};
+
+export const getMealCountPreference = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const stored = window.localStorage.getItem("mp_meal_counts");
+  if (stored === null) return false;
+  return stored === "on";
+};
+
 export type ProfilePreferences = {
   themeMode?: ThemeMode;
   tabAnimationsEnabled?: boolean;
@@ -113,6 +128,7 @@ export type ProfilePreferences = {
   lazyLoadEnabled?: boolean;
   chartAnimationsEnabled?: boolean;
   autoExpandMeals?: boolean;
+  showMealCounts?: boolean;
 };
 
 export const getProfilePreferences = (profile?: Record<string, unknown>): ProfilePreferences => {
@@ -146,6 +162,10 @@ export const getProfilePreferences = (profile?: Record<string, unknown>): Profil
       typeof profile.autoExpandMeals === "boolean"
         ? profile.autoExpandMeals
         : undefined,
+    showMealCounts:
+      typeof profile.showMealCounts === "boolean"
+        ? profile.showMealCounts
+        : undefined,
   };
 };
 
@@ -174,6 +194,9 @@ export const applyProfilePreferences = (profile?: Record<string, unknown>) => {
   }
   if (typeof prefs.autoExpandMeals === "boolean") {
     applyAutoExpandMealsPreference(prefs.autoExpandMeals);
+  }
+  if (typeof prefs.showMealCounts === "boolean") {
+    applyMealCountPreference(prefs.showMealCounts);
   }
   return prefs;
 };
