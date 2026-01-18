@@ -294,12 +294,17 @@ ion-tab-button.mp-tab-btn--add * {
   overflow: visible !important;
   /* Ensure the button can extend beyond its bounds */
   contain: none !important;
+  /* Keep flex behavior to maintain button height */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
 }
 
 .mp-tab-btn__add-circle {
-  /* Position absolutely to break out of any clipping constraints */
+  /* Position absolutely relative to the tab button */
   position: absolute;
-  top: -24px;
+  /* Position 24px above the bottom edge (negative bottom = upward) */
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: 64px;
@@ -317,6 +322,8 @@ ion-tab-button.mp-tab-btn--add * {
   /* Ensure no clipping */
   clip: unset;
   clip-path: none;
+  /* Allow pointer events */
+  pointer-events: auto;
 }
 
 .mp-tab-btn__add-circle ion-icon {
