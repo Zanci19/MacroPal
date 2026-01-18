@@ -1,7 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getLazyLoadPreference, applyLazyLoadPreference } from './preferences';
+import {
+  getLazyLoadPreference,
+  applyLazyLoadPreference,
+  getMealCountPreference,
+  applyMealCountPreference,
+} from './preferences';
 
-describe('Lazy Load Preferences', () => {
+describe('Preferences', () => {
   beforeEach(() => {
     // Clear localStorage before each test
     localStorage.clear();
@@ -80,6 +85,44 @@ describe('Lazy Load Preferences', () => {
       // Simulate a new user with no stored preference
       const result = getLazyLoadPreference();
       expect(result).toBe(true); // Lazy loading should be ON by default
+    });
+  });
+
+  describe('Meal Count Preferences', () => {
+    it('should return false by default when nothing is stored', () => {
+      const result = getMealCountPreference();
+      expect(result).toBe(false);
+    });
+
+    it('should return true when stored value is "on"', () => {
+      localStorage.setItem('mp_meal_counts', 'on');
+      const result = getMealCountPreference();
+      expect(result).toBe(true);
+    });
+
+    it('should return false when stored value is "off"', () => {
+      localStorage.setItem('mp_meal_counts', 'off');
+      const result = getMealCountPreference();
+      expect(result).toBe(false);
+    });
+
+    it('should store "on" when enabled is true', () => {
+      applyMealCountPreference(true);
+      const stored = localStorage.getItem('mp_meal_counts');
+      expect(stored).toBe('on');
+    });
+
+    it('should dispatch custom event with correct detail', () => {
+      const eventSpy = vi.fn();
+      window.addEventListener('mp_meal_counts_change', eventSpy);
+
+      applyMealCountPreference(true);
+
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+      const event = eventSpy.mock.calls[0][0] as CustomEvent;
+      expect(event.detail.enabled).toBe(true);
+
+      window.removeEventListener('mp_meal_counts_change', eventSpy);
     });
   });
 });

@@ -74,7 +74,7 @@ import {
   normalizeAnnouncementNum,
   shouldShowAnnouncement,
 } from "../../utils/announcement";
-import { getAutoExpandMealsPreference } from "../../utils/preferences";
+import { getAutoExpandMealsPreference, getMealCountPreference } from "../../utils/preferences";
 import type {
   MealKey,
   Macros,
@@ -211,6 +211,7 @@ const MealCard: React.FC<{
   isCollapsed: boolean;
   mealTotals: Macros;
   mealIcon: string;
+  showMealCounts: boolean;
   onToggleCollapse: () => void;
   onAddFood: () => void;
   onMoreOptions: () => void;
@@ -223,6 +224,7 @@ const MealCard: React.FC<{
   isCollapsed,
   mealTotals,
   mealIcon: mealIconProp,
+  showMealCounts,
   onToggleCollapse,
   onAddFood,
   onMoreOptions,
@@ -239,6 +241,11 @@ const MealCard: React.FC<{
       mealTotals.fat > 0);
 
   const pretty = (s: string) => s[0].toUpperCase() + s.slice(1);
+  const mealCountLabel =
+    showMealCounts && hasItems
+      ? ` • ${items.length} ${items.length === 1 ? "food" : "foods"}`
+      : "";
+  const mealTitle = `${pretty(meal)}${mealCountLabel}`;
 
   return (
     <IonCard
@@ -261,7 +268,7 @@ const MealCard: React.FC<{
           />
 
           <div className="fs-meal__title">
-            <h2 className="fs-meal__title-text">{pretty(meal)}</h2>
+            <h2 className="fs-meal__title-text">{mealTitle}</h2>
 
             {hasMealTotals && !isCollapsed && (
               <div className="fs-meal__totals">
@@ -505,6 +512,9 @@ const Home: React.FC = () => {
   const [autoExpandMealsEnabled, setAutoExpandMealsEnabled] = useState<boolean>(() => {
     return getAutoExpandMealsPreference();
   });
+  const [showMealCountsEnabled, setShowMealCountsEnabled] = useState<boolean>(() => {
+    return getMealCountPreference();
+  });
 
   const [quote, setQuote] = useState<InspirationalQuote | null>(() => {
     const stored = readStoredQuote();
@@ -537,6 +547,16 @@ const Home: React.FC = () => {
   }, [profile]);
 
   useEffect(() => {
+    const pref =
+      typeof profile === "object" && profile && "showMealCounts" in profile
+        ? (profile as { showMealCounts?: unknown }).showMealCounts
+        : undefined;
+    if (typeof pref === "boolean") {
+      setShowMealCountsEnabled(pref);
+    }
+  }, [profile]);
+
+  useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<{ enabled: boolean }>).detail;
       if (detail && typeof detail.enabled === "boolean") {
@@ -546,6 +566,19 @@ const Home: React.FC = () => {
     window.addEventListener("mp_auto_expand_meals_change", handler as EventListener);
     return () => {
       window.removeEventListener("mp_auto_expand_meals_change", handler as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ enabled: boolean }>).detail;
+      if (detail && typeof detail.enabled === "boolean") {
+        setShowMealCountsEnabled(detail.enabled);
+      }
+    };
+    window.addEventListener("mp_meal_counts_change", handler as EventListener);
+    return () => {
+      window.removeEventListener("mp_meal_counts_change", handler as EventListener);
     };
   }, []);
 
@@ -2354,6 +2387,7 @@ const Home: React.FC = () => {
                 isCollapsed={isCollapsed}
                 mealTotals={mealTotals}
                 mealIcon={mealIcon[meal]}
+                showMealCounts={showMealCountsEnabled}
                 onToggleCollapse={() => {
                   setCollapsedMeals((prev) => ({
                     ...prev,

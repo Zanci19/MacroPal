@@ -10,6 +10,8 @@ import {
   IonItem,
   IonLabel,
   IonList,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonModal,
   IonButtons,
@@ -453,6 +455,11 @@ const AddFood: React.FC = () => {
   const autoMealFromQuery = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const value = params.get("autoMeal");
+    return value === "1" || value === "true";
+  }, [location.search]);
+  const quickAddFromQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const value = params.get("quickAdd");
     return value === "1" || value === "true";
   }, [location.search]);
   const autoMealPendingRef = useRef<boolean>(autoMealFromQuery);
@@ -2529,6 +2536,22 @@ const AddFood: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
+        {quickAddFromQuery && (
+          <IonItem lines="none" style={{ marginBottom: 12 }}>
+            <IonLabel>For which meal?</IonLabel>
+            <IonSelect
+              value={meal}
+              interface="popover"
+              onIonChange={(e) => handleChangeMeal(e.detail.value as MealKey)}
+            >
+              {MEAL_ORDER.map((mealKey) => (
+                <IonSelectOption key={mealKey} value={mealKey}>
+                  {mealKey[0].toUpperCase() + mealKey.slice(1)}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+        )}
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}

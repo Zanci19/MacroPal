@@ -197,7 +197,7 @@ const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
-const QUICK_ADD_URL = "/add-food?autoMeal=1";
+const QUICK_ADD_URL = "/add-food?autoMeal=1&quickAdd=1";
 
 // Detect reduced motion preference safely
 const getPrefersReducedMotion = () => {
