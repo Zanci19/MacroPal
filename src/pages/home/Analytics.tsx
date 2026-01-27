@@ -622,7 +622,7 @@ const Analytics: React.FC = () => {
       <IonContent className="ion-padding tabbed-content" fullscreen>
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent
-            pullingSpinner="crescent"
+            pullingIcon="chevron-down-outline"
             refreshingSpinner="crescent"
           />
         </IonRefresher>

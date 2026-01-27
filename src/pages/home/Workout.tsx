@@ -321,7 +321,7 @@ const Workout: React.FC = () => {
       <IonContent fullscreen className="home-content">
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent
-            pullingSpinner="crescent"
+            pullingIcon="chevron-down-outline"
             refreshingSpinner="crescent"
           />
         </IonRefresher>
