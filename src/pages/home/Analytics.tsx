@@ -21,6 +21,9 @@ import {
   IonIcon,
   IonChip,
   IonActionSheet,
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
 } from "@ionic/react";
 import { shareOrDownload } from "../../utils/exportUtils";
 import {
@@ -31,7 +34,6 @@ import {
   timeOutline,
   analyticsOutline,
   medalOutline,
-  refreshOutline,
 } from "ionicons/icons";
 
 import { db, trackEvent } from "../../firebase";
@@ -227,6 +229,18 @@ const Analytics: React.FC = () => {
       setLoading(false);
     }
   }, [uid]);
+
+  const handleRefresh = useCallback(
+    async (event: CustomEvent<RefresherEventDetail>) => {
+      try {
+        trackEvent("analytics_refresh");
+        await fetchDays();
+      } finally {
+        event.detail.complete();
+      }
+    },
+    [fetchDays]
+  );
 
   useEffect(() => {
     if (!authLoading) {
@@ -602,22 +616,16 @@ const Analytics: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Analytics</IonTitle>
-          <IonButton
-            slot="end"
-            fill="clear"
-            color="medium"
-            aria-label="Refresh analytics"
-            onClick={() => {
-              trackEvent("analytics_refresh");
-              void fetchDays();
-            }}
-          >
-            <IonIcon icon={refreshOutline} />
-          </IonButton>
         </IonToolbar>
       </IonHeader>
 
       <IonContent className="ion-padding tabbed-content" fullscreen>
+        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+          <IonRefresherContent
+            pullingIcon="chevron-down-outline"
+            refreshingSpinner="crescent"
+          />
+        </IonRefresher>
         {(authLoading || loading) && (
           <div className="ion-text-center" style={{ padding: 24 }}>
             <IonSpinner name="dots" />
