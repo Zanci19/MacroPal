@@ -610,6 +610,12 @@ const Analytics: React.FC = () => {
     "#a855f7",
     "#64748b",
   ];
+  const responsiveContainerProps = {
+    width: "100%",
+    height: "100%",
+    minHeight: 200,
+    minWidth: 1,
+  } as const;
 
   return (
     <IonPage>
@@ -699,7 +705,7 @@ const Analytics: React.FC = () => {
                     <IonCardContent>
                       {weightChartData.length ? (
                         <div style={{ width: "100%", height: 260 }}>
-                          <ResponsiveContainer>
+                          <ResponsiveContainer {...responsiveContainerProps}>
                             <LineChart data={weightChartData}>
                               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                               <XAxis dataKey="date" />
@@ -767,7 +773,7 @@ const Analytics: React.FC = () => {
                             </IonCardHeader>
                             <IonCardContent>
                               <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
+                                <ResponsiveContainer {...responsiveContainerProps}>
                                   <PieChart>
                                     <Pie
                                       data={[
@@ -861,7 +867,7 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         <div style={{ width: "100%", height: 300 }}>
-                          <ResponsiveContainer>
+                          <ResponsiveContainer {...responsiveContainerProps}>
                             <ComposedChart
                               data={view.map((d, i) => ({
                                 date: fmtDate(d.key),
@@ -914,7 +920,7 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         <div style={{ width: "100%", height: 260 }}>
-                          <ResponsiveContainer>
+                          <ResponsiveContainer {...responsiveContainerProps}>
                             <BarChart data={macroEnergyByDay}>
                               <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                               <XAxis dataKey="date" />
@@ -967,7 +973,7 @@ const Analytics: React.FC = () => {
                             </IonCardHeader>
                             <IonCardContent>
                               <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
+                                <ResponsiveContainer {...responsiveContainerProps}>
                                   <PieChart>
                                     <Pie
                                       data={macroDonut}
@@ -1048,7 +1054,7 @@ const Analytics: React.FC = () => {
                             </IonCardHeader>
                             <IonCardContent>
                               <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
+                                <ResponsiveContainer {...responsiveContainerProps}>
                                   <RadarChart
                                     data={[
                                       { metric: "Carbohydrates", g: avg.carbs },
@@ -1095,7 +1101,7 @@ const Analytics: React.FC = () => {
                       <IonCardContent>
                         {caloriesTarget ? (
                           <div style={{ width: "100%", height: 220 }}>
-                            <ResponsiveContainer>
+                            <ResponsiveContainer {...responsiveContainerProps}>
                               <BarChart
                                 data={[
                                   {
@@ -1150,7 +1156,7 @@ const Analytics: React.FC = () => {
                       <IonCardContent>
                         {macroTargets ? (
                           <div style={{ width: "100%", height: 260 }}>
-                            <ResponsiveContainer>
+                            <ResponsiveContainer {...responsiveContainerProps}>
                               <BarChart
                                 data={[
                                   {
