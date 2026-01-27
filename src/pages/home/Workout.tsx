@@ -26,6 +26,9 @@ import {
   IonToast,
   IonDatetime,
   IonNote,
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -37,7 +40,7 @@ import {
   timerOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
-import { doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
 import { db, trackEvent } from "../../firebase";
 import {
   clampDateKeyToToday,
@@ -156,6 +159,30 @@ const Workout: React.FC = () => {
 
     return () => unsub();
   }, [uid, activeDateKey]);
+
+  const handleRefresh = useCallback(
+    async (event: CustomEvent<RefresherEventDetail>) => {
+      try {
+        if (!uid) return;
+        setLoading(true);
+        const snap = await getDoc(doc(db, "users", uid, "workouts", activeDateKey));
+        const raw = snap.data() as WorkoutDayDoc | undefined;
+        const nextActivities = raw?.activities ?? [];
+        setActivities(nextActivities);
+        trackEvent("workout_refresh", {
+          uid,
+          date: activeDateKey,
+          total_activities: nextActivities.length,
+        });
+      } catch (error) {
+        console.error("Failed to refresh workout data:", error);
+      } finally {
+        setLoading(false);
+        event.detail.complete();
+      }
+    },
+    [activeDateKey, uid]
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -292,6 +319,12 @@ const Workout: React.FC = () => {
       </IonHeader>
 
       <IonContent fullscreen className="home-content">
+        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+          <IonRefresherContent
+            pullingSpinner="crescent"
+            refreshingSpinner="crescent"
+          />
+        </IonRefresher>
         <div className="fs-datebar">
           <IonButton
             fill="clear"

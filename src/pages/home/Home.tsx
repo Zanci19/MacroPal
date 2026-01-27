@@ -28,6 +28,9 @@ import {
   IonAlert,
   useIonViewDidEnter,
   useIonViewDidLeave,
+  IonRefresher,
+  IonRefresherContent,
+  type RefresherEventDetail,
 } from "@ionic/react";
 import {
   addCircleOutline,
@@ -499,6 +502,7 @@ const Home: React.FC = () => {
   const longPressTriggeredRef = useRef(false);
   const quoteHasLoadedRef = useRef(false);
   const snapshotTrackRef = useRef({ day: 0, workout: 0 });
+  const listenersCleanupRef = useRef<(() => void) | null>(null);
 
   const [collapsedMeals, setCollapsedMeals] = useState<
     Record<MealKey, boolean>
@@ -745,7 +749,12 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!isViewActive) return;
-    return startHomeListeners();
+    const cleanup = startHomeListeners();
+    listenersCleanupRef.current = cleanup;
+    return () => {
+      cleanup();
+      listenersCleanupRef.current = null;
+    };
   }, [isViewActive, startHomeListeners]);
 
   useEffect(() => {
@@ -1818,14 +1827,13 @@ const Home: React.FC = () => {
     showWellnessTip,
   ]);
 
-  // Fetch and display announcement if needed
-  useEffect(() => {
-    if (!uid || !profile || announcementFetchedRef.current) return;
-    if (!isViewActive) return;
+  const fetchAnnouncement = useCallback(
+    async (force = false) => {
+      if (!uid || !profile) return;
+      if (!force && announcementFetchedRef.current) return;
 
-    announcementFetchedRef.current = true;
+      announcementFetchedRef.current = true;
 
-    const fetchAnnouncement = async () => {
       try {
         const response = await fetch(ANNOUNCEMENT_API_URL);
         if (!response.ok) {
@@ -1873,10 +1881,39 @@ const Home: React.FC = () => {
           error: error instanceof Error ? error.message : "unknown",
         });
       }
-    };
+    },
+    [announcementNum, profile, uid]
+  );
 
+  // Fetch and display announcement if needed
+  useEffect(() => {
+    if (!isViewActive) return;
     void fetchAnnouncement();
-  }, [uid, profile, announcementNum, isViewActive]);
+  }, [fetchAnnouncement, isViewActive]);
+
+  const handleRefresh = useCallback(
+    async (event: CustomEvent<RefresherEventDetail>) => {
+      try {
+        trackEvent("home_refresh", { uid, date: activeDateKey });
+        listenersCleanupRef.current?.();
+        const cleanup = startHomeListeners();
+        listenersCleanupRef.current = cleanup;
+        await Promise.all([
+          fetchInspirationalQuote(),
+          fetchAnnouncement(true),
+        ]);
+      } finally {
+        event.detail.complete();
+      }
+    },
+    [
+      activeDateKey,
+      fetchAnnouncement,
+      fetchInspirationalQuote,
+      startHomeListeners,
+      uid,
+    ]
+  );
 
   const handleAnnouncementDismiss = async () => {
     if (!uid || !announcement) {
@@ -1918,6 +1955,12 @@ const Home: React.FC = () => {
       </IonHeader>
 
       <IonContent className="home-content ion-padding tabbed-content" fullscreen>
+        <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
+          <IonRefresherContent
+            pullingSpinner="crescent"
+            refreshingSpinner="crescent"
+          />
+        </IonRefresher>
         <div className="fs-datebar" role="group" aria-label="Select day">
           <IonButton
             fill="clear"
