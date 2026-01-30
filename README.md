@@ -90,6 +90,24 @@ Built with modern web technologies and wrapped in a native mobile experience usi
 
 > 🚀 **Live App**: Coming soon!
 
+### Demo Mode for Presentations
+
+MacroPal includes a special **Demo Mode** designed for showcasing the app to audiences without requiring authentication or Firebase backend.
+
+**Key Features:**
+- 🎥 Plays a looping intro video in landscape mode
+- 🚀 Bypasses login and goes straight to the app
+- 📱 Displays app in portrait mode (9:16) on any screen
+- ⏱️ Auto-resets after 1 minute of inactivity
+- 💾 Uses localStorage for temporary demo data
+
+**Setup:**
+1. Add your video to `/public/assets/demo-loop.mp4`
+2. Set `VITE_DEMO_MODE=true` in `.env`
+3. Build and launch the app
+
+📖 **Full Documentation**: See [DEMO_MODE.md](DEMO_MODE.md) for detailed setup instructions.
+
 ### Screenshots
 
 <div align="center">
@@ -131,16 +149,15 @@ Visit our web app at [Coming Soon] and start tracking immediately!
    - Enable Authentication (Email/Password, Google, Facebook)
    - Create a Firestore database
    - Enable Storage for profile photos
-   - Copy your Firebase config and create a `.env` file:
+   - Copy `.env.example` to `.env` and fill in your Firebase config:
    
    ```env
+   # Demo Mode (optional)
+   VITE_DEMO_MODE=false
+   
+   # Firebase Configuration
    VITE_FIREBASE_API_KEY=your_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   VITE_GOOGLE_WEB_CLIENT_ID=your_google_client_id
    ```
 
 4. **Run the development server**
