@@ -924,21 +924,21 @@ const Analytics: React.FC = () => {
                               <Bar
                                 dataKey="carbsK"
                                 stackId="a"
-                                name="Carbohydrates kcal"
+                                name="Carbohydrates kcal:"
                                 fill={palette[0]}
                                 isAnimationActive={chartAnimationsEnabled}
                               />
                               <Bar
                                 dataKey="proteinK"
                                 stackId="a"
-                                name="Protein kcal"
+                                name="Protein kcal:"
                                 fill={palette[1]}
                                 isAnimationActive={chartAnimationsEnabled}
                               />
                               <Bar
                                 dataKey="fatK"
                                 stackId="a"
-                                name="Fat kcal"
+                                name="Fat kcal:"
                                 fill={palette[2]}
                                 isAnimationActive={chartAnimationsEnabled}
                               />
