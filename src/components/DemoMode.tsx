@@ -153,7 +153,7 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
         </div>
       ) : (
         <div className="demo-app-container demo-app-container--portrait">
-          {children}
+          <div className="demo-app-frame">{children}</div>
         </div>
       )}
     </>
