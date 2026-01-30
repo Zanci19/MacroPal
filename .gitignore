@@ -24,6 +24,7 @@
 /.vscode/*
 !/.vscode/extensions.json
 .idea
+/public/assets/demo-loop.mp4
 
 npm-debug.log*
 yarn-debug.log*
