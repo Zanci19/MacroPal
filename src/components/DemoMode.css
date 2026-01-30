@@ -69,6 +69,7 @@
   height: 100vh;
   max-height: calc(100vw * 16 / 9);
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+  flex-shrink: 0; /* Prevent shrinking */
 }
 
 /* For mobile, fill the screen */
