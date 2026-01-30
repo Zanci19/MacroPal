@@ -33,6 +33,7 @@
   background-color: rgba(0, 0, 0, 0.7);
   border-radius: 8px;
   pointer-events: none;
+  opacity: 0.5;
 }
 
 .demo-video-text {
@@ -46,28 +47,37 @@
 .demo-app-container {
   width: 100%;
   height: 100%;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 .demo-app-container--portrait {
   /* Portrait mode for app - 9:16 aspect ratio */
-  max-width: 100vh * 9 / 16;
-  margin: 0 auto;
-  aspect-ratio: 9 / 16;
+  /* The container fills the screen with black background */
+  /* The inner content will be constrained to 9:16 */
 }
 
-/* For larger screens, center the portrait view */
-@media (min-width: 768px) {
-  .demo-app-container--portrait {
-    max-width: calc(100vh * 9 / 16);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
-  }
+.demo-app-container--portrait > * {
+  /* Constrain children to 9:16 aspect ratio */
+  width: calc(100vh * 9 / 16);
+  max-width: 100vw;
+  height: 100vh;
+  max-height: calc(100vw * 16 / 9);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
 }
 
 /* For mobile, fill the screen */
 @media (max-width: 767px) {
-  .demo-app-container--portrait {
-    max-width: 100%;
-    width: 100%;
-    height: 100%;
+  .demo-app-container--portrait > * {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    box-shadow: none;
   }
 }
