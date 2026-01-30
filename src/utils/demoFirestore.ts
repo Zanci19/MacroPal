@@ -3,10 +3,10 @@
  * This provides a localStorage-backed implementation that mimics Firestore's API
  */
 
-type Listener = (data: any) => void;
+type Listener = (data: unknown) => void;
 
 interface DemoDoc {
-  data: any;
+  data: unknown;
   listeners: Set<Listener>;
 }
 
@@ -22,7 +22,7 @@ class DemoFirestore {
     try {
       const stored = localStorage.getItem(this.storageKey);
       if (stored) {
-        const data = JSON.parse(stored);
+        const data = JSON.parse(stored) as Record<string, unknown>;
         Object.entries(data).forEach(([path, docData]) => {
           this.docs.set(path, {
             data: docData,
@@ -37,7 +37,7 @@ class DemoFirestore {
 
   private saveToStorage() {
     try {
-      const data: Record<string, any> = {};
+      const data: Record<string, unknown> = {};
       this.docs.forEach((doc, path) => {
         data[path] = doc.data;
       });
@@ -48,18 +48,18 @@ class DemoFirestore {
   }
 
   // Get document data
-  getData(path: string): any {
+  getData(path: string): unknown {
     return this.docs.get(path)?.data;
   }
 
   // Set document data
-  setData(path: string, data: any) {
+  setData(path: string, data: unknown) {
     let doc = this.docs.get(path);
     if (!doc) {
       doc = { data: {}, listeners: new Set() };
       this.docs.set(path, doc);
     }
-    doc.data = { ...doc.data, ...data };
+    doc.data = { ...doc.data as object, ...data as object };
     this.saveToStorage();
     
     // Notify listeners
@@ -105,5 +105,6 @@ export const demoFirestore = new DemoFirestore();
 
 // Expose globally for clearing on demo reset
 if (typeof window !== "undefined") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (window as any).__demoFirestore = demoFirestore;
 }

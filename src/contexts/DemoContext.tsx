@@ -4,8 +4,8 @@ interface DemoContextType {
   isDemoMode: boolean;
   demoUserId: string;
   clearDemoData: () => void;
-  getDemoData: (path: string) => any;
-  setDemoData: (path: string, data: any) => void;
+  getDemoData: (path: string) => unknown;
+  setDemoData: (path: string, data: unknown) => void;
 }
 
 const DemoContext = createContext<DemoContextType | undefined>(undefined);
@@ -15,7 +15,7 @@ const DEMO_STORAGE_KEY = "demo_mode_data";
 
 export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
-  const [demoStorage, setDemoStorage] = useState<Record<string, any>>(() => {
+  const [demoStorage, setDemoStorage] = useState<Record<string, unknown>>(() => {
     if (!isDemoMode) return {};
     
     try {
@@ -26,12 +26,12 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
 
-  const getDemoData = useCallback((path: string): any => {
+  const getDemoData = useCallback((path: string): unknown => {
     if (!isDemoMode) return undefined;
     return demoStorage[path];
   }, [isDemoMode, demoStorage]);
 
-  const setDemoData = useCallback((path: string, data: any) => {
+  const setDemoData = useCallback((path: string, data: unknown) => {
     if (!isDemoMode) return;
     
     setDemoStorage((prev) => {
@@ -56,9 +56,11 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Expose clearDemoData globally for the DemoMode component to use
   useEffect(() => {
     if (isDemoMode) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__clearDemoData = clearDemoData;
     }
     return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       delete (window as any).__clearDemoData;
     };
   }, [isDemoMode, clearDemoData]);

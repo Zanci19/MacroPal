@@ -13,7 +13,7 @@ export const useDemoFirestore = () => {
    * Subscribe to a document
    */
   const onSnapshotDoc = useCallback(
-    (path: string, callback: (data: any) => void): (() => void) => {
+    (path: string, callback: (data: unknown) => void): (() => void) => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
         return demoFirestore.onSnapshot(path, callback);
@@ -34,7 +34,7 @@ export const useDemoFirestore = () => {
    * Set document data
    */
   const setDocData = useCallback(
-    async (path: string, data: any) => {
+    async (path: string, data: unknown) => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
         demoFirestore.setData(path, data);
@@ -44,7 +44,7 @@ export const useDemoFirestore = () => {
       // Normal mode - use real Firestore
       const pathParts = path.split("/");
       const docRef = doc(db, pathParts[0], pathParts[1], ...pathParts.slice(2)) as DocumentReference;
-      await setDoc(docRef, data, { merge: true });
+      await setDoc(docRef, data as Record<string, unknown>, { merge: true });
     },
     [isDemoMode]
   );
@@ -53,7 +53,7 @@ export const useDemoFirestore = () => {
    * Get document data
    */
   const getDocData = useCallback(
-    async (path: string): Promise<any> => {
+    async (path: string): Promise<unknown> => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
         return demoFirestore.getData(path) || {};

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { IonApp } from "@ionic/react";
 import "./DemoMode.css";
 
 interface DemoModeProps {
@@ -36,12 +35,16 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
 
   const clearDemoData = useCallback(() => {
     // Use the global clearDemoData if available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (typeof (window as any).__clearDemoData === 'function') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__clearDemoData();
     }
     
     // Clear demo firestore
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (typeof (window as any).__demoFirestore !== 'undefined') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).__demoFirestore.clear();
     }
     
