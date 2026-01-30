@@ -14,10 +14,10 @@ export const useDemoAuth = () => {
     if (isDemoMode) {
       // In demo mode, create a mock user object
       const mockUser = {
-        uid: "demo-user-id",
+        uid: "zy3NzV7vbFbPbjKXNcB3ksMbRjK2",
         email: "demo@macropal.app",
         emailVerified: true,
-        displayName: "Demo User",
+        displayName: "Demo",
         photoURL: null,
         phoneNumber: null,
         providerId: "demo",
