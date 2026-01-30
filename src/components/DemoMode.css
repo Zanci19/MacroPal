@@ -1,0 +1,73 @@
+/* Demo Mode Styles */
+
+.demo-video-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  overflow: hidden;
+}
+
+.demo-video-container--landscape {
+  /* Landscape mode for video */
+}
+
+.demo-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.demo-video-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.demo-video-text {
+  color: #fff;
+  font-size: 18px;
+  margin: 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.demo-app-container {
+  width: 100%;
+  height: 100%;
+}
+
+.demo-app-container--portrait {
+  /* Portrait mode for app - 9:16 aspect ratio */
+  max-width: 100vh * 9 / 16;
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
+}
+
+/* For larger screens, center the portrait view */
+@media (min-width: 768px) {
+  .demo-app-container--portrait {
+    max-width: calc(100vh * 9 / 16);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* For mobile, fill the screen */
+@media (max-width: 767px) {
+  .demo-app-container--portrait {
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+  }
+}

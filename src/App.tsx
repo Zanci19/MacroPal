@@ -129,6 +129,9 @@ import { trackEvent } from "./firebase";
 import UpdateGate, { isFeatureEnabled, useRemoteConfig } from "./UpdateGate";
 import DebugOverlay from "./components/DebugOverlay";
 import { reportRenderProfile } from "./components/renderProfiler";
+import DemoMode from "./components/DemoMode";
+import DemoRouter from "./components/DemoRouter";
+import { DemoProvider } from "./contexts/DemoContext";
 
 // Loading fallback component
 const RouteLoader: React.FC = () => (
@@ -625,57 +628,61 @@ const App: React.FC = () => {
       <UpdateGate>
         <DebugOverlay />
         <ErrorBoundary>
-          <IonReactRouter>
-            <IonRouterOutlet id="root">
-              <Route exact path="/login" render={(props) => (
-                <LazyRoute component={Login} profileId="Login" {...props} />
-              )} />
-              <Route exact path="/register" render={(props) => (
-                <LazyRoute component={Register} profileId="Register" {...props} />
-              )} />
-              <Route exact path="/verify-email" render={(props) => (
-                <LazyRoute component={EmailVerification} profileId="EmailVerification" {...props} />
-              )} />
-              <Route exact path="/add-food" render={(props) => (
-                <LazyRoute component={AddFood} profileId="AddFood" {...props} />
-              )} />
-              <Route exact path="/onboarding-terms" render={(props) => (
-                <LazyRoute component={OnboardingTerms} profileId="OnboardingTerms" {...props} />
-              )} />
-              <Route exact path="/onboarding-profile" render={(props) => (
-                <LazyRoute component={OnboardingProfile} profileId="OnboardingProfile" {...props} />
-              )} />
-              <Route exact path="/setup-profile" render={(props) => (
-                <LazyRoute component={SetupProfile} profileId="SetupProfile" {...props} />
-              )} />
-              <Route exact path="/check-login" render={(props) => (
-                <LazyRoute component={CheckLogin} profileId="CheckLogin" {...props} />
-              )} />
-              <Route exact path="/start" render={(props) => (
-                <LazyRoute component={Start} profileId="Start" {...props} />
-              )} />
-              <Route exact path="/reset-password" render={(props) => (
-                <LazyRoute component={ResetPassword} profileId="ResetPassword" {...props} />
-              )} />
-              <Route exact path="/scan-barcode" render={(props) => (
-                <ScanBarcodeRoute {...props} />
-              )} />
-              <Route exact path="/auth-loading" render={(props) => (
-                <LazyRoute component={AuthLoading} profileId="AuthLoading" {...props} />
-              )} />
-              <Route exact path="/offline" render={(props) => (
-                <LazyRoute component={Offline} profileId="Offline" {...props} />
-              )} />
+          <DemoProvider>
+            <DemoMode>
+              <IonReactRouter>
+                <IonRouterOutlet id="root">
+                  <Route exact path="/login" render={(props) => (
+                    <LazyRoute component={Login} profileId="Login" {...props} />
+                  )} />
+                  <Route exact path="/register" render={(props) => (
+                    <LazyRoute component={Register} profileId="Register" {...props} />
+                  )} />
+                  <Route exact path="/verify-email" render={(props) => (
+                    <LazyRoute component={EmailVerification} profileId="EmailVerification" {...props} />
+                  )} />
+                  <Route exact path="/add-food" render={(props) => (
+                    <LazyRoute component={AddFood} profileId="AddFood" {...props} />
+                  )} />
+                  <Route exact path="/onboarding-terms" render={(props) => (
+                    <LazyRoute component={OnboardingTerms} profileId="OnboardingTerms" {...props} />
+                  )} />
+                  <Route exact path="/onboarding-profile" render={(props) => (
+                    <LazyRoute component={OnboardingProfile} profileId="OnboardingProfile" {...props} />
+                  )} />
+                  <Route exact path="/setup-profile" render={(props) => (
+                    <LazyRoute component={SetupProfile} profileId="SetupProfile" {...props} />
+                  )} />
+                  <Route exact path="/check-login" render={(props) => (
+                    <LazyRoute component={CheckLogin} profileId="CheckLogin" {...props} />
+                  )} />
+                  <Route exact path="/start" render={(props) => (
+                    <LazyRoute component={Start} profileId="Start" {...props} />
+                  )} />
+                  <Route exact path="/reset-password" render={(props) => (
+                    <LazyRoute component={ResetPassword} profileId="ResetPassword" {...props} />
+                  )} />
+                  <Route exact path="/scan-barcode" render={(props) => (
+                    <ScanBarcodeRoute {...props} />
+                  )} />
+                  <Route exact path="/auth-loading" render={(props) => (
+                    <LazyRoute component={AuthLoading} profileId="AuthLoading" {...props} />
+                  )} />
+                  <Route exact path="/offline" render={(props) => (
+                    <LazyRoute component={Offline} profileId="Offline" {...props} />
+                  )} />
 
-              <Route path="/app" render={(props) => (
-                <React.Profiler id="TabsShell" onRender={reportProfiler}>
-                  <TabsShell {...props} />
-                </React.Profiler>
-              )} />
+                  <Route path="/app" render={(props) => (
+                    <React.Profiler id="TabsShell" onRender={reportProfiler}>
+                      <TabsShell {...props} />
+                    </React.Profiler>
+                  )} />
 
-              <Redirect exact from="/" to="/check-login" />
-            </IonRouterOutlet>
-          </IonReactRouter>
+                  <Route exact path="/" component={DemoRouter} />
+                </IonRouterOutlet>
+              </IonReactRouter>
+            </DemoMode>
+          </DemoProvider>
         </ErrorBoundary>
       </UpdateGate>
     </IonApp>
