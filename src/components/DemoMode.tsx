@@ -40,6 +40,11 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
       (window as any).__clearDemoData();
     }
     
+    // Clear demo firestore
+    if (typeof (window as any).__demoFirestore !== 'undefined') {
+      (window as any).__demoFirestore.clear();
+    }
+    
     // Also clear localStorage keys
     const keysToPreserve = [
       "mp_theme_mode",
