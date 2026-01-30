@@ -72,6 +72,8 @@
   flex: 0 0 auto; /* Prevent shrinking */
   display: flex;
   overflow: hidden;
+  position: relative;
+  transform: translateZ(0);
 }
 
 .demo-app-frame > * {
