@@ -102,6 +102,17 @@ const addDays = (d: Date, n: number) => {
   return x;
 };
 
+const ChartContainer: React.FC<{ height: number; children: React.ReactNode }> = ({
+  height,
+  children,
+}) => (
+  <div style={{ width: "100%", height }}>
+    <ResponsiveContainer width="100%" height="100%" minHeight={height} minWidth={0}>
+      {children}
+    </ResponsiveContainer>
+  </div>
+);
+
 /* Sum per-day macros (c/p/f) from all meals */
 function sumDay(doc: DayDiaryDoc) {
   const all: DiaryEntry[] = MEALS.flatMap((m) => doc[m] || []);
@@ -704,26 +715,24 @@ const Analytics: React.FC = () => {
                     </IonCardHeader>
                     <IonCardContent>
                       {weightChartData.length ? (
-                        <div style={{ width: "100%", height: 260 }}>
-                          <ResponsiveContainer>
-                            <LineChart data={weightChartData}>
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis dataKey="date" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Line
-                                type="monotone"
-                                dataKey="weight"
-                                name={`Weight (${weightLabel(unitSystem)})`}
-                                stroke={palette[4]}
-                                dot={false}
-                                strokeWidth={2}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <ChartContainer height={260}>
+                          <LineChart data={weightChartData}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Line
+                              type="monotone"
+                              dataKey="weight"
+                              name={`Weight (${weightLabel(unitSystem)})`}
+                              stroke={palette[4]}
+                              dot={false}
+                              strokeWidth={2}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                          </LineChart>
+                        </ChartContainer>
                       ) : (
                         <div style={{ fontSize: 14, opacity: 0.75 }}>
                           No weigh-ins in this range yet. Log one from Home to see it
@@ -772,41 +781,39 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
-                                  <PieChart>
-                                    <Pie
-                                      data={[
-                                        {
-                                          name: "Breakfast",
-                                          value: mealShare.breakfast,
-                                        },
-                                        { name: "Lunch", value: mealShare.lunch },
-                                        { name: "Dinner", value: mealShare.dinner },
-                                        { name: "Snacks", value: mealShare.snacks },
-                                      ]}
-                                      dataKey="value"
-                                      nameKey="name"
-                                      innerRadius={58}
-                                      outerRadius={96}
-                                      paddingAngle={2}
-                                      cx="50%"
-                                      cy="50%"
-                                      isAnimationActive={chartAnimationsEnabled}
-                                    >
-                                      {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
-                                        (_, i) => (
-                                          <Cell
-                                            key={i}
-                                            fill={palette[i % palette.length]}
-                                          />
-                                        )
-                                      )}
-                                    </Pie>
-                                    <Tooltip />
-                                  </PieChart>
-                                </ResponsiveContainer>
-                              </div>
+                              <ChartContainer height={260}>
+                                <PieChart>
+                                  <Pie
+                                    data={[
+                                      {
+                                        name: "Breakfast",
+                                        value: mealShare.breakfast,
+                                      },
+                                      { name: "Lunch", value: mealShare.lunch },
+                                      { name: "Dinner", value: mealShare.dinner },
+                                      { name: "Snacks", value: mealShare.snacks },
+                                    ]}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    innerRadius={58}
+                                    outerRadius={96}
+                                    paddingAngle={2}
+                                    cx="50%"
+                                    cy="50%"
+                                    isAnimationActive={chartAnimationsEnabled}
+                                  >
+                                    {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
+                                      (_, i) => (
+                                        <Cell
+                                          key={i}
+                                          fill={palette[i % palette.length]}
+                                        />
+                                      )
+                                    )}
+                                  </Pie>
+                                  <Tooltip />
+                                </PieChart>
+                              </ChartContainer>
 
                               {/* Custom legend below chart */}
                               <div
@@ -866,41 +873,39 @@ const Analytics: React.FC = () => {
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <div style={{ width: "100%", height: 300 }}>
-                          <ResponsiveContainer>
-                            <ComposedChart
-                              data={view.map((d, i) => ({
-                                date: fmtDate(d.key),
-                                kcal: kcalSeries[i],
-                                ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
-                              }))}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis dataKey="date" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Area
-                                type="monotone"
-                                dataKey="kcal"
-                                name="Calories"
-                                fill={palette[0]}
-                                stroke={palette[0]}
-                                opacity={0.25}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                              <Line
-                                type="monotone"
-                                dataKey="ma7"
-                                name="MA7"
-                                stroke={palette[1]}
-                                dot={false}
-                                strokeWidth={2}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <ChartContainer height={300}>
+                          <ComposedChart
+                            data={view.map((d, i) => ({
+                              date: fmtDate(d.key),
+                              kcal: kcalSeries[i],
+                              ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
+                            }))}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Area
+                              type="monotone"
+                              dataKey="kcal"
+                              name="Calories"
+                              fill={palette[0]}
+                              stroke={palette[0]}
+                              opacity={0.25}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="ma7"
+                              name="MA7"
+                              stroke={palette[1]}
+                              dot={false}
+                              strokeWidth={2}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                          </ComposedChart>
+                        </ChartContainer>
                       </IonCardContent>
                     </IonCard>
 
@@ -919,38 +924,36 @@ const Analytics: React.FC = () => {
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <div style={{ width: "100%", height: 260 }}>
-                          <ResponsiveContainer>
-                            <BarChart data={macroEnergyByDay}>
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis dataKey="date" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Bar
-                                dataKey="carbsK"
-                                stackId="a"
-                                name="Carbohydrates kcal:"
-                                fill={palette[0]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                              <Bar
-                                dataKey="proteinK"
-                                stackId="a"
-                                name="Protein kcal:"
-                                fill={palette[1]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                              <Bar
-                                dataKey="fatK"
-                                stackId="a"
-                                name="Fat kcal:"
-                                fill={palette[2]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
+                        <ChartContainer height={260}>
+                          <BarChart data={macroEnergyByDay}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                            <XAxis dataKey="date" />
+                            <YAxis />
+                            <Tooltip />
+                            <Legend />
+                            <Bar
+                              dataKey="carbsK"
+                              stackId="a"
+                              name="Carbohydrates kcal:"
+                              fill={palette[0]}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                            <Bar
+                              dataKey="proteinK"
+                              stackId="a"
+                              name="Protein kcal:"
+                              fill={palette[1]}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                            <Bar
+                              dataKey="fatK"
+                              stackId="a"
+                              name="Fat kcal:"
+                              fill={palette[2]}
+                              isAnimationActive={chartAnimationsEnabled}
+                            />
+                          </BarChart>
+                        </ChartContainer>
                       </IonCardContent>
                     </IonCard>
 
@@ -972,31 +975,29 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
-                                  <PieChart>
-                                    <Pie
-                                      data={macroDonut}
-                                      dataKey="value"
-                                      nameKey="name"
-                                      innerRadius={58}
-                                      outerRadius={96}
-                                      paddingAngle={1}
-                                      cx="50%"
-                                      cy="50%"
-                                      isAnimationActive={chartAnimationsEnabled}
-                                    >
-                                      {macroDonut.map((_, i) => (
-                                        <Cell
-                                          key={i}
-                                          fill={palette[i % palette.length]}
-                                        />
-                                      ))}
-                                    </Pie>
-                                    <Tooltip />
-                                  </PieChart>
-                                </ResponsiveContainer>
-                              </div>
+                              <ChartContainer height={260}>
+                                <PieChart>
+                                  <Pie
+                                    data={macroDonut}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    innerRadius={58}
+                                    outerRadius={96}
+                                    paddingAngle={1}
+                                    cx="50%"
+                                    cy="50%"
+                                    isAnimationActive={chartAnimationsEnabled}
+                                  >
+                                    {macroDonut.map((_, i) => (
+                                      <Cell
+                                        key={i}
+                                        fill={palette[i % palette.length]}
+                                      />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip />
+                                </PieChart>
+                              </ChartContainer>
 
                               {/* Custom legend below chart */}
                               <div
@@ -1053,31 +1054,29 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <div style={{ width: "100%", height: 260 }}>
-                                <ResponsiveContainer>
-                                  <RadarChart
-                                    data={[
-                                      { metric: "Carbohydrates", g: avg.carbs },
-                                      { metric: "Protein", g: avg.protein },
-                                      { metric: "Fat", g: avg.fat },
-                                    ]}
-                                  >
-                                    <PolarGrid />
-                                    <PolarAngleAxis dataKey="metric" />
-                                    <PolarRadiusAxis />
-                                    <Radar
-                                      name="Avg g"
-                                      dataKey="g"
-                                      stroke={palette[0]}
-                                      fill={palette[0]}
-                                      fillOpacity={0.35}
-                                      isAnimationActive={chartAnimationsEnabled}
-                                    />
-                                    <Legend />
-                                    <Tooltip />
-                                  </RadarChart>
-                                </ResponsiveContainer>
-                              </div>
+                              <ChartContainer height={260}>
+                                <RadarChart
+                                  data={[
+                                    { metric: "Carbohydrates", g: avg.carbs },
+                                    { metric: "Protein", g: avg.protein },
+                                    { metric: "Fat", g: avg.fat },
+                                  ]}
+                                >
+                                  <PolarGrid />
+                                  <PolarAngleAxis dataKey="metric" />
+                                  <PolarRadiusAxis />
+                                  <Radar
+                                    name="Avg g"
+                                    dataKey="g"
+                                    stroke={palette[0]}
+                                    fill={palette[0]}
+                                    fillOpacity={0.35}
+                                    isAnimationActive={chartAnimationsEnabled}
+                                  />
+                                  <Legend />
+                                  <Tooltip />
+                                </RadarChart>
+                              </ChartContainer>
                             </IonCardContent>
                           </IonCard>
                         </IonCol>
@@ -1100,37 +1099,35 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         {caloriesTarget ? (
-                          <div style={{ width: "100%", height: 220 }}>
-                            <ResponsiveContainer>
-                              <BarChart
-                                data={[
-                                  {
-                                    metric: "Calories",
-                                    average: avg.calories,
-                                    target: caloriesTarget,
-                                  },
-                                ]}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                                <XAxis dataKey="metric" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar
-                                  dataKey="average"
-                                  name="Current avg (kcal)"
-                                  fill={palette[0]}
-                                  isAnimationActive={chartAnimationsEnabled}
-                                />
-                                <Bar
-                                  dataKey="target"
-                                  name="Target (kcal)"
-                                  fill={palette[3]}
-                                  isAnimationActive={chartAnimationsEnabled}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
+                          <ChartContainer height={220}>
+                            <BarChart
+                              data={[
+                                {
+                                  metric: "Calories",
+                                  average: avg.calories,
+                                  target: caloriesTarget,
+                                },
+                              ]}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                              <XAxis dataKey="metric" />
+                              <YAxis />
+                              <Tooltip />
+                              <Legend />
+                              <Bar
+                                dataKey="average"
+                                name="Current avg (kcal)"
+                                fill={palette[0]}
+                                isAnimationActive={chartAnimationsEnabled}
+                              />
+                              <Bar
+                                dataKey="target"
+                                name="Target (kcal)"
+                                fill={palette[3]}
+                                isAnimationActive={chartAnimationsEnabled}
+                              />
+                            </BarChart>
+                          </ChartContainer>
                         ) : (
                           <div style={{ fontSize: 14, opacity: 0.75 }}>
                             Set a calorie target in your profile to see it here.
@@ -1155,47 +1152,45 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         {macroTargets ? (
-                          <div style={{ width: "100%", height: 260 }}>
-                            <ResponsiveContainer>
-                              <BarChart
-                                data={[
-                                  {
-                                    metric: "Carbohydrates",
-                                    average: Math.round(avg.carbs),
-                                    target: macroTargets.carbsG,
-                                  },
-                                  {
-                                    metric: "Protein",
-                                    average: Math.round(avg.protein),
-                                    target: macroTargets.proteinG,
-                                  },
-                                  {
-                                    metric: "Fat",
-                                    average: Math.round(avg.fat),
-                                    target: macroTargets.fatG,
-                                  },
-                                ]}
-                              >
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                                <XAxis dataKey="metric" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar
-                                  dataKey="average"
-                                  name="Current avg (g)"
-                                  fill={palette[0]}
-                                  isAnimationActive={chartAnimationsEnabled}
-                                />
-                                <Bar
-                                  dataKey="target"
-                                  name="Target (g)"
-                                  fill={palette[1]}
-                                  isAnimationActive={chartAnimationsEnabled}
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          </div>
+                          <ChartContainer height={260}>
+                            <BarChart
+                              data={[
+                                {
+                                  metric: "Carbohydrates",
+                                  average: Math.round(avg.carbs),
+                                  target: macroTargets.carbsG,
+                                },
+                                {
+                                  metric: "Protein",
+                                  average: Math.round(avg.protein),
+                                  target: macroTargets.proteinG,
+                                },
+                                {
+                                  metric: "Fat",
+                                  average: Math.round(avg.fat),
+                                  target: macroTargets.fatG,
+                                },
+                              ]}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                              <XAxis dataKey="metric" />
+                              <YAxis />
+                              <Tooltip />
+                              <Legend />
+                              <Bar
+                                dataKey="average"
+                                name="Current avg (g)"
+                                fill={palette[0]}
+                                isAnimationActive={chartAnimationsEnabled}
+                              />
+                              <Bar
+                                dataKey="target"
+                                name="Target (g)"
+                                fill={palette[1]}
+                                isAnimationActive={chartAnimationsEnabled}
+                              />
+                            </BarChart>
+                          </ChartContainer>
                         ) : (
                           <div style={{ fontSize: 14, opacity: 0.75 }}>
                             Set macro targets in your profile to see them here.
