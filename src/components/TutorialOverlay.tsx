@@ -147,15 +147,22 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
     const style: React.CSSProperties = {};
     const padding = 20;
+    const screenPadding = 16;
+    const maxCardWidth = Math.min(window.innerWidth - screenPadding * 2, 360);
+    const centerX = highlightRect.left + highlightRect.width / 2;
+    const clampedCenterX = Math.min(
+      Math.max(centerX, screenPadding + maxCardWidth / 2),
+      window.innerWidth - screenPadding - maxCardWidth / 2,
+    );
+
+    style.left = `${clampedCenterX}px`;
+    style.transform = "translateX(-50%)";
+    style.maxWidth = `${maxCardWidth}px`;
 
     if (currentStep.position === "top") {
-      style.top = `${highlightRect.bottom + padding}px`;
-      style.left = `${highlightRect.left + highlightRect.width / 2}px`;
-      style.transform = "translateX(-50%)";
-    } else if (currentStep.position === "bottom") {
       style.bottom = `${window.innerHeight - highlightRect.top + padding}px`;
-      style.left = `${highlightRect.left + highlightRect.width / 2}px`;
-      style.transform = "translateX(-50%)";
+    } else if (currentStep.position === "bottom") {
+      style.top = `${highlightRect.bottom + padding}px`;
     }
 
     return style;
@@ -176,12 +183,12 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
 
     switch (currentStep.arrowDirection) {
       case "down":
-        style.top = `${highlightRect.bottom + offset}px`;
+        style.top = `${highlightRect.top - offset}px`;
         style.left = `${highlightRect.left + highlightRect.width / 2}px`;
-        style.transform = "translateX(-50%) rotate(90deg)";
+        style.transform = "translate(-50%, -100%) rotate(90deg)";
         break;
       case "up":
-        style.bottom = `${window.innerHeight - highlightRect.top + offset}px`;
+        style.top = `${highlightRect.bottom + offset}px`;
         style.left = `${highlightRect.left + highlightRect.width / 2}px`;
         style.transform = "translateX(-50%) rotate(-90deg)";
         break;
