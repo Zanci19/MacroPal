@@ -67,6 +67,11 @@ const ResetPassword: React.FC = () => {
   const formatSeconds = (ms: number) => Math.ceil(ms / 1000);
 
   const handleRecoverPassword = async () => {
+    console.log(`[USER ACTION] Reset Password: Clicked send reset email button`, {
+      hasEmail: !!email.trim(),
+      cooldownActive: cooldownMsLeft > 0,
+    });
+    
     if (!email.trim()) {
       setToast({
         show: true,
@@ -151,9 +156,13 @@ const ResetPassword: React.FC = () => {
                 type="email"
                 inputMode="email"
                 autocomplete="email"
-                onIonChange={(e: any) =>
-                  setEmail(e?.detail?.value ?? "")
-                }
+                onIonChange={(e: any) => {
+                  console.log(`[USER ACTION] Reset Password: Email input changed`, {
+                    hasValue: !!e?.detail?.value,
+                    length: e?.detail?.value?.length ?? 0,
+                  });
+                  setEmail(e?.detail?.value ?? "");
+                }}
                 disabled={sending}
               />
             </IonItem>
@@ -182,7 +191,10 @@ const ResetPassword: React.FC = () => {
               <IonButton
                 fill="clear"
                 expand="block"
-                onClick={() => history.push("/login")}
+                onClick={() => {
+                  console.log(`[USER ACTION] Reset Password: Clicked log in link`);
+                  history.push("/login");
+                }}
                 disabled={sending}
                 className="reset-footer-button"
               >
