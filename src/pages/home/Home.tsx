@@ -2006,66 +2006,54 @@ const Home: React.FC = () => {
     } finally {
       setShowAnnouncementPopup(false);
       // After announcement is dismissed, check if tutorial should be shown
-      if (!hasViewedTutorial && !tutorialCheckedRef.current) {
-        tutorialCheckedRef.current = true;
-        // Small delay to let announcement close smoothly
-        setTimeout(() => {
-          setShowTutorial(true);
-          trackEvent("tutorial_started", { uid });
-        }, 500);
-      }
+      showTutorialWithDelay(500);
+    }
+  };
+
+  // Helper function to update hasViewedTutorial in Firebase
+  const updateHasViewedTutorial = async (eventName: string) => {
+    if (!uid) return;
+
+    if (isDemoMode) {
+      trackEvent(eventName, { uid });
+      return;
+    }
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        hasViewedTutorial: true,
+      });
+      trackEvent(eventName, { uid });
+    } catch (error) {
+      console.error("Failed to update hasViewedTutorial:", error);
+      trackEvent("tutorial_update_error", {
+        uid,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  };
+
+  // Helper function to show tutorial with delay
+  const showTutorialWithDelay = (delay: number) => {
+    if (!hasViewedTutorial && !tutorialCheckedRef.current) {
+      tutorialCheckedRef.current = true;
+      setTimeout(() => {
+        setShowTutorial(true);
+        trackEvent("tutorial_started", { uid });
+      }, delay);
     }
   };
 
   // Tutorial handlers
   const handleTutorialComplete = async () => {
     setShowTutorial(false);
-    
-    if (!uid) return;
-
-    if (isDemoMode) {
-      trackEvent("tutorial_completed", { uid });
-      return;
-    }
-
-    try {
-      const userRef = doc(db, "users", uid);
-      await updateDoc(userRef, {
-        hasViewedTutorial: true,
-      });
-      trackEvent("tutorial_completed", { uid });
-    } catch (error) {
-      console.error("Failed to update hasViewedTutorial:", error);
-      trackEvent("tutorial_update_error", {
-        uid,
-        error: error instanceof Error ? error.message : "unknown",
-      });
-    }
+    await updateHasViewedTutorial("tutorial_completed");
   };
 
   const handleTutorialSkip = async () => {
     setShowTutorial(false);
-    
-    if (!uid) return;
-
-    if (isDemoMode) {
-      trackEvent("tutorial_skipped", { uid });
-      return;
-    }
-
-    try {
-      const userRef = doc(db, "users", uid);
-      await updateDoc(userRef, {
-        hasViewedTutorial: true,
-      });
-      trackEvent("tutorial_skipped", { uid });
-    } catch (error) {
-      console.error("Failed to update hasViewedTutorial:", error);
-      trackEvent("tutorial_update_error", {
-        uid,
-        error: error instanceof Error ? error.message : "unknown",
-      });
-    }
+    await updateHasViewedTutorial("tutorial_skipped");
   };
 
   // Check if tutorial should be shown when there's no announcement
@@ -2076,12 +2064,7 @@ const Home: React.FC = () => {
 
     // If user hasn't viewed tutorial and no announcement is showing
     if (!hasViewedTutorial && !showAnnouncementPopup) {
-      tutorialCheckedRef.current = true;
-      // Small delay to let the page render first
-      setTimeout(() => {
-        setShowTutorial(true);
-        trackEvent("tutorial_started", { uid });
-      }, 1000);
+      showTutorialWithDelay(1000);
     } else if (hasViewedTutorial) {
       tutorialCheckedRef.current = true;
     }
