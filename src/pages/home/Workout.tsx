@@ -162,6 +162,7 @@ const Workout: React.FC = () => {
 
   const handleRefresh = useCallback(
     async (event: CustomEvent<RefresherEventDetail>) => {
+      console.log('[USER ACTION] Workout: Pull-to-refresh triggered', { uid, date: activeDateKey });
       try {
         if (!uid) return;
         setLoading(true);
@@ -201,6 +202,7 @@ const Workout: React.FC = () => {
   );
 
   const goRelativeDay = (delta: number) => {
+    console.log('[USER ACTION] Workout: Navigate relative day', { delta, currentDate: activeDateKey });
     const next = clampDateKeyToToday(shiftDateKey(activeDateKey, delta));
     setActiveDateKey(next);
     setPendingDateKey(next);
@@ -208,12 +210,14 @@ const Workout: React.FC = () => {
   };
 
   const handlePresetChange = (presetId: string) => {
+    console.log('[USER ACTION] Workout: Activity preset changed', { presetId });
     setSelectedPresetId(presetId);
     setUseEstimate(true);
     syncCaloriesFromPreset(presetId);
   };
 
   const handleDurationChange = (value: string) => {
+    console.log('[USER ACTION] Workout: Duration changed', { value, durationMinutes: Number(value) });
     const duration = Number(value);
     setDraft((d) => {
       const next = { ...d, durationMinutes: Number.isFinite(duration) ? duration : undefined };
@@ -231,6 +235,7 @@ const Workout: React.FC = () => {
   };
 
   const addActivity = async () => {
+    console.log('[USER ACTION] Workout: Add activity clicked', { draft, selectedPreset: selectedPresetId });
     if (!uid) return;
     const title = (draft.title || "").trim();
     const preset = getActivityPreset(selectedPresetId);
@@ -283,6 +288,7 @@ const Workout: React.FC = () => {
   };
 
   const deleteActivity = async (index: number) => {
+    console.log('[USER ACTION] Workout: Delete activity clicked', { index, activityTitle: activities[index]?.title });
     if (!uid || index < 0 || index >= activities.length) return;
     const target = activities[index];
 
@@ -329,7 +335,10 @@ const Workout: React.FC = () => {
           <IonButton
             fill="clear"
             shape="round"
-            onClick={() => goRelativeDay(-1)}
+            onClick={() => {
+              console.log('[USER ACTION] Workout: Previous day button clicked');
+              goRelativeDay(-1);
+            }}
             aria-label="Previous day"
           >
             <IonIcon icon={chevronBackOutline} />
@@ -337,7 +346,10 @@ const Workout: React.FC = () => {
 
           <IonButton
             className="fs-datebtn"
-            onClick={() => setShowDatePicker(true)}
+            onClick={() => {
+              console.log('[USER ACTION] Workout: Date picker button clicked', { currentDate: activeDateKey });
+              setShowDatePicker(true);
+            }}
             aria-label="Pick a date"
           >
             <IonIcon icon={calendarOutline} />
@@ -352,7 +364,10 @@ const Workout: React.FC = () => {
           <IonButton
             fill="clear"
             shape="round"
-            onClick={() => goRelativeDay(1)}
+            onClick={() => {
+              console.log('[USER ACTION] Workout: Next day button clicked');
+              goRelativeDay(1);
+            }}
             aria-label="Next day"
             disabled={isToday}
           >
@@ -403,6 +418,7 @@ const Workout: React.FC = () => {
                 fill="outline"
                 size="small"
                 onClick={() => {
+                  console.log('[USER ACTION] Workout: Add activity button (summary card) clicked');
                   setShowForm(true);
                   syncCaloriesFromPreset(selectedPresetId, draft.durationMinutes, true);
                 }}
@@ -449,7 +465,10 @@ const Workout: React.FC = () => {
                       fill="clear"
                       color="danger"
                       size="small"
-                      onClick={() => deleteActivity(idx)}
+                      onClick={() => {
+                      console.log('[USER ACTION] Workout: Remove button clicked in activity list', { index: idx, activityTitle: act.title });
+                      deleteActivity(idx);
+                    }}
                       aria-label={`Delete ${act.title}`}
                     >
                       Remove
@@ -467,7 +486,10 @@ const Workout: React.FC = () => {
           <IonToolbar>
             <IonTitle>Log activity</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setShowForm(false)}>Close</IonButton>
+              <IonButton onClick={() => {
+                console.log('[USER ACTION] Workout: Close modal button clicked');
+                setShowForm(false);
+              }}>Close</IonButton>
             </IonButtons>
           </IonToolbar>
         </IonHeader>
@@ -478,7 +500,10 @@ const Workout: React.FC = () => {
               <IonSelect
                 interface="popover"
                 value={selectedPresetId}
-                onIonChange={(e) => handlePresetChange(e.detail.value)}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] Workout: Activity type select changed', { value: e.detail.value });
+                  handlePresetChange(e.detail.value);
+                }}
               >
                 {ACTIVITY_PRESETS.map((preset) => (
                   <IonSelectOption key={preset.id} value={preset.id}>
@@ -493,9 +518,10 @@ const Workout: React.FC = () => {
               <IonInput
                 value={draft.title}
                 placeholder="Jogging, cycling, yoga"
-                onIonInput={(e) =>
-                  setDraft((d) => ({ ...d, title: e.detail.value || "" }))
-                }
+                onIonInput={(e) => {
+                  console.log('[USER ACTION] Workout: Activity title input changed', { value: e.detail.value });
+                  setDraft((d) => ({ ...d, title: e.detail.value || "" }));
+                }}
               />
             </IonItem>
             <IonItem>
@@ -504,6 +530,7 @@ const Workout: React.FC = () => {
                 type="number"
                 value={draft.calories}
                 onIonInput={(e) => {
+                  console.log('[USER ACTION] Workout: Calories input changed (manual override)', { value: e.detail.value });
                   setUseEstimate(false);
                   setDraft((d) => ({ ...d, calories: Number(e.detail.value) || 0 }));
                 }}
@@ -515,7 +542,10 @@ const Workout: React.FC = () => {
               <IonInput
                 type="number"
                 value={draft.durationMinutes}
-                onIonInput={(e) => handleDurationChange(e.detail.value || "0")}
+                onIonInput={(e) => {
+                  console.log('[USER ACTION] Workout: Duration input changed', { value: e.detail.value });
+                  handleDurationChange(e.detail.value || "0");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -523,9 +553,10 @@ const Workout: React.FC = () => {
               <IonSelect
                 interface="popover"
                 value={draft.intensity}
-                onIonChange={(e) =>
-                  setDraft((d) => ({ ...d, intensity: e.detail.value }))
-                }
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] Workout: Intensity select changed', { value: e.detail.value });
+                  setDraft((d) => ({ ...d, intensity: e.detail.value }));
+                }}
               >
                 <IonSelectOption value="easy">Easy</IonSelectOption>
                 <IonSelectOption value="moderate">Moderate</IonSelectOption>
@@ -538,13 +569,17 @@ const Workout: React.FC = () => {
                 autoGrow
                 value={draft.note}
                 placeholder="How did it feel?"
-                onIonInput={(e) =>
-                  setDraft((d) => ({ ...d, note: e.detail.value || "" }))
-                }
+                onIonInput={(e) => {
+                  console.log('[USER ACTION] Workout: Notes textarea changed', { length: e.detail.value?.length || 0 });
+                  setDraft((d) => ({ ...d, note: e.detail.value || "" }));
+                }}
               />
             </IonItem>
           </IonList>
-          <IonButton expand="block" className="ion-margin-top" onClick={addActivity}>
+          <IonButton expand="block" className="ion-margin-top" onClick={() => {
+            console.log('[USER ACTION] Workout: Save activity button clicked');
+            addActivity();
+          }}>
             Save activity
           </IonButton>
         </IonContent>
@@ -556,6 +591,7 @@ const Workout: React.FC = () => {
             presentation="date"
             value={pendingDateKey}
             onIonChange={(ev) => {
+              console.log('[USER ACTION] Workout: Date picker value changed', { value: ev.detail.value });
               const v = ev.detail.value as string;
               if (isDateKey(v)) setPendingDateKey(clampDateKeyToToday(v));
             }}
@@ -565,7 +601,10 @@ const Workout: React.FC = () => {
             <IonButton
               expand="block"
               fill="outline"
-              onClick={() => setShowDatePicker(false)}
+              onClick={() => {
+                console.log('[USER ACTION] Workout: Date picker Cancel button clicked');
+                setShowDatePicker(false);
+              }}
               color="medium"
             >
               Cancel
@@ -573,6 +612,7 @@ const Workout: React.FC = () => {
             <IonButton
               expand="block"
               onClick={() => {
+                console.log('[USER ACTION] Workout: Date picker Done button clicked', { selectedDate: pendingDateKey });
                 setActiveDateKey(pendingDateKey);
                 setShowDatePicker(false);
               }}

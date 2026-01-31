@@ -232,6 +232,7 @@ const Analytics: React.FC = () => {
 
   const handleRefresh = useCallback(
     async (event: CustomEvent<RefresherEventDetail>) => {
+      console.log(`[USER ACTION] Analytics: Pull-to-refresh triggered`);
       try {
         trackEvent("analytics_refresh");
         await fetchDays();
@@ -506,6 +507,7 @@ const Analytics: React.FC = () => {
     : null;
 
   const viewDay = (date: string) => {
+    console.log(`[USER ACTION] Analytics: View day button clicked`, { date });
     history.push(`/app/home?date=${date}`);
   };
 
@@ -642,9 +644,10 @@ const Analytics: React.FC = () => {
                     <IonCol size="12" sizeMd="7">
                       <IonSegment
                         value={tf}
-                        onIonChange={(e) =>
-                          setTf((e.detail.value as TF) ?? "30d")
-                        }
+                        onIonChange={(e) => {
+                          console.log(`[USER ACTION] Analytics: Time period segment changed`, { newValue: e.detail.value });
+                          setTf((e.detail.value as TF) ?? "30d");
+                        }}
                       >
                         <IonSegmentButton value="7d">
                           <IonLabel>7 days</IonLabel>
@@ -666,7 +669,10 @@ const Analytics: React.FC = () => {
                         fill="outline"
                         style={{ marginBottom: 8 }}
                         disabled={!hasFoodData}
-                        onClick={() => setExportMenuOpen(true)}
+                        onClick={() => {
+                          console.log(`[USER ACTION] Analytics: Export button clicked`);
+                          setExportMenuOpen(true);
+                        }}
                       >
                         <IonIcon icon={downloadOutline} slot="start" />
                         Export
@@ -1361,7 +1367,10 @@ const Analytics: React.FC = () => {
                               <IonButton
                                 size="small"
                                 fill="outline"
-                                onClick={() => viewDay(d.date)}
+                                onClick={() => {
+                                  console.log(`[USER ACTION] Analytics: View day button clicked (from list)`, { date: d.date });
+                                  viewDay(d.date);
+                                }}
                               >
                                 View day
                               </IonButton>
@@ -1420,24 +1429,30 @@ const Analytics: React.FC = () => {
       </IonContent>
       <IonActionSheet
         isOpen={exportMenuOpen}
-        onDidDismiss={() => setExportMenuOpen(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Analytics: Export action sheet dismissed`);
+          setExportMenuOpen(false);
+        }}
         header="Export summary"
         buttons={[
           {
             text: "PDF",
             handler: () => {
+              console.log(`[USER ACTION] Analytics: Export as PDF selected`);
               void exportPDF();
             },
           },
           {
             text: "JSON",
             handler: () => {
+              console.log(`[USER ACTION] Analytics: Export as JSON selected`);
               void exportJSON();
             },
           },
           {
             text: "CSV",
             handler: () => {
+              console.log(`[USER ACTION] Analytics: Export as CSV selected`);
               void exportCSV();
             },
           },

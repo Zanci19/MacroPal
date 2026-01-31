@@ -172,6 +172,10 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
   }, []);
 
   const dismissBanner = () => {
+    console.log(`[USER ACTION] Update Banner: Dismissed update notification`, {
+      latestVersion: config?.latestVersion,
+      currentVersion: APP_VERSION,
+    });
     if (config?.latestVersion) {
       setDismissedVersion(config.latestVersion);
     }
@@ -179,6 +183,12 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
   };
 
   const update = (source: "hard_block" | "soft_banner") => {
+    console.log(`[USER ACTION] Update App: Clicked update button`, {
+      source,
+      hasStoreUrl: !!config?.storeUrl,
+      currentVersion: APP_VERSION,
+      latestVersion: config?.latestVersion,
+    });
     trackEvent("update_prompt_click", {
       source,
       hasStoreUrl: !!config?.storeUrl,
@@ -218,7 +228,12 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
                 href={config.maintenanceMode.ctaUrl}
                 target="_blank"
                 rel="noreferrer"
-                onClick={() => trackEvent("maintenance_cta_click")}
+                onClick={() => {
+                  console.log(`[USER ACTION] Maintenance CTA: Clicked maintenance status link`, {
+                    url: config.maintenanceMode!.ctaUrl,
+                  });
+                  trackEvent("maintenance_cta_click");
+                }}
               >
                 {config.maintenanceMode.ctaLabel ?? "View status"}
               </IonButton>
@@ -255,7 +270,13 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
                 target="_blank"
                 rel="noreferrer"
                 style={{ marginLeft: 8 }}
-                onClick={() => trackEvent("update_changelog_click", { source: "hard_block" })}
+                onClick={() => {
+                  console.log(`[USER ACTION] Update Changelog: Clicked changelog link`, {
+                    url: config.changelogUrl,
+                    source: "hard_block",
+                  });
+                  trackEvent("update_changelog_click", { source: "hard_block" });
+                }}
               >
                 What&apos;s new
               </IonButton>
@@ -280,6 +301,10 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
             text: "Later",
             role: "cancel",
             handler: () => {
+              console.log(`[USER ACTION] Update Prompt: Dismissed soft update banner`, {
+                currentVersion: APP_VERSION,
+                latestVersion: config?.latestVersion,
+              });
               dismissBanner();
               trackEvent("update_prompt_dismiss", { source: "soft_banner" });
             },

@@ -170,6 +170,7 @@ const Reminders: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
+    console.log('[USER ACTION] Reminders: Save button clicked', { mealEnabled, mealTime, weighInEnabled, weighInTime, workoutEnabled, workoutTime });
     const current = auth.currentUser;
     if (!current) {
       setToast({ show: true, message: "You must be logged in." });
@@ -265,7 +266,10 @@ const Reminders: React.FC = () => {
           <IonToggle
             slot="end"
             checked={mealEnabled}
-            onIonChange={(e) => setMealEnabled(e.detail.checked)}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Meal reminder toggle changed', { enabled: e.detail.checked });
+              setMealEnabled(e.detail.checked);
+            }}
           />
         </IonItem>
         <IonItem lines="full">
@@ -273,7 +277,10 @@ const Reminders: React.FC = () => {
           <IonDatetime
             presentation="time"
             value={mealTime}
-            onIonChange={(e) => setMealTime(normalizeTime(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Meal time changed', { value: e.detail.value });
+              setMealTime(normalizeTime(e.detail.value));
+            }}
           />
         </IonItem>
 
@@ -282,7 +289,10 @@ const Reminders: React.FC = () => {
           <IonToggle
             slot="end"
             checked={weighInEnabled}
-            onIonChange={(e) => setWeighInEnabled(e.detail.checked)}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Weigh-in reminder toggle changed', { enabled: e.detail.checked });
+              setWeighInEnabled(e.detail.checked);
+            }}
           />
         </IonItem>
         <IonItem lines="full">
@@ -290,7 +300,10 @@ const Reminders: React.FC = () => {
           <IonDatetime
             presentation="time"
             value={weighInTime}
-            onIonChange={(e) => setWeighInTime(normalizeTime(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Weigh-in time changed', { value: e.detail.value });
+              setWeighInTime(normalizeTime(e.detail.value));
+            }}
           />
         </IonItem>
 
@@ -299,7 +312,10 @@ const Reminders: React.FC = () => {
           <IonToggle
             slot="end"
             checked={workoutEnabled}
-            onIonChange={(e) => setWorkoutEnabled(e.detail.checked)}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Workout reminder toggle changed', { enabled: e.detail.checked });
+              setWorkoutEnabled(e.detail.checked);
+            }}
           />
         </IonItem>
         <IonItem lines="full">
@@ -307,14 +323,20 @@ const Reminders: React.FC = () => {
           <IonDatetime
             presentation="time"
             value={workoutTime}
-            onIonChange={(e) => setWorkoutTime(normalizeTime(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Reminders: Workout time changed', { value: e.detail.value });
+              setWorkoutTime(normalizeTime(e.detail.value));
+            }}
           />
         </IonItem>
 
         <IonButton
           expand="block"
           className="ion-margin-top"
-          onClick={handleSave}
+          onClick={() => {
+            console.log('[USER ACTION] Reminders: Save reminders button clicked');
+            handleSave();
+          }}
           disabled={saving}
         >
           {saving ? "Saving..." : "Save reminders"}

@@ -39,6 +39,7 @@ const DataPrivacy: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
 
   const exportFullData = async () => {
+    console.log('[USER ACTION] DataPrivacy: Export full data button clicked');
     const user = auth.currentUser;
     if (!user) {
       setToast({ open: true, message: "Please log in first.", color: "warning" });
@@ -106,6 +107,7 @@ const DataPrivacy: React.FC = () => {
   };
 
   const handleDeleteStep1 = () => {
+    console.log('[USER ACTION] DataPrivacy: Delete account button clicked (step 1)');
     setPassword("");
     setUsernameConfirm("");
     setShowDeleteStep1(true);
@@ -189,7 +191,10 @@ const DataPrivacy: React.FC = () => {
         <IonButton
           expand="block"
           className="ion-margin-bottom"
-          onClick={() => history.push("/app/analytics")}
+          onClick={() => {
+            console.log('[USER ACTION] DataPrivacy: Open Analytics exports button clicked');
+            history.push("/app/analytics");
+          }}
         >
           Open Analytics exports
         </IonButton>
@@ -208,7 +213,10 @@ const DataPrivacy: React.FC = () => {
           expand="block"
           color="danger"
           className="ion-margin-bottom"
-          onClick={handleDeleteStep1}
+          onClick={() => {
+            console.log('[USER ACTION] DataPrivacy: Delete my account button clicked');
+            handleDeleteStep1();
+          }}
         >
           <IonIcon slot="start" icon={trashOutline} />
           Delete my account
@@ -224,7 +232,10 @@ const DataPrivacy: React.FC = () => {
         <IonButton
           expand="block"
           className="ion-margin-bottom"
-          onClick={exportFullData}
+          onClick={() => {
+            console.log('[USER ACTION] DataPrivacy: Export full data button clicked (bottom)');
+            exportFullData();
+          }}
           disabled={exporting}
         >
           {exporting ? "Exporting..." : "Export full data"}

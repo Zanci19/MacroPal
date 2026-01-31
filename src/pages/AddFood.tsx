@@ -1222,6 +1222,7 @@ const AddFood: React.FC = () => {
   };
 
   const clearRecentQueries = () => {
+    console.log(`[USER ACTION] AddFood: Clear recent searches clicked`);
     setRecentQueries([]);
     localStorage.removeItem(RECENT_QUERY_KEY);
     trackEvent("recent_queries_cleared");
@@ -1572,6 +1573,7 @@ const AddFood: React.FC = () => {
   };
 
   const handlePhotoChange = useCallback((file?: File | null) => {
+    console.log(`[USER ACTION] AddFood: Photo file selected`, { fileType: file?.type, fileSize: file?.size });
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -1586,6 +1588,7 @@ const AddFood: React.FC = () => {
   }, []);
 
   const clearPhoto = useCallback(() => {
+    console.log(`[USER ACTION] AddFood: Remove photo button clicked`);
     setPhotoPreview(null);
     setPhotoName("");
     setPhotoRemoved(true);
@@ -1632,6 +1635,7 @@ const AddFood: React.FC = () => {
   }, []);
 
   const addFoodToMeal = async () => {
+    console.log(`[USER ACTION] AddFood: Add/Save food to meal clicked`, { meal, editMode: !!editEntry });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -1888,6 +1892,7 @@ const AddFood: React.FC = () => {
   };
 
   const saveCurrentSelectionAsFavorite = async () => {
+    console.log(`[USER ACTION] AddFood: Save as favorite clicked`, { foodName: selectedFood?.product_name });
     const user = auth.currentUser;
     if (!user || !selectedFood) return;
 
@@ -1968,6 +1973,7 @@ const AddFood: React.FC = () => {
   };
 
   const createCustomFood = async () => {
+    console.log(`[USER ACTION] AddFood: Create custom food clicked`, { name: customName });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2037,6 +2043,7 @@ const AddFood: React.FC = () => {
   };
 
   const addFavoriteToMeal = async (fav: FavoriteFood) => {
+    console.log(`[USER ACTION] AddFood: Favorite clicked to add to meal`, { favoriteId: fav.id || 'unknown', meal });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2126,6 +2133,7 @@ const AddFood: React.FC = () => {
   };
 
   const addHistoryFoodToMeal = async (src: DiaryEntryDoc) => {
+    console.log(`[USER ACTION] AddFood: Recent food clicked to add to meal`, { foodName: src.name, meal });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2169,6 +2177,7 @@ const AddFood: React.FC = () => {
   };
 
   const createMealPreset = async () => {
+    console.log(`[USER ACTION] AddFood: Create custom meal clicked`, { name: mealPresetName });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2224,6 +2233,7 @@ const AddFood: React.FC = () => {
   };
 
   const addMealPresetToMeal = async (preset: CustomMealPreset) => {
+    console.log(`[USER ACTION] AddFood: Custom meal clicked to add to meal`, { presetName: preset.name, meal });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2261,6 +2271,7 @@ const AddFood: React.FC = () => {
   };
 
   const confirmDeleteFavorite = async () => {
+    console.log(`[USER ACTION] AddFood: Confirm delete favorite clicked`, { favoriteName: favoriteToDelete?.name });
     const user = auth.currentUser;
     if (!user || !favoriteToDelete) {
       setFavoriteToDelete(null);
@@ -2296,6 +2307,7 @@ const AddFood: React.FC = () => {
   };
 
   const confirmDeleteMealPreset = async () => {
+    console.log(`[USER ACTION] AddFood: Confirm delete custom meal clicked`, { presetName: mealPresetToDelete?.name });
     const user = auth.currentUser;
     if (!user || !mealPresetToDelete) {
       setMealPresetToDelete(null);
@@ -2439,6 +2451,8 @@ const AddFood: React.FC = () => {
 
   const handleChangeMeal = useCallback((next: MealKey) => {
     if (next === meal) return;
+    
+    console.log(`[USER ACTION] AddFood: Meal changed`, { from: meal, to: next });
 
     trackEvent("add_food_meal_change", {
       from: meal,
@@ -2555,7 +2569,10 @@ const AddFood: React.FC = () => {
         <IonChip
           color="primary"
           style={{ marginBottom: 12 }}
-          onClick={() => setShowMealPicker(true)}
+          onClick={() => {
+            console.log(`[USER ACTION] AddFood: Date/meal chip clicked to open meal picker`, { currentMeal: meal, date: dateKey });
+            setShowMealPicker(true);
+          }}
         >
           <IonIcon icon={calendarOutline} />
           <span style={{ marginLeft: 6 }}>
@@ -2606,6 +2623,7 @@ const AddFood: React.FC = () => {
         <IonSegment
           value={tab}
           onIonChange={(e) => {
+            console.log(`[USER ACTION] AddFood: Tab changed`, { from: tab, to: e.detail.value });
             const v = (e.detail.value as "search" | "favorites") || "search";
             setTab(v);
             trackEvent("add_food_tab_change", { tab: v, meal, date: dateKey });
@@ -2628,9 +2646,13 @@ const AddFood: React.FC = () => {
                 value={query}
                 debounce={0}
                 ref={searchInputRef}
-                onIonInput={(e) => setQuery(e.detail.value ?? "")}
+                onIonInput={(e) => {
+                  console.log(`[USER ACTION] AddFood: Search input changed`, { query: e.detail.value });
+                  setQuery(e.detail.value ?? "");
+                }}
                 onKeyUp={(e) => {
                   if (e.key === "Enter" && query.trim()) {
+                    console.log(`[USER ACTION] AddFood: Enter key pressed in search`, { query: query.trim() });
                     trackEvent("food_search_enter_key", { query: query.trim(), meal, date: dateKey });
                     hideKeyboard();
                     foodsSearch(query.trim(), 1);
@@ -2644,6 +2666,7 @@ const AddFood: React.FC = () => {
                 expand="block"
                 disabled={!query || loading}
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Search button clicked`, { query: query.trim() });
                   if (!query.trim()) return;
                   trackEvent("food_search_button_click", { query: query.trim(), meal, date: dateKey });
                   hideKeyboard();
@@ -2665,6 +2688,7 @@ const AddFood: React.FC = () => {
                 fill="outline"
                 color={barcodeScannerEnabled ? undefined : "medium"}
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Barcode scanner button clicked`, { enabled: barcodeScannerEnabled });
                   if (!barcodeScannerEnabled) {
                     setToast({
                       show: true,
@@ -2735,6 +2759,7 @@ const AddFood: React.FC = () => {
                     <IonChip
                       key={r.id}
                       onClick={() => {
+                        console.log(`[USER ACTION] AddFood: Recent food chip clicked`, { id: r.id, name: r.name, hasCode: !!r.code });
                         trackEvent("recent_off_chip_click", {
                           id: r.id,
                           code: r.code,
@@ -2767,6 +2792,7 @@ const AddFood: React.FC = () => {
                     key={`${food.code}-${food.product_name || ""}`}
                     button
                     onClick={() => {
+                      console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
                       trackEvent("search_result_click", {
                         code: food.code,
                         name: food.product_name || "(no name)",
@@ -2797,6 +2823,7 @@ const AddFood: React.FC = () => {
                   size="small"
                   disabled={page <= 1 || loading}
                   onClick={() => {
+                    console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
                     trackEvent("food_search_page_prev", { page, query });
                     foodsSearch(query.trim(), page - 1);
                   }}
@@ -2807,6 +2834,7 @@ const AddFood: React.FC = () => {
                   size="small"
                   disabled={loading}
                   onClick={() => {
+                    console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
                     trackEvent("food_search_page_next", { page, query });
                     foodsSearch(query.trim(), page + 1);
                   }}
@@ -2824,6 +2852,7 @@ const AddFood: React.FC = () => {
               <IonButton
                 size="small"
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Create custom food button clicked`);
                   setShowCreateCustomFood(true);
                   trackEvent("custom_food_modal_open");
                 }}
@@ -2834,6 +2863,7 @@ const AddFood: React.FC = () => {
                 size="small"
                 fill="outline"
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Create custom meal button clicked`);
                   setShowCreateMealPreset(true);
                   trackEvent("meal_preset_modal_open");
                 }}
@@ -2927,6 +2957,7 @@ const AddFood: React.FC = () => {
                         fill="clear"
                         color="danger"
                         onClick={(e) => {
+                          console.log(`[USER ACTION] AddFood: Delete favorite button clicked`, { favoriteId: fav.id, name: fav.name });
                           e.stopPropagation();
                           setFavoriteToDelete(fav);
                           trackEvent("favorite_delete_prompt_open", {
@@ -2979,6 +3010,7 @@ const AddFood: React.FC = () => {
                         fill="clear"
                         color="danger"
                         onClick={(e) => {
+                          console.log(`[USER ACTION] AddFood: Delete custom meal button clicked`, { presetId: preset.id, name: preset.name });
                           e.stopPropagation();
                           setMealPresetToDelete(preset);
                           trackEvent("meal_preset_delete_prompt_open", {
@@ -3000,6 +3032,7 @@ const AddFood: React.FC = () => {
         <IonModal
           isOpen={open}
           onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Food details modal dismissed`);
             setOpen(false);
             trackEvent("food_details_modal_dismiss");
           }}
@@ -3032,6 +3065,7 @@ const AddFood: React.FC = () => {
                   <IonSegment
                     value={useServing ? "serving" : "weight"}
                     onIonChange={(e) => {
+                      console.log(`[USER ACTION] AddFood: Serving/weight mode changed`, { mode: e.detail.value });
                       const val = e.detail.value;
                       const nextServing = val === "serving";
                       setUseServing(nextServing);
@@ -3070,9 +3104,12 @@ const AddFood: React.FC = () => {
                       >
                         <IonButton
                           fill="outline"
-                          onClick={() =>
-                            setServingsQty((v) => Math.max(0.1, safeNum(v - 0.5, 1)))
-                          }
+                          onClick={() => {
+                            const oldQty = servingsQty;
+                            const newQty = Math.max(0.1, safeNum(oldQty - 0.5, 1));
+                            console.log(`[USER ACTION] AddFood: Serving quantity decreased`, { from: oldQty, to: newQty });
+                            setServingsQty(newQty);
+                          }}
                         >
                           −
                         </IonButton>
@@ -3082,14 +3119,20 @@ const AddFood: React.FC = () => {
                           value={servingsQty}
                           min="0.1"
                           step="0.1"
-                          onIonChange={(e) =>
-                            setServingsQty(Math.max(0.1, Number(e.detail.value)))
-                          }
+                          onIonChange={(e) => {
+                            console.log(`[USER ACTION] AddFood: Serving quantity input changed`, { newQty: e.detail.value });
+                            setServingsQty(Math.max(0.1, Number(e.detail.value)));
+                          }}
                           style={{ textAlign: "center" }}
                         />
                         <IonButton
                           fill="outline"
-                          onClick={() => setServingsQty((v) => safeNum(v + 0.5, 1))}
+                          onClick={() => {
+                            const oldQty = servingsQty;
+                            const newQty = safeNum(oldQty + 0.5, 1);
+                            console.log(`[USER ACTION] AddFood: Serving quantity increased`, { from: oldQty, to: newQty });
+                            setServingsQty(newQty);
+                          }}
                         >
                           +
                         </IonButton>
@@ -3114,7 +3157,10 @@ const AddFood: React.FC = () => {
                       >
                         <IonButton
                           fill="outline"
-                          onClick={() => setWeightQty((v) => Math.max(1, v - 10))}
+                          onClick={() => {
+                            console.log(`[USER ACTION] AddFood: Weight quantity decreased`, { currentQty: weightQty });
+                            setWeightQty((v) => Math.max(1, v - 10));
+                          }}
                         >
                           −10
                         </IonButton>
@@ -3124,12 +3170,16 @@ const AddFood: React.FC = () => {
                           value={weightQty}
                           min="1"
                           step="1"
-                          onIonChange={(e) =>
-                            setWeightQty(Math.max(1, Number(e.detail.value)))
-                          }
+                          onIonChange={(e) => {
+                            console.log(`[USER ACTION] AddFood: Weight quantity input changed`, { newQty: e.detail.value });
+                            setWeightQty(Math.max(1, Number(e.detail.value)));
+                          }}
                           style={{ textAlign: "center" }}
                         />
-                        <IonButton fill="outline" onClick={() => setWeightQty((v) => v + 10)}>
+                        <IonButton fill="outline" onClick={() => {
+                          console.log(`[USER ACTION] AddFood: Weight quantity increased`, { currentQty: weightQty });
+                          setWeightQty((v) => v + 10);
+                        }}>
                           +10
                         </IonButton>
                       </div>
@@ -3392,7 +3442,10 @@ const AddFood: React.FC = () => {
                           >
                             <IonButton
                               expand="block"
-                              onClick={() => photoInputRef.current?.click()}
+                              onClick={() => {
+                                console.log(`[USER ACTION] AddFood: Add photo button clicked`, { hasExistingPhoto: !!photoPreview });
+                                photoInputRef.current?.click();
+                              }}
                               style={{ flex: photoPreview ? 1 : "0 1 220px" }}
                             >
                               {photoPreview ? "Replace photo" : "Add photo"}
@@ -3434,7 +3487,10 @@ const AddFood: React.FC = () => {
                       textDecoration: "underline",
                       cursor: "pointer",
                     }}
-                    onClick={saveCurrentSelectionAsFavorite}
+                    onClick={() => {
+                      console.log(`[USER ACTION] AddFood: Save as favorite text link clicked`, { foodName: selectedFood.product_name });
+                      saveCurrentSelectionAsFavorite();
+                    }}
                   >
                     Save this portion as a favorite
                   </IonText>
@@ -3444,6 +3500,7 @@ const AddFood: React.FC = () => {
                   <IonButton
                     expand="block"
                     onClick={() => {
+                      console.log(`[USER ACTION] AddFood: Cancel food details button clicked`);
                       setOpen(false);
                       trackEvent("food_details_cancel");
                     }}
@@ -3453,7 +3510,10 @@ const AddFood: React.FC = () => {
                   </IonButton>
                   <IonButton
                     expand="block"
-                    onClick={addFoodToMeal}
+                    onClick={() => {
+                      console.log(`[USER ACTION] AddFood: Add/Save food button clicked in modal`, { editMode: !!editEntry, meal });
+                      addFoodToMeal();
+                    }}
                     disabled={disableAddButton || addingFood}
                   >
                     {addingFood ? (
@@ -3480,7 +3540,10 @@ const AddFood: React.FC = () => {
           message={toast.message}
           color={toast.color}
           duration={2000}
-          onDidDismiss={() => setToast({ ...toast, show: false })}
+          onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Toast dismissed`);
+            setToast({ ...toast, show: false });
+          }}
         />
 
         <IonAlert
@@ -3490,10 +3553,19 @@ const AddFood: React.FC = () => {
             favoriteToDelete ? `Remove “${favoriteToDelete.name}” from your favorites?` : ""
           }
           buttons={[
-            { text: "Cancel", role: "cancel", handler: () => setFavoriteToDelete(null) },
-            { text: "Delete", role: "destructive", handler: confirmDeleteFavorite },
+            { text: "Cancel", role: "cancel", handler: () => {
+              console.log(`[USER ACTION] AddFood: Delete favorite alert cancelled`);
+              setFavoriteToDelete(null);
+            }},
+            { text: "Delete", role: "destructive", handler: () => {
+              console.log(`[USER ACTION] AddFood: Delete favorite confirmed in alert`);
+              confirmDeleteFavorite();
+            }},
           ]}
-          onDidDismiss={() => setFavoriteToDelete(null)}
+          onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Delete favorite alert dismissed`);
+            setFavoriteToDelete(null);
+          }}
         />
 
         <IonAlert
@@ -3503,15 +3575,25 @@ const AddFood: React.FC = () => {
             mealPresetToDelete ? `Remove "${mealPresetToDelete.name}" from your custom meals?` : ""
           }
           buttons={[
-            { text: "Cancel", role: "cancel", handler: () => setMealPresetToDelete(null) },
-            { text: "Delete", role: "destructive", handler: confirmDeleteMealPreset },
+            { text: "Cancel", role: "cancel", handler: () => {
+              console.log(`[USER ACTION] AddFood: Delete custom meal alert cancelled`);
+              setMealPresetToDelete(null);
+            }},
+            { text: "Delete", role: "destructive", handler: () => {
+              console.log(`[USER ACTION] AddFood: Delete custom meal confirmed in alert`);
+              confirmDeleteMealPreset();
+            }},
           ]}
-          onDidDismiss={() => setMealPresetToDelete(null)}
+          onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Delete custom meal alert dismissed`);
+            setMealPresetToDelete(null);
+          }}
         />
 
         <IonModal
           isOpen={showCreateCustomFood}
           onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Create custom food modal dismissed`);
             setShowCreateCustomFood(false);
             trackEvent("custom_food_modal_dismiss");
           }}
@@ -3524,11 +3606,17 @@ const AddFood: React.FC = () => {
           <IonContent className="ion-padding" fullscreen>
             <IonItem>
               <IonLabel position="stacked">Name</IonLabel>
-              <IonInput value={customName} onIonChange={(e) => setCustomName(e.detail.value || "")} />
+              <IonInput value={customName} onIonChange={(e) => {
+                console.log(`[USER ACTION] AddFood: Custom food name input changed`, { value: e.detail.value });
+                setCustomName(e.detail.value || "");
+              }} />
             </IonItem>
             <IonItem>
               <IonLabel position="stacked">Brand (optional)</IonLabel>
-              <IonInput value={customBrand} onIonChange={(e) => setCustomBrand(e.detail.value || "")} />
+              <IonInput value={customBrand} onIonChange={(e) => {
+                console.log(`[USER ACTION] AddFood: Custom food brand input changed`, { value: e.detail.value });
+                setCustomBrand(e.detail.value || "");
+              }} />
             </IonItem>
             <IonItem>
               <IonLabel position="stacked">Calories per 100 g</IonLabel>
@@ -3536,7 +3624,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="numeric"
                 value={customCalories}
-                onIonChange={(e) => setCustomCalories(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food calories input changed`, { value: e.detail.value });
+                  setCustomCalories(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3545,7 +3636,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={customCarbs}
-                onIonChange={(e) => setCustomCarbs(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food carbs input changed`, { value: e.detail.value });
+                  setCustomCarbs(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3554,7 +3648,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={customProtein}
-                onIonChange={(e) => setCustomProtein(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food protein input changed`, { value: e.detail.value });
+                  setCustomProtein(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3563,7 +3660,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={customFat}
-                onIonChange={(e) => setCustomFat(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food fat input changed`, { value: e.detail.value });
+                  setCustomFat(e.detail.value || "");
+                }}
               />
             </IonItem>
 
@@ -3572,13 +3672,17 @@ const AddFood: React.FC = () => {
                 expand="block"
                 fill="outline"
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Cancel custom food creation clicked`);
                   setShowCreateCustomFood(false);
                   trackEvent("custom_food_modal_cancel");
                 }}
               >
                 Cancel
               </IonButton>
-              <IonButton expand="block" onClick={createCustomFood}>
+              <IonButton expand="block" onClick={() => {
+                console.log(`[USER ACTION] AddFood: Save custom food clicked`, { name: customName });
+                createCustomFood();
+              }}>
                 Save custom food
               </IonButton>
             </div>
@@ -3588,6 +3692,7 @@ const AddFood: React.FC = () => {
         <IonModal
           isOpen={showCreateMealPreset}
           onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Create custom meal modal dismissed`);
             setShowCreateMealPreset(false);
             trackEvent("meal_preset_modal_dismiss");
           }}
@@ -3600,11 +3705,17 @@ const AddFood: React.FC = () => {
           <IonContent className="ion-padding" fullscreen>
             <IonItem>
               <IonLabel position="stacked">Meal name</IonLabel>
-              <IonInput value={mealPresetName} onIonChange={(e) => setMealPresetName(e.detail.value || "")} />
+              <IonInput value={mealPresetName} onIonChange={(e) => {
+                console.log(`[USER ACTION] AddFood: Meal preset name input changed`, { value: e.detail.value });
+                setMealPresetName(e.detail.value || "");
+              }} />
             </IonItem>
             <IonItem>
               <IonLabel position="stacked">Note (optional)</IonLabel>
-              <IonInput value={mealPresetNote} onIonChange={(e) => setMealPresetNote(e.detail.value || "")} />
+              <IonInput value={mealPresetNote} onIonChange={(e) => {
+                console.log(`[USER ACTION] AddFood: Meal preset note input changed`, { value: e.detail.value });
+                setMealPresetNote(e.detail.value || "");
+              }} />
             </IonItem>
             <IonItem>
               <IonLabel position="stacked">Total calories</IonLabel>
@@ -3612,7 +3723,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="numeric"
                 value={mealPresetCalories}
-                onIonChange={(e) => setMealPresetCalories(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Meal preset calories input changed`, { value: e.detail.value });
+                  setMealPresetCalories(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3621,7 +3735,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={mealPresetCarbs}
-                onIonChange={(e) => setMealPresetCarbs(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Meal preset carbs input changed`, { value: e.detail.value });
+                  setMealPresetCarbs(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3630,7 +3747,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={mealPresetProtein}
-                onIonChange={(e) => setMealPresetProtein(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Meal preset protein input changed`, { value: e.detail.value });
+                  setMealPresetProtein(e.detail.value || "");
+                }}
               />
             </IonItem>
             <IonItem>
@@ -3639,7 +3759,10 @@ const AddFood: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={mealPresetFat}
-                onIonChange={(e) => setMealPresetFat(e.detail.value || "")}
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Meal preset fat input changed`, { value: e.detail.value });
+                  setMealPresetFat(e.detail.value || "");
+                }}
               />
             </IonItem>
 
@@ -3648,13 +3771,17 @@ const AddFood: React.FC = () => {
                 expand="block"
                 fill="outline"
                 onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Cancel meal preset creation clicked`);
                   setShowCreateMealPreset(false);
                   trackEvent("meal_preset_modal_cancel");
                 }}
               >
                 Cancel
               </IonButton>
-              <IonButton expand="block" onClick={createMealPreset}>
+              <IonButton expand="block" onClick={() => {
+                console.log(`[USER ACTION] AddFood: Save custom meal clicked`, { name: mealPresetName });
+                createMealPreset();
+              }}>
                 Save custom meal
               </IonButton>
             </div>
@@ -3663,14 +3790,31 @@ const AddFood: React.FC = () => {
 
         <IonActionSheet
           isOpen={showMealPicker}
-          onDidDismiss={() => setShowMealPicker(false)}
+          onDidDismiss={() => {
+            console.log(`[USER ACTION] AddFood: Meal picker action sheet dismissed`);
+            setShowMealPicker(false);
+          }}
           header="Select meal"
           buttons={[
-            { text: "Breakfast", handler: () => handleChangeMeal("breakfast") },
-            { text: "Lunch", handler: () => handleChangeMeal("lunch") },
-            { text: "Dinner", handler: () => handleChangeMeal("dinner") },
-            { text: "Snacks", handler: () => handleChangeMeal("snacks") },
-            { text: "Cancel", role: "cancel" },
+            { text: "Breakfast", handler: () => {
+              console.log(`[USER ACTION] AddFood: Breakfast selected from meal picker`);
+              handleChangeMeal("breakfast");
+            }},
+            { text: "Lunch", handler: () => {
+              console.log(`[USER ACTION] AddFood: Lunch selected from meal picker`);
+              handleChangeMeal("lunch");
+            }},
+            { text: "Dinner", handler: () => {
+              console.log(`[USER ACTION] AddFood: Dinner selected from meal picker`);
+              handleChangeMeal("dinner");
+            }},
+            { text: "Snacks", handler: () => {
+              console.log(`[USER ACTION] AddFood: Snacks selected from meal picker`);
+              handleChangeMeal("snacks");
+            }},
+            { text: "Cancel", role: "cancel", handler: () => {
+              console.log(`[USER ACTION] AddFood: Meal picker cancelled`);
+            }},
           ]}
         />
       </IonContent>

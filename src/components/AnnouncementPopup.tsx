@@ -55,7 +55,13 @@ const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
         <div className="announcement-popup-container">
           <button
             className="announcement-popup-close"
-            onClick={onDismiss}
+            onClick={() => {
+              console.log(`[USER ACTION] Announcement Popup: Closed announcement using X button`, {
+                announcementNum: announcement.announcementNum,
+                title: announcement.title,
+              });
+              onDismiss();
+            }}
             aria-label="Close announcement"
           >
             <IonIcon icon={closeOutline} />
@@ -91,7 +97,14 @@ const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
             <IonButton
               expand="block"
               className="announcement-popup-button"
-              onClick={onDismiss}
+              onClick={() => {
+                console.log(`[USER ACTION] Announcement Popup: Clicked announcement button`, {
+                  announcementNum: announcement.announcementNum,
+                  title: announcement.title,
+                  buttonText: announcement.buttonText,
+                });
+                onDismiss();
+              }}
             >
               {announcement.buttonText}
             </IonButton>

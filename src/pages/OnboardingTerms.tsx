@@ -153,6 +153,7 @@ const OnboardingTerms: React.FC = () => {
   );
 
   const handleScroll = (event: CustomEvent) => {
+    console.log('[USER ACTION] OnboardingTerms: Scrolled', { scrollTop: event.detail?.scrollTop, scrollHeight: event.detail?.scrollHeight });
     const detail = event.detail as { scrollTop?: number; scrollHeight?: number; offsetHeight?: number };
     const scrollTop = detail.scrollTop ?? 0;
     const scrollHeight = detail.scrollHeight ?? 0;
@@ -163,6 +164,7 @@ const OnboardingTerms: React.FC = () => {
   };
 
   const handleAgree = async () => {
+    console.log('[USER ACTION] OnboardingTerms: Agree & Continue button clicked', { hasRead, agreed, saving });
     if (saving) return;
     const user = auth.currentUser;
     if (!user) {
@@ -225,7 +227,10 @@ const OnboardingTerms: React.FC = () => {
             <label className="onboarding-terms-checkbox">
               <IonCheckbox
                 checked={agreed}
-                onIonChange={(event) => setAgreed(event.detail.checked)}
+                onIonChange={(event) => {
+                  console.log('[USER ACTION] OnboardingTerms: Agreement checkbox changed', { checked: event.detail.checked });
+                  setAgreed(event.detail.checked);
+                }}
                 aria-label="Agree to terms"
               />
               <span>I have read and agree to the terms and privacy practices.</span>
@@ -234,7 +239,10 @@ const OnboardingTerms: React.FC = () => {
             <IonButton
               expand="block"
               disabled={!hasRead || !agreed || saving}
-              onClick={handleAgree}
+              onClick={() => {
+                console.log('[USER ACTION] OnboardingTerms: Agree & Continue button clicked (bottom)');
+                handleAgree();
+              }}
             >
               {saving ? <IonSpinner name="dots" /> : "Agree & Continue"}
             </IonButton>

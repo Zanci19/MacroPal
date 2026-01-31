@@ -88,6 +88,7 @@ const EnergyNeeds: React.FC = () => {
   ) => setToast({ show: true, message, color });
 
   const handleSave = async () => {
+    console.log('[USER ACTION] EnergyNeeds: Save button clicked', { caloriesTarget, carbsTarget, proteinTarget, fatTarget });
     const current = auth.currentUser;
     if (!current) {
       showToast("You must be logged in.");
@@ -165,9 +166,10 @@ const EnergyNeeds: React.FC = () => {
             type="number"
             inputMode="numeric"
             value={caloriesTarget ?? ""}
-            onIonChange={(e) =>
-              setCaloriesTarget(toNumOrNull(e.detail.value))
-            }
+            onIonChange={(e) => {
+              console.log('[USER ACTION] EnergyNeeds: Calories input changed', { value: e.detail.value });
+              setCaloriesTarget(toNumOrNull(e.detail.value));
+            }}
           />
         </IonItem>
 
@@ -177,7 +179,10 @@ const EnergyNeeds: React.FC = () => {
             type="number"
             inputMode="numeric"
             value={carbsTarget ?? ""}
-            onIonChange={(e) => setCarbsTarget(toNumOrNull(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] EnergyNeeds: Carbs input changed', { value: e.detail.value });
+              setCarbsTarget(toNumOrNull(e.detail.value));
+            }}
           />
         </IonItem>
 
@@ -187,7 +192,10 @@ const EnergyNeeds: React.FC = () => {
             type="number"
             inputMode="numeric"
             value={proteinTarget ?? ""}
-            onIonChange={(e) => setProteinTarget(toNumOrNull(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] EnergyNeeds: Protein input changed', { value: e.detail.value });
+              setProteinTarget(toNumOrNull(e.detail.value));
+            }}
           />
         </IonItem>
 
@@ -197,14 +205,20 @@ const EnergyNeeds: React.FC = () => {
             type="number"
             inputMode="numeric"
             value={fatTarget ?? ""}
-            onIonChange={(e) => setFatTarget(toNumOrNull(e.detail.value))}
+            onIonChange={(e) => {
+              console.log('[USER ACTION] EnergyNeeds: Fat input changed', { value: e.detail.value });
+              setFatTarget(toNumOrNull(e.detail.value));
+            }}
           />
         </IonItem>
 
         <IonButton
           expand="block"
           className="ion-margin-top"
-          onClick={handleSave}
+          onClick={() => {
+            console.log('[USER ACTION] EnergyNeeds: Save energy needs button clicked');
+            handleSave();
+          }}
           disabled={saving}
         >
           {saving ? "Saving..." : "Save energy needs"}

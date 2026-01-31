@@ -34,7 +34,10 @@ const Start: React.FC = () => {
               <IonButton
                 size="large"
                 className="start-btn start-btn-primary"
-                onClick={() => router.push("/register")}
+                onClick={() => {
+                  console.log(`[USER ACTION] Start: Clicked Get Started button`);
+                  router.push("/register");
+                }}
               >
                 Get Started
               </IonButton>
@@ -42,7 +45,10 @@ const Start: React.FC = () => {
                 size="large"
                 fill="outline"
                 className="start-btn start-btn-secondary"
-                onClick={() => router.push("/login")}
+                onClick={() => {
+                  console.log(`[USER ACTION] Start: Clicked I already have an account button`);
+                  router.push("/login");
+                }}
               >
                 I already have an account
               </IonButton>

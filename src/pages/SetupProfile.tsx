@@ -175,6 +175,7 @@ const SetupProfile: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
+    console.log('[USER ACTION] SetupProfile: Save button clicked', { age, weight, height, gender, goal, activity, unitSystem });
     const user = auth.currentUser;
     if (!user) {
       trackEvent("profile_save_blocked", { reason: "no_user" });
@@ -310,7 +311,10 @@ const SetupProfile: React.FC = () => {
                 type="number"
                 inputMode="numeric"
                 value={age ?? ""}
-                onIonChange={(e) => setAge(toNumOrNull(e.detail.value))}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] SetupProfile: Age input changed', { value: e.detail.value });
+                  setAge(toNumOrNull(e.detail.value));
+                }}
               />
             </IonItem>
 
@@ -322,7 +326,10 @@ const SetupProfile: React.FC = () => {
                 type="number"
                 inputMode="decimal"
                 value={weight ?? ""}
-                onIonChange={(e) => setWeight(toNumOrNull(e.detail.value))}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] SetupProfile: Weight input changed', { value: e.detail.value, unit: weightLabel(unitSystem) });
+                  setWeight(toNumOrNull(e.detail.value));
+                }}
               />
             </IonItem>
 
@@ -334,7 +341,10 @@ const SetupProfile: React.FC = () => {
                 type="number"
                 inputMode="numeric"
                 value={height ?? ""}
-                onIonChange={(e) => setHeight(toNumOrNull(e.detail.value))}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] SetupProfile: Height input changed', { value: e.detail.value, unit: heightLabel(unitSystem) });
+                  setHeight(toNumOrNull(e.detail.value));
+                }}
               />
             </IonItem>
 
@@ -342,7 +352,10 @@ const SetupProfile: React.FC = () => {
               <IonLabel position="stacked">Gender</IonLabel>
               <IonSelect
                 value={gender}
-                onIonChange={(e) => setGender(e.detail.value as Gender)}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] SetupProfile: Gender select changed', { value: e.detail.value });
+                  setGender(e.detail.value as Gender);
+                }}
               >
                 <IonSelectOption value="male">Male</IonSelectOption>
                 <IonSelectOption value="female">Female</IonSelectOption>
@@ -354,19 +367,28 @@ const SetupProfile: React.FC = () => {
               <div className="setup-goal-buttons">
                 <IonButton
                   fill={goal === "lose" ? "solid" : "outline"}
-                  onClick={() => setGoal("lose")}
+                  onClick={() => {
+                    console.log('[USER ACTION] SetupProfile: Goal selected', { goal: 'lose' });
+                    setGoal("lose");
+                  }}
                 >
                   Lose
                 </IonButton>
                 <IonButton
                   fill={goal === "maintain" ? "solid" : "outline"}
-                  onClick={() => setGoal("maintain")}
+                  onClick={() => {
+                    console.log('[USER ACTION] SetupProfile: Goal selected', { goal: 'maintain' });
+                    setGoal("maintain");
+                  }}
                 >
                   Maintain
                 </IonButton>
                 <IonButton
                   fill={goal === "gain" ? "solid" : "outline"}
-                  onClick={() => setGoal("gain")}
+                  onClick={() => {
+                    console.log('[USER ACTION] SetupProfile: Goal selected', { goal: 'gain' });
+                    setGoal("gain");
+                  }}
                 >
                   Gain
                 </IonButton>
@@ -377,7 +399,10 @@ const SetupProfile: React.FC = () => {
               <IonLabel position="stacked">Activity level</IonLabel>
               <IonSelect
                 value={activity}
-                onIonChange={(e) => setActivity(e.detail.value as Activity)}
+                onIonChange={(e) => {
+                  console.log('[USER ACTION] SetupProfile: Activity level changed', { value: e.detail.value });
+                  setActivity(e.detail.value as Activity);
+                }}
               >
                 <IonSelectOption value="sedentary">
                   Sedentary (little/no exercise)
@@ -400,7 +425,10 @@ const SetupProfile: React.FC = () => {
             <IonButton
               expand="block"
               className="setup-save-button"
-              onClick={handleSave}
+              onClick={() => {
+                console.log('[USER ACTION] SetupProfile: Save profile button clicked (bottom)');
+                handleSave();
+              }}
               disabled={loading}
             >
               {loading ? "Saving..." : "Save profile"}

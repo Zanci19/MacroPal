@@ -232,10 +232,16 @@ const AuthLoading: React.FC = () => {
           )}
           {timedOut && (
             <div style={{ marginTop: "1rem" }}>
-              <IonButton onClick={() => history.replace("/login")}>
+              <IonButton onClick={() => {
+                console.log(`[USER ACTION] Auth Loading: Clicked go to login button (timeout)`);
+                history.replace("/login");
+              }}>
                 Go to Login
               </IonButton>
-              <IonButton fill="outline" onClick={() => window.location.reload()}>
+              <IonButton fill="outline" onClick={() => {
+                console.log(`[USER ACTION] Auth Loading: Clicked retry button (timeout)`);
+                window.location.reload();
+              }}>
                 Retry
               </IonButton>
             </div>
