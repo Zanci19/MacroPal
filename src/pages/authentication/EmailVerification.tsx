@@ -74,6 +74,8 @@ const EmailVerification: React.FC = () => {
   );
 
   const resendVerification = async () => {
+    console.log(`[USER ACTION] Email Verification: Clicked resend email button`);
+    
     const user = auth.currentUser;
     if (!user) {
       history.replace("/login");
@@ -93,6 +95,8 @@ const EmailVerification: React.FC = () => {
   };
 
   const handleBackToLogin = async () => {
+    console.log(`[USER ACTION] Email Verification: Clicked back to login button`);
+    
     try {
       setChecking(true);
       await signOut(auth);
@@ -142,7 +146,12 @@ const EmailVerification: React.FC = () => {
           </IonText>
 
           <div className="verification-actions">
-            <IonButton expand="block" onClick={() => checkVerification()}>
+            <IonButton expand="block" onClick={() => {
+              console.log(`[USER ACTION] Email Verification: Clicked I've verified button`, {
+                checking,
+              });
+              checkVerification();
+            }}>
               {checking ? <IonSpinner name="dots" /> : "I've verified"}
             </IonButton>
             <IonButton

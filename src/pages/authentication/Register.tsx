@@ -108,6 +108,14 @@ const Register: React.FC = () => {
   }, [history]);
 
   const handleRegister = async () => {
+    console.log(`[USER ACTION] Register: Clicked sign up button`, {
+      hasName: !!name.trim(),
+      hasEmail: !!email.trim(),
+      hasPassword: !!pw?.trim(),
+      hasConfirmPassword: !!pw2?.trim(),
+      busy,
+    });
+    
     if (busy) return;
 
     const cleanName = name.trim();
@@ -200,6 +208,11 @@ const Register: React.FC = () => {
   };
 
   const handleGoogleRegister = async () => {
+    console.log(`[USER ACTION] Register: Clicked Google register button`, {
+      isNativePlatform: Capacitor.isNativePlatform(),
+      busy,
+    });
+    
     if (busy) return;
     setBusy(true);
     try {
@@ -322,7 +335,13 @@ const Register: React.FC = () => {
               <IonInput
                 placeholder="Your name"
                 value={name}
-                onIonChange={(e: any) => setName(e?.detail?.value ?? "")}
+                onIonChange={(e: any) => {
+                  console.log(`[USER ACTION] Register: Name input changed`, {
+                    hasValue: !!e?.detail?.value,
+                    length: e?.detail?.value?.length ?? 0,
+                  });
+                  setName(e?.detail?.value ?? "");
+                }}
               />
             </IonItem>
 
@@ -332,7 +351,13 @@ const Register: React.FC = () => {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onIonChange={(e: any) => setEmail(e?.detail?.value ?? "")}
+                onIonChange={(e: any) => {
+                  console.log(`[USER ACTION] Register: Email input changed`, {
+                    hasValue: !!e?.detail?.value,
+                    length: e?.detail?.value?.length ?? 0,
+                  });
+                  setEmail(e?.detail?.value ?? "");
+                }}
                 inputmode="email"
                 autocomplete="email"
               />
@@ -344,7 +369,13 @@ const Register: React.FC = () => {
                 type="password"
                 placeholder="At least 8 characters, include a number"
                 value={pw}
-                onIonChange={(e: any) => setPw(e?.detail?.value ?? "")}
+                onIonChange={(e: any) => {
+                  console.log(`[USER ACTION] Register: Password input changed`, {
+                    hasValue: !!e?.detail?.value,
+                    length: e?.detail?.value?.length ?? 0,
+                  });
+                  setPw(e?.detail?.value ?? "");
+                }}
                 autocomplete="new-password"
               />
             </IonItem>
@@ -355,7 +386,13 @@ const Register: React.FC = () => {
                 type="password"
                 placeholder="Repeat your password"
                 value={pw2}
-                onIonChange={(e: any) => setPw2(e?.detail?.value ?? "")}
+                onIonChange={(e: any) => {
+                  console.log(`[USER ACTION] Register: Confirm password input changed`, {
+                    hasValue: !!e?.detail?.value,
+                    length: e?.detail?.value?.length ?? 0,
+                  });
+                  setPw2(e?.detail?.value ?? "");
+                }}
                 autocomplete="new-password"
               />
             </IonItem>
@@ -394,6 +431,7 @@ const Register: React.FC = () => {
               expand="block"
               className="register-footer-button"
               onClick={() => {
+                console.log(`[USER ACTION] Register: Clicked login link`);
                 trackEvent("navigate_to_login_from_register");
                 history.push("/login");
               }}

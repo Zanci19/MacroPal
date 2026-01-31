@@ -102,6 +102,12 @@ const Login: React.FC = () => {
   }, [history]);
 
   const handleLogin = async () => {
+    console.log(`[USER ACTION] Login: Clicked login button`, {
+      hasEmail: !!email.trim(),
+      hasPassword: !!pw.trim(),
+      busy,
+    });
+    
     if (busy) return;
 
     const trimmedEmail = email.trim();
@@ -216,6 +222,11 @@ const Login: React.FC = () => {
   };
 
   const handleGoogleLogin = async () => {
+    console.log(`[USER ACTION] Login: Clicked Google sign-in button`, {
+      isNativePlatform: Capacitor.isNativePlatform(),
+      busy,
+    });
+    
     if (busy) return;
     setBusy(true);
     try {
@@ -343,7 +354,13 @@ const Login: React.FC = () => {
                 autocorrect="off"
                 placeholder="you@example.com"
                 value={email}
-                onIonInput={(e: any) => setEmail(e.detail.value ?? "")}
+                onIonInput={(e: any) => {
+                  console.log(`[USER ACTION] Login: Email input changed`, {
+                    hasValue: !!e.detail.value,
+                    length: e.detail.value?.length ?? 0,
+                  });
+                  setEmail(e.detail.value ?? "");
+                }}
               />
             </IonItem>
 
@@ -357,13 +374,22 @@ const Login: React.FC = () => {
                   autocorrect="off"
                   placeholder="Your password"
                   value={pw}
-                  onIonInput={(e: any) => setPw(e.detail.value ?? "")}
+                  onIonInput={(e: any) => {
+                    console.log(`[USER ACTION] Login: Password input changed`, {
+                      hasValue: !!e.detail.value,
+                      length: e.detail.value?.length ?? 0,
+                    });
+                    setPw(e.detail.value ?? "");
+                  }}
                   className="pw-input"
                 />
                 <button
                   type="button"
                   className="pw-toggle-btn"
                   onClick={() => {
+                    console.log(`[USER ACTION] Login: Toggled password visibility`, {
+                      newState: !showPw ? "visible" : "hidden",
+                    });
                     setShowPw((v) => !v);
                     trackEvent("login_toggle_password_visibility", {
                       new_state: !showPw,
@@ -409,6 +435,7 @@ const Login: React.FC = () => {
               expand="block"
               className="login-footer-button"
               onClick={() => {
+                console.log(`[USER ACTION] Login: Clicked create account link`);
                 trackEvent("navigate_to_register_from_login");
                 history.push("/register");
               }}
