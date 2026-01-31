@@ -24,6 +24,8 @@ import {
   IonRefresher,
   IonRefresherContent,
   type RefresherEventDetail,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from "@ionic/react";
 import { shareOrDownload } from "../../utils/exportUtils";
 import {
@@ -102,14 +104,22 @@ const addDays = (d: Date, n: number) => {
   return x;
 };
 
-const ChartContainer: React.FC<{ height: number; children: React.ReactNode }> = ({
-  height,
-  children,
-}) => (
+const ChartContainer: React.FC<{
+  height: number;
+  enabled?: boolean;
+  children: React.ReactNode;
+}> = ({ height, enabled = true, children }) => (
   <div style={{ width: "100%", height }}>
-    <ResponsiveContainer width="100%" height="100%" minHeight={height} minWidth={0}>
-      {children}
-    </ResponsiveContainer>
+    {enabled ? (
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minHeight={height}
+        minWidth={0}
+      >
+        {children}
+      </ResponsiveContainer>
+    ) : null}
   </div>
 );
 
@@ -166,7 +176,9 @@ const Analytics: React.FC = () => {
   const [days, setDays] = useState<DayRoll[]>([]);
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isViewActive, setIsViewActive] = useState(true);
   const unitSystem = getUnitSystem(profile?.units);
+  const chartsEnabled = isViewActive;
   const [chartAnimationsEnabled, setChartAnimationsEnabled] = useState(() => {
     if (typeof window === "undefined") return true;
     const prefersReducedMotion =
@@ -187,6 +199,14 @@ const Analytics: React.FC = () => {
       window.removeEventListener("mp_chart_animation_change", handler);
     };
   }, []);
+
+  useIonViewDidEnter(() => {
+    setIsViewActive(true);
+  });
+
+  useIonViewDidLeave(() => {
+    setIsViewActive(false);
+  });
 
   // Fetch last 60 days whenever we have a uid and auth has settled
   const fetchDays = useCallback(async () => {
@@ -715,7 +735,7 @@ const Analytics: React.FC = () => {
                     </IonCardHeader>
                     <IonCardContent>
                       {weightChartData.length ? (
-                        <ChartContainer height={260}>
+                        <ChartContainer height={260} enabled={chartsEnabled}>
                           <LineChart data={weightChartData}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                             <XAxis dataKey="date" />
@@ -781,7 +801,7 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260}>
+                              <ChartContainer height={260} enabled={chartsEnabled}>
                                 <PieChart>
                                   <Pie
                                     data={[
@@ -873,7 +893,7 @@ const Analytics: React.FC = () => {
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <ChartContainer height={300}>
+                        <ChartContainer height={300} enabled={chartsEnabled}>
                           <ComposedChart
                             data={view.map((d, i) => ({
                               date: fmtDate(d.key),
@@ -924,7 +944,7 @@ const Analytics: React.FC = () => {
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <ChartContainer height={260}>
+                        <ChartContainer height={260} enabled={chartsEnabled}>
                           <BarChart data={macroEnergyByDay}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
                             <XAxis dataKey="date" />
@@ -975,7 +995,7 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260}>
+                              <ChartContainer height={260} enabled={chartsEnabled}>
                                 <PieChart>
                                   <Pie
                                     data={macroDonut}
@@ -1054,7 +1074,7 @@ const Analytics: React.FC = () => {
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260}>
+                              <ChartContainer height={260} enabled={chartsEnabled}>
                                 <RadarChart
                                   data={[
                                     { metric: "Carbohydrates", g: avg.carbs },
@@ -1099,7 +1119,7 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         {caloriesTarget ? (
-                          <ChartContainer height={220}>
+                          <ChartContainer height={220} enabled={chartsEnabled}>
                             <BarChart
                               data={[
                                 {
@@ -1152,7 +1172,7 @@ const Analytics: React.FC = () => {
                       </IonCardHeader>
                       <IonCardContent>
                         {macroTargets ? (
-                          <ChartContainer height={260}>
+                          <ChartContainer height={260} enabled={chartsEnabled}>
                             <BarChart
                               data={[
                                 {
