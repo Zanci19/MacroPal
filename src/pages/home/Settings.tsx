@@ -275,7 +275,7 @@ const Settings: React.FC = () => {
   };
 
   const handlePhotoChange = async (file?: File | null) => {
-    console.log(`[USER ACTION] Settings: Photo file selected for upload`, { fileName: file?.name, fileSize: file?.size });
+    console.log(`[USER ACTION] Settings: Photo file selected for upload`, { fileType: file?.type, fileSize: file?.size });
     if (!file || !auth.currentUser) return;
 
     try {

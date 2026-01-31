@@ -288,7 +288,7 @@ const Workout: React.FC = () => {
   };
 
   const deleteActivity = async (index: number) => {
-    console.log('[USER ACTION] Workout: Delete activity clicked', { index, activity: activities[index] });
+    console.log('[USER ACTION] Workout: Delete activity clicked', { index, activityTitle: activities[index]?.title });
     if (!uid || index < 0 || index >= activities.length) return;
     const target = activities[index];
 

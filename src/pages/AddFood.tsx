@@ -1573,7 +1573,7 @@ const AddFood: React.FC = () => {
   };
 
   const handlePhotoChange = useCallback((file?: File | null) => {
-    console.log(`[USER ACTION] AddFood: Photo file selected`, { fileName: file?.name, fileSize: file?.size });
+    console.log(`[USER ACTION] AddFood: Photo file selected`, { fileType: file?.type, fileSize: file?.size });
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {

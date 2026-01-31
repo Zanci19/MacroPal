@@ -414,7 +414,7 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handlePhotoChange = (file?: File | null) => {
-    console.log('[USER ACTION] OnboardingProfile: Photo file selected', { fileName: file?.name, fileSize: file?.size });
+    console.log('[USER ACTION] OnboardingProfile: Photo file selected', { fileType: file?.type, fileSize: file?.size });
     if (!file) return;
     if (photoPreviewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(photoPreviewUrl);
