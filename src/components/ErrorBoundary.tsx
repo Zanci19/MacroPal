@@ -41,14 +41,25 @@ export class ErrorBoundary extends React.Component<
   }
 
   handleReload = () => {
+    console.log(`[USER ACTION] Error Boundary: Clicked reload app button after crash`, {
+      error: this.state.error?.message,
+      url: window.location.href,
+    });
     window.location.reload();
   };
 
   handleToggleDetails = () => {
+    console.log(`[USER ACTION] Error Boundary: Toggled error details`, {
+      showingDetails: !this.state.showDetails,
+      error: this.state.error?.message,
+    });
     this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   handleCopyError = () => {
+    console.log(`[USER ACTION] Error Boundary: Copied error details to clipboard`, {
+      error: this.state.error?.message,
+    });
     const { error, errorInfo } = this.state;
     const errorText = `MacroPal Error Report
 ===================

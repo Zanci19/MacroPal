@@ -238,6 +238,9 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   useEffect(() => {
     const handleAnimationChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      console.log(`[USER ACTION] Animation Preference: Changed tab animations`, {
+        enabled: customEvent.detail.enabled,
+      });
       setAnimationsEnabled(customEvent.detail.enabled);
     };
 
@@ -275,6 +278,13 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     tabName: string,
     href: string,
   ) => {
+    console.log(`[USER ACTION] Tab Navigation: Clicked ${tabName} tab`, {
+      from: getActiveTab(),
+      to: tabName,
+      href,
+      eventType: event.type,
+    });
+    
     if ("preventDefault" in event && typeof event.preventDefault === "function") {
       event.preventDefault();
     }
@@ -303,6 +313,9 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   };
 
   const handleQuickAddFood = useCallback(() => {
+    console.log(`[USER ACTION] Quick Add Food: Clicked quick add button`, {
+      url: QUICK_ADD_URL,
+    });
     trackEvent("tab_quick_add_food");
     router.push(QUICK_ADD_URL, "forward", "push");
   }, [router]);
@@ -411,6 +424,11 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       if (!isTabRootRoute(location.pathname)) return;
       if (!("detail" in event) || typeof event.detail?.register !== "function") return;
 
+      console.log(`[USER ACTION] Back Button: Hardware back button pressed`, {
+        currentPath: location.pathname,
+        navigatingTo: "/app/home",
+      });
+
       event.detail.register(10, () => {
         if (location.pathname !== "/app/home") {
           router.push("/app/home", "root", "replace");
@@ -429,6 +447,11 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     const unblock = history.block((_nextLocation, action) => {
       if (action !== "POP") return;
       if (!isTabRootRoute(history.location.pathname)) return;
+
+      console.log(`[USER ACTION] Browser Back: Browser back button pressed`, {
+        currentPath: history.location.pathname,
+        navigatingTo: "/app/home",
+      });
 
       if (history.location.pathname !== "/app/home") {
         router.push("/app/home", "root", "replace");
@@ -539,6 +562,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleLazyLoadChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      console.log(`[USER ACTION] Lazy Load Preference: Changed lazy load setting`, {
+        enabled: customEvent.detail.enabled,
+      });
       setLazyLoadEnabled(customEvent.detail.enabled);
     };
 
