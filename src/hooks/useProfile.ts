@@ -23,6 +23,7 @@ export function useProfile() {
   const [uid, setUid] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [announcementNum, setAnnouncementNum] = useState<unknown>(null);
+  const [hasViewedTutorial, setHasViewedTutorial] = useState<boolean>(false);
 
   useEffect(() => {
     // In demo mode, immediately provide demo profile
@@ -30,6 +31,7 @@ export function useProfile() {
       setUid("demo-user-id");
       setProfile(DEFAULT_DEMO_PROFILE);
       setAnnouncementNum(0);
+      setHasViewedTutorial(true);
       setLoading(false);
       return () => {}; // No cleanup needed for demo mode
     }
@@ -47,6 +49,7 @@ export function useProfile() {
       if (!user) {
         setUid(null);
         setProfile(null);
+        setHasViewedTutorial(false);
         setLoading(false);
         return;
       }
@@ -64,12 +67,14 @@ export function useProfile() {
           const p = (data.profile as Profile | undefined) ?? null;
           setProfile(p);
           setAnnouncementNum(data.announcementNum ?? null);
+          setHasViewedTutorial(data.hasViewedTutorial ?? false);
           setLoading(false);
         },
         (err) => {
           console.error("Profile snapshot error:", err);
           setProfile(null);
           setAnnouncementNum(null);
+          setHasViewedTutorial(false);
           setLoading(false);
         }
       );
@@ -82,7 +87,7 @@ export function useProfile() {
   }, [isDemoMode]);
 
   return useMemo(
-    () => ({ uid, profile, announcementNum, loading }),
-    [uid, profile, announcementNum, loading]
+    () => ({ uid, profile, announcementNum, hasViewedTutorial, loading }),
+    [uid, profile, announcementNum, hasViewedTutorial, loading]
   );
 }

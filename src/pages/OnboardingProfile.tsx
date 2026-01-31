@@ -369,6 +369,7 @@ const OnboardingProfile: React.FC = () => {
           uid: user.uid,
           email: user.email ?? null,
           displayName: user.displayName ?? null,
+          hasViewedTutorial: false,
           createdAt: serverTimestamp(),
         },
         { merge: true }

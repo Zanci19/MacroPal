@@ -102,6 +102,7 @@ import {
 import AnnouncementPopup, {
   type AnnouncementData,
 } from "../../components/AnnouncementPopup";
+import TutorialOverlay from "../../components/TutorialOverlay";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -456,12 +457,16 @@ const MealCard: React.FC<{
 
 MealCard.displayName = 'MealCard';
 
+// Tutorial timing constants
+const TUTORIAL_DELAY_AFTER_ANNOUNCEMENT = 500; // ms - delay after announcement closes
+const TUTORIAL_INITIAL_DELAY = 1000; // ms - delay on initial page load
+
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-  const { uid, profile, announcementNum, loading: profileLoading } = useProfile();
+  const { uid, profile, announcementNum, hasViewedTutorial, loading: profileLoading } = useProfile();
   const [demoAnnouncementNum, setDemoAnnouncementNum] = useState<number | null>(() => {
     if (!isDemoMode) return null;
     return readDemoAnnouncementNum();
@@ -563,6 +568,9 @@ const Home: React.FC = () => {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
   const announcementFetchedRef = useRef(false);
+
+  const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialCheckedRef = useRef(false);
 
   const unitSystem = getUnitSystem(profile?.units);
 
@@ -2001,8 +2009,70 @@ const Home: React.FC = () => {
       });
     } finally {
       setShowAnnouncementPopup(false);
+      // After announcement is dismissed, check if tutorial should be shown
+      showTutorialWithDelay(TUTORIAL_DELAY_AFTER_ANNOUNCEMENT);
     }
   };
+
+  // Helper function to update hasViewedTutorial in Firebase
+  const updateHasViewedTutorial = async (eventName: string) => {
+    if (!uid) return;
+
+    if (isDemoMode) {
+      trackEvent(eventName, { uid });
+      return;
+    }
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        hasViewedTutorial: true,
+      });
+      trackEvent(eventName, { uid });
+    } catch (error) {
+      console.error("Failed to update hasViewedTutorial:", error);
+      trackEvent("tutorial_update_error", {
+        uid,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  };
+
+  // Helper function to show tutorial with delay
+  const showTutorialWithDelay = (delay: number) => {
+    if (!hasViewedTutorial && !tutorialCheckedRef.current) {
+      tutorialCheckedRef.current = true;
+      setTimeout(() => {
+        setShowTutorial(true);
+        trackEvent("tutorial_started", { uid });
+      }, delay);
+    }
+  };
+
+  // Tutorial handlers
+  const handleTutorialComplete = async () => {
+    setShowTutorial(false);
+    await updateHasViewedTutorial("tutorial_completed");
+  };
+
+  const handleTutorialSkip = async () => {
+    setShowTutorial(false);
+    await updateHasViewedTutorial("tutorial_skipped");
+  };
+
+  // Check if tutorial should be shown when there's no announcement
+  useEffect(() => {
+    if (!isViewActive || tutorialCheckedRef.current || !uid || profileLoading) {
+      return;
+    }
+
+    // If user hasn't viewed tutorial and no announcement is showing
+    if (!hasViewedTutorial && !showAnnouncementPopup) {
+      showTutorialWithDelay(TUTORIAL_INITIAL_DELAY);
+    } else if (hasViewedTutorial) {
+      tutorialCheckedRef.current = true;
+    }
+  }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading]);
 
 
   return (
@@ -2887,6 +2957,12 @@ const Home: React.FC = () => {
         isOpen={showAnnouncementPopup}
         announcement={announcement}
         onDismiss={handleAnnouncementDismiss}
+      />
+
+      <TutorialOverlay
+        isOpen={showTutorial}
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
       />
     </IonPage>
   );
