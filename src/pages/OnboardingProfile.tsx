@@ -262,6 +262,7 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handleSave = async () => {
+    console.log('[USER ACTION] OnboardingProfile: Save profile clicked', { gender, age, weight, height, goal, activity, unitSystem });
     const user = auth.currentUser;
     if (!user) {
       showToast("You must be logged in to save your profile.");
@@ -397,6 +398,7 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handleNext = () => {
+    console.log('[USER ACTION] OnboardingProfile: Next button clicked', { step, currentStepName: steps[step], canProceed });
     if (!canProceed) {
       showToast("Please fill this in before continuing.", "warning");
       return;
@@ -412,6 +414,7 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handlePhotoChange = (file?: File | null) => {
+    console.log('[USER ACTION] OnboardingProfile: Photo file selected', { fileName: file?.name, fileSize: file?.size });
     if (!file) return;
     if (photoPreviewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(photoPreviewUrl);
@@ -422,6 +425,7 @@ const OnboardingProfile: React.FC = () => {
   };
 
   const handleBack = () => {
+    console.log('[USER ACTION] OnboardingProfile: Back button clicked', { step, currentStepName: steps[step] });
     setDirection("back");
     setStep((prev) => Math.max(prev - 1, 0));
   };
@@ -451,13 +455,19 @@ const OnboardingProfile: React.FC = () => {
               <div className="onboarding-choice-row">
                 <IonButton
                   fill={gender === "male" ? "solid" : "outline"}
-                  onClick={() => setGender("male")}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'male' });
+                    setGender("male");
+                  }}
                 >
                   Male
                 </IonButton>
                 <IonButton
                   fill={gender === "female" ? "solid" : "outline"}
-                  onClick={() => setGender("female")}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'female' });
+                    setGender("female");
+                  }}
                 >
                   Female
                 </IonButton>
@@ -472,11 +482,11 @@ const OnboardingProfile: React.FC = () => {
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setAge(
-                      adjustNumber(age, 1, 1, 120, DEFAULTS.age)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(age, 1, 1, 120, DEFAULTS.age);
+                    console.log('[USER ACTION] OnboardingProfile: Age increased', { from: age, to: newValue });
+                    setAge(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronUpOutline} />
                 </IonButton>
@@ -485,16 +495,19 @@ const OnboardingProfile: React.FC = () => {
                   type="number"
                   inputMode="numeric"
                   value={age ?? ""}
-                  onIonChange={(e) => setAge(toNumOrNull(e.detail.value))}
+                  onIonChange={(e) => {
+                    console.log('[USER ACTION] OnboardingProfile: Age input changed', { value: e.detail.value });
+                    setAge(toNumOrNull(e.detail.value));
+                  }}
                 />
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setAge(
-                      adjustNumber(age, -1, 1, 120, DEFAULTS.age)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(age, -1, 1, 120, DEFAULTS.age);
+                    console.log('[USER ACTION] OnboardingProfile: Age decreased', { from: age, to: newValue });
+                    setAge(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronDownOutline} />
                 </IonButton>
@@ -512,11 +525,11 @@ const OnboardingProfile: React.FC = () => {
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setWeight(
-                      adjustNumber(weight, 1, weightMin, weightMax, weightDefaults)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(weight, 1, weightMin, weightMax, weightDefaults);
+                    console.log('[USER ACTION] OnboardingProfile: Weight increased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
+                    setWeight(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronUpOutline} />
                 </IonButton>
@@ -525,16 +538,19 @@ const OnboardingProfile: React.FC = () => {
                   type="number"
                   inputMode="decimal"
                   value={weight ?? ""}
-                  onIonChange={(e) => setWeight(toNumOrNull(e.detail.value))}
+                  onIonChange={(e) => {
+                    console.log('[USER ACTION] OnboardingProfile: Weight input changed', { value: e.detail.value, unit: weightLabel(unitSystem) });
+                    setWeight(toNumOrNull(e.detail.value));
+                  }}
                 />
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setWeight(
-                      adjustNumber(weight, -1, weightMin, weightMax, weightDefaults)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(weight, -1, weightMin, weightMax, weightDefaults);
+                    console.log('[USER ACTION] OnboardingProfile: Weight decreased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
+                    setWeight(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronDownOutline} />
                 </IonButton>
@@ -552,11 +568,11 @@ const OnboardingProfile: React.FC = () => {
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setHeight(
-                      adjustNumber(height, 1, heightMin, heightMax, heightDefaults)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(height, 1, heightMin, heightMax, heightDefaults);
+                    console.log('[USER ACTION] OnboardingProfile: Height increased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
+                    setHeight(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronUpOutline} />
                 </IonButton>
@@ -565,16 +581,19 @@ const OnboardingProfile: React.FC = () => {
                   type="number"
                   inputMode="numeric"
                   value={height ?? ""}
-                  onIonChange={(e) => setHeight(toNumOrNull(e.detail.value))}
+                  onIonChange={(e) => {
+                    console.log('[USER ACTION] OnboardingProfile: Height input changed', { value: e.detail.value, unit: heightLabel(unitSystem) });
+                    setHeight(toNumOrNull(e.detail.value));
+                  }}
                 />
                 <IonButton
                   fill="clear"
                   className="onboarding-step-button"
-                  onClick={() =>
-                    setHeight(
-                      adjustNumber(height, -1, heightMin, heightMax, heightDefaults)
-                    )
-                  }
+                  onClick={() => {
+                    const newValue = adjustNumber(height, -1, heightMin, heightMax, heightDefaults);
+                    console.log('[USER ACTION] OnboardingProfile: Height decreased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
+                    setHeight(newValue);
+                  }}
                 >
                   <IonIcon icon={chevronDownOutline} />
                 </IonButton>
@@ -591,19 +610,28 @@ const OnboardingProfile: React.FC = () => {
               <div className="onboarding-choice-row">
                 <IonButton
                   fill={goal === "lose" ? "solid" : "outline"}
-                  onClick={() => setGoal("lose")}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'lose' });
+                    setGoal("lose");
+                  }}
                 >
                   Lose
                 </IonButton>
                 <IonButton
                   fill={goal === "maintain" ? "solid" : "outline"}
-                  onClick={() => setGoal("maintain")}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'maintain' });
+                    setGoal("maintain");
+                  }}
                 >
                   Maintain
                 </IonButton>
                 <IonButton
                   fill={goal === "gain" ? "solid" : "outline"}
-                  onClick={() => setGoal("gain")}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'gain' });
+                    setGoal("gain");
+                  }}
                 >
                   Gain
                 </IonButton>
@@ -618,7 +646,10 @@ const OnboardingProfile: React.FC = () => {
                 <IonLabel position="stacked">Activity level</IonLabel>
                 <IonSelect
                   value={activity}
-                  onIonChange={(e) => setActivity(e.detail.value as Activity)}
+                  onIonChange={(e) => {
+                    console.log('[USER ACTION] OnboardingProfile: Activity level changed', { value: e.detail.value });
+                    setActivity(e.detail.value as Activity);
+                  }}
                 >
                   <IonSelectOption value="sedentary">
                     Sedentary (little/no exercise)
@@ -664,7 +695,10 @@ const OnboardingProfile: React.FC = () => {
                 </div>
                 <IonButton
                   className="onboarding-photo-button"
-                  onClick={() => photoInputRef.current?.click()}
+                  onClick={() => {
+                    console.log('[USER ACTION] OnboardingProfile: Add/Replace photo button clicked', { hasPhoto: !!displayedPhotoUrl });
+                    photoInputRef.current?.click();
+                  }}
                 >
                   {displayedPhotoUrl ? "Replace photo" : "Add photo"}
                 </IonButton>
@@ -673,6 +707,7 @@ const OnboardingProfile: React.FC = () => {
                     fill="clear"
                     className="onboarding-photo-remove"
                     onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Remove photo button clicked');
                       if (photoPreviewUrl?.startsWith("blob:")) {
                         URL.revokeObjectURL(photoPreviewUrl);
                       }
@@ -689,9 +724,10 @@ const OnboardingProfile: React.FC = () => {
                   className="onboarding-photo-input"
                   type="file"
                   accept="image/*"
-                  onChange={(event) =>
-                    handlePhotoChange(event.target.files?.[0] ?? null)
-                  }
+                  onChange={(event) => {
+                    console.log('[USER ACTION] OnboardingProfile: Photo file input changed', { hasFile: !!event.target.files?.[0] });
+                    handlePhotoChange(event.target.files?.[0] ?? null);
+                  }}
                 />
               </div>
             )}
@@ -701,14 +737,20 @@ const OnboardingProfile: React.FC = () => {
             <IonButton
               fill="clear"
               className="onboarding-back"
-              onClick={handleBack}
+              onClick={() => {
+                console.log('[USER ACTION] OnboardingProfile: Back navigation button clicked');
+                handleBack();
+              }}
               disabled={step === 0}
             >
               Back
             </IonButton>
             <IonButton
               className="onboarding-next"
-              onClick={handleNext}
+              onClick={() => {
+                console.log('[USER ACTION] OnboardingProfile: Next/Finish button clicked (bottom)', { isLastStep, loading });
+                handleNext();
+              }}
               disabled={loading}
             >
               {isLastStep ? (loading ? "Saving…" : "Finish") : "Next"}

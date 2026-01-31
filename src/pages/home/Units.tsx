@@ -61,6 +61,7 @@ const Units: React.FC = () => {
   }, []);
 
   const handleSave = async () => {
+    console.log('[USER ACTION] Units: Save button clicked', { units });
     const current = auth.currentUser;
     if (!current) {
       setToast({ show: true, message: "You must be logged in." });
@@ -102,9 +103,10 @@ const Units: React.FC = () => {
           <IonLabel position="stacked">Unit system</IonLabel>
           <IonSegment
             value={units}
-            onIonChange={(e) =>
-              setUnits(getUnitSystem(e.detail.value as UnitSystem))
-            }
+            onIonChange={(e) => {
+              console.log('[USER ACTION] Units: Unit system changed', { value: e.detail.value });
+              setUnits(getUnitSystem(e.detail.value as UnitSystem));
+            }}
           >
             <IonSegmentButton value="metric">
               <IonLabel>Metric (kg, cm)</IonLabel>
@@ -118,7 +120,10 @@ const Units: React.FC = () => {
         <IonButton
           expand="block"
           className="ion-margin-top"
-          onClick={handleSave}
+          onClick={() => {
+            console.log('[USER ACTION] Units: Save units button clicked');
+            handleSave();
+          }}
           disabled={saving}
         >
           {saving ? "Saving..." : "Save units"}

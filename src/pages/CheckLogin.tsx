@@ -117,6 +117,7 @@ const CheckLogin: React.FC = () => {
   }, [phase]);
 
   const handleRetry = () => {
+    console.log('[USER ACTION] CheckLogin: Try again button clicked', { phase, isOnline: navigator.onLine });
     // IMPORTANT: do NOT switch to "checking" if still offline
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       setPhase("offline");
@@ -180,7 +181,10 @@ const CheckLogin: React.FC = () => {
           >
             Turn on Wi-Fi or mobile data, then tap “Try again”.
           </IonText>
-          <IonButton expand="block" onClick={handleRetry}>
+          <IonButton expand="block" onClick={() => {
+            console.log('[USER ACTION] CheckLogin: Try again button clicked (offline/error)');
+            handleRetry();
+          }}>
             Try again
           </IonButton>
         </>
@@ -215,7 +219,10 @@ const CheckLogin: React.FC = () => {
           expand="block"
           fill="outline"
           style={{ marginTop: 8 }}
-          onClick={() => history.replace("/login")}
+          onClick={() => {
+            console.log('[USER ACTION] CheckLogin: Go to login button clicked (error)');
+            history.replace("/login");
+          }}
         >
           Go to login
         </IonButton>

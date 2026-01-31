@@ -299,6 +299,7 @@ const ScanBarcode: React.FC = () => {
   }, []);
 
   const rotateCamera = () => {
+    console.log('[USER ACTION] ScanBarcode: Rotate camera button clicked', { currentDevice: activeDeviceId, totalDevices: devices.length });
     if (!devices.length) return;
     const currentIndex = devices.findIndex(
       (device) => device.deviceId === activeDeviceId
@@ -349,7 +350,10 @@ const ScanBarcode: React.FC = () => {
             <IonButton
               fill="solid"
               size="small"
-              onClick={rotateCamera}
+              onClick={() => {
+                console.log('[USER ACTION] ScanBarcode: Rotate camera button clicked (inline)');
+                rotateCamera();
+              }}
               disabled={starting || devices.length < 2}
               style={{
                 position: "absolute",
@@ -481,6 +485,7 @@ const ScanBarcode: React.FC = () => {
               <IonButton
                 expand="block"
                 onClick={() => {
+                  console.log('[USER ACTION] ScanBarcode: Try again button clicked (error)', { error });
                   trackEvent("barcode_scan_retry_click");
                   start();
                 }}
@@ -491,6 +496,7 @@ const ScanBarcode: React.FC = () => {
                 expand="block"
                 fill="outline"
                 onClick={() => {
+                  console.log('[USER ACTION] ScanBarcode: Back to Add Food button clicked', { meal, date: dateKey });
                   trackEvent("barcode_scan_back_to_add_food", {
                     meal,
                     date: dateKey,

@@ -121,6 +121,7 @@ const Settings: React.FC = () => {
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
 
   const handleThemeChange = async (newTheme: ThemeMode) => {
+    console.log(`[USER ACTION] Settings: Theme changed`, { newTheme });
     setThemeMode(newTheme);
     applyTheme(newTheme);
 
@@ -178,6 +179,7 @@ const Settings: React.FC = () => {
   };
 
   const handleVerifyEmail = async () => {
+    console.log(`[USER ACTION] Settings: Send verification email clicked`);
     if (!auth.currentUser) return;
     try {
       await sendEmailVerification(auth.currentUser);
@@ -196,6 +198,7 @@ const Settings: React.FC = () => {
   };
 
   const handleResetPassword = async () => {
+    console.log(`[USER ACTION] Settings: Send password reset email clicked`);
     const email = auth.currentUser?.email || "";
     if (!email) {
       setToast({
@@ -222,6 +225,7 @@ const Settings: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
+    console.log(`[USER ACTION] Settings: Delete account confirmed and executing`);
     if (!auth.currentUser) return;
     try {
       await deleteUser(auth.currentUser);
@@ -239,6 +243,7 @@ const Settings: React.FC = () => {
   };
 
   const handleClearRecentFoods = async () => {
+    console.log(`[USER ACTION] Settings: Clear recent foods confirmed and executing`);
     if (!auth.currentUser) return;
     try {
       setClearingRecent(true);
@@ -270,6 +275,7 @@ const Settings: React.FC = () => {
   };
 
   const handlePhotoChange = async (file?: File | null) => {
+    console.log(`[USER ACTION] Settings: Photo file selected for upload`, { fileName: file?.name, fileSize: file?.size });
     if (!file || !auth.currentUser) return;
 
     try {
@@ -300,6 +306,7 @@ const Settings: React.FC = () => {
   };
 
   const handleCopyDiagnostics = async () => {
+    console.log(`[USER ACTION] Settings: Copy diagnostics to clipboard clicked`);
     const prefersReducedMotion =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const prefersDark =
@@ -498,6 +505,7 @@ const Settings: React.FC = () => {
   };
 
   const handleClearCachedPreferences = () => {
+    console.log(`[USER ACTION] Settings: Clear cached preferences clicked`);
     if (typeof window === "undefined") return;
     const keys = [
       "mp_theme",
@@ -539,6 +547,7 @@ const Settings: React.FC = () => {
   };
 
   const handleRemovePhoto = async () => {
+    console.log(`[USER ACTION] Settings: Remove profile photo clicked`);
     if (!auth.currentUser) return;
     try {
       const ref = doc(db, "users", auth.currentUser.uid);
@@ -713,7 +722,10 @@ const Settings: React.FC = () => {
           <IonText color="medium">Please log in.</IonText>
           <IonButton
             className="ion-margin-top"
-            onClick={() => history.push("/login")}
+            onClick={() => {
+              console.log(`[USER ACTION] Settings: Navigate to login page`);
+              history.push("/login");
+            }}
           >
             Go to Login
           </IonButton>
@@ -744,11 +756,15 @@ const Settings: React.FC = () => {
                 <IonItem lines="full">
                   <div
                     className="settings-avatar"
-                    onClick={() => setShowPhotoActions(true)}
+                    onClick={() => {
+                      console.log(`[USER ACTION] Settings: Clicked profile photo avatar`);
+                      setShowPhotoActions(true);
+                    }}
                     role="button"
                     tabIndex={0}
                     aria-label="Update profile photo"
                     onKeyDown={(event) => {
+                      console.log(`[USER ACTION] Settings: Keyboard action on profile photo avatar`, { key: event.key });
                       if (event.key === "Enter" || event.key === " ") {
                         setShowPhotoActions(true);
                       }
@@ -803,35 +819,50 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/setup-profile")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to setup profile page`);
+                    history.push("/setup-profile");
+                  }}
                 >
                   <IonLabel>Profile, goals & targets</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/app/energy-needs")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to energy needs page`);
+                    history.push("/app/energy-needs");
+                  }}
                 >
                   <IonLabel>Change energy needs</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/app/units")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to units page`);
+                    history.push("/app/units");
+                  }}
                 >
                   <IonLabel>Units & measurements</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/app/reminders")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to reminders page`);
+                    history.push("/app/reminders");
+                  }}
                 >
                   <IonLabel>Reminders</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/app/data-privacy")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to data privacy page`);
+                    history.push("/app/data-privacy");
+                  }}
                 >
                   <IonLabel>Data & privacy</IonLabel>
                 </IonItem>
@@ -853,6 +884,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={smartRecommendationEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Smart recommendation toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setSmartRecommendationEnabled(checked);
 
@@ -889,6 +921,7 @@ const Settings: React.FC = () => {
                     value={smartDietStyle}
                     disabled={!smartRecommendationEnabled}
                     onIonChange={(e) => {
+                      console.log(`[USER ACTION] Settings: Diet style changed`, { value: e.detail.value });
                       const value = (e.detail.value || "none") as SmartDietStyle;
                       setSmartDietStyle(value);
                       void saveSmartRecommendationProfile({ dietStyle: value });
@@ -906,6 +939,7 @@ const Settings: React.FC = () => {
                     value={smartMacroFocus}
                     disabled={!smartRecommendationEnabled}
                     onIonChange={(e) => {
+                      console.log(`[USER ACTION] Settings: Macro focus changed`, { value: e.detail.value });
                       const value = (e.detail.value || "balanced") as SmartMacroFocus;
                       setSmartMacroFocus(value);
                       void saveSmartRecommendationProfile({ macroFocus: value });
@@ -934,6 +968,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={showRandomQuoteEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Random quote toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setShowRandomQuoteEnabled(checked);
 
@@ -970,6 +1005,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={showAchievementsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Achievements toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setShowAchievementsEnabled(checked);
 
@@ -1006,6 +1042,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={showRecentItemsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Recent items toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setShowRecentItemsEnabled(checked);
 
@@ -1042,6 +1079,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={showRecentSearchesEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Recent searches toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setShowRecentSearchesEnabled(checked);
 
@@ -1094,7 +1132,10 @@ const Settings: React.FC = () => {
                     slot="end"
                     interface="popover"
                     value={themeMode}
-                    onIonChange={(e) => handleThemeChange(e.detail.value as ThemeMode)}
+                    onIonChange={(e) => {
+                      console.log(`[USER ACTION] Settings: Theme select changed`, { value: e.detail.value });
+                      handleThemeChange(e.detail.value as ThemeMode);
+                    }}
                   >
                     <IonSelectOption value="system">System Default</IonSelectOption>
                     <IonSelectOption value="light">Light</IonSelectOption>
@@ -1111,6 +1152,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={tabAnimationsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Tab animations toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setTabAnimationsEnabled(checked);
                       applyAnimationPreference(checked);
@@ -1151,6 +1193,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={chartAnimationsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Chart animations toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setChartAnimationsEnabled(checked);
                       applyChartAnimationPreference(checked);
@@ -1191,6 +1234,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={showMealCountsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Meal counts toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setShowMealCountsEnabled(checked);
                       applyMealCountPreference(checked);
@@ -1231,6 +1275,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={autoExpandMealsEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Auto-expand meals toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setAutoExpandMealsEnabled(checked);
                       applyAutoExpandMealsPreference(checked);
@@ -1275,7 +1320,10 @@ const Settings: React.FC = () => {
                   lines="full"
                   button
                   disabled={clearingRecent}
-                  onClick={() => setConfirmClearRecent(true)}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Clear recent foods clicked`);
+                    setConfirmClearRecent(true);
+                  }}
                 >
                   <IonIcon slot="start" icon={trashOutline} />
                   <IonLabel>Clear recent foods history</IonLabel>
@@ -1295,13 +1343,19 @@ const Settings: React.FC = () => {
             </IonCardHeader>
             <IonCardContent>
               <IonList>
-                <IonItem lines="full" button onClick={() => void handleCopyDiagnostics()}>
+                <IonItem lines="full" button onClick={() => {
+                  console.log(`[USER ACTION] Settings: Copy diagnostics clicked`);
+                  void handleCopyDiagnostics();
+                }}>
                   <IonLabel>
                     <h2>Copy diagnostics</h2>
                     <p>Copy device and app info for support.</p>
                   </IonLabel>
                 </IonItem>
-                <IonItem lines="full" button onClick={handleClearCachedPreferences}>
+                <IonItem lines="full" button onClick={() => {
+                  console.log(`[USER ACTION] Settings: Clear cached preferences clicked`);
+                  handleClearCachedPreferences();
+                }}>
                   <IonLabel>
                     <h2>Clear cached preferences</h2>
                     <p>Reset theme, animation, and lazy-load settings.</p>
@@ -1316,6 +1370,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={debugOverlayEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Debug overlay toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setDebugOverlayEnabled(checked);
                       applyDebugOverlayPreference(checked);
@@ -1355,6 +1410,7 @@ const Settings: React.FC = () => {
                     slot="end"
                     checked={lazyLoadEnabled}
                     onIonChange={async (e) => {
+                      console.log(`[USER ACTION] Settings: Lazy load toggle changed`, { checked: e.detail.checked });
                       const checked = e.detail.checked;
                       setLazyLoadEnabled(checked);
                       applyLazyLoadPreference(checked);
@@ -1398,9 +1454,10 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  onClick={() =>
-                    window.open("https://buymeacoffee.com/zanci19", "_blank")
-                  }
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Buy me a coffee clicked`, { url: 'https://buymeacoffee.com/zanci19' });
+                    window.open("https://buymeacoffee.com/zanci19", "_blank");
+                  }}
                 >
                   <IonIcon slot="start" icon={cafeOutline} />
                   <IonLabel>Buy me a coffee ☕</IonLabel>
@@ -1408,7 +1465,10 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => history.push("/app/changelog")}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to changelog page`);
+                    history.push("/app/changelog");
+                  }}
                 >
                   <IonIcon slot="start" icon={newspaperOutline} />
                   <IonLabel>Changelog</IonLabel>
@@ -1416,7 +1476,10 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => setShowAbout(true)}
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Show About MacroPal modal`);
+                    setShowAbout(true);
+                  }}
                 >
                   <IonIcon slot="start" icon={informationCircleOutline} />
                   <IonLabel>About MacroPal</IonLabel>
@@ -1435,6 +1498,7 @@ const Settings: React.FC = () => {
                   lines="full"
                   button
                   onClick={async () => {
+                    console.log(`[USER ACTION] Settings: Sign out clicked`, { isDemoMode });
                     if (isDemoMode) {
                       setToast({
                         show: true,
@@ -1461,6 +1525,7 @@ const Settings: React.FC = () => {
         accept="image/*"
         className="settings-file-input"
         onChange={(event) => {
+          console.log(`[USER ACTION] Settings: Gallery photo selected`, { filesCount: event.target.files?.length });
           void handlePhotoChange(event.target.files?.[0] ?? null);
           if (event.currentTarget) event.currentTarget.value = "";
         }}
@@ -1472,6 +1537,7 @@ const Settings: React.FC = () => {
         capture="environment"
         className="settings-file-input"
         onChange={(event) => {
+          console.log(`[USER ACTION] Settings: Camera photo captured`, { filesCount: event.target.files?.length });
           void handlePhotoChange(event.target.files?.[0] ?? null);
           if (event.currentTarget) event.currentTarget.value = "";
         }}
@@ -1479,16 +1545,25 @@ const Settings: React.FC = () => {
 
       <IonActionSheet
         isOpen={showPhotoActions}
-        onDidDismiss={() => setShowPhotoActions(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: Photo action sheet dismissed`);
+          setShowPhotoActions(false);
+        }}
         header="Update profile photo"
         buttons={[
           {
             text: "Choose from gallery",
-            handler: () => galleryInputRef.current?.click(),
+            handler: () => {
+              console.log(`[USER ACTION] Settings: Choose from gallery button clicked`);
+              galleryInputRef.current?.click();
+            },
           },
           {
             text: "Take a photo",
-            handler: () => cameraInputRef.current?.click(),
+            handler: () => {
+              console.log(`[USER ACTION] Settings: Take a photo button clicked`);
+              cameraInputRef.current?.click();
+            },
           },
           ...(profilePhotoUrl
             ? [
@@ -1496,6 +1571,7 @@ const Settings: React.FC = () => {
                   text: "Remove photo",
                   role: "destructive",
                   handler: () => {
+                    console.log(`[USER ACTION] Settings: Remove photo button clicked`);
                     void handleRemovePhoto();
                   },
                 },
@@ -1517,18 +1593,25 @@ const Settings: React.FC = () => {
           {
             text: "Cancel",
             role: "cancel",
-            handler: () => setConfirmDelete(false),
+            handler: () => {
+              console.log(`[USER ACTION] Settings: Delete account alert cancelled`);
+              setConfirmDelete(false);
+            },
           },
           {
             text: "Continue",
             role: "destructive",
             handler: () => {
+              console.log(`[USER ACTION] Settings: Delete account alert - Continue clicked`);
               setConfirmDelete(false);
               setConfirmDeleteName(true);
             },
           },
         ]}
-        onDidDismiss={() => setConfirmDelete(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: Delete account alert dismissed`);
+          setConfirmDelete(false);
+        }}
       />
 
       <IonAlert
@@ -1539,18 +1622,25 @@ const Settings: React.FC = () => {
           {
             text: "Cancel",
             role: "cancel",
-            handler: () => setConfirmClearRecent(false),
+            handler: () => {
+              console.log(`[USER ACTION] Settings: Clear recent foods alert cancelled`);
+              setConfirmClearRecent(false);
+            },
           },
           {
             text: "Clear",
             role: "destructive",
             handler: () => {
+              console.log(`[USER ACTION] Settings: Clear recent foods alert - Clear confirmed`);
               setConfirmClearRecent(false);
               void handleClearRecentFoods();
             },
           },
         ]}
-        onDidDismiss={() => setConfirmClearRecent(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: Clear recent foods alert dismissed`);
+          setConfirmClearRecent(false);
+        }}
       />
 
       <IonAlert
@@ -1568,6 +1658,7 @@ const Settings: React.FC = () => {
             text: "Cancel",
             role: "cancel",
             handler: () => {
+              console.log(`[USER ACTION] Settings: Delete account name confirmation cancelled`);
               setConfirmDeleteName(false);
             },
           },
@@ -1575,6 +1666,7 @@ const Settings: React.FC = () => {
             text: "Delete",
             role: "destructive",
             handler: (data: any) => {
+              console.log(`[USER ACTION] Settings: Delete account name confirmation - Delete clicked`, { matchesUsername: (data?.typedName || "").trim() === usernameToType });
               const typed = (data?.typedName || "").trim();
               if (typed !== usernameToType) {
                 setToast({
@@ -1590,7 +1682,10 @@ const Settings: React.FC = () => {
             },
           },
         ]}
-        onDidDismiss={() => setConfirmDeleteName(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: Delete account name confirmation dismissed`);
+          setConfirmDeleteName(false);
+        }}
       />
 
       <IonAlert
@@ -1618,17 +1713,24 @@ Thank you for using MacroPal!`}
           {
             text: "Close",
             role: "cancel",
-            handler: () => setShowAbout(false),
+            handler: () => {
+              console.log(`[USER ACTION] Settings: About MacroPal alert closed`);
+              setShowAbout(false);
+            },
           },
           {
             text: "Support Developer",
             handler: () => {
+              console.log(`[USER ACTION] Settings: About MacroPal - Support Developer clicked`, { url: 'https://buymeacoffee.com/zanci19' });
               window.open("https://buymeacoffee.com/zanci19", "_blank");
               setShowAbout(false);
             },
           },
         ]}
-        onDidDismiss={() => setShowAbout(false)}
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: About MacroPal alert dismissed`);
+          setShowAbout(false);
+        }}
       />
 
       <IonToast
@@ -1636,9 +1738,10 @@ Thank you for using MacroPal!`}
         message={toast.message}
         color={toast.color}
         duration={2200}
-        onDidDismiss={() =>
-          setToast((t) => ({ ...t, show: false, message: "" }))
-        }
+        onDidDismiss={() => {
+          console.log(`[USER ACTION] Settings: Toast dismissed`, { message: toast.message });
+          setToast((t) => ({ ...t, show: false, message: "" }));
+        }}
       />
     </IonPage>
   );

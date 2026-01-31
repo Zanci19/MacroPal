@@ -17,10 +17,12 @@ const Offline: React.FC = () => {
   const history = useHistory();
 
   const goBackToCheck = () => {
+    console.log('[USER ACTION] Offline: Try again button clicked');
     history.replace("/check-login");
   };
 
   const continueOffline = () => {
+    console.log('[USER ACTION] Offline: Continue offline button clicked');
     history.replace("/app/home");
   };
 
@@ -64,7 +66,10 @@ const Offline: React.FC = () => {
           <IonButton
             expand="block"
             style={{ marginTop: 24 }}
-            onClick={goBackToCheck}
+            onClick={() => {
+              console.log('[USER ACTION] Offline: Try again button clicked (inline)');
+              goBackToCheck();
+            }}
           >
             <IonIcon slot="start" icon={refreshOutline} />
             Try again
@@ -73,7 +78,10 @@ const Offline: React.FC = () => {
             expand="block"
             fill="outline"
             style={{ marginTop: 12 }}
-            onClick={continueOffline}
+            onClick={() => {
+              console.log('[USER ACTION] Offline: Continue offline button clicked (inline)');
+              continueOffline();
+            }}
           >
             <IonIcon slot="start" icon={cloudOfflineOutline} />
             Continue offline
