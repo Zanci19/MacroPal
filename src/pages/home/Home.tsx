@@ -1518,6 +1518,10 @@ const Home: React.FC = () => {
         : "var(--ion-color-danger)";
 
   const goRelativeDay = (delta: number) => {
+    console.log(`[USER ACTION] Home: Navigate day`, {
+      delta: delta > 0 ? 'next' : 'previous',
+      currentDate: activeDateKey,
+    });
     setActiveDateKey((prev) => {
       const next = clampDateKeyToToday(shiftDateKey(prev, delta));
       if (next !== prev) {
@@ -1533,6 +1537,9 @@ const Home: React.FC = () => {
   };
 
   const openPicker = () => {
+    console.log(`[USER ACTION] Home: Opened date picker`, {
+      currentDate: activeDateKey,
+    });
     setPendingDateKey(activeDateKey);
     setShowDatePicker(true);
     trackEvent("day_picker_open", { uid, date: activeDateKey });
@@ -1541,6 +1548,11 @@ const Home: React.FC = () => {
   const confirmPicker = () => {
     const from = activeDateKey;
     const to = clampDateKeyToToday(pendingDateKey);
+    console.log(`[USER ACTION] Home: Confirmed date picker`, {
+      from,
+      to,
+      changed: from !== to,
+    });
     setActiveDateKey(to);
     setShowDatePicker(false);
     if (from !== to) {
@@ -1551,6 +1563,10 @@ const Home: React.FC = () => {
   const handleDateChange = (value: string | null | undefined) => {
     if (!value) return;
     const key = value.split("T")[0];
+    console.log(`[USER ACTION] Home: Date picker value changed`, {
+      value,
+      key,
+    });
     if (isDateKey(key)) {
       const clamped = clampDateKeyToToday(key);
       setPendingDateKey(clamped);
@@ -1702,6 +1718,10 @@ const Home: React.FC = () => {
   }, [uid, anyItems, profile, activeDateKey]);
 
   const openWeighInModal = () => {
+    console.log(`[USER ACTION] Home: Opened weigh-in modal`, {
+      date: activeDateKey,
+      hasCurrentWeight: !!profile?.weight,
+    });
     const fallback =
       typeof profile?.weight === "number"
         ? String(
@@ -2034,6 +2054,9 @@ const Home: React.FC = () => {
             fill="clear"
             shape="round"
             onClick={() => {
+              console.log(`[USER ACTION] Home: Opened day menu`, {
+                date: activeDateKey,
+              });
               setDayMenuOpen(true);
               trackEvent("day_menu_open", { uid, date: activeDateKey });
             }}
@@ -2443,6 +2466,9 @@ const Home: React.FC = () => {
             <IonButton
               style={{ marginTop: 12 }}
               onClick={() => {
+                console.log(`[USER ACTION] Home: Clicked add your first food (empty state)`, {
+                  date: activeDateKey,
+                });
                 trackEvent("home_empty_state_add_food_tap", {
                   uid,
                   date: activeDateKey,
@@ -2778,7 +2804,10 @@ const Home: React.FC = () => {
           <IonToolbar>
             <IonTitle>Log weigh-in</IonTitle>
             <IonButtons slot="end">
-              <IonButton onClick={() => setShowWeighInModal(false)}>
+              <IonButton onClick={() => {
+                console.log(`[USER ACTION] Home: Closed weigh-in modal`);
+                setShowWeighInModal(false);
+              }}>
                 Close
               </IonButton>
             </IonButtons>
@@ -2833,6 +2862,10 @@ const Home: React.FC = () => {
               expand="block"
               fill="outline"
               onClick={() => {
+                console.log(`[USER ACTION] Home: Cancelled date picker`, {
+                  active: activeDateKey,
+                  pending: pendingDateKey,
+                });
                 setShowDatePicker(false);
                 trackEvent("day_picker_cancel", {
                   uid,
