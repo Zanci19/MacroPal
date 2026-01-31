@@ -466,7 +466,7 @@ const Workout: React.FC = () => {
                       color="danger"
                       size="small"
                       onClick={() => {
-                      console.log('[USER ACTION] Workout: Remove button clicked in activity list', { index: idx, activity: act });
+                      console.log('[USER ACTION] Workout: Remove button clicked in activity list', { index: idx, activityTitle: act.title });
                       deleteActivity(idx);
                     }}
                       aria-label={`Delete ${act.title}`}

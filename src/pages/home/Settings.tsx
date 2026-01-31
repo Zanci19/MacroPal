@@ -764,8 +764,8 @@ const Settings: React.FC = () => {
                     tabIndex={0}
                     aria-label="Update profile photo"
                     onKeyDown={(event) => {
-                      console.log(`[USER ACTION] Settings: Keyboard action on profile photo avatar`, { key: event.key });
                       if (event.key === "Enter" || event.key === " ") {
+                        console.log(`[USER ACTION] Settings: Keyboard action on profile photo avatar`, { key: event.key });
                         setShowPhotoActions(true);
                       }
                     }}

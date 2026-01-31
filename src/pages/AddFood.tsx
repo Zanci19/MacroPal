@@ -2043,7 +2043,7 @@ const AddFood: React.FC = () => {
   };
 
   const addFavoriteToMeal = async (fav: FavoriteFood) => {
-    console.log(`[USER ACTION] AddFood: Favorite clicked to add to meal`, { favoriteName: fav.name, meal });
+    console.log(`[USER ACTION] AddFood: Favorite clicked to add to meal`, { favoriteId: fav.id || 'unknown', meal });
     const user = auth.currentUser;
     if (!user) return;
 
@@ -2450,8 +2450,9 @@ const AddFood: React.FC = () => {
   const modalTitle = editEntry?.item?.name || selectedFood?.product_name || "(no name)";
 
   const handleChangeMeal = useCallback((next: MealKey) => {
-    console.log(`[USER ACTION] AddFood: Meal changed`, { from: meal, to: next });
     if (next === meal) return;
+    
+    console.log(`[USER ACTION] AddFood: Meal changed`, { from: meal, to: next });
 
     trackEvent("add_food_meal_change", {
       from: meal,
@@ -3104,8 +3105,10 @@ const AddFood: React.FC = () => {
                         <IonButton
                           fill="outline"
                           onClick={() => {
-                            console.log(`[USER ACTION] AddFood: Serving quantity decreased`, { currentQty: servingsQty });
-                            setServingsQty((v) => Math.max(0.1, safeNum(v - 0.5, 1)));
+                            const oldQty = servingsQty;
+                            const newQty = Math.max(0.1, safeNum(oldQty - 0.5, 1));
+                            console.log(`[USER ACTION] AddFood: Serving quantity decreased`, { from: oldQty, to: newQty });
+                            setServingsQty(newQty);
                           }}
                         >
                           −
@@ -3125,8 +3128,10 @@ const AddFood: React.FC = () => {
                         <IonButton
                           fill="outline"
                           onClick={() => {
-                            console.log(`[USER ACTION] AddFood: Serving quantity increased`, { currentQty: servingsQty });
-                            setServingsQty((v) => safeNum(v + 0.5, 1));
+                            const oldQty = servingsQty;
+                            const newQty = safeNum(oldQty + 0.5, 1);
+                            console.log(`[USER ACTION] AddFood: Serving quantity increased`, { from: oldQty, to: newQty });
+                            setServingsQty(newQty);
                           }}
                         >
                           +
