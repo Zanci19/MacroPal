@@ -73,6 +73,7 @@ type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
 const Settings: React.FC = () => {
   const history = useHistory();
   const user = auth.currentUser;
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   const [toast, setToast] = React.useState<{
     show: boolean;
@@ -1434,6 +1435,14 @@ const Settings: React.FC = () => {
                   lines="full"
                   button
                   onClick={async () => {
+                    if (isDemoMode) {
+                      setToast({
+                        show: true,
+                        message: "Sign out is disabled in demo mode.",
+                        color: "medium",
+                      });
+                      return;
+                    }
                     await signOut(auth);
                   }}
                 >

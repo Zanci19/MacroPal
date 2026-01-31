@@ -123,6 +123,7 @@ const computeCollapsedMeals = (day: DayDiaryDoc): Record<MealKey, boolean> =>
 const ZEN_QUOTES_ENDPOINT = "https://zenquote-wjgl4tt7ha-ew.a.run.app";
 const QUOTE_STORAGE_KEY = "mp_daily_quote";
 const ANNOUNCEMENT_API_URL = "https://zanci19.github.io/macro.pal/app/home-popups/new-feature.json";
+const DEMO_ANNOUNCEMENT_STORAGE_KEY = "demo_announcement_num";
 
 const getFallbackQuote = (): InspirationalQuote => {
   const index = Math.floor(Math.random() * INSPIRATIONAL_QUOTES.length);
@@ -163,6 +164,26 @@ const storeQuote = (dateKey: string, quote: InspirationalQuote) => {
     localStorage.setItem(QUOTE_STORAGE_KEY, JSON.stringify(payload));
   } catch (error) {
     console.warn("Unable to store quote", error);
+  }
+};
+
+const readDemoAnnouncementNum = (): number | null => {
+  try {
+    const raw = localStorage.getItem(DEMO_ANNOUNCEMENT_STORAGE_KEY);
+    if (raw === null) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch (error) {
+    console.warn("Unable to read demo announcement number", error);
+    return null;
+  }
+};
+
+const storeDemoAnnouncementNum = (value: number) => {
+  try {
+    localStorage.setItem(DEMO_ANNOUNCEMENT_STORAGE_KEY, String(value));
+  } catch (error) {
+    console.warn("Unable to store demo announcement number", error);
   }
 };
 
@@ -438,8 +459,13 @@ MealCard.displayName = 'MealCard';
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   const { uid, profile, announcementNum, loading: profileLoading } = useProfile();
+  const [demoAnnouncementNum, setDemoAnnouncementNum] = useState<number | null>(() => {
+    if (!isDemoMode) return null;
+    return readDemoAnnouncementNum();
+  });
 
   const [loading, setLoading] = useState(true);
   const [activeDateKey, setActiveDateKey] = useState<string>(() => {
@@ -1856,7 +1882,9 @@ const Home: React.FC = () => {
         }
 
         // Get user's current announcementNum from profile
-        const userAnnouncementNum = normalizeAnnouncementNum(announcementNum);
+        const userAnnouncementNum = normalizeAnnouncementNum(
+          isDemoMode ? demoAnnouncementNum : announcementNum
+        );
         const apiNum = data.announcementNum;
 
         // Show popup only if the user's number is lower than the latest
@@ -1882,7 +1910,7 @@ const Home: React.FC = () => {
         });
       }
     },
-    [announcementNum, profile, uid]
+    [announcementNum, demoAnnouncementNum, isDemoMode, profile, uid]
   );
 
   // Fetch and display announcement if needed
@@ -1922,6 +1950,17 @@ const Home: React.FC = () => {
     }
 
     const newAnnouncementNum = announcement.announcementNum;
+
+    if (isDemoMode) {
+      storeDemoAnnouncementNum(newAnnouncementNum);
+      setDemoAnnouncementNum(newAnnouncementNum);
+      trackEvent("announcement_dismissed", {
+        uid,
+        announcementNum: announcement.announcementNum,
+      });
+      setShowAnnouncementPopup(false);
+      return;
+    }
 
     try {
       const userRef = doc(db, "users", uid);
