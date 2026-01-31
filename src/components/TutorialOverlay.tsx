@@ -8,6 +8,10 @@ import {
 import { arrowForwardOutline, closeOutline } from "ionicons/icons";
 import "./TutorialOverlay.css";
 
+// Constants for timing and styling
+const DOM_READY_DELAY = 100; // ms - wait for DOM to be ready before highlighting
+const SPOTLIGHT_PADDING = 8; // px - padding around highlighted element
+
 interface TutorialStep {
   id: string;
   title: string;
@@ -110,7 +114,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
       } else {
         setHighlightRect(null);
       }
-    }, 100);
+    }, DOM_READY_DELAY);
 
     return () => clearTimeout(timer);
   }, [isOpen, currentStep, currentStepIndex]);
@@ -206,10 +210,10 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
         <div
           className="tutorial-spotlight"
           style={{
-            top: `${highlightRect.top - 8}px`,
-            left: `${highlightRect.left - 8}px`,
-            width: `${highlightRect.width + 16}px`,
-            height: `${highlightRect.height + 16}px`,
+            top: `${highlightRect.top - SPOTLIGHT_PADDING}px`,
+            left: `${highlightRect.left - SPOTLIGHT_PADDING}px`,
+            width: `${highlightRect.width + SPOTLIGHT_PADDING * 2}px`,
+            height: `${highlightRect.height + SPOTLIGHT_PADDING * 2}px`,
           }}
         />
       )}

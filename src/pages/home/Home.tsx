@@ -457,6 +457,10 @@ const MealCard: React.FC<{
 
 MealCard.displayName = 'MealCard';
 
+// Tutorial timing constants
+const TUTORIAL_DELAY_AFTER_ANNOUNCEMENT = 500; // ms - delay after announcement closes
+const TUTORIAL_INITIAL_DELAY = 1000; // ms - delay on initial page load
+
 const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
@@ -2006,7 +2010,7 @@ const Home: React.FC = () => {
     } finally {
       setShowAnnouncementPopup(false);
       // After announcement is dismissed, check if tutorial should be shown
-      showTutorialWithDelay(500);
+      showTutorialWithDelay(TUTORIAL_DELAY_AFTER_ANNOUNCEMENT);
     }
   };
 
@@ -2064,7 +2068,7 @@ const Home: React.FC = () => {
 
     // If user hasn't viewed tutorial and no announcement is showing
     if (!hasViewedTutorial && !showAnnouncementPopup) {
-      showTutorialWithDelay(1000);
+      showTutorialWithDelay(TUTORIAL_INITIAL_DELAY);
     } else if (hasViewedTutorial) {
       tutorialCheckedRef.current = true;
     }
