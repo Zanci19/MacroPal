@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { enableIndexedDbPersistence, initializeFirestore } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import {
   getAnalytics,
@@ -22,16 +26,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
-export const storage = getStorage(app);
+const firestoreSettings =
+  typeof window !== "undefined"
+    ? {
+        experimentalForceLongPolling: true,
+        cache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      }
+    : {
+        experimentalForceLongPolling: true,
+      };
 
-if (typeof window !== "undefined") {
-  enableIndexedDbPersistence(db).catch((err) => {
-    console.warn("Firestore persistence unavailable:", err);
-  });
-}
+export const db = initializeFirestore(app, firestoreSettings);
+export const storage = getStorage(app);
 
 export let analytics: Analytics | null = null;
 
