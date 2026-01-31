@@ -36,7 +36,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "home-tab",
-    title: "Home Tab 🏠",
+    title: "Home Tab",
     description: "This is your home screen where you can track your daily meals and see your progress.",
     targetSelector: 'ion-tab-button[tab="home"]',
     position: "top",
@@ -44,7 +44,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "add-food-button",
-    title: "Quick Add Food ➕",
+    title: "Quick Add Food",
     description: "Tap this button anytime to quickly log your meals. It's the fastest way to track what you eat!",
     targetSelector: 'ion-tab-button[tab="quick-add"]',
     position: "top",
@@ -52,7 +52,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "analytics-tab",
-    title: "Analytics 📊",
+    title: "Analytics",
     description: "View detailed charts and statistics about your nutrition and progress over time.",
     targetSelector: 'ion-tab-button[tab="analytics"]',
     position: "top",
@@ -60,7 +60,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "workout-tab",
-    title: "Workout Tracker 💪",
+    title: "Workout Tracker",
     description: "Log your workouts and track calories burned during exercise.",
     targetSelector: 'ion-tab-button[tab="workout"]',
     position: "top",
@@ -68,7 +68,7 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "settings-tab",
-    title: "Settings ⚙️",
+    title: "Settings",
     description: "Customize your profile, units, reminders, and other preferences here.",
     targetSelector: 'ion-tab-button[tab="settings"]',
     position: "top",
@@ -76,8 +76,8 @@ const tutorialSteps: TutorialStep[] = [
   },
   {
     id: "delete-food",
-    title: "Managing Food Entries 🗑️",
-    description: "To delete a food item, simply swipe left on any entry in your meal list and tap the delete button.",
+    title: "Managing Food Entries",
+    description: "To delete a food item, simply hold on any entry in your meal list and tap the delete button. You'll also see other useful options you may use.",
     position: "center",
   },
   {
@@ -254,7 +254,7 @@ const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
               <IonIcon icon={closeOutline} />
             </button>
 
-            <h2 className="tutorial-title">{currentStep.title}</h2>
+            <h2 className="tutorial-title"><b>{currentStep.title}</b></h2>
             <p className="tutorial-description">{currentStep.description}</p>
 
             <div className="tutorial-footer">
