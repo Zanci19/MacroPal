@@ -102,6 +102,7 @@ import {
 import AnnouncementPopup, {
   type AnnouncementData,
 } from "../../components/AnnouncementPopup";
+import TutorialOverlay from "../../components/TutorialOverlay";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -461,7 +462,7 @@ const Home: React.FC = () => {
   const location = useLocation();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
-  const { uid, profile, announcementNum, loading: profileLoading } = useProfile();
+  const { uid, profile, announcementNum, hasViewedTutorial, loading: profileLoading } = useProfile();
   const [demoAnnouncementNum, setDemoAnnouncementNum] = useState<number | null>(() => {
     if (!isDemoMode) return null;
     return readDemoAnnouncementNum();
@@ -563,6 +564,9 @@ const Home: React.FC = () => {
   const [showAnnouncementPopup, setShowAnnouncementPopup] = useState(false);
   const [announcement, setAnnouncement] = useState<AnnouncementData | null>(null);
   const announcementFetchedRef = useRef(false);
+
+  const [showTutorial, setShowTutorial] = useState(false);
+  const tutorialCheckedRef = useRef(false);
 
   const unitSystem = getUnitSystem(profile?.units);
 
@@ -2001,8 +2005,87 @@ const Home: React.FC = () => {
       });
     } finally {
       setShowAnnouncementPopup(false);
+      // After announcement is dismissed, check if tutorial should be shown
+      if (!hasViewedTutorial && !tutorialCheckedRef.current) {
+        tutorialCheckedRef.current = true;
+        // Small delay to let announcement close smoothly
+        setTimeout(() => {
+          setShowTutorial(true);
+          trackEvent("tutorial_started", { uid });
+        }, 500);
+      }
     }
   };
+
+  // Tutorial handlers
+  const handleTutorialComplete = async () => {
+    setShowTutorial(false);
+    
+    if (!uid) return;
+
+    if (isDemoMode) {
+      trackEvent("tutorial_completed", { uid });
+      return;
+    }
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        hasViewedTutorial: true,
+      });
+      trackEvent("tutorial_completed", { uid });
+    } catch (error) {
+      console.error("Failed to update hasViewedTutorial:", error);
+      trackEvent("tutorial_update_error", {
+        uid,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  };
+
+  const handleTutorialSkip = async () => {
+    setShowTutorial(false);
+    
+    if (!uid) return;
+
+    if (isDemoMode) {
+      trackEvent("tutorial_skipped", { uid });
+      return;
+    }
+
+    try {
+      const userRef = doc(db, "users", uid);
+      await updateDoc(userRef, {
+        hasViewedTutorial: true,
+      });
+      trackEvent("tutorial_skipped", { uid });
+    } catch (error) {
+      console.error("Failed to update hasViewedTutorial:", error);
+      trackEvent("tutorial_update_error", {
+        uid,
+        error: error instanceof Error ? error.message : "unknown",
+      });
+    }
+  };
+
+  // Check if tutorial should be shown when there's no announcement
+  useEffect(() => {
+    if (!isViewActive || tutorialCheckedRef.current || !uid || profileLoading) {
+      return;
+    }
+
+    // If user hasn't viewed tutorial and no announcement is showing
+    if (!hasViewedTutorial && !showAnnouncementPopup) {
+      tutorialCheckedRef.current = true;
+      // Small delay to let the page render first
+      setTimeout(() => {
+        setShowTutorial(true);
+        trackEvent("tutorial_started", { uid });
+      }, 1000);
+    } else if (hasViewedTutorial) {
+      tutorialCheckedRef.current = true;
+    }
+  }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading]);
 
 
   return (
@@ -2887,6 +2970,12 @@ const Home: React.FC = () => {
         isOpen={showAnnouncementPopup}
         announcement={announcement}
         onDismiss={handleAnnouncementDismiss}
+      />
+
+      <TutorialOverlay
+        isOpen={showTutorial}
+        onComplete={handleTutorialComplete}
+        onSkip={handleTutorialSkip}
       />
     </IonPage>
   );

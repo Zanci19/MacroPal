@@ -1,0 +1,210 @@
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.tutorial-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.tutorial-spotlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  z-index: 10001;
+  transition: all 0.3s ease-in-out;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 128, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 128, 255, 0.8);
+  }
+}
+
+.tutorial-arrow {
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateX(-50%) rotate(90deg) translateY(0);
+  }
+  50% {
+    transform: translateX(-50%) rotate(90deg) translateY(-5px);
+  }
+}
+
+.tutorial-card-container {
+  position: fixed;
+  z-index: 10003;
+  pointer-events: auto;
+  max-width: 90%;
+  width: 100%;
+}
+
+.tutorial-card-container.center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 400px;
+}
+
+@media (min-width: 768px) {
+  .tutorial-card-container {
+    max-width: 400px;
+  }
+}
+
+.tutorial-card {
+  margin: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.tutorial-card ion-card-content {
+  padding: 24px 20px 20px;
+  position: relative;
+}
+
+.tutorial-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: var(--ion-color-medium, #92949c);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 24px;
+  transition: all 0.2s ease;
+  z-index: 1;
+}
+
+.tutorial-close:hover {
+  background: var(--ion-color-light, #f4f5f8);
+  color: var(--ion-color-dark, #222428);
+}
+
+.tutorial-close ion-icon {
+  font-size: 24px;
+}
+
+.tutorial-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  color: var(--ion-text-color, #000);
+  line-height: 1.3;
+  padding-right: 32px;
+}
+
+.tutorial-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ion-color-medium-shade, #808289);
+  margin: 0 0 24px 0;
+}
+
+.tutorial-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tutorial-progress {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+
+.tutorial-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ion-color-light, #f4f5f8);
+  transition: all 0.3s ease;
+}
+
+.tutorial-progress-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--ion-color-primary, #3880ff);
+}
+
+.tutorial-progress-dot.completed {
+  background: var(--ion-color-primary-tint, #4c8dff);
+}
+
+.tutorial-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tutorial-skip-button {
+  --color: var(--ion-color-medium, #92949c);
+  font-size: 14px;
+}
+
+.tutorial-next-button {
+  --border-radius: 8px;
+  font-weight: 600;
+  flex: 1;
+  max-width: 200px;
+  margin-left: auto;
+}
+
+/* Dark mode adjustments */
+.dark .tutorial-backdrop {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.dark .tutorial-spotlight {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
+}
+
+@media (prefers-color-scheme: dark) {
+  body:not(.light) .tutorial-backdrop {
+    background: rgba(0, 0, 0, 0.85);
+  }
+
+  body:not(.light) .tutorial-spotlight {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
+  }
+}
