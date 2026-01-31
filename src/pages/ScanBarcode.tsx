@@ -13,8 +13,9 @@ import {
   IonIcon,
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
-import { cameraReverseOutline } from "ionicons/icons";
+import { cameraReverseOutline, flashOffOutline, flashOutline } from "ionicons/icons";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import type { Result, ResultPoint } from "@zxing/library";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import { trackEvent } from "../firebase";
@@ -45,6 +46,8 @@ const ScanBarcode: React.FC = () => {
   const highlightTimeoutRef = useRef<number | null>(null);
   const decodeInProgressRef = useRef(false);
   const hasScannedRef = useRef(false);
+  const cameraStartMsRef = useRef<number>(0);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
 
   const history = useHistory();
   const location = useLocation();
@@ -62,6 +65,8 @@ const ScanBarcode: React.FC = () => {
     height: number;
   } | null>(null);
   const [highlightActive, setHighlightActive] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
 
   // 🔔 Shutter flash state
   const [flash, setFlash] = useState(false);
@@ -70,26 +75,6 @@ const ScanBarcode: React.FC = () => {
   useEffect(() => {
     trackEvent("barcode_scan_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
-
-  const stop = () => {
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
-    const reader = readerRef.current;
-    if (reader && "stopContinuousDecode" in reader) {
-      (reader as { stopContinuousDecode: () => void }).stopContinuousDecode();
-    }
-    readerRef.current = null;
-    decodeInProgressRef.current = false;
-    setHighlightActive(false);
-    setHighlightBox(null);
-    setActiveDeviceId(null);
-    if (highlightTimeoutRef.current) {
-      window.clearTimeout(highlightTimeoutRef.current);
-      highlightTimeoutRef.current = null;
-    }
-    trackEvent("barcode_scan_camera_stopped");
-  };
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -161,12 +146,74 @@ const ScanBarcode: React.FC = () => {
     };
   };
 
+  const updateTorchCapabilities = () => {
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    const track = stream?.getVideoTracks?.()[0] ?? null;
+    videoTrackRef.current = track;
+    const capabilities = track?.getCapabilities?.() as
+      | MediaTrackCapabilities
+      | undefined;
+    const supportsTorch = Boolean(capabilities && (capabilities as any).torch);
+    setTorchSupported(supportsTorch);
+    if (!supportsTorch) {
+      setTorchOn(false);
+    }
+  };
+
+  const enableTorchIfPossible = async (on: boolean) => {
+    const track = videoTrackRef.current;
+    const capabilities = track?.getCapabilities?.() as
+      | MediaTrackCapabilities
+      | undefined;
+    if (!track || !capabilities || !(capabilities as any).torch) {
+      return;
+    }
+    try {
+      await track.applyConstraints({
+        advanced: [{ torch: on }] as any,
+      });
+      setTorchOn(on);
+    } catch (err) {
+      console.warn("Failed to toggle torch", err);
+      setTorchOn(false);
+    }
+  };
+
+  const stop = () => {
+    if (torchOn) {
+      void enableTorchIfPossible(false);
+    }
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    stream?.getTracks().forEach((t) => t.stop());
+    if (videoRef.current) videoRef.current.srcObject = null;
+    const reader = readerRef.current;
+    if (reader && "stopContinuousDecode" in reader) {
+      (reader as { stopContinuousDecode: () => void }).stopContinuousDecode();
+    }
+    readerRef.current = null;
+    decodeInProgressRef.current = false;
+    setHighlightActive(false);
+    setHighlightBox(null);
+    setActiveDeviceId(null);
+    setTorchOn(false);
+    setTorchSupported(false);
+    videoTrackRef.current = null;
+    if (highlightTimeoutRef.current) {
+      window.clearTimeout(highlightTimeoutRef.current);
+      highlightTimeoutRef.current = null;
+    }
+    trackEvent("barcode_scan_camera_stopped");
+  };
+
   const start = async (preferredDeviceId?: string | null) => {
     setError(null);
     setStarting(true);
     setHighlightBox(null);
     setHighlightActive(false);
     hasScannedRef.current = false;
+    setTorchOn(false);
+    setTorchSupported(false);
+    cameraStartMsRef.current = Date.now();
 
     trackEvent("barcode_scan_start", { meal, date: dateKey });
 
@@ -177,12 +224,24 @@ const ScanBarcode: React.FC = () => {
       });
       pre.getTracks().forEach((t) => t.stop());
 
-      const reader = new BrowserMultiFormatReader();
+      const hints = new Map();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,
+        BarcodeFormat.EAN_8,
+        BarcodeFormat.UPC_A,
+        BarcodeFormat.UPC_E,
+        BarcodeFormat.ITF,
+        BarcodeFormat.CODE_128,
+      ]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      const reader = new BrowserMultiFormatReader(hints);
       readerRef.current = reader;
 
       if (videoRef.current) {
         videoRef.current.onloadedmetadata = () => {
           setStarting(false);
+          cameraStartMsRef.current = Date.now();
+          updateTorchCapabilities();
         };
       }
 
@@ -207,13 +266,31 @@ const ScanBarcode: React.FC = () => {
       }
       setActiveDeviceId(devId);
 
-      await reader.decodeFromVideoDevice(
-        devId,
+      const constraints: MediaStreamConstraints = {
+        video: {
+          deviceId: { exact: devId },
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+          advanced: [
+            {
+              focusMode: "continuous",
+              exposureMode: "continuous",
+              whiteBalanceMode: "continuous",
+            },
+          ] as any,
+        },
+      };
+
+      await reader.decodeFromConstraints(
+        constraints,
         videoRef.current!,
-        async (result, err) => {
+        async (result) => {
           if (hasScannedRef.current) return;
           if (decodeInProgressRef.current) return;
           if (!result) return;
+          if (Date.now() - cameraStartMsRef.current < 600) return;
 
           try {
             decodeInProgressRef.current = true;
@@ -346,6 +423,32 @@ const ScanBarcode: React.FC = () => {
               muted
               style={{ width: "100%", background: "#000" }}
             />
+
+            {torchSupported && (
+              <IonButton
+                fill="solid"
+                size="small"
+                onClick={() => {
+                  const nextState = !torchOn;
+                  trackEvent("barcode_scan_torch_toggle", { on: nextState });
+                  void enableTorchIfPossible(nextState);
+                }}
+                disabled={starting}
+                style={{
+                  position: "absolute",
+                  top: 12,
+                  right: 60,
+                  zIndex: 5,
+                  "--padding-start": "10px",
+                  "--padding-end": "10px",
+                }}
+              >
+                <IonIcon
+                  slot="icon-only"
+                  icon={torchOn ? flashOutline : flashOffOutline}
+                />
+              </IonButton>
+            )}
 
             <IonButton
               fill="solid"
