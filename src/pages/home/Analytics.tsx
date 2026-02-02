@@ -256,6 +256,11 @@ const Analytics: React.FC = () => {
 
       setDays(list);
       setWeightEntries(weighList);
+    } catch (error) {
+      console.error("Error fetching analytics data:", error);
+      trackEvent("analytics_fetch_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
     } finally {
       setLoading(false);
     }
