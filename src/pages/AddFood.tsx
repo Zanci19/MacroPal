@@ -216,7 +216,9 @@ type DiaryEntryDoc = {
   dataSource?: string;
   code?: string;
   addedAt?: string;
-  [k: string]: any;
+  photoUrl?: string;
+  photoName?: string;
+  amount?: number;
 };
 
 type DayDoc = Partial<Record<MealKey, DiaryEntryDoc[]>>;
@@ -356,8 +358,8 @@ function scale(base: MacroSet, qty: number): MacroSet {
   };
 }
 
-function stripUndefined<T extends Record<string, any>>(obj: T): T {
-  const out: any = {};
+function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+  const out: Record<string, unknown> = {};
   Object.entries(obj).forEach(([k, v]) => {
     if (v !== undefined) out[k] = v;
   });
@@ -667,7 +669,8 @@ const AddFood: React.FC = () => {
           uid: user.uid,
           calories: p.caloriesTarget,
         });
-      } catch (e: any) {
+      } catch (error: unknown) {
+        const e = error as Error;
         const msg = handleError("add_food_profile_targets", e);
         trackEvent("add_food_profile_targets_error", {
           message: e?.message || String(e),
@@ -850,7 +853,8 @@ const AddFood: React.FC = () => {
             setQuery(code);
             await foodsSearch(code, 1);
           }
-        } catch (e: any) {
+        } catch (error: unknown) {
+          const e = error as Error;
           console.error(e);
           trackEvent("barcode_lookup_exception", {
             code,
@@ -950,7 +954,7 @@ const AddFood: React.FC = () => {
     setPhotoName(typeof item.photoName === "string" ? item.photoName : "");
     setPhotoRemoved(false);
 
-    const sel: any = item.selection || {};
+    const sel = item.selection || {};
     const mode: "serving" | "weight" =
       sel.mode === "serving" || sel.mode === "weight" ? sel.mode : "weight";
 
@@ -1097,7 +1101,8 @@ const AddFood: React.FC = () => {
             count: unique.length,
           });
         }
-      } catch (e: any) {
+      } catch (error: unknown) {
+        const e = error as Error;
         console.error(e);
         if (!cancelled) {
           trackEvent("recent_history_load_error", {
@@ -1434,7 +1439,8 @@ const AddFood: React.FC = () => {
       });
 
       return deduped.length;
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error & { name?: string };
       if (e?.name === "AbortError") return 0;
 
       const msg = handleError("food_search", e);
@@ -1506,7 +1512,8 @@ const AddFood: React.FC = () => {
       }
 
       throw new Error("Not found");
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -1645,9 +1652,8 @@ const AddFood: React.FC = () => {
     try {
       if (editEntry) {
         const { meal: mealKey, index, item } = editEntry;
-        const anyItem: any = item;
-        const sel: any = anyItem.selection || {};
-        const base = anyItem.base || null;
+        const sel = item.selection || {};
+        const base = item.base || null;
 
         const mode: "serving" | "weight" =
           sel.mode === "serving" || sel.mode === "weight"
@@ -1669,8 +1675,8 @@ const AddFood: React.FC = () => {
           oldValue =
             typeof sel.weightQty === "number" && sel.weightQty > 0
               ? sel.weightQty
-              : typeof anyItem.amount === "number" && anyItem.amount > 0
-              ? anyItem.amount
+              : typeof item.amount === "number" && item.amount > 0
+              ? item.amount
               : 100;
           newValue = Math.max(1, weightQty);
         }
@@ -1678,7 +1684,7 @@ const AddFood: React.FC = () => {
         if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
         const ratio = newValue / oldValue;
 
-        const oldTotal: any = item.total || {};
+        const oldTotal = item.total || {} as MacroSet;
         const newTotalRaw: MacroSet = {
           calories: safeNum((oldTotal.calories || 0) * ratio, 0),
           carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
@@ -1708,7 +1714,7 @@ const AddFood: React.FC = () => {
 
         const newTotal = stripUndefined(newTotalRaw);
 
-        const newSel: any = {
+        const newSel = {
           ...(sel || {}),
           mode,
         };
@@ -1751,8 +1757,8 @@ const AddFood: React.FC = () => {
           ...item,
           total: newTotal,
           selection: newSel,
-          photoUrl: finalPhotoUrl,
-          photoName: finalPhotoName,
+          photoUrl: finalPhotoUrl ?? undefined,
+          photoName: finalPhotoName ?? undefined,
         };
 
         const userRef = doc(db, "users", user.uid, "foods", dateKey);
@@ -1875,7 +1881,8 @@ const AddFood: React.FC = () => {
 
       setOpen(false);
       history.replace(`/app/home?date=${dateKey}`);
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       const msg = handleError("add_food_to_meal", e);
       setToast({
@@ -1959,7 +1966,8 @@ const AddFood: React.FC = () => {
         code: selectedFood.code,
         name: favData.name,
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -2029,7 +2037,8 @@ const AddFood: React.FC = () => {
         name,
         calories,
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -2219,7 +2228,8 @@ const AddFood: React.FC = () => {
         name,
         calories,
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -2291,7 +2301,8 @@ const AddFood: React.FC = () => {
         uid: user.uid,
         favorite_id: favoriteToDelete.id,
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -2327,7 +2338,8 @@ const AddFood: React.FC = () => {
         uid: user.uid,
         preset_id: mealPresetToDelete.id,
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       setToast({
         show: true,
@@ -2344,8 +2356,8 @@ const AddFood: React.FC = () => {
 
   const previewPerBaseLabel = useMemo(() => {
     if (editEntry) {
-      const src: any = editEntry.item;
-      const sel: any = src.selection || {};
+      const src = editEntry.item;
+      const sel = src.selection || {};
       const base = src.base || null;
 
       if (useServing) {
@@ -2368,10 +2380,10 @@ const AddFood: React.FC = () => {
 
   const previewTotal = useMemo(() => {
     if (editEntry) {
-      const src: any = editEntry.item;
+      const src = editEntry.item;
       const total: MacroSet =
         src.total || ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
-      const sel: any = src.selection || {};
+      const sel = src.selection || {};
 
       const mode: "serving" | "weight" =
         sel.mode === "serving" || sel.mode === "weight"
@@ -2421,8 +2433,8 @@ const AddFood: React.FC = () => {
   const isEditServingMode =
     !!editEntry &&
     (() => {
-      const src: any = editEntry.item;
-      const sel: any = src.selection || {};
+      const src = editEntry.item;
+      const sel = src.selection || {};
       const mode: "serving" | "weight" =
         sel.mode === "serving" || sel.mode === "weight"
           ? sel.mode

@@ -686,7 +686,6 @@ const Home: React.FC = () => {
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
     dayDataSignatureRef.current = "";
-    setDayDataSignature("");
     collapsedInitKeyRef.current = null;
     setWorkoutCalories(0);
 
@@ -710,7 +709,6 @@ const Home: React.FC = () => {
       if (nextSignature !== dayDataSignatureRef.current) {
         dayDataSignatureRef.current = nextSignature;
         setDayData(nextDay);
-        setDayDataSignature(nextSignature);
         if (collapsedInitKeyRef.current !== activeDateKey) {
           collapsedInitKeyRef.current = activeDateKey;
           if (autoExpandMealsEnabled) {

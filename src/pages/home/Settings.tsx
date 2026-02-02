@@ -137,7 +137,8 @@ const Settings: React.FC = () => {
         uid: current.uid,
         theme: newTheme,
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save theme preference:", err);
       setToast({
         show: true,
@@ -167,7 +168,8 @@ const Settings: React.FC = () => {
         uid: current.uid,
         ...nextProfile,
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save smart recommendation profile:", err);
       setToast({
         show: true,
@@ -187,7 +189,8 @@ const Settings: React.FC = () => {
         message: "Verification email sent.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not send verification email.",
@@ -214,7 +217,8 @@ const Settings: React.FC = () => {
         message: "Password reset email sent.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not send password reset email.",
@@ -230,7 +234,8 @@ const Settings: React.FC = () => {
       await deleteUser(auth.currentUser);
       setToast({ show: true, message: "Account deleted.", color: "success" });
       history.replace("/login");
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message:
@@ -262,7 +267,8 @@ const Settings: React.FC = () => {
         message: "Recent foods history cleared.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not clear recent foods.",
@@ -294,7 +300,8 @@ const Settings: React.FC = () => {
       setProfilePhotoUrl(downloadURL);
       trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
       setToast({ show: true, message: "Profile photo updated.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save profile photo:", err);
       setToast({
         show: true,
@@ -493,7 +500,8 @@ const Settings: React.FC = () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
       setToast({ show: true, message: "Diagnostics copied to clipboard.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to copy diagnostics:", err);
       setToast({
         show: true,
@@ -554,7 +562,8 @@ const Settings: React.FC = () => {
       setProfilePhotoUrl(null);
       trackEvent("settings_profile_photo_remove", { uid: auth.currentUser.uid });
       setToast({ show: true, message: "Profile photo removed.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to remove profile photo:", err);
       setToast({
         show: true,
@@ -901,7 +910,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save smartRecommendationEnabled:", err);
                         setToast({
                           show: true,
@@ -985,7 +995,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRandomQuote:", err);
                         setToast({
                           show: true,
@@ -1022,7 +1033,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showAchievements:", err);
                         setToast({
                           show: true,
@@ -1059,7 +1071,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRecentItems:", err);
                         setToast({
                           show: true,
@@ -1096,7 +1109,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRecentSearches:", err);
                         setToast({
                           show: true,
@@ -1169,7 +1183,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save tab animations preference:", err);
                         setToast({
                           show: true,
@@ -1210,7 +1225,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save chart animations preference:", err);
                         setToast({
                           show: true,
@@ -1251,7 +1267,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save meal counts preference:", err);
                         setToast({
                           show: true,
@@ -1292,7 +1309,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save auto expand preference:", err);
                         setToast({
                           show: true,
@@ -1387,7 +1405,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save debug overlay preference:", err);
                         setToast({
                           show: true,
@@ -1427,7 +1446,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save lazy load preference:", err);
                         setToast({
                           show: true,
@@ -1664,7 +1684,7 @@ const Settings: React.FC = () => {
           {
             text: "Delete",
             role: "destructive",
-            handler: (data: any) => {
+            handler: (data: { typedName?: string }) => {
               console.log(`[USER ACTION] Settings: Delete account name confirmation - Delete clicked`, { matchesUsername: (data?.typedName || "").trim() === usernameToType });
               const typed = (data?.typedName || "").trim();
               if (typed !== usernameToType) {

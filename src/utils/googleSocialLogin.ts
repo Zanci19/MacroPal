@@ -131,7 +131,8 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
 
   try {
     return await loginWithTokens();
-  } catch (err: any) {
+  } catch (error: unknown) {
+    const err = error as Error & { code?: number | string; errorCode?: number | string; nativeCode?: number | string };
     console.error("[googleSocialLogin] Error during sign-in:", err);
     const code = err?.code ?? err?.errorCode ?? err?.nativeCode;
     const message = String(err?.message ?? "").toLowerCase();

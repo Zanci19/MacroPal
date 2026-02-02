@@ -1,4 +1,4 @@
-import { onRequest } from "firebase-functions/v2/https";
+import { onRequest, Response as HttpsResponse } from "firebase-functions/v2/https";
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
@@ -7,14 +7,14 @@ initializeApp();
 const firestore = getFirestore();
 
 /* ============ Shared helpers ============ */
-function setCors(res: any) {
+function setCors(res: HttpsResponse) {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.set("Vary", "Origin");
 }
 
-function setCaching(res: any) {
+function setCaching(res: HttpsResponse) {
   // Client cache 60s, CDN/edge cache 300s, serve stale 600s
   res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
 }
@@ -48,7 +48,7 @@ async function fetchWithTimeout(url: string, init: RequestInit = {}, ms = 5000) 
 async function raceOk(urls: string[], init: RequestInit) {
   return new Promise<Response>((resolve, reject) => {
     let pending = urls.length;
-    let lastErr: any;
+    let lastErr: Error | undefined;
 
     for (const u of urls) {
       fetchWithTimeout(u, init)
@@ -59,8 +59,8 @@ async function raceOk(urls: string[], init: RequestInit) {
             if (--pending === 0) reject(lastErr);
           }
         })
-        .catch((e) => {
-          lastErr = e;
+        .catch((e: unknown) => {
+          lastErr = e as Error;
           if (--pending === 0) reject(lastErr);
         });
     }
@@ -92,7 +92,8 @@ export const offBarcode = onRequest({ region: "europe-west1" }, async (req, res)
     res.set("Content-Type", r.headers.get("content-type") || "application/json");
     setCaching(res);
     res.status(200).send(body);
-  } catch (e: any) {
+  } catch (error: unknown) {
+    const e = error as Error & { name?: string };
     const aborted = e?.name === "AbortError";
     console.error("offBarcode error:", aborted ? "timeout" : e);
     res
