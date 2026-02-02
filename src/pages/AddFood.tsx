@@ -1684,7 +1684,7 @@ const AddFood: React.FC = () => {
         if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
         const ratio = newValue / oldValue;
 
-        const oldTotal = item.total || {} as MacroSet;
+        const oldTotal = (item.total || {}) as MacroSet;
         const newTotalRaw: MacroSet = {
           calories: safeNum((oldTotal.calories || 0) * ratio, 0),
           carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
