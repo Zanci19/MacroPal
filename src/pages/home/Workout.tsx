@@ -36,7 +36,6 @@ import {
   chevronBackOutline,
   chevronForwardOutline,
   fitnessOutline,
-  flameOutline,
   timerOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";

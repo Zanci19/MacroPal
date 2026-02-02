@@ -15,24 +15,6 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
 
-  const resetInactivityTimer = useCallback(() => {
-    if (!isDemoMode || !isDemoActive) return;
-
-    // Clear existing timer
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-
-    // Set new timer
-    inactivityTimerRef.current = setTimeout(() => {
-      // Reset demo mode - clear data and show video again
-      console.log("Demo mode: Inactivity timeout - resetting to video");
-      clearDemoData();
-      setIsDemoActive(false);
-      setShowVideo(true);
-    }, INACTIVITY_TIMEOUT_MS);
-  }, [isDemoMode, isDemoActive]);
-
   const clearDemoData = useCallback(() => {
     // Use the global clearDemoData if available
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,6 +49,24 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
 
     console.log("Demo mode: Cleared user data");
   }, []);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (!isDemoMode || !isDemoActive) return;
+
+    // Clear existing timer
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+
+    // Set new timer
+    inactivityTimerRef.current = setTimeout(() => {
+      // Reset demo mode - clear data and show video again
+      console.log("Demo mode: Inactivity timeout - resetting to video");
+      clearDemoData();
+      setIsDemoActive(false);
+      setShowVideo(true);
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [isDemoMode, isDemoActive, clearDemoData]);
 
   const handleClick = useCallback(() => {
     if (!isDemoMode) return;

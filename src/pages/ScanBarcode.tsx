@@ -210,7 +210,7 @@ const ScanBarcode: React.FC = () => {
       await reader.decodeFromVideoDevice(
         devId,
         videoRef.current!,
-        async (result, err) => {
+        async (result) => {
           if (hasScannedRef.current) return;
           if (decodeInProgressRef.current) return;
           if (!result) return;

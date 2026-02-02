@@ -28,7 +28,6 @@ import {
   personCircleOutline,
   logOutOutline,
   mailOutline,
-  warningOutline,
   cafeOutline,
   trashOutline,
   colorPaletteOutline,
@@ -321,11 +320,11 @@ const Settings: React.FC = () => {
     let localStorageSize = 0;
     try {
       for (const key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
           localStorageSize += localStorage[key].length + key.length;
         }
       }
-    } catch (e) {
+    } catch {
       localStorageSize = -1;
     }
 
@@ -409,7 +408,7 @@ const Settings: React.FC = () => {
         try {
           const canvas = document.createElement('canvas');
           return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-        } catch (e) {
+        } catch {
           return false;
         }
       })(),
@@ -417,7 +416,7 @@ const Settings: React.FC = () => {
         try {
           const canvas = document.createElement('canvas');
           return !!canvas.getContext('webgl2');
-        } catch (e) {
+        } catch {
           return false;
         }
       })(),
