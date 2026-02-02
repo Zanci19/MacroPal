@@ -16,7 +16,7 @@ type SocialLoginPlugin = {
       autoSelectEnabled?: boolean;
       forceRefreshToken?: boolean;
     };
-  }) => Promise<Record<string, any>>;
+  }) => Promise<Record<string, unknown>>;
   logout?: () => Promise<void>;
 };
 
@@ -44,12 +44,12 @@ const initializeSocialLogin = async () => {
 };
 
 const getTokenValue = (
-  sources: Array<Record<string, any> | null | undefined>,
+  sources: Array<Record<string, unknown> | null | undefined>,
   keys: string[]
 ) => {
   const visited = new Set<unknown>();
-  const queue: Array<Record<string, any>> = sources.filter(
-    (source): source is Record<string, any> => !!source
+  const queue: Array<Record<string, unknown>> = sources.filter(
+    (source): source is Record<string, unknown> => !!source
   );
 
   while (queue.length > 0) {
@@ -66,7 +66,7 @@ const getTokenValue = (
 
     for (const value of Object.values(current)) {
       if (value && typeof value === "object") {
-        queue.push(value as Record<string, any>);
+        queue.push(value as Record<string, unknown>);
       }
     }
   }
@@ -91,21 +91,29 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     const response = await SocialLogin.login({
       provider: "google",
     });
+    
+    const responseData = response as Record<string, unknown> & {
+      result?: Record<string, unknown> & { authentication?: Record<string, unknown> };
+      response?: Record<string, unknown>;
+      data?: Record<string, unknown>;
+      authentication?: Record<string, unknown>;
+    };
+    
     console.log("[googleSocialLogin] Login response received (structure):", {
-      hasResult: !!response?.result,
-      hasResponse: !!response?.response,
-      hasData: !!response?.data,
-      hasAuthentication: !!(response?.result?.authentication || response?.authentication),
-      topLevelKeys: response ? Object.keys(response) : []
+      hasResult: !!responseData?.result,
+      hasResponse: !!responseData?.response,
+      hasData: !!responseData?.data,
+      hasAuthentication: !!(responseData?.result?.authentication || responseData?.authentication),
+      topLevelKeys: responseData ? Object.keys(responseData) : []
     });
 
-    const candidates = [
-      response,
-      response?.result,
-      response?.response,
-      response?.data,
-      response?.result?.authentication,
-      response?.authentication,
+    const candidates: Array<Record<string, unknown> | null | undefined> = [
+      responseData,
+      responseData?.result ?? null,
+      responseData?.response ?? null,
+      responseData?.data ?? null,
+      responseData?.result?.authentication ?? null,
+      responseData?.authentication ?? null,
     ];
 
     const idToken = getTokenValue(candidates, ["idToken", "id_token"]);

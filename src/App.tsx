@@ -169,7 +169,7 @@ const reportProfiler: React.ProfilerOnRenderCallback = (
 };
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
-const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
+const LazyRoute = ({ component: Component, profileId, ...props }: { component: React.ComponentType<RouteComponentProps>; profileId?: string } & RouteComponentProps) => (
   <React.Profiler
     id={profileId ?? Component.displayName ?? Component.name ?? "LazyRoute"}
     onRender={reportProfiler}

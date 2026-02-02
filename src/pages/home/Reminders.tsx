@@ -190,7 +190,9 @@ const Reminders: React.FC = () => {
       });
       trackEvent("reminders_saved", {
         uid: current.uid,
-        reminders,
+        mealEnabled,
+        weighInEnabled,
+        workoutEnabled,
       });
       const needsPermission = mealEnabled || weighInEnabled || workoutEnabled;
       if (needsPermission) {
@@ -238,7 +240,8 @@ const Reminders: React.FC = () => {
 
       setToast({ show: true, message: "Reminders updated.", color: "success" });
       history.push("/app/settings");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save reminders:", err);
       trackEvent("reminders_save_error", {
         uid: current.uid,

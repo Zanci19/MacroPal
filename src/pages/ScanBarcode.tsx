@@ -249,7 +249,9 @@ const ScanBarcode: React.FC = () => {
 
             hasScannedRef.current = true;
             setFlash(true);
-            if ("vibrate" in navigator) (navigator as any).vibrate?.(20);
+            if ("vibrate" in navigator && typeof (navigator as { vibrate?: (duration: number) => void }).vibrate === "function") {
+              (navigator as { vibrate: (duration: number) => void }).vibrate(20);
+            }
             await sleep(180);
             setFlash(false);
 
@@ -268,16 +270,18 @@ const ScanBarcode: React.FC = () => {
                 code
               )}&found=1`
             );
-          } catch (decodeError: any) {
-            console.error(decodeError);
-            const msg = decodeError?.message ?? "Failed to decode barcode";
+          } catch (decodeError: unknown) {
+            const err = decodeError as Error;
+            console.error(err);
+            const msg = err?.message ?? "Failed to decode barcode";
             setError(msg);
             trackEvent("barcode_scan_error", { message: msg });
             decodeInProgressRef.current = false;
           }
         }
       );
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       console.error(e);
       const msg = e?.message ?? "Failed to start camera";
       setError(msg);

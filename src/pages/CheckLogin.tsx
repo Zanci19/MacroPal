@@ -61,7 +61,8 @@ const CheckLogin: React.FC = () => {
 
           // Let /auth-loading decide between /setup-profile and /app/home
           history.replace("/auth-loading");
-        } catch (e: any) {
+        } catch (error: unknown) {
+          const e = error as Error;
           console.error(e);
           setErrorMsg(
             e?.message || "Unexpected error while checking your account."
