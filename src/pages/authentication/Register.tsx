@@ -89,7 +89,8 @@ const Register: React.FC = () => {
         trackEvent("register_google_success", { uid: result.user.uid });
         showToast("Signed up with Google.", "success");
         history.replace("/auth-loading");
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         if (!active) return;
         trackEvent("register_google_error", { code: err?.code || "unknown" });
         showToast(handleError("register", err));
@@ -182,7 +183,8 @@ const Register: React.FC = () => {
         "success"
       );
       history.replace("/verify-email");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
       const code = err?.code || "unknown";
       trackEvent("register_error", { code });
 
@@ -257,7 +259,8 @@ const Register: React.FC = () => {
         trackEvent("register_google_success", { uid: result.user.uid });
         showToast("Signed up with Google.", "success");
         history.replace("/auth-loading");
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         const code = err?.code || "unknown";
         if (popupFallbackCodes.has(code)) {
           trackEvent("register_google_popup_fallback_redirect", { code });
@@ -270,7 +273,8 @@ const Register: React.FC = () => {
         }
         throw err;
       }
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
       const code = err?.code || "unknown";
       const message = typeof err?.message === "string" ? err.message : "";
       trackEvent("register_google_error", { code });
@@ -335,7 +339,7 @@ const Register: React.FC = () => {
               <IonInput
                 placeholder="Your name"
                 value={name}
-                onIonChange={(e: any) => {
+                onIonChange={(e) => {
                   console.log(`[USER ACTION] Register: Name input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -351,7 +355,7 @@ const Register: React.FC = () => {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onIonChange={(e: any) => {
+                onIonChange={(e) => {
                   console.log(`[USER ACTION] Register: Email input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -369,7 +373,7 @@ const Register: React.FC = () => {
                 type="password"
                 placeholder="At least 8 characters, include a number"
                 value={pw}
-                onIonChange={(e: any) => {
+                onIonChange={(e) => {
                   console.log(`[USER ACTION] Register: Password input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -386,7 +390,7 @@ const Register: React.FC = () => {
                 type="password"
                 placeholder="Repeat your password"
                 value={pw2}
-                onIonChange={(e: any) => {
+                onIonChange={(e) => {
                   console.log(`[USER ACTION] Register: Confirm password input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,

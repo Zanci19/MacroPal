@@ -83,7 +83,8 @@ const Login: React.FC = () => {
         trackEvent("login_google_success", { uid: result.user.uid });
         showToast("Signed in with Google.", "success");
         history.replace("/auth-loading");
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         if (!active) return;
         trackEvent("login_google_error", { code: err?.code || "unknown" });
         showToast(handleError("login", err));
@@ -183,7 +184,8 @@ const Login: React.FC = () => {
       trackEvent("login_success", { uid: cred.user.uid });
       showToast("Welcome back!", "success");
       history.replace("/auth-loading");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
       let message = "";
 
       if (
@@ -271,7 +273,8 @@ const Login: React.FC = () => {
         trackEvent("login_google_success", { uid: result.user.uid });
         showToast("Signed in with Google.", "success");
         history.replace("/auth-loading");
-      } catch (err: any) {
+      } catch (error: unknown) {
+        const err = error as Error & { code?: string };
         const code = err?.code || "unknown";
         if (popupFallbackCodes.has(code)) {
           trackEvent("login_google_popup_fallback_redirect", { code });
@@ -284,7 +287,8 @@ const Login: React.FC = () => {
         }
         throw err;
       }
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
       const code = err?.code || "unknown";
       const message = typeof err?.message === "string" ? err.message : "";
       trackEvent("login_google_error", { code });
@@ -354,7 +358,7 @@ const Login: React.FC = () => {
                 autocorrect="off"
                 placeholder="you@example.com"
                 value={email}
-                onIonInput={(e: any) => {
+                onIonInput={(e) => {
                   console.log(`[USER ACTION] Login: Email input changed`, {
                     hasValue: !!e.detail.value,
                     length: e.detail.value?.length ?? 0,
@@ -374,7 +378,7 @@ const Login: React.FC = () => {
                   autocorrect="off"
                   placeholder="Your password"
                   value={pw}
-                  onIonInput={(e: any) => {
+                  onIonInput={(e) => {
                     console.log(`[USER ACTION] Login: Password input changed`, {
                       hasValue: !!e.detail.value,
                       length: e.detail.value?.length ?? 0,

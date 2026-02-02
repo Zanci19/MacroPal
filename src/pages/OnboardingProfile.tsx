@@ -61,7 +61,7 @@ type ProfileData = {
   units?: UnitSystem;
 };
 
-const toNumOrNull = (v: any) => {
+const toNumOrNull = (v: string | number | null | undefined) => {
   if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -384,14 +384,15 @@ const OnboardingProfile: React.FC = () => {
 
       showToast("Profile saved. Welcome!", "success");
       history.push("/app/home");
-    } catch (error: any) {
-      console.error(error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error(err);
       trackEvent("onboarding_profile_save_error", {
         uid: auth.currentUser?.uid || null,
-        message: error?.message || "Unknown error",
+        message: err?.message || "Unknown error",
       });
       showToast(
-        "Error saving profile: " + (error?.message || "Unknown error")
+        "Error saving profile: " + (err?.message || "Unknown error")
       );
     } finally {
       setLoading(false);

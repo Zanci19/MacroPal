@@ -45,7 +45,6 @@ import {
   calendarOutline,
   ellipsisVertical,
   chevronDownOutline,
-  chevronUpOutline,
 } from "ionicons/icons";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -85,7 +84,6 @@ import type {
   DayDiaryDoc,
   MealTemplate,
   WorkoutDayDoc,
-  WorkoutEntry,
 } from "../../types";
 import type { WeighInEntry } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
@@ -662,7 +660,6 @@ const Home: React.FC = () => {
     return `${entries.length}:${Math.round(calories * 100) / 100}:${latest}`;
   }, []);
 
-  const [dayDataSignature, setDayDataSignature] = useState<string>("");
   const dayDataSignatureRef = useRef<string>("");
 
   useEffect(() => {
@@ -689,7 +686,6 @@ const Home: React.FC = () => {
     setLastDeleted(null);
     setDayData({ breakfast: [], lunch: [], dinner: [], snacks: [] });
     dayDataSignatureRef.current = "";
-    setDayDataSignature("");
     collapsedInitKeyRef.current = null;
     setWorkoutCalories(0);
 
@@ -713,7 +709,6 @@ const Home: React.FC = () => {
       if (nextSignature !== dayDataSignatureRef.current) {
         dayDataSignatureRef.current = nextSignature;
         setDayData(nextDay);
-        setDayDataSignature(nextSignature);
         if (collapsedInitKeyRef.current !== activeDateKey) {
           collapsedInitKeyRef.current = activeDateKey;
           if (autoExpandMealsEnabled) {
@@ -2039,7 +2034,7 @@ const Home: React.FC = () => {
   };
 
   // Helper function to show tutorial with delay
-  const showTutorialWithDelay = (delay: number) => {
+  const showTutorialWithDelay = useCallback((delay: number) => {
     if (!hasViewedTutorial && !tutorialCheckedRef.current) {
       tutorialCheckedRef.current = true;
       setTimeout(() => {
@@ -2047,7 +2042,7 @@ const Home: React.FC = () => {
         trackEvent("tutorial_started", { uid });
       }, delay);
     }
-  };
+  }, [hasViewedTutorial, uid]);
 
   // Tutorial handlers
   const handleTutorialComplete = async () => {
@@ -2072,7 +2067,7 @@ const Home: React.FC = () => {
     } else if (hasViewedTutorial) {
       tutorialCheckedRef.current = true;
     }
-  }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading]);
+  }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading, showTutorialWithDelay]);
 
 
   return (

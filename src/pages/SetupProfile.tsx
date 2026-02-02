@@ -29,7 +29,7 @@ import {
   weightLabel,
 } from "../utils/units";
 
-const toNumOrNull = (v: any) => {
+const toNumOrNull = (v: string | number | null | undefined) => {
   if (v === null || v === undefined || v === "") return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -276,13 +276,14 @@ const SetupProfile: React.FC = () => {
 
       showToast("Profile updated.", "success");
       history.push("/app/settings");
-    } catch (error: any) {
-      console.error(error);
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error(err);
       trackEvent("profile_save_error", {
         uid: auth.currentUser?.uid || null,
-        message: error?.message || "Unknown error",
+        message: err?.message || "Unknown error",
       });
-      showToast("Error saving profile: " + (error?.message || "Unknown error"));
+      showToast("Error saving profile: " + (err?.message || "Unknown error"));
     } finally {
       setLoading(false);
     }

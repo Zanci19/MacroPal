@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { auth } from "../firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
+import { onAuthStateChanged, User, IdTokenResult } from "firebase/auth";
 
 /**
  * useDemoAuth - Returns a mock user in demo mode, real auth user otherwise
@@ -31,7 +31,15 @@ export const useDemoAuth = () => {
         tenantId: null,
         delete: async () => {},
         getIdToken: async () => "demo-token",
-        getIdTokenResult: async () => ({} as any),
+        getIdTokenResult: async () => ({
+          token: "demo-token",
+          expirationTime: new Date(Date.now() + 3600000).toUTCString(),
+          authTime: new Date().toUTCString(),
+          issuedAtTime: new Date().toUTCString(),
+          signInProvider: "demo",
+          signInSecondFactor: null,
+          claims: {},
+        } as IdTokenResult),
         reload: async () => {},
         toJSON: () => ({}),
       } as User;

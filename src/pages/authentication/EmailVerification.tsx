@@ -57,10 +57,11 @@ const EmailVerification: React.FC = () => {
         if (!silent) {
           showToast("Still waiting on email verification.", "warning");
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const err = error as Error;
         if (!silent) {
           showToast(
-            error?.message || "Could not check verification status.",
+            err?.message || "Could not check verification status.",
             "danger"
           );
         }
@@ -87,8 +88,9 @@ const EmailVerification: React.FC = () => {
       await sendEmailVerification(user);
       trackEvent("verification_email_resent", { uid: user.uid });
       showToast("Verification email resent.", "success");
-    } catch (error: any) {
-      showToast(error?.message || "Could not resend verification email.");
+    } catch (error: unknown) {
+      const err = error as Error;
+      showToast(err?.message || "Could not resend verification email.");
     } finally {
       setChecking(false);
     }
@@ -102,9 +104,10 @@ const EmailVerification: React.FC = () => {
       await signOut(auth);
       trackEvent("verification_back_to_login");
       history.replace("/login");
-    } catch (error: any) {
-      console.error("Error signing out:", error);
-      showToast(error?.message || "Could not sign out.", "danger");
+    } catch (error: unknown) {
+      const err = error as Error;
+      console.error("Error signing out:", err);
+      showToast(err?.message || "Could not sign out.", "danger");
     } finally {
       setChecking(false);
     }
