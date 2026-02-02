@@ -260,6 +260,10 @@ const MEAL_PRESETS_LOAD_DELAY_MS = 700;
 const SEARCH_DEBOUNCE_MS = 300;
 const SCROLL_TO_TOP_DELAY_MS = 700;
 
+// Validation constants for custom food creation
+const MAX_CALORIES = 10000;
+const MAX_MACRONUTRIENT_GRAMS = 1000;
+
 const BASIC_FOODS: OFFSearchHit[] = basicFoods as OFFSearchHit[];
 const BASIC_FOODS_BY_CODE = new Map(
   BASIC_FOODS.map((food) => [food.code, food])
@@ -2039,37 +2043,37 @@ const AddFood: React.FC = () => {
     const fatVal = parseFloat(customFat || "0");
 
     // Validate numeric values
-    if (isNaN(caloriesVal) || caloriesVal < 0 || caloriesVal > 10000) {
+    if (isNaN(caloriesVal) || caloriesVal < 0 || caloriesVal > MAX_CALORIES) {
       setToast({
         show: true,
-        message: "Please enter a valid calorie value (0-10000)",
+        message: `Please enter a valid calorie value (0-${MAX_CALORIES})`,
         color: "warning",
       });
       return;
     }
 
-    if (isNaN(carbsVal) || carbsVal < 0 || carbsVal > 1000) {
+    if (isNaN(carbsVal) || carbsVal < 0 || carbsVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
-        message: "Please enter a valid carbs value (0-1000g)",
+        message: `Please enter a valid carbs value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
         color: "warning",
       });
       return;
     }
 
-    if (isNaN(proteinVal) || proteinVal < 0 || proteinVal > 1000) {
+    if (isNaN(proteinVal) || proteinVal < 0 || proteinVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
-        message: "Please enter a valid protein value (0-1000g)",
+        message: `Please enter a valid protein value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
         color: "warning",
       });
       return;
     }
 
-    if (isNaN(fatVal) || fatVal < 0 || fatVal > 1000) {
+    if (isNaN(fatVal) || fatVal < 0 || fatVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
-        message: "Please enter a valid fat value (0-1000g)",
+        message: `Please enter a valid fat value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
         color: "warning",
       });
       return;

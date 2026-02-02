@@ -15,7 +15,13 @@ class Logger {
 
   constructor() {
     this.isDevelopment = import.meta.env.DEV;
-    this.isDebugEnabled = localStorage.getItem("mp_debug_logs") === "true";
+    // Safely check localStorage availability
+    try {
+      this.isDebugEnabled = typeof localStorage !== 'undefined' && 
+        localStorage.getItem("mp_debug_logs") === "true";
+    } catch {
+      this.isDebugEnabled = false;
+    }
   }
 
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
