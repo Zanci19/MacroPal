@@ -73,6 +73,13 @@ Built with modern web technologies and wrapped in a native mobile experience usi
 - **Smooth Animations**: Polished UI with Framer Motion animations
 - **Inspirational Quotes**: Daily motivation to keep you going
 - **Achievement System**: Celebrate your milestones
+- **⭐ Favorites System**: Bookmark frequently used foods for quick access
+- **⚡ Keyboard Shortcuts**: Power user shortcuts for quick navigation (Ctrl+A to add food, Ctrl+H for home, etc.)
+- **📊 Quick Stats Widget**: At-a-glance dashboard showing calories, meals, and workout summary
+- **💾 Backup Reminders**: Periodic reminders to export and backup your data
+- **🎯 Smart Loading States**: Clear visual feedback during data operations
+- **🔔 Toast Notifications**: Informative success and error messages
+- **♿ Enhanced Accessibility**: WCAG-compliant with screen reader support and keyboard navigation
 
 ### 🔐 **Security & Privacy**
 - **Firebase Authentication**: Secure user accounts with email/password and social login
@@ -229,6 +236,9 @@ Then build and run from Android Studio.
 - ⚖️ **Weigh yourself consistently** (same time, same conditions) for accurate tracking
 - 🎯 **Set realistic goals** and celebrate small wins
 - 💡 **Enable smart recommendations** for personalized meal suggestions
+- ⭐ **Bookmark favorite foods** for quick access when logging meals
+- ⌨️ **Use keyboard shortcuts** for faster navigation (see shortcuts in Settings)
+- 💾 **Export your data regularly** to keep backups of your nutrition history
 
 ## 🛠️ Tech Stack
 
@@ -264,6 +274,15 @@ Then build and run from Android Studio.
 - `react-router-dom` - Navigation
 - `ionicons` - Icon library
 
+### Code Quality & Best Practices
+- **Type Safety** - Comprehensive TypeScript types with type guards for runtime validation
+- **Input Validation** - Robust validation utilities for all user inputs
+- **Error Handling** - Graceful error recovery with user-friendly messages
+- **Accessibility** - WCAG 2.1 AA compliant with screen reader support
+- **Performance** - Memoization, debouncing, and lazy loading optimizations
+- **Testing** - Unit tests with Vitest for critical utilities
+- **Documentation** - Inline JSDoc comments for complex functions
+
 ## 🗂️ Project Structure
 
 ```
@@ -272,7 +291,10 @@ MacroPal/
 │   ├── components/        # Reusable UI components
 │   │   ├── AnnouncementPopup.tsx
 │   │   ├── ErrorBoundary.tsx
-│   │   └── DebugOverlay.tsx
+│   │   ├── DebugOverlay.tsx
+│   │   ├── ToastNotification.tsx    # Toast messages
+│   │   ├── LoadingState.tsx         # Loading indicators
+│   │   └── QuickStats.tsx           # Stats widget
 │   ├── pages/             # Application screens
 │   │   ├── authentication/
 │   │   │   ├── Login.tsx
@@ -285,12 +307,19 @@ MacroPal/
 │   │       └── Settings.tsx      # User settings
 │   ├── hooks/             # Custom React hooks
 │   │   ├── useProfile.ts
+│   │   ├── useKeyboardShortcuts.ts
+│   │   ├── usePerformance.ts
 │   │   └── version.ts
 │   ├── utils/             # Helper functions
 │   │   ├── activityCatalog.ts
 │   │   ├── exportUtils.ts
 │   │   ├── date.ts
-│   │   └── preferences.ts
+│   │   ├── preferences.ts
+│   │   ├── validation.ts         # Input validation
+│   │   ├── typeGuards.ts         # Runtime type checking
+│   │   ├── favorites.ts          # Favorites management
+│   │   ├── backupReminder.ts     # Backup reminders
+│   │   └── accessibility.ts      # A11y helpers
 │   ├── types/             # TypeScript types
 │   ├── data/              # Static data
 │   │   ├── basicFoods.json
