@@ -249,8 +249,9 @@ const ScanBarcode: React.FC = () => {
 
             hasScannedRef.current = true;
             setFlash(true);
-            if ("vibrate" in navigator && typeof (navigator as { vibrate?: (duration: number) => void }).vibrate === "function") {
-              (navigator as { vibrate: (duration: number) => void }).vibrate(20);
+            const nav = navigator as { vibrate?: (duration: number) => void };
+            if ("vibrate" in navigator && typeof nav.vibrate === "function") {
+              nav.vibrate(20);
             }
             await sleep(180);
             setFlash(false);
