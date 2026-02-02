@@ -49,7 +49,7 @@ export function addFavoriteFood(meal: Meal): boolean {
     }
 
     const newFavorite: FavoriteFood = {
-      id: `fav_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `fav_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       meal,
       addedAt: new Date().toISOString(),
     };

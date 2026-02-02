@@ -71,11 +71,11 @@ export function useDebounce<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 300
 ): T {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   return useCallback(
     ((...args) => {
-      if (timeoutRef.current) {
+      if (timeoutRef.current !== null) {
         clearTimeout(timeoutRef.current);
       }
 
