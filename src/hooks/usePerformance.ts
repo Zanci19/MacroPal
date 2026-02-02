@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 
 /**
  * Hook for memoizing expensive calculations with dependencies
@@ -155,6 +155,3 @@ export function useLazyState<T>(initializer: () => T): [T, React.Dispatch<React.
   const [state, setState] = React.useState<T>(initializer);
   return [state, setState];
 }
-
-// Re-export useState for consistent import
-import React from 'react';
