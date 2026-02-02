@@ -66,8 +66,31 @@ import {
   type ThemeMode,
 } from "../../utils/preferences";
 import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../utils/image";
+
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
+
+interface UserProfile {
+  smartRecommendationEnabled?: boolean;
+  smartRecommendationProfile?: {
+    dietStyle?: string;
+    macroFocus?: string;
+  };
+  showWellnessTip?: boolean;
+  showAchievements?: boolean;
+  showRecentItems?: boolean;
+  showRecentSearches?: boolean;
+  photoUrl?: string;
+  themeMode?: string;
+  tabAnimationsEnabled?: boolean;
+  chartAnimationsEnabled?: boolean;
+  debugOverlayEnabled?: boolean;
+  lazyLoadEnabled?: boolean;
+}
+
+interface UserData {
+  profile?: UserProfile;
+}
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -465,8 +488,8 @@ const Settings: React.FC = () => {
       connection: {
         effectiveType: connection?.effectiveType,
         downlink: connection?.downlink,
-        rtt: (connection as any)?.rtt,
-        saveData: (connection as any)?.saveData,
+        rtt: (connection as { rtt?: number })?.rtt,
+        saveData: (connection as { saveData?: boolean })?.saveData,
       },
       
       // Performance
@@ -581,7 +604,7 @@ const Settings: React.FC = () => {
       try {
         const ref = doc(db, "users", current.uid);
         const snap = await getDoc(ref);
-        const data = snap.data() as any | undefined;
+        const data = snap.data() as UserData | undefined;
         const profile = data?.profile;
 
         const enabled =
@@ -590,12 +613,12 @@ const Settings: React.FC = () => {
             : true;
 
         setSmartRecommendationEnabled(
-          typeof (profile as any).smartRecommendationEnabled === "boolean"
-            ? (profile as any).smartRecommendationEnabled
+          typeof profile?.smartRecommendationEnabled === "boolean"
+            ? profile.smartRecommendationEnabled
             : true
         );
 
-        const smartProfile = (profile as any)?.smartRecommendationProfile;
+        const smartProfile = profile?.smartRecommendationProfile;
         if (smartProfile) {
           if (typeof smartProfile.dietStyle === "string") {
             setSmartDietStyle(smartProfile.dietStyle as SmartDietStyle);
@@ -606,46 +629,46 @@ const Settings: React.FC = () => {
         }
 
         setShowRandomQuoteEnabled(
-          typeof (profile as any).showWellnessTip === "boolean"
-            ? (profile as any).showWellnessTip
+          typeof profile?.showWellnessTip === "boolean"
+            ? profile.showWellnessTip
             : true
         );
 
         setShowAchievementsEnabled(
-          typeof (profile as any).showAchievements === "boolean"
-            ? (profile as any).showAchievements
+          typeof profile?.showAchievements === "boolean"
+            ? profile.showAchievements
             : true
         );
 
 
         setShowRecentItemsEnabled(
-          typeof (profile as any).showRecentItems === "boolean"
-            ? (profile as any).showRecentItems
+          typeof profile?.showRecentItems === "boolean"
+            ? profile.showRecentItems
             : true
         );
 
         setShowRecentSearchesEnabled(
-          typeof (profile as any).showRecentSearches === "boolean"
-            ? (profile as any).showRecentSearches
+          typeof profile?.showRecentSearches === "boolean"
+            ? profile.showRecentSearches
             : true
         );
 
         const storedPhotoUrl =
-          typeof (profile as any)?.photoUrl === "string"
-            ? normalizePhotoUrl((profile as any).photoUrl)
+          typeof profile?.photoUrl === "string"
+            ? normalizePhotoUrl(profile.photoUrl)
             : null;
         const fallbackPhotoUrl = normalizePhotoUrl(current.photoURL);
         setProfilePhotoUrl(storedPhotoUrl ?? fallbackPhotoUrl);
 
         // Load theme preference from Firebase
-        const savedTheme = (profile as any)?.themeMode as string | undefined;
+        const savedTheme = profile?.themeMode as string | undefined;
         if (savedTheme && THEME_MODES.includes(savedTheme as ThemeMode)) {
           setThemeMode(savedTheme as ThemeMode);
           applyTheme(savedTheme as ThemeMode);
         }
 
         // Load tab animations preference from Firebase or localStorage
-        const savedAnimationPref = (profile as any)?.tabAnimationsEnabled;
+        const savedAnimationPref = profile?.tabAnimationsEnabled;
         if (typeof savedAnimationPref === "boolean") {
           setTabAnimationsEnabled(savedAnimationPref);
           applyAnimationPreference(savedAnimationPref);
@@ -655,7 +678,7 @@ const Settings: React.FC = () => {
           setTabAnimationsEnabled(localPref);
         }
 
-        const savedChartAnimationPref = (profile as any)?.chartAnimationsEnabled;
+        const savedChartAnimationPref = profile?.chartAnimationsEnabled;
         if (typeof savedChartAnimationPref === "boolean") {
           setChartAnimationsEnabled(savedChartAnimationPref);
           applyChartAnimationPreference(savedChartAnimationPref);
@@ -665,7 +688,7 @@ const Settings: React.FC = () => {
         }
 
         // Load debug overlay preference from Firebase or localStorage
-        const savedDebugOverlayPref = (profile as any)?.debugOverlayEnabled;
+        const savedDebugOverlayPref = profile?.debugOverlayEnabled;
         if (typeof savedDebugOverlayPref === "boolean") {
           setDebugOverlayEnabled(savedDebugOverlayPref);
           applyDebugOverlayPreference(savedDebugOverlayPref);
@@ -676,7 +699,7 @@ const Settings: React.FC = () => {
         }
 
         // Load lazy load preference from Firebase or localStorage
-        const savedLazyLoadPref = (profile as any)?.lazyLoadEnabled;
+        const savedLazyLoadPref = profile?.lazyLoadEnabled;
         if (typeof savedLazyLoadPref === "boolean") {
           setLazyLoadEnabled(savedLazyLoadPref);
           applyLazyLoadPreference(savedLazyLoadPref);

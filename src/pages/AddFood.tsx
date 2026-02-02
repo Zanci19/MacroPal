@@ -563,9 +563,9 @@ const AddFood: React.FC = () => {
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
-  const searchInputRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const contentRef = useRef<HTMLIonContentElement | null>(null);
-  const resultsListRef = useRef<any>(null);
+  const resultsListRef = useRef<HTMLIonListElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
   const prevResultsKeyRef = useRef<string | null>(null);
@@ -935,7 +935,16 @@ const AddFood: React.FC = () => {
   }, [ensureResultsVisible, loading, results]);
 
   useEffect(() => {
-    const state = (location as any).state as
+    const state = (location as { state?: {
+      editEntry?: {
+        id: string;
+        date: string;
+        meal: MealKey;
+        entry: DiaryEntryDoc;
+      };
+      copyEntry?: DiaryEntryDoc;
+      photoInfo?: { photoUrl: string; photoName: string };
+    } }).state as
       | {
           editEntry?: {
             meal: MealKey;
@@ -2166,8 +2175,8 @@ const AddFood: React.FC = () => {
           note: "",
           servingsQty: null,
           weightQty: null,
-        } as any),
-      perBase: src.perBase ? stripUndefined(src.perBase as any) : total,
+        }),
+      perBase: src.perBase ? stripUndefined(src.perBase) : total,
       total,
       addedAt: new Date().toISOString(),
     };
