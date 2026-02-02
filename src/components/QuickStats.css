@@ -1,0 +1,106 @@
+.quick-stats {
+  margin: 0;
+}
+
+.quick-stats__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.quick-stats__item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  background: var(--ion-color-step-50, rgba(0, 0, 0, 0.02));
+  transition: transform 0.2s ease;
+}
+
+.quick-stats__item:hover {
+  transform: translateY(-2px);
+}
+
+.quick-stats__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+.quick-stats__icon--primary {
+  background: var(--ion-color-primary-tint, #4c8dff);
+  color: var(--ion-color-primary-contrast, #fff);
+}
+
+.quick-stats__icon--secondary {
+  background: var(--ion-color-secondary-tint, #50c8ff);
+  color: var(--ion-color-secondary-contrast, #fff);
+}
+
+.quick-stats__icon--tertiary {
+  background: var(--ion-color-tertiary-tint, #6a64ff);
+  color: var(--ion-color-tertiary-contrast, #fff);
+}
+
+.quick-stats__icon--success {
+  background: var(--ion-color-success-tint, #2fdf75);
+  color: var(--ion-color-success-contrast, #fff);
+}
+
+.quick-stats__icon--warning {
+  background: var(--ion-color-warning-tint, #ffd534);
+  color: var(--ion-color-warning-contrast, #000);
+}
+
+.quick-stats__icon--danger {
+  background: var(--ion-color-danger-tint, #ff4961);
+  color: var(--ion-color-danger-contrast, #fff);
+}
+
+.quick-stats__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.quick-stats__value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ion-text-color, #000);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quick-stats__label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.quick-stats__footer {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+  text-align: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+  .quick-stats__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 768px) {
+  .quick-stats__grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
