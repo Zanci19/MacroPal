@@ -28,7 +28,6 @@ import {
   personCircleOutline,
   logOutOutline,
   mailOutline,
-  warningOutline,
   cafeOutline,
   trashOutline,
   colorPaletteOutline,
@@ -67,8 +66,31 @@ import {
   type ThemeMode,
 } from "../../utils/preferences";
 import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../utils/image";
+
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
+
+interface UserProfile {
+  smartRecommendationEnabled?: boolean;
+  smartRecommendationProfile?: {
+    dietStyle?: string;
+    macroFocus?: string;
+  };
+  showWellnessTip?: boolean;
+  showAchievements?: boolean;
+  showRecentItems?: boolean;
+  showRecentSearches?: boolean;
+  photoUrl?: string;
+  themeMode?: string;
+  tabAnimationsEnabled?: boolean;
+  chartAnimationsEnabled?: boolean;
+  debugOverlayEnabled?: boolean;
+  lazyLoadEnabled?: boolean;
+}
+
+interface UserData {
+  profile?: UserProfile;
+}
 
 const Settings: React.FC = () => {
   const history = useHistory();
@@ -138,7 +160,8 @@ const Settings: React.FC = () => {
         uid: current.uid,
         theme: newTheme,
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save theme preference:", err);
       setToast({
         show: true,
@@ -168,7 +191,8 @@ const Settings: React.FC = () => {
         uid: current.uid,
         ...nextProfile,
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save smart recommendation profile:", err);
       setToast({
         show: true,
@@ -188,7 +212,8 @@ const Settings: React.FC = () => {
         message: "Verification email sent.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not send verification email.",
@@ -215,7 +240,8 @@ const Settings: React.FC = () => {
         message: "Password reset email sent.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not send password reset email.",
@@ -231,7 +257,8 @@ const Settings: React.FC = () => {
       await deleteUser(auth.currentUser);
       setToast({ show: true, message: "Account deleted.", color: "success" });
       history.replace("/login");
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message:
@@ -263,7 +290,8 @@ const Settings: React.FC = () => {
         message: "Recent foods history cleared.",
         color: "success",
       });
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as Error;
       setToast({
         show: true,
         message: e?.message || "Could not clear recent foods.",
@@ -295,7 +323,8 @@ const Settings: React.FC = () => {
       setProfilePhotoUrl(downloadURL);
       trackEvent("settings_profile_photo_update", { uid: auth.currentUser?.uid });
       setToast({ show: true, message: "Profile photo updated.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save profile photo:", err);
       setToast({
         show: true,
@@ -321,11 +350,11 @@ const Settings: React.FC = () => {
     let localStorageSize = 0;
     try {
       for (const key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
+        if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
           localStorageSize += localStorage[key].length + key.length;
         }
       }
-    } catch (e) {
+    } catch {
       localStorageSize = -1;
     }
 
@@ -409,7 +438,7 @@ const Settings: React.FC = () => {
         try {
           const canvas = document.createElement('canvas');
           return !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-        } catch (e) {
+        } catch {
           return false;
         }
       })(),
@@ -417,7 +446,7 @@ const Settings: React.FC = () => {
         try {
           const canvas = document.createElement('canvas');
           return !!canvas.getContext('webgl2');
-        } catch (e) {
+        } catch {
           return false;
         }
       })(),
@@ -459,8 +488,8 @@ const Settings: React.FC = () => {
       connection: {
         effectiveType: connection?.effectiveType,
         downlink: connection?.downlink,
-        rtt: (connection as any)?.rtt,
-        saveData: (connection as any)?.saveData,
+        rtt: (connection as { rtt?: number })?.rtt,
+        saveData: (connection as { saveData?: boolean })?.saveData,
       },
       
       // Performance
@@ -494,7 +523,8 @@ const Settings: React.FC = () => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
       setToast({ show: true, message: "Diagnostics copied to clipboard.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to copy diagnostics:", err);
       setToast({
         show: true,
@@ -555,7 +585,8 @@ const Settings: React.FC = () => {
       setProfilePhotoUrl(null);
       trackEvent("settings_profile_photo_remove", { uid: auth.currentUser.uid });
       setToast({ show: true, message: "Profile photo removed.", color: "success" });
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to remove profile photo:", err);
       setToast({
         show: true,
@@ -573,7 +604,7 @@ const Settings: React.FC = () => {
       try {
         const ref = doc(db, "users", current.uid);
         const snap = await getDoc(ref);
-        const data = snap.data() as any | undefined;
+        const data = snap.data() as UserData | undefined;
         const profile = data?.profile;
 
         const enabled =
@@ -582,12 +613,12 @@ const Settings: React.FC = () => {
             : true;
 
         setSmartRecommendationEnabled(
-          typeof (profile as any).smartRecommendationEnabled === "boolean"
-            ? (profile as any).smartRecommendationEnabled
+          typeof profile?.smartRecommendationEnabled === "boolean"
+            ? profile.smartRecommendationEnabled
             : true
         );
 
-        const smartProfile = (profile as any)?.smartRecommendationProfile;
+        const smartProfile = profile?.smartRecommendationProfile;
         if (smartProfile) {
           if (typeof smartProfile.dietStyle === "string") {
             setSmartDietStyle(smartProfile.dietStyle as SmartDietStyle);
@@ -598,46 +629,46 @@ const Settings: React.FC = () => {
         }
 
         setShowRandomQuoteEnabled(
-          typeof (profile as any).showWellnessTip === "boolean"
-            ? (profile as any).showWellnessTip
+          typeof profile?.showWellnessTip === "boolean"
+            ? profile.showWellnessTip
             : true
         );
 
         setShowAchievementsEnabled(
-          typeof (profile as any).showAchievements === "boolean"
-            ? (profile as any).showAchievements
+          typeof profile?.showAchievements === "boolean"
+            ? profile.showAchievements
             : true
         );
 
 
         setShowRecentItemsEnabled(
-          typeof (profile as any).showRecentItems === "boolean"
-            ? (profile as any).showRecentItems
+          typeof profile?.showRecentItems === "boolean"
+            ? profile.showRecentItems
             : true
         );
 
         setShowRecentSearchesEnabled(
-          typeof (profile as any).showRecentSearches === "boolean"
-            ? (profile as any).showRecentSearches
+          typeof profile?.showRecentSearches === "boolean"
+            ? profile.showRecentSearches
             : true
         );
 
         const storedPhotoUrl =
-          typeof (profile as any)?.photoUrl === "string"
-            ? normalizePhotoUrl((profile as any).photoUrl)
+          typeof profile?.photoUrl === "string"
+            ? normalizePhotoUrl(profile.photoUrl)
             : null;
         const fallbackPhotoUrl = normalizePhotoUrl(current.photoURL);
         setProfilePhotoUrl(storedPhotoUrl ?? fallbackPhotoUrl);
 
         // Load theme preference from Firebase
-        const savedTheme = (profile as any)?.themeMode as string | undefined;
+        const savedTheme = profile?.themeMode as string | undefined;
         if (savedTheme && THEME_MODES.includes(savedTheme as ThemeMode)) {
           setThemeMode(savedTheme as ThemeMode);
           applyTheme(savedTheme as ThemeMode);
         }
 
         // Load tab animations preference from Firebase or localStorage
-        const savedAnimationPref = (profile as any)?.tabAnimationsEnabled;
+        const savedAnimationPref = profile?.tabAnimationsEnabled;
         if (typeof savedAnimationPref === "boolean") {
           setTabAnimationsEnabled(savedAnimationPref);
           applyAnimationPreference(savedAnimationPref);
@@ -647,7 +678,7 @@ const Settings: React.FC = () => {
           setTabAnimationsEnabled(localPref);
         }
 
-        const savedChartAnimationPref = (profile as any)?.chartAnimationsEnabled;
+        const savedChartAnimationPref = profile?.chartAnimationsEnabled;
         if (typeof savedChartAnimationPref === "boolean") {
           setChartAnimationsEnabled(savedChartAnimationPref);
           applyChartAnimationPreference(savedChartAnimationPref);
@@ -657,7 +688,7 @@ const Settings: React.FC = () => {
         }
 
         // Load debug overlay preference from Firebase or localStorage
-        const savedDebugOverlayPref = (profile as any)?.debugOverlayEnabled;
+        const savedDebugOverlayPref = profile?.debugOverlayEnabled;
         if (typeof savedDebugOverlayPref === "boolean") {
           setDebugOverlayEnabled(savedDebugOverlayPref);
           applyDebugOverlayPreference(savedDebugOverlayPref);
@@ -668,7 +699,7 @@ const Settings: React.FC = () => {
         }
 
         // Load lazy load preference from Firebase or localStorage
-        const savedLazyLoadPref = (profile as any)?.lazyLoadEnabled;
+        const savedLazyLoadPref = profile?.lazyLoadEnabled;
         if (typeof savedLazyLoadPref === "boolean") {
           setLazyLoadEnabled(savedLazyLoadPref);
           applyLazyLoadPreference(savedLazyLoadPref);
@@ -902,7 +933,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save smartRecommendationEnabled:", err);
                         setToast({
                           show: true,
@@ -986,7 +1018,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRandomQuote:", err);
                         setToast({
                           show: true,
@@ -1023,7 +1056,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showAchievements:", err);
                         setToast({
                           show: true,
@@ -1060,7 +1094,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRecentItems:", err);
                         setToast({
                           show: true,
@@ -1097,7 +1132,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save showRecentSearches:", err);
                         setToast({
                           show: true,
@@ -1170,7 +1206,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save tab animations preference:", err);
                         setToast({
                           show: true,
@@ -1211,7 +1248,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save chart animations preference:", err);
                         setToast({
                           show: true,
@@ -1252,7 +1290,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save meal counts preference:", err);
                         setToast({
                           show: true,
@@ -1293,7 +1332,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save auto expand preference:", err);
                         setToast({
                           show: true,
@@ -1388,7 +1428,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save debug overlay preference:", err);
                         setToast({
                           show: true,
@@ -1428,7 +1469,8 @@ const Settings: React.FC = () => {
                           uid: current.uid,
                           enabled: checked,
                         });
-                      } catch (err: any) {
+                      } catch (error: unknown) {
+                        const err = error as Error;
                         console.error("Failed to save lazy load preference:", err);
                         setToast({
                           show: true,
@@ -1665,7 +1707,7 @@ const Settings: React.FC = () => {
           {
             text: "Delete",
             role: "destructive",
-            handler: (data: any) => {
+            handler: (data: { typedName?: string }) => {
               console.log(`[USER ACTION] Settings: Delete account name confirmation - Delete clicked`, { matchesUsername: (data?.typedName || "").trim() === usernameToType });
               const typed = (data?.typedName || "").trim();
               if (typed !== usernameToType) {

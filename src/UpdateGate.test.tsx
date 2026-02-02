@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { doc, getDoc } from 'firebase/firestore';
+import { getDoc } from 'firebase/firestore';
 import UpdateGate from './UpdateGate';
 
 // Mock firebase
@@ -135,7 +135,7 @@ describe('UpdateGate - Announcement Fix', () => {
         }),
       } as any);
 
-      const { getByText } = render(
+      render(
         <UpdateGate>
           <div>App Content</div>
         </UpdateGate>

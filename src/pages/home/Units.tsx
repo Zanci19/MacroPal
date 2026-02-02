@@ -76,7 +76,8 @@ const Units: React.FC = () => {
       trackEvent("units_saved", { uid: current.uid, units });
       setToast({ show: true, message: "Units updated.", color: "success" });
       history.push("/app/settings");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save units:", err);
       trackEvent("units_save_error", {
         uid: current.uid,

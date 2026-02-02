@@ -94,7 +94,7 @@ const AuthLoading: React.FC = () => {
         let targetRoute = "/onboarding-profile";
 
         if (snap.exists()) {
-          const data: any = snap.data();
+          const data = snap.data();
           const profile = data.profile as Record<string, unknown> | undefined;
           applyProfilePreferences(profile);
           setProgress(PROGRESS_STAGES.PREFERENCES_APPLIED);

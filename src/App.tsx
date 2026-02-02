@@ -169,7 +169,7 @@ const reportProfiler: React.ProfilerOnRenderCallback = (
 };
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
-const LazyRoute = ({ component: Component, profileId, ...props }: any) => (
+const LazyRoute = ({ component: Component, profileId, ...props }: { component: React.ComponentType<RouteComponentProps>; profileId?: string } & RouteComponentProps) => (
   <React.Profiler
     id={profileId ?? Component.displayName ?? Component.name ?? "LazyRoute"}
     onRender={reportProfiler}
@@ -250,7 +250,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     };
   }, []);
 
-  const getActiveTab = () => {
+  const getActiveTab = useCallback(() => {
     const path = location.pathname || "";
 
     if (path.startsWith("/app/analytics")) return "analytics";
@@ -260,7 +260,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     if (path.startsWith("/app/settings")) return "settings";
 
     return "home";
-  };
+  }, [location.pathname]);
 
   const activeTab = getActiveTab();
   const isTabRootRoute = (path: string) =>
@@ -413,7 +413,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
       return rootAnimation;
     },
-    [animationsEnabled] // Re-create animation when preference changes
+    [animationsEnabled, getActiveTab] // Re-create animation when preference or active tab logic changes
   );
 
   const tabClass = (tabName: string) =>

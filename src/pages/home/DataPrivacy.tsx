@@ -13,7 +13,6 @@ import {
   IonToolbar,
   IonToast,
   IonAlert,
-  IonInput,
   IonText,
 } from "@ionic/react";
 import { analyticsOutline, shieldCheckmarkOutline, trashOutline, warningOutline } from "ionicons/icons";
@@ -128,7 +127,7 @@ const DataPrivacy: React.FC = () => {
       // Password correct, proceed to step 2
       setShowDeleteStep1(false);
       setShowDeleteStep2(true);
-    } catch (e: any) {
+    } catch {
       setToast({
         open: true,
         message: "Incorrect password. Please try again.",
@@ -158,7 +157,8 @@ const DataPrivacy: React.FC = () => {
       setTimeout(() => {
         history.replace("/login");
       }, 1500);
-    } catch (e: any) {
+    } catch (error: unknown) {
+      const e = error as { message?: string };
       setDeleting(false);
       setToast({
         open: true,
@@ -274,7 +274,7 @@ const DataPrivacy: React.FC = () => {
             },
             {
               text: "Next",
-              handler: (data: any) => {
+              handler: (data: { password?: string }) => {
                 setPassword(data?.password || "");
                 handleDeleteStep2();
                 return false; // Prevent auto-dismiss
@@ -313,7 +313,7 @@ const DataPrivacy: React.FC = () => {
             {
               text: deleting ? "Deleting..." : "Delete Forever",
               role: "destructive",
-              handler: (data: any) => {
+              handler: (data: { username?: string }) => {
                 setUsernameConfirm(data?.username || "");
                 handleDeleteFinal();
                 return false; // Prevent auto-dismiss until deletion completes

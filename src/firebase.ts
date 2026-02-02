@@ -43,7 +43,7 @@ export const storage = getStorage(app);
 
 export let analytics: Analytics | null = null;
 
-export const trackEvent = (name: string, params?: Record<string, any>) => {
+export const trackEvent = (name: string, params?: Record<string, string | number | boolean | null | undefined>) => {
   if (!analytics) return;
   logEvent(analytics, name, params);
 };

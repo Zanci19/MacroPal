@@ -100,9 +100,10 @@ const ResetPassword: React.FC = () => {
         color: "success",
       });
       startCooldown(COOLDOWN_MS_DEFAULT);
-    } catch (error: any) {
-      console.error("Error sending password reset email:", error);
-      const code = error?.code as string | undefined;
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
+      console.error("Error sending password reset email:", err);
+      const code = err?.code as string | undefined;
 
       if (code === "auth/too-many-requests") {
         startCooldown(COOLDOWN_MS_RATE_LIMIT);
@@ -113,7 +114,7 @@ const ResetPassword: React.FC = () => {
         });
       } else {
         const message =
-          error?.message ?? "Failed to send password reset email.";
+          err?.message ?? "Failed to send password reset email.";
         setToast({ show: true, message, color: "danger" });
       }
     } finally {
@@ -156,7 +157,7 @@ const ResetPassword: React.FC = () => {
                 type="email"
                 inputMode="email"
                 autocomplete="email"
-                onIonChange={(e: any) => {
+                onIonChange={(e) => {
                   console.log(`[USER ACTION] Reset Password: Email input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,

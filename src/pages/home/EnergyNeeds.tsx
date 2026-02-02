@@ -136,7 +136,8 @@ const EnergyNeeds: React.FC = () => {
 
       showToast("Energy needs updated.", "success");
       history.push("/app/settings");
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as Error;
       console.error("Failed to save energy needs:", err);
       trackEvent("energy_needs_save_error", {
         uid: current.uid,
