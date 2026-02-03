@@ -166,6 +166,15 @@ const PhotoFoodLogger: React.FC = () => {
       }
     } catch (err) {
       console.error("Error taking photo:", err);
+      
+      // Check if user simply cancelled - don't show error for that
+      const errorMessage = String(err);
+      if (errorMessage.includes("User cancelled") || errorMessage.includes("cancel")) {
+        trackEvent("photo_food_logger_camera_cancelled");
+        // Don't set error state for user cancellation
+        return;
+      }
+      
       setError("Failed to take photo. Please try again.");
       trackEvent("photo_food_logger_camera_error", { error: String(err) });
     }
@@ -191,6 +200,15 @@ const PhotoFoodLogger: React.FC = () => {
       }
     } catch (err) {
       console.error("Error picking photo:", err);
+      
+      // Check if user simply cancelled - don't show error for that
+      const errorMessage = String(err);
+      if (errorMessage.includes("User cancelled") || errorMessage.includes("cancel")) {
+        trackEvent("photo_food_logger_gallery_cancelled");
+        // Don't set error state for user cancellation
+        return;
+      }
+      
       setError("Failed to select photo. Please try again.");
       trackEvent("photo_food_logger_gallery_error", { error: String(err) });
     }
