@@ -30,8 +30,6 @@ import {
   useIonViewDidLeave,
   IonRefresher,
   IonRefresherContent,
-  IonFab,
-  IonFabButton,
   type RefresherEventDetail,
 } from "@ionic/react";
 import {
@@ -2175,6 +2173,19 @@ const Home: React.FC = () => {
             fill="clear"
             shape="round"
             onClick={() => {
+              console.log(`[USER ACTION] Home: Quick add button clicked from top bar`);
+              setShowQuickAdd(true);
+              trackEvent("quick_add_open_from_topbar", { uid, date: activeDateKey });
+            }}
+            aria-label="Quick add food"
+          >
+            <IonIcon icon={rocketOutline} />
+          </IonButton>
+
+          <IonButton
+            fill="clear"
+            shape="round"
+            onClick={() => {
               console.log(`[USER ACTION] Home: Opened day menu`, {
                 date: activeDateKey,
               });
@@ -2681,13 +2692,6 @@ const Home: React.FC = () => {
               />
             );
           })}
-
-        {/* Quick Add FAB */}
-        <IonFab vertical="bottom" horizontal="end" slot="fixed">
-          <IonFabButton onClick={() => setShowQuickAdd(true)}>
-            <IonIcon icon={rocketOutline} />
-          </IonFabButton>
-        </IonFab>
 
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
