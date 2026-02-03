@@ -30,6 +30,8 @@ import {
   useIonViewDidLeave,
   IonRefresher,
   IonRefresherContent,
+  IonFab,
+  IonFabButton,
   type RefresherEventDetail,
 } from "@ionic/react";
 import {
@@ -45,6 +47,7 @@ import {
   calendarOutline,
   ellipsisVertical,
   chevronDownOutline,
+  rocketOutline,
 } from "ionicons/icons";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
@@ -101,6 +104,8 @@ import AnnouncementPopup, {
   type AnnouncementData,
 } from "../../components/AnnouncementPopup";
 import TutorialOverlay from "../../components/TutorialOverlay";
+import { WaterIntake } from "../../components/WaterIntake";
+import { QuickAddModal } from "../../components/QuickAddModal";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -481,6 +486,7 @@ const Home: React.FC = () => {
   });
   const [pendingDateKey, setPendingDateKey] = useState<string>(activeDateKey);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const [dayData, setDayData] = useState<DayDiaryDoc>({
     breakfast: [],
@@ -1195,6 +1201,56 @@ const Home: React.FC = () => {
       });
     } finally {
       setCopyMenuMeal(null);
+    }
+  };
+
+  const handleQuickAdd = async (meal: MealKey, foodName: string, calories: number) => {
+    if (!uid) return;
+    
+    const dayKey = activeDateKey;
+    const newEntry: DiaryEntry = {
+      fdcId: Date.now() + Math.floor(Math.random() * 1000000),
+      name: foodName,
+      total: {
+        calories,
+        carbs: 0,
+        protein: 0,
+        fat: 0,
+      },
+      addedAt: new Date().toISOString(),
+    };
+
+    setDayData((prev) => ({
+      ...prev,
+      [meal]: [...(prev[meal] || []), newEntry],
+    }));
+
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "users", uid, "foods", dayKey);
+        const snap = await tx.get(ref);
+        const data = snap.data() || {};
+        const current: DiaryEntry[] = [...(data[meal] || [])];
+        const updated = [...current, newEntry];
+        tx.set(ref, { [meal]: updated }, { merge: true });
+      });
+
+      setToast({ open: true, message: `Added ${foodName} to ${meal}` });
+      trackEvent("quick_add_food_success", {
+        uid,
+        date: dayKey,
+        meal,
+        food: foodName,
+      });
+    } catch (error) {
+      setToast({ open: true, message: "Failed to add food" });
+      trackEvent("quick_add_food_error", {
+        uid,
+        date: dayKey,
+        meal,
+        food: foodName,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   };
 
@@ -2443,6 +2499,17 @@ const Home: React.FC = () => {
               </div>
             </SwiperSlide>
 
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Water Intake</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <WaterIntake dateKey={activeDateKey} />
+                </IonCardContent>
+              </div>
+            </SwiperSlide>
+
             {showAchievements && (
               <SwiperSlide>
                 <div className="fs-summary__slide">
@@ -2614,6 +2681,13 @@ const Home: React.FC = () => {
               />
             );
           })}
+
+        {/* Quick Add FAB */}
+        <IonFab vertical="bottom" horizontal="end" slot="fixed">
+          <IonFabButton onClick={() => setShowQuickAdd(true)}>
+            <IonIcon icon={rocketOutline} />
+          </IonFabButton>
+        </IonFab>
 
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
@@ -2858,6 +2932,13 @@ const Home: React.FC = () => {
           onDidDismiss={() =>
             setWeighInToast((prev) => ({ ...prev, open: false }))
           }
+        />
+
+        <QuickAddModal
+          isOpen={showQuickAdd}
+          onDismiss={() => setShowQuickAdd(false)}
+          onAddFood={handleQuickAdd}
+          dateKey={activeDateKey}
         />
       </IonContent>
 

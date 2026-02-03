@@ -1,0 +1,43 @@
+.nutrition-card {
+  margin-top: 16px;
+}
+
+.nutrition-card.per-serving {
+  background: var(--ion-color-primary-tint);
+}
+
+.nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  text-align: center;
+}
+
+.nutrition-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.nutrition-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ion-color-primary);
+}
+
+.per-serving .nutrition-value {
+  color: var(--ion-color-success);
+}
+
+.nutrition-label {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+}
+
+@media (max-width: 576px) {
+  .nutrition-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

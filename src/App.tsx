@@ -57,6 +57,7 @@ const importDataPrivacy = () => import("./pages/home/DataPrivacy");
 const importWorkout = () => import("./pages/home/Workout");
 const importChangelog = () => import("./pages/Changelog");
 const importScanBarcode = () => import("./pages/ScanBarcode");
+const importRecipeCalculator = () => import("./pages/RecipeCalculator");
 
 const Login = lazy(importLogin);
 const Register = lazy(importRegister);
@@ -80,6 +81,7 @@ const DataPrivacy = lazy(importDataPrivacy);
 const Workout = lazy(importWorkout);
 const Changelog = lazy(importChangelog);
 const ScanBarcode = lazy(importScanBarcode);
+const RecipeCalculator = lazy(importRecipeCalculator);
 
 const LAZY_ROUTE_IMPORTS = [
   importLogin,
@@ -690,6 +692,9 @@ const App: React.FC = () => {
                   )} />
                   <Route exact path="/scan-barcode" render={(props) => (
                     <ScanBarcodeRoute {...props} />
+                  )} />
+                  <Route exact path="/recipe-calculator" render={(props) => (
+                    <ErrorBoundary><RecipeCalculator {...props} /></ErrorBoundary>
                   )} />
                   <Route exact path="/auth-loading" render={(props) => (
                     <LazyRoute component={AuthLoading} profileId="AuthLoading" {...props} />
