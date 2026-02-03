@@ -1,0 +1,37 @@
+.quick-food-item {
+  --padding-start: 16px;
+  --padding-end: 8px;
+}
+
+.food-emoji {
+  font-size: 1.5rem;
+  margin-right: 8px;
+}
+
+.meal-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.meal-chips ion-chip {
+  cursor: pointer;
+  margin: 0;
+  height: 28px;
+  font-size: 0.75rem;
+}
+
+.meal-chips ion-chip:hover {
+  opacity: 0.8;
+}
+
+.quick-food-item ion-label h2 {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.quick-food-item ion-label p {
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+}
