@@ -186,10 +186,8 @@ const ScanBarcode: React.FC = () => {
 
       // Configure hints for better scanning in non-perfect conditions
       const hints = new Map<DecodeHintType, boolean | BarcodeFormat[]>();
-      
       // TRY_HARDER: Spend more time to find barcodes, optimize for accuracy
       hints.set(DecodeHintType.TRY_HARDER, true);
-      
       // POSSIBLE_FORMATS: Limit to common food product barcode formats
       // This improves accuracy and speed by focusing on relevant formats
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [
