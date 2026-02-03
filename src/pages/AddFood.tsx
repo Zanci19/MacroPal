@@ -253,6 +253,17 @@ type ProfileFromFirestore = {
 
 const FN_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
+// Timing constants for UI debouncing and delays
+const FAVORITES_LOAD_DELAY_MS = 300;
+const RECENT_FOODS_LOAD_DELAY_MS = 500;
+const MEAL_PRESETS_LOAD_DELAY_MS = 700;
+const SEARCH_DEBOUNCE_MS = 300;
+const SCROLL_TO_TOP_DELAY_MS = 700;
+
+// Validation constants for custom food creation
+const MAX_CALORIES = 10000;
+const MAX_MACRONUTRIENT_GRAMS = 1000;
+
 const BASIC_FOODS: OFFSearchHit[] = basicFoods as OFFSearchHit[];
 const BASIC_FOODS_BY_CODE = new Map(
   BASIC_FOODS.map((food) => [food.code, food])
@@ -1029,7 +1040,7 @@ const AddFood: React.FC = () => {
         }
       );
       return () => unsub();
-    }, 300);
+    }, FAVORITES_LOAD_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, []);
@@ -1044,20 +1055,30 @@ const AddFood: React.FC = () => {
       const ref = collection(db, "users", user.uid, "recentFoods");
       const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
 
-      const unsub = onSnapshot(q, (snap) => {
-        const list: RecentFood[] = snap.docs.map((d) => {
-          const data = d.data() as Omit<RecentFood, "id">;
-          return { id: d.id, ...data };
-        });
-        setRecent(list);
-        trackEvent("recent_off_loaded", {
-          uid: user.uid,
-          count: list.length,
-        });
-      });
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          const list: RecentFood[] = snap.docs.map((d) => {
+            const data = d.data() as Omit<RecentFood, "id">;
+            return { id: d.id, ...data };
+          });
+          setRecent(list);
+          trackEvent("recent_off_loaded", {
+            uid: user.uid,
+            count: list.length,
+          });
+        },
+        (err) => {
+          console.error("Error loading recent foods:", err);
+          trackEvent("recent_foods_load_error", {
+            uid: user.uid,
+            error: err?.message || String(err),
+          });
+        }
+      );
 
       return () => unsub();
-    }, 500);
+    }, RECENT_FOODS_LOAD_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, []);
@@ -1167,7 +1188,7 @@ const AddFood: React.FC = () => {
         }
       );
       return () => unsub();
-    }, 700);
+    }, MEAL_PRESETS_LOAD_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, []);
@@ -1753,6 +1774,11 @@ const AddFood: React.FC = () => {
           } else {
             // Upload failed, show warning but continue
             console.warn("Photo upload failed, meal will be saved without photo");
+            setToast({
+              show: true,
+              message: "Photo upload failed. Meal saved without photo.",
+              color: "warning",
+            });
             finalPhotoUrl = null;
             finalPhotoName = null;
           }
@@ -1849,6 +1875,11 @@ const AddFood: React.FC = () => {
         } else {
           // Upload failed, show warning but continue
           console.warn("Photo upload failed, meal will be saved without photo");
+          setToast({
+            show: true,
+            message: "Photo upload failed. Meal saved without photo.",
+            color: "warning",
+          });
         }
       }
 
@@ -1994,12 +2025,64 @@ const AddFood: React.FC = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const name = customName.trim() || "(no name)";
+    // Validate inputs
+    const name = customName.trim();
+    if (!name) {
+      setToast({
+        show: true,
+        message: "Please enter a food name",
+        color: "warning",
+      });
+      return;
+    }
+
     const brand = customBrand.trim() || null;
-    const calories = safeNum(parseFloat(customCalories || "0"), 0);
-    const carbs = safeNum(parseFloat(customCarbs || "0"), 1);
-    const protein = safeNum(parseFloat(customProtein || "0"), 1);
-    const fat = safeNum(parseFloat(customFat || "0"), 1);
+    const caloriesVal = parseFloat(customCalories || "0");
+    const carbsVal = parseFloat(customCarbs || "0");
+    const proteinVal = parseFloat(customProtein || "0");
+    const fatVal = parseFloat(customFat || "0");
+
+    // Validate numeric values
+    if (isNaN(caloriesVal) || caloriesVal < 0 || caloriesVal > MAX_CALORIES) {
+      setToast({
+        show: true,
+        message: `Please enter a valid calorie value (0-${MAX_CALORIES})`,
+        color: "warning",
+      });
+      return;
+    }
+
+    if (isNaN(carbsVal) || carbsVal < 0 || carbsVal > MAX_MACRONUTRIENT_GRAMS) {
+      setToast({
+        show: true,
+        message: `Please enter a valid carbs value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
+        color: "warning",
+      });
+      return;
+    }
+
+    if (isNaN(proteinVal) || proteinVal < 0 || proteinVal > MAX_MACRONUTRIENT_GRAMS) {
+      setToast({
+        show: true,
+        message: `Please enter a valid protein value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
+        color: "warning",
+      });
+      return;
+    }
+
+    if (isNaN(fatVal) || fatVal < 0 || fatVal > MAX_MACRONUTRIENT_GRAMS) {
+      setToast({
+        show: true,
+        message: `Please enter a valid fat value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
+        color: "warning",
+      });
+      return;
+    }
+
+    const calories = safeNum(caloriesVal, 0);
+    const carbs = safeNum(carbsVal, 1);
+    const protein = safeNum(proteinVal, 1);
+    const fat = safeNum(fatVal, 1);
 
     const perBase: MacroSet = { calories, carbs, protein, fat };
     const baseMeta = { amount: 100, unit: "g", label: "100 g" };
@@ -2665,7 +2748,7 @@ const AddFood: React.FC = () => {
               <IonInput
                 placeholder={`Search food to add to ${meal}...`}
                 value={query}
-                debounce={0}
+                debounce={SEARCH_DEBOUNCE_MS}
                 ref={searchInputRef}
                 onIonInput={(e) => {
                   console.log(`[USER ACTION] AddFood: Search input changed`, { query: e.detail.value });

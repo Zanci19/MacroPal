@@ -56,12 +56,10 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Expose clearDemoData globally for the DemoMode component to use
   useEffect(() => {
     if (isDemoMode) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__clearDemoData = clearDemoData;
+      window.__clearDemoData = clearDemoData;
     }
     return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (window as any).__clearDemoData;
+      delete window.__clearDemoData;
     };
   }, [isDemoMode, clearDemoData]);
 

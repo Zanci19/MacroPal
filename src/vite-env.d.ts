@@ -9,3 +9,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+// Demo mode window extensions
+interface Window {
+  __clearDemoData?: () => void;
+  __demoFirestore?: {
+    clear: () => void;
+  };
+}

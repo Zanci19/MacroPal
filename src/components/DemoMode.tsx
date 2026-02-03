@@ -17,17 +17,13 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
 
   const clearDemoData = useCallback(() => {
     // Use the global clearDemoData if available
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__clearDemoData === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__clearDemoData();
+    if (typeof window.__clearDemoData === 'function') {
+      window.__clearDemoData();
     }
     
     // Clear demo firestore
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (typeof (window as any).__demoFirestore !== 'undefined') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__demoFirestore.clear();
+    if (typeof window.__demoFirestore !== 'undefined') {
+      window.__demoFirestore.clear();
     }
     
     // Also clear localStorage keys

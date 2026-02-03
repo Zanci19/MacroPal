@@ -105,6 +105,5 @@ export const demoFirestore = new DemoFirestore();
 
 // Expose globally for clearing on demo reset
 if (typeof window !== "undefined") {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).__demoFirestore = demoFirestore;
+  window.__demoFirestore = demoFirestore;
 }
