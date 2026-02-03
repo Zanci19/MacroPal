@@ -121,3 +121,58 @@ ion-button ion-spinner {
     --background: var(--ion-color-dark);
   }
 }
+
+/* Match group styling */
+.match-group {
+  margin-bottom: 24px;
+}
+
+.prediction-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+}
+
+.match-group ion-list {
+  margin-top: 8px;
+}
+
+/* Add modal content */
+.add-modal-content {
+  padding: 16px;
+}
+
+.nutrition-display {
+  padding: 16px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+}
+
+.nutrition-display h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  color: var(--ion-color-primary);
+}
+
+.nutrition-display ion-item {
+  --background: transparent;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .prediction-label {
+    background: var(--ion-color-dark);
+  }
+
+  .nutrition-display {
+    background: var(--ion-color-dark);
+  }
+}

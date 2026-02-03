@@ -282,24 +282,61 @@ export async function recognizeFood(
 
 /**
  * Match recognized food names to items in the food database
+ * Returns matches with full nutrition data
  */
 export function matchFoodToDatabase(
   predictions: FoodPrediction[],
-  foodDatabase: Array<{ product_name: string; code?: string }>
-): Array<{ prediction: FoodPrediction; matches: typeof foodDatabase }> {
+  foodDatabase: Array<{ 
+    product_name: string; 
+    code?: string;
+    nutriments?: any;
+    serving_size?: string;
+    brands?: string;
+  }>
+): Array<{ 
+  prediction: FoodPrediction; 
+  matches: Array<{ 
+    product_name: string; 
+    code?: string;
+    nutriments?: any;
+    serving_size?: string;
+    brands?: string;
+    matchScore: number;
+  }> 
+}> {
   return predictions.map(prediction => {
-    const searchTerms = prediction.name.toLowerCase().split(/[\s,]+/);
+    const searchTerms = prediction.name.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
     
-    const matches = foodDatabase.filter(food => {
-      const foodName = food.product_name.toLowerCase();
-      return searchTerms.some(term => 
-        term.length > 2 && foodName.includes(term)
-      );
-    });
+    const matches = foodDatabase
+      .map(food => {
+        const foodName = food.product_name.toLowerCase();
+        const brandName = (food.brands || '').toLowerCase();
+        
+        // Calculate match score
+        let score = 0;
+        for (const term of searchTerms) {
+          if (foodName.includes(term)) score += 2;
+          if (brandName.includes(term)) score += 1;
+        }
+        
+        // Bonus for exact word matches
+        const foodWords = foodName.split(/\s+/);
+        for (const term of searchTerms) {
+          if (foodWords.includes(term)) score += 3;
+        }
+        
+        return {
+          ...food,
+          matchScore: score
+        };
+      })
+      .filter(food => food.matchScore > 0)
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, 5); // Top 5 matches
     
     return {
       prediction,
-      matches: matches.slice(0, 3) // Top 3 matches
+      matches
     };
   });
 }
