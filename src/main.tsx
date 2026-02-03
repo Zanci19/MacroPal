@@ -10,6 +10,10 @@ import "./theme/theme.css";
 import { setupPlatform } from "./utils/platformSetup";
 setupPlatform();
 
+// Initialize PWA Elements for Capacitor plugins (Camera, etc.) on web
+import { defineCustomElements } from '@ionic/pwa-elements/loader';
+defineCustomElements(window);
+
 addIcons({
   "chevron-down-outline": chevronDownOutline,
 });

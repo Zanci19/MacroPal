@@ -3,7 +3,7 @@
  * Ensures data from Firebase and external sources matches expected types
  */
 
-import type { Profile, DiaryEntry, Meal, Macros } from '../types';
+import type { Profile, DiaryEntry, Macros, MealKey } from '../types';
 
 /**
  * Checks if a value is a valid Macros object
@@ -26,19 +26,11 @@ export function isMacros(value: unknown): value is Macros {
 }
 
 /**
- * Checks if a value is a valid Meal object
+ * Checks if a value is a valid MealKey
  */
-export function isMeal(value: unknown): value is Meal {
-  if (!value || typeof value !== 'object') return false;
-  
-  const obj = value as Record<string, unknown>;
-  
-  return (
-    typeof obj.name === 'string' &&
-    typeof obj.servings === 'number' &&
-    Number.isFinite(obj.servings) &&
-    isMacros(obj.macros)
-  );
+export function isMealKey(value: unknown): value is MealKey {
+  return typeof value === 'string' && 
+    ['breakfast', 'lunch', 'dinner', 'snacks'].includes(value);
 }
 
 /**
@@ -50,10 +42,9 @@ export function isDiaryEntry(value: unknown): value is DiaryEntry {
   const obj = value as Record<string, unknown>;
   
   return (
-    typeof obj.date === 'string' &&
-    Array.isArray(obj.meals) &&
-    obj.meals.every(isMeal) &&
-    (obj.weight === undefined || typeof obj.weight === 'number')
+    typeof obj.name === 'string' &&
+    typeof obj.fdcId === 'number' &&
+    isMacros(obj.total)
   );
 }
 

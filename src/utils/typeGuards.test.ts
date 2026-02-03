@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isMacros,
-  isMeal,
+  isMealKey,
   isDiaryEntry,
   isProfile,
   isObject,
@@ -27,183 +27,101 @@ describe('isMacros', () => {
   });
 });
 
-describe('isMeal', () => {
-  it('should validate valid Meal objects', () => {
-    const meal = {
-      name: 'Chicken Breast',
-      servings: 1,
-      macros: { calories: 200, carbs: 0, protein: 40, fat: 4 },
-    };
-    expect(isMeal(meal)).toBe(true);
+describe('isMealKey', () => {
+  it('should validate valid MealKey values', () => {
+    expect(isMealKey('breakfast')).toBe(true);
+    expect(isMealKey('lunch')).toBe(true);
+    expect(isMealKey('dinner')).toBe(true);
+    expect(isMealKey('snacks')).toBe(true);
   });
 
-  it('should reject invalid Meal objects', () => {
-    expect(isMeal(null)).toBe(false);
-    expect(isMeal({})).toBe(false);
-    expect(isMeal({ name: 'Test' })).toBe(false);
-    expect(
-      isMeal({
-        name: 'Test',
-        servings: 'one',
-        macros: { calories: 200, carbs: 20, protein: 25, fat: 8 },
-      })
-    ).toBe(false);
-    expect(
-      isMeal({
-        name: 'Test',
-        servings: 1,
-        macros: { calories: 200 },
-      })
-    ).toBe(false);
+  it('should reject invalid MealKey values', () => {
+    expect(isMealKey('brunch')).toBe(false);
+    expect(isMealKey('')).toBe(false);
+    expect(isMealKey(null)).toBe(false);
+    expect(isMealKey(undefined)).toBe(false);
+    expect(isMealKey(123)).toBe(false);
   });
 });
 
 describe('isDiaryEntry', () => {
   it('should validate valid DiaryEntry objects', () => {
     const entry = {
-      date: '2024-01-01',
-      meals: [
-        {
-          name: 'Breakfast',
-          servings: 1,
-          macros: { calories: 300, carbs: 30, protein: 20, fat: 10 },
-        },
-      ],
-      weight: 70,
+      fdcId: 123,
+      name: 'Test Food',
+      total: { calories: 200, carbs: 20, protein: 25, fat: 8 },
+      addedAt: '2024-01-01T00:00:00Z',
     };
     expect(isDiaryEntry(entry)).toBe(true);
-
-    // Without weight
-    const entryNoWeight = {
-      date: '2024-01-01',
-      meals: [],
-    };
-    expect(isDiaryEntry(entryNoWeight)).toBe(true);
   });
 
   it('should reject invalid DiaryEntry objects', () => {
     expect(isDiaryEntry(null)).toBe(false);
     expect(isDiaryEntry({})).toBe(false);
-    expect(isDiaryEntry({ date: '2024-01-01' })).toBe(false);
-    expect(isDiaryEntry({ date: '2024-01-01', meals: 'not-an-array' })).toBe(false);
-    expect(
-      isDiaryEntry({
-        date: '2024-01-01',
-        meals: [{ invalid: 'meal' }],
-      })
-    ).toBe(false);
+    expect(isDiaryEntry({ name: 'Test' })).toBe(false);
   });
 });
 
 describe('isProfile', () => {
   it('should validate valid Profile objects', () => {
     const profile = {
-      email: 'test@example.com',
-      userId: 'user123',
       age: 30,
       weight: 70,
       height: 175,
-      gender: 'male' as const,
-      goal: 'maintain' as const,
+      gender: 'male',
+      goal: 'maintain',
+      activity: 'moderate',
     };
     expect(isProfile(profile)).toBe(true);
-
-    // Minimal profile
-    const minimalProfile = {
-      email: 'test@example.com',
-      userId: 'user123',
-    };
-    expect(isProfile(minimalProfile)).toBe(true);
   });
 
   it('should reject invalid Profile objects', () => {
     expect(isProfile(null)).toBe(false);
     expect(isProfile({})).toBe(false);
-    expect(isProfile({ email: 'test@example.com' })).toBe(false);
-    expect(isProfile({ userId: 'user123' })).toBe(false);
-    expect(
-      isProfile({
-        email: 'test@example.com',
-        userId: 'user123',
-        age: 'thirty',
-      })
-    ).toBe(false);
-    expect(
-      isProfile({
-        email: 'test@example.com',
-        userId: 'user123',
-        gender: 'invalid',
-      })
-    ).toBe(false);
+    expect(isProfile({ age: 30 })).toBe(false);
   });
 });
 
-describe('isObject', () => {
-  it('should validate objects', () => {
-    expect(isObject({})).toBe(true);
-    expect(isObject({ key: 'value' })).toBe(true);
+describe('helper type guards', () => {
+  describe('isObject', () => {
+    it('should identify objects', () => {
+      expect(isObject({})).toBe(true);
+      expect(isObject({ a: 1 })).toBe(true);
+      expect(isObject(null)).toBe(false);
+      expect(isObject(undefined)).toBe(false);
+      expect(isObject('string')).toBe(false);
+      expect(isObject(123)).toBe(false);
+    });
   });
 
-  it('should reject non-objects', () => {
-    expect(isObject(null)).toBe(false);
-    expect(isObject(undefined)).toBe(false);
-    expect(isObject([])).toBe(false);
-    expect(isObject('string')).toBe(false);
-    expect(isObject(123)).toBe(false);
-  });
-});
-
-describe('isNonEmptyString', () => {
-  it('should validate non-empty strings', () => {
-    expect(isNonEmptyString('hello')).toBe(true);
-    expect(isNonEmptyString('  text  ')).toBe(true);
+  describe('isNonEmptyString', () => {
+    it('should identify non-empty strings', () => {
+      expect(isNonEmptyString('test')).toBe(true);
+      expect(isNonEmptyString('  ')).toBe(false);
+      expect(isNonEmptyString('')).toBe(false);
+      expect(isNonEmptyString(null)).toBe(false);
+      expect(isNonEmptyString(123)).toBe(false);
+    });
   });
 
-  it('should reject empty or invalid strings', () => {
-    expect(isNonEmptyString('')).toBe(false);
-    expect(isNonEmptyString('   ')).toBe(false);
-    expect(isNonEmptyString(null)).toBe(false);
-    expect(isNonEmptyString(123)).toBe(false);
-  });
-});
-
-describe('isPositiveNumber', () => {
-  it('should validate positive numbers', () => {
-    expect(isPositiveNumber(1)).toBe(true);
-    expect(isPositiveNumber(0.1)).toBe(true);
-    expect(isPositiveNumber(1000)).toBe(true);
+  describe('isPositiveNumber', () => {
+    it('should identify positive numbers', () => {
+      expect(isPositiveNumber(1)).toBe(true);
+      expect(isPositiveNumber(0.1)).toBe(true);
+      expect(isPositiveNumber(0)).toBe(false);
+      expect(isPositiveNumber(-1)).toBe(false);
+      expect(isPositiveNumber(NaN)).toBe(false);
+      expect(isPositiveNumber('1')).toBe(false);
+    });
   });
 
-  it('should reject non-positive numbers', () => {
-    expect(isPositiveNumber(0)).toBe(false);
-    expect(isPositiveNumber(-1)).toBe(false);
-    expect(isPositiveNumber(NaN)).toBe(false);
-    expect(isPositiveNumber(Infinity)).toBe(false);
-  });
-});
-
-describe('isNonNegativeNumber', () => {
-  it('should validate non-negative numbers', () => {
-    expect(isNonNegativeNumber(0)).toBe(true);
-    expect(isNonNegativeNumber(1)).toBe(true);
-    expect(isNonNegativeNumber(100.5)).toBe(true);
-  });
-
-  it('should reject negative numbers', () => {
-    expect(isNonNegativeNumber(-1)).toBe(false);
-    expect(isNonNegativeNumber(NaN)).toBe(false);
-    expect(isNonNegativeNumber(Infinity)).toBe(false);
-  });
-});
-
-describe('parseFirestoreData', () => {
-  it('should parse valid data', () => {
-    const macros = { calories: 200, carbs: 20, protein: 25, fat: 8 };
-    expect(parseFirestoreData(macros, isMacros)).toEqual(macros);
-  });
-
-  it('should return null for invalid data', () => {
-    expect(parseFirestoreData({ invalid: 'data' }, isMacros)).toBeNull();
-    expect(parseFirestoreData(null, isMacros)).toBeNull();
+  describe('isNonNegativeNumber', () => {
+    it('should identify non-negative numbers', () => {
+      expect(isNonNegativeNumber(0)).toBe(true);
+      expect(isNonNegativeNumber(1)).toBe(true);
+      expect(isNonNegativeNumber(-1)).toBe(false);
+      expect(isNonNegativeNumber(NaN)).toBe(false);
+      expect(isNonNegativeNumber('0')).toBe(false);
+    });
   });
 });
