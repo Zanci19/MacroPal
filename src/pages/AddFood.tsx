@@ -54,7 +54,12 @@ import {
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-import { calendarOutline, starOutline, trashOutline } from "ionicons/icons";
+import { calendarOutline, starOutline, trashOutline, cameraOutline, sparklesOutline } from "ionicons/icons";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import {
+  recognizeFood,
+  matchFoodToDatabase,
+} from "../utils/foodRecognition";
 import {
   clampDateKeyToToday,
   formatDateKey,
@@ -534,6 +539,11 @@ const AddFood: React.FC = () => {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState("");
   const [photoRemoved, setPhotoRemoved] = useState(false);
+
+  // AI Photo Recognition state
+  const [aiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
+  const [aiPhotoDataUrl, setAiPhotoDataUrl] = useState<string | null>(null);
+  const [aiMatches, setAiMatches] = useState<any[]>([]);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -1555,6 +1565,108 @@ const AddFood: React.FC = () => {
         code,
         error: e?.message || String(e),
       });
+    }
+  };
+
+  const takeAiPhoto = async () => {
+    try {
+      trackEvent("ai_photo_camera_open", { meal, date: dateKey });
+      
+      const photo = await Camera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (photo.dataUrl) {
+        setAiPhotoDataUrl(photo.dataUrl);
+        await analyzeAiPhoto(photo.dataUrl);
+      }
+    } catch (err) {
+      console.error("Error taking AI photo:", err);
+      
+      // Check if user simply cancelled - don't show error for that
+      const errorMessage = String(err);
+      if (errorMessage.includes("User cancelled") || errorMessage.includes("cancel")) {
+        trackEvent("ai_photo_camera_cancelled", { meal, date: dateKey });
+        return;
+      }
+      
+      setToast({
+        show: true,
+        message: "Failed to take photo. Please try again.",
+        color: "danger",
+      });
+      trackEvent("ai_photo_camera_error", { meal, date: dateKey, error: String(err) });
+    }
+  };
+
+  const analyzeAiPhoto = async (photoDataUrl: string) => {
+    setAiPhotoAnalyzing(true);
+    setAiMatches([]);
+
+    try {
+      trackEvent("ai_photo_analyze_start", { meal, date: dateKey });
+
+      const result = await recognizeFood(
+        photoDataUrl,
+        false, // Don't use Google Vision by default
+        import.meta.env.VITE_GOOGLE_VISION_API_KEY
+      );
+
+      if (result.success && result.predictions.length > 0) {
+        // Match predictions to food database
+        const matches = matchFoodToDatabase(result.predictions, basicFoods as any[]);
+        const validMatches = matches.filter(m => m.matches.length > 0);
+        
+        setAiMatches(validMatches);
+        
+        // If we have matches, automatically select the top match
+        if (validMatches.length > 0 && validMatches[0].matches.length > 0) {
+          const topMatch = validMatches[0].matches[0];
+          // Convert to OFFProduct format and open modal
+          const offProduct = {
+            ...topMatch,
+            product_name: topMatch.product_name,
+            dataSource: "ai_recognition" as const,
+          };
+          setSelectedFood(offProduct as any);
+          setOpen(true);
+          
+          trackEvent("ai_photo_analyze_success", {
+            meal,
+            date: dateKey,
+            predictionsCount: result.predictions.length,
+            matchesCount: validMatches.length,
+            topFood: topMatch.product_name,
+          });
+        } else {
+          setToast({
+            show: true,
+            message: "No food matches found. Try manual search or a different photo.",
+            color: "warning",
+          });
+          trackEvent("ai_photo_no_matches", { meal, date: dateKey });
+        }
+      } else {
+        setToast({
+          show: true,
+          message: result.error || "No food items detected. Try a different photo or angle.",
+          color: "warning",
+        });
+        trackEvent("ai_photo_analyze_no_results", { meal, date: dateKey });
+      }
+    } catch (err) {
+      console.error("Error analyzing AI photo:", err);
+      setToast({
+        show: true,
+        message: "Failed to analyze photo. Please try again.",
+        color: "danger",
+      });
+      trackEvent("ai_photo_analyze_error", { meal, date: dateKey, error: String(err) });
+    } finally {
+      setAiPhotoAnalyzing(false);
     }
   };
 
@@ -2807,6 +2919,20 @@ const AddFood: React.FC = () => {
                 }}
               >
                 Barcode scanner
+              </IonButton>
+
+              <IonButton
+                expand="block"
+                fill="outline"
+                onClick={() => {
+                  console.log(`[USER ACTION] AddFood: AI Photo button clicked`);
+                  takeAiPhoto();
+                }}
+                disabled={aiPhotoAnalyzing}
+              >
+                <IonIcon slot="start" icon={cameraOutline} />
+                {aiPhotoAnalyzing ? "Analyzing..." : "AI Photo Recognition"}
+                {aiPhotoAnalyzing && <IonSpinner name="crescent" slot="end" />}
               </IonButton>
             </div>
 
