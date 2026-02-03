@@ -92,7 +92,7 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
 
   const removeGlass = () => {
     if (waterData.glasses > 0) {
-      updateWaterIntake(waterData.glasses - 0.5);
+      updateWaterIntake(waterData.glasses - 1);
     }
   };
 
@@ -144,7 +144,7 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
             disabled={waterData.glasses === 0}
           >
             <IonIcon slot="start" icon={removeOutline} />
-            -0.5
+            -1
           </IonButton>
           <IonChip color="primary" className="water-display">
             <IonLabel>{waterData.glasses} glasses</IonLabel>

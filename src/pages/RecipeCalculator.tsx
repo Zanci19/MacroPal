@@ -36,6 +36,16 @@ import basicFoods from "../data/basicFoods.json";
 import type { Macros } from "../types";
 import "./RecipeCalculator.css";
 
+interface BasicFood {
+  product_name: string;
+  nutriments: {
+    "energy-kcal_100g": number;
+    proteins_100g: number;
+    carbohydrates_100g: number;
+    fat_100g: number;
+  };
+}
+
 interface RecipeIngredient {
   id: string;
   name: string;
@@ -95,7 +105,7 @@ const RecipeCalculator: React.FC = () => {
       return;
     }
 
-    const food = basicFoods.find((f: any) => f.name === selectedFood);
+    const food = (basicFoods as BasicFood[]).find((f) => f.product_name === selectedFood);
     if (!food) {
       setToast({ open: true, message: "Food not found" });
       return;
@@ -105,13 +115,13 @@ const RecipeCalculator: React.FC = () => {
     const scaleFactor = ingredientAmount / 100;
     const newIngredient: RecipeIngredient = {
       id: `${Date.now()}-${Math.random()}`,
-      name: food.name,
+      name: food.product_name,
       amount: ingredientAmount,
       unit: "g",
-      calories: Math.round(food.calories * scaleFactor),
-      protein: Math.round(food.protein * scaleFactor * 10) / 10,
-      carbs: Math.round(food.carbs * scaleFactor * 10) / 10,
-      fat: Math.round(food.fat * scaleFactor * 10) / 10,
+      calories: Math.round((food.nutriments["energy-kcal_100g"] || 0) * scaleFactor),
+      protein: Math.round((food.nutriments.proteins_100g || 0) * scaleFactor * 10) / 10,
+      carbs: Math.round((food.nutriments.carbohydrates_100g || 0) * scaleFactor * 10) / 10,
+      fat: Math.round((food.nutriments.fat_100g || 0) * scaleFactor * 10) / 10,
     };
 
     setRecipe({
@@ -359,9 +369,9 @@ Per Serving:
                   onIonChange={(e) => setSelectedFood(e.detail.value)}
                   interface="action-sheet"
                 >
-                  {basicFoods.slice(0, 50).map((food: any) => (
-                    <IonSelectOption key={food.name} value={food.name}>
-                      {food.name}
+                  {(basicFoods as BasicFood[]).slice(0, 50).map((food) => (
+                    <IonSelectOption key={food.product_name} value={food.product_name}>
+                      {food.product_name}
                     </IonSelectOption>
                   ))}
                 </IonSelect>

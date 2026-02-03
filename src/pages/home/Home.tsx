@@ -1209,7 +1209,7 @@ const Home: React.FC = () => {
     
     const dayKey = activeDateKey;
     const newEntry: DiaryEntry = {
-      fdcId: Date.now(),
+      fdcId: Date.now() + Math.floor(Math.random() * 1000000),
       name: foodName,
       total: {
         calories,
