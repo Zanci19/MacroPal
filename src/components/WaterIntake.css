@@ -1,33 +1,5 @@
-.water-intake-card {
-  margin: 16px;
-  border-radius: 12px;
-}
-
-.water-intake-card ion-card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.2rem;
-}
-
-.water-icon {
-  font-size: 1.5rem;
-  color: var(--ion-color-primary);
-}
-
-.goal-reached-icon {
-  margin-left: auto;
-  font-size: 1.5rem;
-  animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-  from {
-    transform: scale(0);
-  }
-  to {
-    transform: scale(1);
-  }
+.water-intake-container {
+  width: 100%;
 }
 
 .water-progress-container {

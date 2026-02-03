@@ -2499,6 +2499,17 @@ const Home: React.FC = () => {
               </div>
             </SwiperSlide>
 
+            <SwiperSlide>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Water Intake</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent>
+                  <WaterIntake dateKey={activeDateKey} />
+                </IonCardContent>
+              </div>
+            </SwiperSlide>
+
             {showAchievements && (
               <SwiperSlide>
                 <div className="fs-summary__slide">
@@ -2670,9 +2681,6 @@ const Home: React.FC = () => {
               />
             );
           })}
-
-        {/* Water Intake Tracker */}
-        <WaterIntake dateKey={activeDateKey} />
 
         {/* Quick Add FAB */}
         <IonFab vertical="bottom" horizontal="end" slot="fixed">

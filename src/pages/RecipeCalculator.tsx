@@ -21,7 +21,7 @@ import {
   IonBackButton,
   IonButtons,
   IonText,
-  IonAlert,
+  IonModal,
   IonToast,
 } from "@ionic/react";
 import {
@@ -334,64 +334,59 @@ Per Serving:
           </>
         )}
 
-        <IonAlert
+        <IonModal
           isOpen={showAddIngredient}
           onDidDismiss={() => setShowAddIngredient(false)}
-          header="Add Ingredient"
-          inputs={[
-            {
-              name: "food",
-              type: "text",
-              placeholder: "Search food",
-              attributes: {
-                list: "food-list",
-              },
-            },
-          ]}
-          buttons={[
-            {
-              text: "Cancel",
-              role: "cancel",
-            },
-            {
-              text: "Add",
-              handler: () => {
+        >
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>Add Ingredient</IonTitle>
+              <IonButtons slot="end">
+                <IonButton onClick={() => setShowAddIngredient(false)}>
+                  Cancel
+                </IonButton>
+              </IonButtons>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding">
+            <IonItem>
+              <IonLabel position="stacked">Select Food</IonLabel>
+              <IonSelect
+                value={selectedFood}
+                onIonChange={(e) => setSelectedFood(e.detail.value)}
+                interface="action-sheet"
+              >
+                {(basicFoods as BasicFood[]).slice(0, 50).map((food) => (
+                  <IonSelectOption key={food.product_name} value={food.product_name}>
+                    {food.product_name}
+                  </IonSelectOption>
+                ))}
+              </IonSelect>
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Amount (grams)</IonLabel>
+              <IonInput
+                type="number"
+                value={ingredientAmount}
+                onIonChange={(e) =>
+                  setIngredientAmount(
+                    Math.max(1, parseInt(e.detail.value || "100", 10))
+                  )
+                }
+                min={1}
+              />
+            </IonItem>
+            <IonButton
+              expand="block"
+              onClick={() => {
                 addIngredient();
-              },
-            },
-          ]}
-          message={
-            <div>
-              <IonItem>
-                <IonLabel position="stacked">Select Food</IonLabel>
-                <IonSelect
-                  value={selectedFood}
-                  onIonChange={(e) => setSelectedFood(e.detail.value)}
-                  interface="action-sheet"
-                >
-                  {(basicFoods as BasicFood[]).slice(0, 50).map((food) => (
-                    <IonSelectOption key={food.product_name} value={food.product_name}>
-                      {food.product_name}
-                    </IonSelectOption>
-                  ))}
-                </IonSelect>
-              </IonItem>
-              <IonItem>
-                <IonLabel position="stacked">Amount (grams)</IonLabel>
-                <IonInput
-                  type="number"
-                  value={ingredientAmount}
-                  onIonChange={(e) =>
-                    setIngredientAmount(
-                      Math.max(1, parseInt(e.detail.value || "100", 10))
-                    )
-                  }
-                  min={1}
-                />
-              </IonItem>
-            </div>
-          }
-        />
+              }}
+              style={{ marginTop: 16 }}
+            >
+              Add Ingredient
+            </IonButton>
+          </IonContent>
+        </IonModal>
 
         <IonToast
           isOpen={toast.open}

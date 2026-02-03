@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
 import {
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardContent,
   IonButton,
   IonIcon,
   IonProgressBar,
@@ -12,7 +8,6 @@ import {
   IonLabel,
 } from "@ionic/react";
 import {
-  waterOutline,
   addOutline,
   removeOutline,
   checkmarkCircleOutline,
@@ -106,63 +101,56 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
   }
 
   return (
-    <IonCard className="water-intake-card">
-      <IonCardHeader>
-        <IonCardTitle>
-          <IonIcon icon={waterOutline} className="water-icon" />
-          Water Intake
-          {isGoalReached && (
-            <IonIcon
-              icon={checkmarkCircleOutline}
-              className="goal-reached-icon"
-              color="success"
-            />
-          )}
-        </IonCardTitle>
-      </IonCardHeader>
-      <IonCardContent>
-        <div className="water-progress-container">
-          <IonProgressBar
-            value={percentage / 100}
-            className={`water-progress ${isGoalReached ? "goal-reached" : ""}`}
-          />
-          <div className="water-stats">
-            <IonText>
-              <h3>
-                {waterData.glasses} / {waterData.goal} glasses
-              </h3>
-              <p className="water-volume">{totalLiters}L consumed</p>
-            </IonText>
-          </div>
+    <div className="water-intake-container">
+      <div className="water-progress-container">
+        <IonProgressBar
+          value={percentage / 100}
+          className={`water-progress ${isGoalReached ? "goal-reached" : ""}`}
+        />
+        <div className="water-stats">
+          <IonText>
+            <h3>
+              {waterData.glasses} / {waterData.goal} glasses
+              {isGoalReached && (
+                <IonIcon
+                  icon={checkmarkCircleOutline}
+                  className="goal-reached-icon"
+                  color="success"
+                  style={{ marginLeft: 8, fontSize: "1.5rem" }}
+                />
+              )}
+            </h3>
+            <p className="water-volume">{totalLiters}L consumed</p>
+          </IonText>
         </div>
+      </div>
 
-        <div className="water-controls">
-          <IonButton
-            fill="outline"
-            size="small"
-            onClick={removeGlass}
-            disabled={waterData.glasses === 0}
-          >
-            <IonIcon slot="start" icon={removeOutline} />
-            -1
-          </IonButton>
-          <IonChip color="primary" className="water-display">
-            <IonLabel>{waterData.glasses} glasses</IonLabel>
-          </IonChip>
-          <IonButton fill="solid" size="small" onClick={addGlass}>
-            <IonIcon slot="start" icon={addOutline} />
-            +1
-          </IonButton>
+      <div className="water-controls">
+        <IonButton
+          fill="outline"
+          size="small"
+          onClick={removeGlass}
+          disabled={waterData.glasses === 0}
+        >
+          <IonIcon slot="start" icon={removeOutline} />
+          -1
+        </IonButton>
+        <IonChip color="primary" className="water-display">
+          <IonLabel>{waterData.glasses} glasses</IonLabel>
+        </IonChip>
+        <IonButton fill="solid" size="small" onClick={addGlass}>
+          <IonIcon slot="start" icon={addOutline} />
+          +1
+        </IonButton>
+      </div>
+
+      {isGoalReached && (
+        <div className="goal-message">
+          <IonText color="success">
+            <p>🎉 Great job! You've reached your hydration goal!</p>
+          </IonText>
         </div>
-
-        {isGoalReached && (
-          <div className="goal-message">
-            <IonText color="success">
-              <p>🎉 Great job! You've reached your hydration goal!</p>
-            </IonText>
-          </div>
-        )}
-      </IonCardContent>
-    </IonCard>
+      )}
+    </div>
   );
 };
