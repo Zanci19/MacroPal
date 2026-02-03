@@ -19,6 +19,18 @@
   font-size: 1.2rem;
 }
 
+.current-mode-display {
+  margin: 16px 0;
+  padding: 12px;
+  background: var(--ion-color-light);
+  border-radius: 8px;
+  border-left: 4px solid var(--ion-color-primary);
+}
+
+.current-mode-display ion-chip {
+  margin: 0 0 8px 0;
+}
+
 .google-vision-toggle {
   margin-top: 12px;
   --background: var(--ion-color-light);
@@ -174,5 +186,13 @@ ion-button ion-spinner {
 
   .nutrition-display {
     background: var(--ion-color-dark);
+  }
+}
+
+/* Dark mode for current mode display */
+@media (prefers-color-scheme: dark) {
+  .current-mode-display {
+    background: var(--ion-color-dark);
+    border-left-color: var(--ion-color-primary);
   }
 }

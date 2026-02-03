@@ -355,16 +355,36 @@ const PhotoFoodLogger: React.FC = () => {
               <IonText color="medium">
                 <p>
                   Take a photo of your food and let AI identify it with full nutrition data!
-                  Uses free TensorFlow.js for local recognition.
                 </p>
               </IonText>
 
+              {/* Current Mode Display */}
+              <div className="current-mode-display">
+                <IonChip color={useGoogleVision ? "success" : "primary"}>
+                  <IonIcon icon={sparklesOutline} />
+                  <IonLabel>
+                    <strong>
+                      {useGoogleVision ? "Google Vision API Mode" : "TensorFlow.js Mode (FREE)"}
+                    </strong>
+                  </IonLabel>
+                </IonChip>
+                <IonText color="medium" style={{ fontSize: '13px', marginTop: '4px', display: 'block' }}>
+                  {useGoogleVision 
+                    ? "🎯 Enhanced accuracy - Using Google Cloud Vision"
+                    : "🆓 100% Free - Runs locally on your device"}
+                </IonText>
+              </div>
+
               {/* Google Vision Toggle */}
               <IonItem lines="none" className="google-vision-toggle">
-                <IonIcon icon={sparklesOutline} slot="start" color="primary" />
+                <IonIcon icon={sparklesOutline} slot="start" color={useGoogleVision ? "success" : "medium"} />
                 <IonLabel>
-                  <h3>Use Google Vision AI</h3>
-                  <p>Enhanced accuracy (1000 free/month)</p>
+                  <h3>Use Google Vision AI (Optional Upgrade)</h3>
+                  <p>
+                    {import.meta.env.VITE_GOOGLE_VISION_API_KEY 
+                      ? "More accurate • 1000 free/month" 
+                      : "Requires API key setup"}
+                  </p>
                 </IonLabel>
                 <IonToggle
                   checked={useGoogleVision}
@@ -373,8 +393,10 @@ const PhotoFoodLogger: React.FC = () => {
                 />
               </IonItem>
               {!import.meta.env.VITE_GOOGLE_VISION_API_KEY && (
-                <IonNote color="warning" className="ion-padding-start">
-                  Configure VITE_GOOGLE_VISION_API_KEY to use Google Vision
+                <IonNote color="medium" className="ion-padding-start">
+                  💡 TensorFlow.js works great without any setup! Google Vision is optional for better accuracy.
+                  <br />
+                  See WHAT_IS_THIS_EXPLAINED.md for setup instructions.
                 </IonNote>
               )}
             </IonCardContent>
