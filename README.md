@@ -36,10 +36,23 @@ Built with modern web technologies and wrapped in a native mobile experience usi
 
 ### 🍽️ **Smart Food Tracking**
 - **Quick Add Foods**: Log meals with our extensive food database
+- **Quick Add Modal**: Lightning-fast logging of common foods with one tap
 - **Barcode Scanner**: Scan product barcodes for instant nutrition info
 - **Custom Foods**: Create and save your own food items with detailed macros
 - **Meal Templates**: Save favorite meals for quick logging
 - **Recent Items**: Quick access to frequently logged foods
+
+### 💧 **Hydration Tracking**
+- **Water Intake Tracker**: Monitor daily water consumption
+- **Visual Progress**: Beautiful progress bar showing hydration goals
+- **Daily Goals**: Customizable water intake targets (default 8 glasses)
+- **Goal Celebrations**: Encouraging feedback when you reach your daily goal
+
+### 🧮 **Recipe Calculator**
+- **Recipe Builder**: Combine multiple foods to create recipes
+- **Nutrition Breakdown**: Automatic calculation of total recipe macros
+- **Per-Serving Analysis**: Calculate nutrition for individual servings
+- **Export Recipes**: Save and share your recipe calculations as text files
 
 ### 📊 **Advanced Analytics**
 - **Macro Breakdown**: Track calories, carbs, protein, and fat
