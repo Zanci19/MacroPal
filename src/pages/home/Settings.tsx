@@ -1532,6 +1532,31 @@ const Settings: React.FC = () => {
 
           <IonCard>
             <IonCardHeader>
+              <IonCardTitle className="settings-card-title">Tools</IonCardTitle>
+            </IonCardHeader>
+            <IonCardContent>
+              <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  routerLink="/recipe-calculator"
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Recipe Calculator clicked`);
+                    trackEvent("settings_recipe_calculator_open", { uid: auth.currentUser?.uid });
+                  }}
+                >
+                  <IonIcon slot="start" icon={cafeOutline} />
+                  <IonLabel>
+                    <h2>Recipe Calculator</h2>
+                    <p>Calculate nutrition for your recipes</p>
+                  </IonLabel>
+                </IonItem>
+              </IonList>
+            </IonCardContent>
+          </IonCard>
+
+          <IonCard>
+            <IonCardHeader>
               <IonCardTitle className="settings-card-title">Sign out</IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
