@@ -101,6 +101,7 @@ import AnnouncementPopup, {
   type AnnouncementData,
 } from "../../components/AnnouncementPopup";
 import TutorialOverlay from "../../components/TutorialOverlay";
+import { WaterIntake } from "../../components/WaterIntake";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -2614,6 +2615,9 @@ const Home: React.FC = () => {
               />
             );
           })}
+
+        {/* Water Intake Tracker */}
+        <WaterIntake dateKey={activeDateKey} />
 
         <IonActionSheet
           isOpen={foodMenuEntry !== null}
