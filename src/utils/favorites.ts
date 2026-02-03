@@ -3,14 +3,14 @@
  * Stores favorites in localStorage for quick access
  */
 
-import type { Meal } from '../types';
+import type { DiaryEntry } from '../types';
 
 const FAVORITES_KEY = 'mp_favorite_foods';
 const MAX_FAVORITES = 50;
 
 export interface FavoriteFood {
   id: string;
-  meal: Meal;
+  food: DiaryEntry;
   addedAt: string;
 }
 
@@ -33,12 +33,12 @@ export function getFavoriteFoods(): FavoriteFood[] {
 /**
  * Add a food to favorites
  */
-export function addFavoriteFood(meal: Meal): boolean {
+export function addFavoriteFood(food: DiaryEntry): boolean {
   try {
     const favorites = getFavoriteFoods();
 
     // Check if already favorited (by name for simplicity)
-    const exists = favorites.some((fav) => fav.meal.name === meal.name);
+    const exists = favorites.some((fav) => fav.food.name === food.name);
     if (exists) {
       return false;
     }
@@ -50,7 +50,7 @@ export function addFavoriteFood(meal: Meal): boolean {
 
     const newFavorite: FavoriteFood = {
       id: `fav_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-      meal,
+      food,
       addedAt: new Date().toISOString(),
     };
 
@@ -88,7 +88,7 @@ export function removeFavoriteFood(id: string): boolean {
  */
 export function isFoodFavorited(foodName: string): boolean {
   const favorites = getFavoriteFoods();
-  return favorites.some((fav) => fav.meal.name === foodName);
+  return favorites.some((fav) => fav.food.name === foodName);
 }
 
 /**
@@ -114,7 +114,7 @@ export function searchFavoriteFoods(query: string): FavoriteFood[] {
   if (!lowerQuery) return favorites;
 
   return favorites.filter((fav) =>
-    fav.meal.name.toLowerCase().includes(lowerQuery)
+    fav.food.name.toLowerCase().includes(lowerQuery)
   );
 }
 

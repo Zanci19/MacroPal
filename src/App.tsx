@@ -58,6 +58,7 @@ const importWorkout = () => import("./pages/home/Workout");
 const importChangelog = () => import("./pages/Changelog");
 const importScanBarcode = () => import("./pages/ScanBarcode");
 const importRecipeCalculator = () => import("./pages/RecipeCalculator");
+const importPhotoFoodLogger = () => import("./pages/PhotoFoodLogger");
 
 const Login = lazy(importLogin);
 const Register = lazy(importRegister);
@@ -82,6 +83,7 @@ const Workout = lazy(importWorkout);
 const Changelog = lazy(importChangelog);
 const ScanBarcode = lazy(importScanBarcode);
 const RecipeCalculator = lazy(importRecipeCalculator);
+const PhotoFoodLogger = lazy(importPhotoFoodLogger);
 
 const LAZY_ROUTE_IMPORTS = [
   importLogin,
@@ -106,6 +108,7 @@ const LAZY_ROUTE_IMPORTS = [
   importWorkout,
   importChangelog,
   importScanBarcode,
+  importPhotoFoodLogger,
 ];
 
 const preloadLazyRoutes = async () => {
@@ -694,7 +697,10 @@ const App: React.FC = () => {
                     <ScanBarcodeRoute {...props} />
                   )} />
                   <Route exact path="/recipe-calculator" render={(props) => (
-                    <ErrorBoundary><RecipeCalculator {...props} /></ErrorBoundary>
+                    <LazyRoute component={RecipeCalculator} profileId="RecipeCalculator" {...props} />
+                  )} />
+                  <Route exact path="/photo-food-logger" render={(props) => (
+                    <LazyRoute component={PhotoFoodLogger} profileId="PhotoFoodLogger" {...props} />
                   )} />
                   <Route exact path="/auth-loading" render={(props) => (
                     <LazyRoute component={AuthLoading} profileId="AuthLoading" {...props} />

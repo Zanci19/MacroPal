@@ -35,6 +35,7 @@ import {
   keyOutline,
   newspaperOutline,
   chevronDownOutline,
+  cameraOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
@@ -1536,6 +1537,21 @@ const Settings: React.FC = () => {
             </IonCardHeader>
             <IonCardContent>
               <IonList>
+                <IonItem
+                  lines="full"
+                  button
+                  routerLink="/photo-food-logger"
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: AI Photo Food Logger clicked`);
+                    trackEvent("settings_photo_food_logger_open", { uid: auth.currentUser?.uid });
+                  }}
+                >
+                  <IonIcon slot="start" icon={cameraOutline} />
+                  <IonLabel>
+                    <h2>AI Photo Food Logger</h2>
+                    <p>Identify food from photos using AI</p>
+                  </IonLabel>
+                </IonItem>
                 <IonItem
                   lines="full"
                   button
