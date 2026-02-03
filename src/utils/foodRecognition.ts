@@ -8,6 +8,37 @@
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import * as tf from '@tensorflow/tfjs';
 
+// Import TensorFlow.js backends
+import '@tensorflow/tfjs-backend-webgl';
+import '@tensorflow/tfjs-backend-cpu';
+
+// Initialize TensorFlow backend
+let tfInitialized = false;
+
+async function initializeTensorFlow() {
+  if (tfInitialized) return;
+  
+  try {
+    // Try to set WebGL backend first (faster)
+    await tf.setBackend('webgl');
+    await tf.ready();
+    console.log('[FoodRecognition] TensorFlow.js initialized with WebGL backend');
+    tfInitialized = true;
+  } catch (error) {
+    console.warn('[FoodRecognition] WebGL backend failed, falling back to CPU:', error);
+    try {
+      // Fall back to CPU backend
+      await tf.setBackend('cpu');
+      await tf.ready();
+      console.log('[FoodRecognition] TensorFlow.js initialized with CPU backend');
+      tfInitialized = true;
+    } catch (cpuError) {
+      console.error('[FoodRecognition] Failed to initialize any TensorFlow backend:', cpuError);
+      throw new Error('Failed to initialize TensorFlow.js backend');
+    }
+  }
+}
+
 // Food keywords that commonly appear in image classifications
 const FOOD_KEYWORDS = [
   'food', 'meal', 'dish', 'cuisine', 'plate', 'bowl',
@@ -44,6 +75,9 @@ export async function recognizeFoodWithMobileNet(
   imageElement: HTMLImageElement
 ): Promise<RecognitionResult> {
   try {
+    // Initialize TensorFlow backend first
+    await initializeTensorFlow();
+    
     console.log('[FoodRecognition] Loading MobileNet model...');
     const model = await mobilenet.load();
     
