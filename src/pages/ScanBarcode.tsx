@@ -16,6 +16,7 @@ import { useHistory, useLocation } from "react-router";
 import { cameraReverseOutline } from "ionicons/icons";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import type { Result, ResultPoint } from "@zxing/library";
+import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import { trackEvent } from "../firebase";
 import "./ScanBarcode.css";
@@ -171,13 +172,40 @@ const ScanBarcode: React.FC = () => {
     trackEvent("barcode_scan_start", { meal, date: dateKey });
 
     try {
-      // Preflight permission (helps Android WebView)
+      // Preflight permission with optimal video constraints for better scanning
+      // Request higher quality video which helps with barcode detection
       const pre = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 },
+          focusMode: { ideal: "continuous" },
+        } as MediaTrackConstraints,
       });
       pre.getTracks().forEach((t) => t.stop());
 
-      const reader = new BrowserMultiFormatReader();
+      // Configure hints for better scanning in non-perfect conditions
+      const hints = new Map<DecodeHintType, boolean | BarcodeFormat[]>();
+      // TRY_HARDER: Spend more time to find barcodes, optimize for accuracy
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      // POSSIBLE_FORMATS: Limit to common food product barcode formats
+      // This improves accuracy and speed by focusing on relevant formats
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+        BarcodeFormat.EAN_13,      // Most common format for food products
+        BarcodeFormat.UPC_A,       // Common in US/Canada
+        BarcodeFormat.EAN_8,       // Shortened EAN for small packages
+        BarcodeFormat.UPC_E,       // Compressed UPC-A
+        BarcodeFormat.CODE_128,    // Used by some manufacturers
+        BarcodeFormat.CODE_39,     // Alternative format
+      ]);
+
+      // Configure reader options for better performance
+      const options = {
+        delayBetweenScanAttempts: 100,  // Faster scanning attempts
+        delayBetweenScanSuccess: 500,   // Prevent duplicate scans
+      };
+
+      const reader = new BrowserMultiFormatReader(hints, options);
       readerRef.current = reader;
 
       if (videoRef.current) {
