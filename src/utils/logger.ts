@@ -78,6 +78,18 @@ class Logger {
       console.log(this.formatMessage("info", `[USER ACTION] ${action}`, context));
     }
   }
+
+  /**
+   * Sanitize error for safe logging
+   * Removes sensitive data from stack traces in production
+   */
+  sanitizeError(error: Error): { message: string; stack?: string } {
+    return {
+      message: error.message,
+      // Only include stack trace in development to avoid exposing internal structure
+      stack: this.isDevelopment ? error.stack : undefined,
+    };
+  }
 }
 
 // Export singleton instance

@@ -1,21 +1,33 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
+/**
+ * Options for writing files using Capacitor Filesystem
+ */
 type FilesystemWriteOptions = {
   path: string;
   data: string;
   directory?: string;
 };
 
+/**
+ * Options for getting file URIs using Capacitor Filesystem
+ */
 type FilesystemGetUriOptions = {
   path: string;
   directory?: string;
 };
 
+/**
+ * Capacitor Filesystem plugin interface
+ */
 type FilesystemPlugin = {
   writeFile(options: FilesystemWriteOptions): Promise<void>;
   getUri(options: FilesystemGetUriOptions): Promise<{ uri: string }>;
 };
 
+/**
+ * Capacitor Share plugin interface
+ */
 type SharePlugin = {
   share(options: { title?: string; url?: string }): Promise<void>;
 };
@@ -23,6 +35,12 @@ type SharePlugin = {
 const Filesystem = registerPlugin<FilesystemPlugin>("Filesystem");
 const Share = registerPlugin<SharePlugin>("Share");
 
+/**
+ * Converts a Blob to base64 encoded string
+ * @param blob - The Blob to convert
+ * @returns Promise resolving to base64 string (without data URL prefix)
+ * @throws Error if file reading fails
+ */
 const blobToBase64 = (blob: Blob) =>
   new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -39,6 +57,21 @@ const blobToBase64 = (blob: Blob) =>
     reader.readAsDataURL(blob);
   });
 
+/**
+ * Share or download a file depending on platform
+ * On native platforms (iOS/Android), uses the native share dialog
+ * On web, triggers a browser download
+ * 
+ * @param file - The File object to share/download
+ * @param fallbackName - Name to use if file.name is not available
+ * @throws Error if sharing/downloading fails
+ * 
+ * @example
+ * ```typescript
+ * const csvFile = new File([csvData], 'export.csv', { type: 'text/csv' });
+ * await shareOrDownload(csvFile, 'nutrition-data.csv');
+ * ```
+ */
 export const shareOrDownload = async (file: File, fallbackName: string) => {
   if (Capacitor.isNativePlatform()) {
     try {

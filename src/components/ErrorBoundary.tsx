@@ -1,5 +1,6 @@
 import React from "react";
 import { trackEvent } from "../firebase";
+import { logger } from "../utils/logger";
 
 type ErrorBoundaryProps = {
   children: React.ReactNode;
@@ -11,6 +12,21 @@ type ErrorBoundaryState = {
   errorInfo: React.ErrorInfo | null;
   showDetails: boolean;
 };
+
+/**
+ * Sanitize error data before sending to analytics
+ * Removes sensitive file paths and internal details in production
+ */
+function sanitizeForAnalytics(error: Error, componentStack?: string) {
+  const isDev = import.meta.env.DEV;
+  
+  return {
+    message: error.message,
+    // Only include stack traces in development
+    stack: isDev ? error.stack : '[hidden in production]',
+    componentStack: isDev ? componentStack : '[hidden in production]',
+  };
+}
 
 export class ErrorBoundary extends React.Component<
   ErrorBoundaryProps,
@@ -32,16 +48,17 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     this.setState({ errorInfo: info });
-    trackEvent("app_crash", { 
-      message: error.message, 
-      stack: error.stack, 
-      componentStack: info.componentStack 
+    
+    // Log with sanitized data
+    const sanitized = sanitizeForAnalytics(error, info.componentStack);
+    trackEvent("app_crash", sanitized);
+    logger.error("ErrorBoundary caught an error", error, {
+      componentStack: info.componentStack,
     });
-    console.error("ErrorBoundary caught an error:", error, info);
   }
 
   handleReload = () => {
-    console.log(`[USER ACTION] Error Boundary: Clicked reload app button after crash`, {
+    logger.userAction("Error Boundary: Clicked reload app button after crash", {
       error: this.state.error?.message,
       url: window.location.href,
     });
@@ -49,7 +66,7 @@ export class ErrorBoundary extends React.Component<
   };
 
   handleToggleDetails = () => {
-    console.log(`[USER ACTION] Error Boundary: Toggled error details`, {
+    logger.userAction("Error Boundary: Toggled error details", {
       showingDetails: !this.state.showDetails,
       error: this.state.error?.message,
     });
@@ -57,7 +74,7 @@ export class ErrorBoundary extends React.Component<
   };
 
   handleCopyError = () => {
-    console.log(`[USER ACTION] Error Boundary: Copied error details to clipboard`, {
+    logger.userAction("Error Boundary: Copied error details to clipboard", {
       error: this.state.error?.message,
     });
     const { error, errorInfo } = this.state;

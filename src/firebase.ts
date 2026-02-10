@@ -15,12 +15,12 @@ import {
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "macropal-zanci19.firebaseapp.com",
-  projectId: "macropal-zanci19",
-  storageBucket: "macropal-zanci19.firebasestorage.app",
-  messagingSenderId: "621449190647",
-  appId: "1:621449190647:web:3e13f7c1de1d0f254587f2",
-  measurementId: "G-HSKWTMK5WZ",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "macropal-zanci19.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "macropal-zanci19",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "macropal-zanci19.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "621449190647",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:621449190647:web:3e13f7c1de1d0f254587f2",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-HSKWTMK5WZ",
 };
 
 const app = initializeApp(firebaseConfig);

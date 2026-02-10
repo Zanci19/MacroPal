@@ -351,14 +351,68 @@ MacroPal/
 
 ## 🧪 Testing
 
+MacroPal uses Vitest for unit tests and Cypress for end-to-end tests.
+
 ### Unit Tests
+
+Run all unit tests:
 ```bash
+npm test
+# or
 npm run test.unit
 ```
 
+Run tests in watch mode (for development):
+```bash
+npm test -- --watch
+```
+
+Generate coverage report:
+```bash
+npm run test:coverage
+```
+
 ### E2E Tests
+
+Run end-to-end tests with Cypress:
 ```bash
 npm run test.e2e
+```
+
+Open Cypress interactive mode:
+```bash
+npx cypress open
+```
+
+### Linting
+
+Check code style and quality:
+```bash
+npm run lint
+```
+
+Auto-fix linting issues:
+```bash
+npm run lint:fix
+```
+
+### Security Audits
+
+Check for vulnerable dependencies:
+```bash
+npm run audit
+```
+
+Auto-fix dependency vulnerabilities (when possible):
+```bash
+npm run audit:fix
+```
+
+### Running All Checks
+
+Before committing, it's recommended to run:
+```bash
+npm run lint && npm test && npm run build
 ```
 
 ## 📦 Deployment

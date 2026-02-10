@@ -1,10 +1,33 @@
 import { trackEvent } from "../firebase";
+import { logger } from "./logger";
 
 export interface ErrorInfo {
   message: string;
   userMessage: string;
   source: string;
   timestamp: string;
+}
+
+/**
+ * Sanitize error stack trace for safe analytics logging
+ * Removes file paths in production to avoid exposing internal structure
+ */
+function sanitizeStackTrace(stack: string | undefined): string {
+  if (!stack) return "";
+  
+  // In development, return full stack
+  if (import.meta.env.DEV) {
+    return stack;
+  }
+  
+  // In production, remove file paths and keep only error type and line info
+  const lines = stack.split('\n');
+  if (lines.length > 0) {
+    // Keep only first line (error message) and sanitized trace
+    return lines[0] + '\n[stack trace hidden in production]';
+  }
+  
+  return "";
 }
 
 /**
@@ -15,13 +38,13 @@ export function handleError(source: string, error: unknown): string {
   const err =
     error instanceof Error ? error : new Error(String(error ?? "Unknown error"));
 
-  console.error(`[${source}]`, err);
+  logger.error(`[${source}]`, err);
 
-  // send to analytics
+  // send to analytics with sanitized stack trace
   trackEvent("error", {
     source,
     message: err.message,
-    stack: err.stack ?? "",
+    stack: sanitizeStackTrace(err.stack),
   });
 
   // Return a user-friendly message
