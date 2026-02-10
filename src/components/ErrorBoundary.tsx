@@ -50,10 +50,10 @@ export class ErrorBoundary extends React.Component<
     this.setState({ errorInfo: info });
     
     // Log with sanitized data
-    const sanitized = sanitizeForAnalytics(error, info.componentStack);
+    const sanitized = sanitizeForAnalytics(error, info.componentStack ?? undefined);
     trackEvent("app_crash", sanitized);
     logger.error("ErrorBoundary caught an error", error, {
-      componentStack: info.componentStack,
+      componentStack: info.componentStack ?? undefined,
     });
   }
 
