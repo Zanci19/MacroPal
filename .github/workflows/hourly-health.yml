@@ -1,0 +1,33 @@
+name: Hourly health check
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # every hour
+  workflow_dispatch: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm" # change to pnpm/yarn if you use those
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint (if present)
+        run: npm run -s lint --if-present
+
+      - name: Typecheck (if present)
+        run: npm run -s typecheck --if-present
+
+      - name: Tests (if present)
+        run: npm test --if-present
+
+      - name: Build (if present)
+        run: npm run -s build --if-present
