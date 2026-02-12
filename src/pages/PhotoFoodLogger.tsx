@@ -255,7 +255,10 @@ const PhotoFoodLogger: React.FC = () => {
           const allMatches = [...off, ...local];
           const seen = new Set<string>();
           const unique = allMatches.filter(match => {
-            // Use normalized product_name as fallback if code is missing
+            // Skip matches without proper identification
+            if (!match.code && !match.product_name) return false;
+            
+            // Use code or normalized product_name as deduplication key
             const key = match.code || (match.product_name || '').toLowerCase().trim();
             if (!key || seen.has(key)) return false;
             seen.add(key);

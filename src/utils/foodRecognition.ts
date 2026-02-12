@@ -359,15 +359,18 @@ export async function searchOpenFoodFacts(
     const data: OpenFoodFactsSearchResponse = await response.json();
     const foods = Array.isArray(data?.products) ? data.products : [];
     
-    // Filter out foods without nutrition data (but allow zero values for things like water, diet drinks)
+    // Filter out foods without any meaningful nutrition data
+    // (but allow zero-calorie foods if they have other nutrients)
     const validFoods = foods.filter(food => {
       const nutri = food.nutriments;
-      return nutri && (
-        nutri['energy-kcal_100g'] !== undefined ||
-        nutri['carbohydrates_100g'] !== undefined ||
-        nutri['proteins_100g'] !== undefined ||
-        nutri['fat_100g'] !== undefined
-      );
+      if (!nutri) return false;
+      
+      const calories = nutri['energy-kcal_100g'] ?? 0;
+      const carbs = nutri['carbohydrates_100g'] ?? 0;
+      const protein = nutri['proteins_100g'] ?? 0;
+      const fat = nutri['fat_100g'] ?? 0;
+      
+      return calories > 0 || carbs > 0 || protein > 0 || fat > 0;
     });
     
     console.log('[FoodRecognition] OpenFoodFacts returned', validFoods.length, 'valid foods');
