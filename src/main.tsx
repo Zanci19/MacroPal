@@ -12,7 +12,6 @@ setupPlatform();
 
 // Initialize PWA Elements for Capacitor plugins (Camera, etc.) on web
 import { defineCustomElements } from '@ionic/pwa-elements/loader';
-defineCustomElements(window);
 
 addIcons({
   "chevron-down-outline": chevronDownOutline,
@@ -21,10 +20,23 @@ addIcons({
 const container = document.getElementById("root");
 const root = createRoot(container!);
 
-root.render(
-  <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </React.StrictMode>
-);
+// Ensure PWA elements are fully loaded before rendering the app
+defineCustomElements(window).then(() => {
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+}).catch((error) => {
+  console.error("Failed to initialize PWA elements:", error);
+  // Still render the app even if PWA elements fail to load
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+});
