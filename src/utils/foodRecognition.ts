@@ -2,10 +2,12 @@
  * Food Recognition Utility
  * Provides AI-powered food recognition from photos using:
  * 1. TensorFlow.js with MobileNet (free, runs locally)
- * 2. Google Cloud Vision API (optional, free tier: 1000 requests/month)
+ * 2. CocoSSD for object detection and portion size estimation
+ * 3. Google Cloud Vision API (optional, free tier: 1000 requests/month)
  */
 
 import * as mobilenet from '@tensorflow-models/mobilenet';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import * as tf from '@tensorflow/tfjs';
 
 // Import TensorFlow.js backends
@@ -39,37 +41,187 @@ async function initializeTensorFlow() {
   }
 }
 
-// Food keywords that commonly appear in image classifications
+// Food keywords that commonly appear in image classifications - Enhanced list
 const FOOD_KEYWORDS = [
-  'food', 'meal', 'dish', 'cuisine', 'plate', 'bowl',
-  'fruit', 'vegetable', 'meat', 'fish', 'chicken', 'beef', 'pork',
-  'bread', 'pasta', 'rice', 'noodle', 'soup', 'salad', 'sandwich',
-  'pizza', 'burger', 'taco', 'sushi', 'breakfast', 'lunch', 'dinner',
-  'snack', 'dessert', 'cake', 'cookie', 'ice cream', 'chocolate',
-  'apple', 'banana', 'orange', 'strawberry', 'grape', 'watermelon',
-  'carrot', 'broccoli', 'tomato', 'potato', 'corn', 'pepper',
-  'cheese', 'yogurt', 'milk', 'egg', 'bacon', 'sausage',
-  'coffee', 'tea', 'juice', 'water', 'drink', 'beverage',
-  'nut', 'almond', 'walnut', 'peanut', 'cashew',
-  'protein', 'bar', 'shake', 'smoothie'
+  // General food terms
+  'food', 'meal', 'dish', 'cuisine', 'plate', 'bowl', 'snack', 'breakfast', 'lunch', 'dinner',
+  
+  // Fruits
+  'fruit', 'apple', 'banana', 'orange', 'strawberry', 'grape', 'watermelon', 'berry', 'blueberry',
+  'raspberry', 'mango', 'pineapple', 'peach', 'pear', 'cherry', 'plum', 'kiwi', 'melon', 'lemon',
+  'lime', 'grapefruit', 'apricot', 'fig', 'date', 'pomegranate', 'papaya', 'guava', 'passion fruit',
+  
+  // Vegetables
+  'vegetable', 'veggie', 'carrot', 'broccoli', 'tomato', 'potato', 'corn', 'pepper', 'onion',
+  'lettuce', 'spinach', 'cabbage', 'cauliflower', 'cucumber', 'celery', 'radish', 'beet',
+  'zucchini', 'squash', 'pumpkin', 'eggplant', 'mushroom', 'asparagus', 'artichoke', 'kale',
+  'chard', 'arugula', 'bell pepper', 'chili', 'jalapeno', 'garlic', 'ginger', 'peas', 'beans',
+  
+  // Proteins
+  'meat', 'fish', 'chicken', 'beef', 'pork', 'turkey', 'lamb', 'duck', 'salmon', 'tuna',
+  'shrimp', 'prawn', 'crab', 'lobster', 'steak', 'bacon', 'sausage', 'ham', 'venison',
+  'protein', 'tofu', 'tempeh', 'seitan', 'egg', 'eggs',
+  
+  // Grains & Carbs
+  'bread', 'pasta', 'rice', 'noodle', 'grain', 'wheat', 'cereal', 'oat', 'oatmeal', 'quinoa',
+  'barley', 'couscous', 'bagel', 'muffin', 'croissant', 'biscuit', 'cracker', 'tortilla',
+  'wrap', 'pita', 'roll', 'bun', 'toast', 'waffle', 'pancake', 'crepe',
+  
+  // Prepared dishes
+  'soup', 'salad', 'sandwich', 'pizza', 'burger', 'taco', 'burrito', 'sushi', 'curry',
+  'stir fry', 'casserole', 'stew', 'chili', 'pasta', 'lasagna', 'spaghetti', 'mac and cheese',
+  'risotto', 'paella', 'biryani', 'pad thai', 'pho', 'ramen', 'udon',
+  
+  // Dairy
+  'cheese', 'yogurt', 'milk', 'cream', 'butter', 'dairy', 'ice cream', 'gelato',
+  
+  // Desserts & Sweets
+  'dessert', 'cake', 'cookie', 'chocolate', 'candy', 'sweet', 'pie', 'tart', 'brownie',
+  'cupcake', 'donut', 'doughnut', 'pastry', 'pudding', 'mousse', 'truffle', 'fudge',
+  'caramel', 'macaron', 'eclair', 'tiramisu', 'cheesecake',
+  
+  // Nuts & Seeds
+  'nut', 'almond', 'walnut', 'peanut', 'cashew', 'pecan', 'pistachio', 'hazelnut',
+  'macadamia', 'seed', 'sunflower', 'pumpkin seed', 'chia', 'flax',
+  
+  // Beverages
+  'coffee', 'tea', 'juice', 'water', 'drink', 'beverage', 'smoothie', 'shake', 'latte',
+  'cappuccino', 'espresso', 'soda', 'cola', 'beer', 'wine', 'cocktail',
+  
+  // Misc
+  'bar', 'granola', 'trail mix', 'popcorn', 'chip', 'pretzel', 'hummus', 'dip', 'sauce',
+  'condiment', 'honey', 'jam', 'jelly', 'syrup', 'oil', 'dressing'
 ];
 
 export interface FoodPrediction {
   name: string;
   confidence: number;
-  source: 'mobilenet' | 'google-vision';
+  source: 'mobilenet' | 'google-vision' | 'coco-ssd';
+}
+
+export interface PortionEstimate {
+  size: 'small' | 'medium' | 'large' | 'extra-large';
+  estimatedGrams: number;
+  confidence: number;
+  boundingBox?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 }
 
 export interface RecognitionResult {
   predictions: FoodPrediction[];
+  portionEstimate?: PortionEstimate;
   imageUrl?: string;
   success: boolean;
   error?: string;
 }
 
 /**
+ * Preprocess image for better recognition
+ * Adjusts contrast, brightness, and normalizes the image
+ */
+function preprocessImage(imageElement: HTMLImageElement): tf.Tensor3D {
+  // Use tf.tidy to automatically clean up intermediate tensors
+  return tf.tidy(() => {
+    // Convert image to tensor
+    let tensor = tf.browser.fromPixels(imageElement);
+    
+    // Normalize to [0, 1]
+    tensor = tf.div(tensor, 255.0);
+    
+    // Adjust contrast (1.2x)
+    const mean = tf.mean(tensor);
+    tensor = tf.add(tf.mul(tf.sub(tensor, mean), 1.2), mean);
+    
+    // Clip values to [0, 1]
+    tensor = tf.clipByValue(tensor, 0, 1);
+    
+    return tensor as tf.Tensor3D;
+  });
+}
+
+/**
+ * Estimate portion size using object detection
+ */
+async function estimatePortionSize(
+  imageElement: HTMLImageElement
+): Promise<PortionEstimate | undefined> {
+  try {
+    console.log('[FoodRecognition] Loading CocoSSD for portion estimation...');
+    const model = await cocoSsd.load();
+    
+    const predictions = await model.detect(imageElement);
+    
+    // Filter for food-related objects
+    const foodObjects = predictions.filter(pred => {
+      const className = pred.class.toLowerCase();
+      return FOOD_KEYWORDS.some(keyword => className.includes(keyword)) ||
+             ['bowl', 'cup', 'bottle', 'plate', 'fork', 'knife', 'spoon'].includes(className);
+    });
+    
+    if (foodObjects.length === 0) {
+      return undefined;
+    }
+    
+    // Pre-calculate areas for efficiency
+    const objectsWithArea = foodObjects.map(obj => ({
+      ...obj,
+      area: obj.bbox[2] * obj.bbox[3] // width * height
+    }));
+    
+    // Use the largest detected object
+    const largestObject = objectsWithArea.reduce((max, obj) => 
+      obj.area > max.area ? obj : max
+    );
+    
+    // Calculate relative size based on bounding box area
+    const imageArea = imageElement.width * imageElement.height;
+    const relativeSize = largestObject.area / imageArea;
+    
+    // Estimate size category and approximate grams
+    let size: PortionEstimate['size'];
+    let estimatedGrams: number;
+    
+    if (relativeSize < 0.1) {
+      size = 'small';
+      estimatedGrams = 50;
+    } else if (relativeSize < 0.25) {
+      size = 'medium';
+      estimatedGrams = 100;
+    } else if (relativeSize < 0.5) {
+      size = 'large';
+      estimatedGrams = 200;
+    } else {
+      size = 'extra-large';
+      estimatedGrams = 300;
+    }
+    
+    console.log('[FoodRecognition] Portion estimate:', { size, estimatedGrams, relativeSize });
+    
+    return {
+      size,
+      estimatedGrams,
+      confidence: largestObject.score,
+      boundingBox: {
+        x: largestObject.bbox[0],
+        y: largestObject.bbox[1],
+        width: largestObject.bbox[2],
+        height: largestObject.bbox[3]
+      }
+    };
+  } catch (error) {
+    console.error('[FoodRecognition] Portion estimation error:', error);
+    return undefined;
+  }
+}
+
+/**
  * Recognize food from an image using TensorFlow.js MobileNet
  * This is completely free and runs locally in the browser
+ * Enhanced with image preprocessing and better filtering
  */
 export async function recognizeFoodWithMobileNet(
   imageElement: HTMLImageElement
@@ -81,37 +233,103 @@ export async function recognizeFoodWithMobileNet(
     console.log('[FoodRecognition] Loading MobileNet model...');
     const model = await mobilenet.load();
     
-    console.log('[FoodRecognition] Running predictions...');
-    const predictions = await model.classify(imageElement);
+    let predictions: Array<{className: string; probability: number}> = [];
+    let originalPredictions: Array<{className: string; probability: number}> = [];
     
-    // Filter and map predictions to food-related items
-    const foodPredictions: FoodPrediction[] = predictions
+    // Try with original image first (most reliable)
+    try {
+      console.log('[FoodRecognition] Running predictions on original image...');
+      originalPredictions = await model.classify(imageElement);
+      console.log('[FoodRecognition] Original predictions:', originalPredictions);
+    } catch (err) {
+      console.warn('[FoodRecognition] Original image prediction failed:', err);
+    }
+    
+    // Try preprocessing for potentially better results
+    try {
+      console.log('[FoodRecognition] Preprocessing image...');
+      const processedTensor = preprocessImage(imageElement);
+      
+      console.log('[FoodRecognition] Running predictions with preprocessing...');
+      predictions = await model.classify(processedTensor);
+      console.log('[FoodRecognition] Preprocessed predictions:', predictions);
+      
+      // Clean up tensor
+      processedTensor.dispose();
+    } catch (err) {
+      console.warn('[FoodRecognition] Preprocessed image prediction failed:', err);
+      // If preprocessing fails, use only original predictions
+      predictions = [];
+    }
+    
+    // If both failed, throw error
+    if (predictions.length === 0 && originalPredictions.length === 0) {
+      throw new Error('Failed to get predictions from image');
+    }
+    
+    // Combine and deduplicate predictions using Map for O(n) performance
+    const allPredictions = [...predictions, ...originalPredictions];
+    const predictionMap = new Map<string, typeof allPredictions[0]>();
+    
+    for (const pred of allPredictions) {
+      const key = pred.className.toLowerCase();
+      const existing = predictionMap.get(key);
+      // Keep prediction with higher probability
+      if (!existing || pred.probability > existing.probability) {
+        predictionMap.set(key, pred);
+      }
+    }
+    
+    const uniquePredictions = Array.from(predictionMap.values());
+    console.log('[FoodRecognition] Unique predictions after deduplication:', uniquePredictions.length);
+    
+    // Filter and map predictions to food-related items with LOWER confidence threshold
+    const foodPredictions: FoodPrediction[] = uniquePredictions
       .filter(pred => {
         const className = pred.className.toLowerCase();
-        return FOOD_KEYWORDS.some(keyword => className.includes(keyword));
+        const isFoodRelated = FOOD_KEYWORDS.some(keyword => className.includes(keyword));
+        // Lowered threshold from 0.1 to 0.05 for better results
+        return isFoodRelated && pred.probability > 0.05;
       })
       .map(pred => ({
         name: pred.className,
         confidence: pred.probability,
         source: 'mobilenet' as const
       }))
+      .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 5); // Top 5 results
     
-    // If no food-specific predictions, return top 3 general predictions
+    console.log('[FoodRecognition] Food-related predictions:', foodPredictions);
+    
+    // Try to estimate portion size
+    let portionEstimate: PortionEstimate | undefined;
+    try {
+      portionEstimate = await estimatePortionSize(imageElement);
+    } catch (err) {
+      console.warn('[FoodRecognition] Portion estimation failed:', err);
+      portionEstimate = undefined;
+    }
+    
+    // If no food-specific predictions with new threshold, return top 5 general predictions
     if (foodPredictions.length === 0) {
+      console.log('[FoodRecognition] No food keywords matched, returning top general predictions');
       return {
-        predictions: predictions.slice(0, 3).map(pred => ({
+        predictions: uniquePredictions.slice(0, 5).map(pred => ({
           name: pred.className,
           confidence: pred.probability,
           source: 'mobilenet' as const
         })),
+        portionEstimate,
         success: true
       };
     }
     
-    console.log('[FoodRecognition] Predictions:', foodPredictions);
+    console.log('[FoodRecognition] Final predictions:', foodPredictions);
+    console.log('[FoodRecognition] Portion estimate:', portionEstimate);
+    
     return {
       predictions: foodPredictions,
+      portionEstimate,
       success: true
     };
   } catch (error) {

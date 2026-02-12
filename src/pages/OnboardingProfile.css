@@ -116,6 +116,28 @@
   width: 100%;
 }
 
+/* Fix select option text color to be visible in both themes */
+.onboarding-select ion-select {
+  color: var(--mp-text);
+}
+
+@media (prefers-color-scheme: light) {
+  .onboarding-select ion-select {
+    color: #121212;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .onboarding-select ion-select {
+    color: #f9fafb;
+  }
+}
+
+/* Ensure the selected value text is visible */
+.onboarding-select .select-text {
+  color: inherit !important;
+}
+
 .onboarding-photo-wrapper {
   display: flex;
   flex-direction: column;

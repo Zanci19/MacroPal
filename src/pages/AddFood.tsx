@@ -2767,7 +2767,7 @@ const AddFood: React.FC = () => {
 
       <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
         {quickAddFromQuery && (
-          <IonItem lines="none" style={{ marginBottom: 12 }}>
+          <IonItem lines="none" className="mp-mb-md">
             <IonLabel>For which meal?</IonLabel>
             <IonSelect
               value={meal}
@@ -2784,22 +2784,22 @@ const AddFood: React.FC = () => {
         )}
         <IonChip
           color="primary"
-          style={{ marginBottom: 12 }}
+          className="mp-mb-md"
           onClick={() => {
             console.log(`[USER ACTION] AddFood: Date/meal chip clicked to open meal picker`, { currentMeal: meal, date: dateKey });
             setShowMealPicker(true);
           }}
         >
           <IonIcon icon={calendarOutline} />
-          <span style={{ marginLeft: 6 }}>
+          <span className="mp-ml-sm">
             {friendlyDate} · {meal}
           </span>
         </IonChip>
 
         {showSmartRecommendation && targets && dayTotals && recommendation && (
-          <IonCard style={{ marginBottom: 12 }}>
+          <IonCard className="mp-mb-md">
             <IonCardHeader>
-              <IonCardTitle style={{ fontSize: 16 }}>Smart recommendation</IonCardTitle>
+              <IonCardTitle className="mp-text-base">Smart recommendation</IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               {recommendation.isClose ? (
@@ -2877,7 +2877,7 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
 
-            <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            <div className="add-food-actions-grid">
               <IonButton
                 expand="block"
                 disabled={!query || loading}
@@ -2937,29 +2937,22 @@ const AddFood: React.FC = () => {
             </div>
 
             {showRecentSearchesEnabled && recentQueries.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 4,
-                  }}
-                >
-                  <IonText color="medium" style={{ fontSize: 13 }}>
+              <div className="add-food-recent-section">
+                <div className="add-food-section-header">
+                  <IonText color="medium" className="mp-text-xs">
                     Recent searches
                   </IonText>
                   <IonButton
                     size="small"
                     fill="clear"
                     onClick={clearRecentQueries}
-                    style={{ marginRight: -8 }}
+                    className="mp-mr-sm"
                   >
                     Clear
                   </IonButton>
                 </div>
 
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div className="add-food-chips-container">
                   {recentQueries.map((rq) => (
                     <IonChip
                       key={rq}
@@ -2977,14 +2970,14 @@ const AddFood: React.FC = () => {
             )}
 
             {showRecentItemsEnabled && recent.length > 0 && showRecent && (
-              <div style={{ marginTop: 12 }}>
+              <div className="add-food-favorites-section">
                 <IonText
                   color="medium"
-                  style={{ fontSize: 13, marginBottom: 4, display: "block" }}
+                  className="add-food-section-text"
                 >
                   From your history
                 </IonText>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div className="add-food-chips-container">
                   {recent.map((r) => (
                     <IonChip
                       key={r.id}
@@ -3013,7 +3006,7 @@ const AddFood: React.FC = () => {
               </div>
             )}
 
-            <IonList style={{ marginTop: 8 }} ref={resultsListRef}>
+            <IonList className="add-food-results-list" ref={resultsListRef}>
               {results.map((food) => {
                 const preview = macrosPer100g(food.nutriments);
 
@@ -3048,7 +3041,7 @@ const AddFood: React.FC = () => {
             </IonList>
 
             {results.length > 0 && (
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              <div className="add-food-pagination">
                 <IonButton
                   size="small"
                   disabled={page <= 1 || loading}
@@ -3078,7 +3071,7 @@ const AddFood: React.FC = () => {
 
         {tab === "favorites" && (
           <>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <div className="add-food-favorites-filter">
               <IonButton
                 size="small"
                 onClick={() => {
@@ -3103,24 +3096,17 @@ const AddFood: React.FC = () => {
             </div>
 
             {recentLoading && (
-              <div className="ion-text-center" style={{ padding: 8 }}>
+              <div className="ion-text-center add-food-loading-state-sm">
                 <IonSpinner name="dots" />
               </div>
             )}
 
             {!recentLoading && recentFoods.length > 0 && (
               <>
-                <IonText
-                  style={{
-                    padding: "4px 12px",
-                    display: "block",
-                    fontSize: 13,
-                    opacity: 0.8,
-                  }}
-                >
+                <IonText className="add-food-section-text">
                   Recently eaten
                 </IonText>
-                <IonList style={{ marginTop: 4 }}>
+                <IonList className="add-food-favorites-list">
                   {recentFoods.map((item, idx) => (
                     <IonItem key={idx} button onClick={() => addHistoryFoodToMeal(item)}>
                       <IonLabel>

@@ -125,9 +125,9 @@ const OnboardingProfile: React.FC = () => {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<"forward" | "back">("forward");
   const [gender, setGender] = useState<Gender | null>(null);
-  const [age, setAge] = useState<number | null>(null);
-  const [weight, setWeight] = useState<number | null>(null);
-  const [height, setHeight] = useState<number | null>(null);
+  const [age, setAge] = useState<number | null>(DEFAULTS.age);
+  const [weight, setWeight] = useState<number | null>(DEFAULTS.weight);
+  const [height, setHeight] = useState<number | null>(DEFAULTS.height);
   const [unitSystem, setUnitSystem] = useState<UnitSystem>(DEFAULT_UNIT_SYSTEM);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [activity, setActivity] = useState<Activity>("sedentary");

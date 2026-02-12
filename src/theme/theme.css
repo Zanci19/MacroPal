@@ -433,3 +433,261 @@ ion-checkbox,
 ion-radio {
   contain: none;
 }
+
+/* Utility Classes for Consistent Design */
+
+/* Spacing Utilities */
+.mp-spacing-xs {
+  gap: 4px;
+}
+
+.mp-spacing-sm {
+  gap: 8px;
+}
+
+.mp-spacing-md {
+  gap: 12px;
+}
+
+.mp-spacing-lg {
+  gap: 16px;
+}
+
+.mp-spacing-xl {
+  gap: 20px;
+}
+
+.mp-mb-xs {
+  margin-bottom: 4px;
+}
+
+.mp-mb-sm {
+  margin-bottom: 8px;
+}
+
+.mp-mb-md {
+  margin-bottom: 12px;
+}
+
+.mp-mb-lg {
+  margin-bottom: 16px;
+}
+
+.mp-mb-xl {
+  margin-bottom: 20px;
+}
+
+.mp-mt-xs {
+  margin-top: 4px;
+}
+
+.mp-mt-sm {
+  margin-top: 8px;
+}
+
+.mp-mt-md {
+  margin-top: 12px;
+}
+
+.mp-mt-lg {
+  margin-top: 16px;
+}
+
+.mp-mt-xl {
+  margin-top: 20px;
+}
+
+.mp-ml-xs {
+  margin-left: 4px;
+}
+
+.mp-ml-sm {
+  margin-left: 6px;
+}
+
+.mp-ml-md {
+  margin-left: 12px;
+}
+
+.mp-mr-sm {
+  margin-right: -8px;
+}
+
+.mp-mt-0 {
+  margin-top: 0;
+}
+
+/* Padding Utilities */
+.mp-p-sm {
+  padding: 8px;
+}
+
+.mp-p-md {
+  padding: 12px;
+}
+
+.mp-p-lg {
+  padding: 16px;
+}
+
+.mp-p-xl {
+  padding: 20px;
+}
+
+/* Border Radius Utilities */
+:root {
+  --mp-r-sm: 8px;
+  --mp-r-md: 12px;
+  --mp-r-card: 18px;
+  --mp-r-pill: 999px;
+}
+
+.mp-rounded-sm {
+  border-radius: var(--mp-r-sm);
+}
+
+.mp-rounded-md {
+  border-radius: var(--mp-r-md);
+}
+
+.mp-rounded-card {
+  border-radius: var(--mp-r-card);
+}
+
+.mp-rounded-pill {
+  border-radius: var(--mp-r-pill);
+}
+
+/* Typography Utilities */
+.mp-text-xs {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
+}
+
+.mp-text-sm {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.5;
+}
+
+.mp-text-base {
+  font-size: 1rem; /* 16px */
+  line-height: 1.5;
+}
+
+.mp-text-lg {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.5;
+}
+
+.mp-text-xl {
+  font-size: 1.25rem; /* 20px */
+  line-height: 1.4;
+}
+
+.mp-text-2xl {
+  font-size: 1.5rem; /* 24px */
+  line-height: 1.3;
+}
+
+.mp-text-3xl {
+  font-size: 1.875rem; /* 30px */
+  line-height: 1.2;
+}
+
+.mp-text-4xl {
+  font-size: 2.125rem; /* 34px */
+  line-height: 1.2;
+}
+
+.mp-font-normal {
+  font-weight: 400;
+}
+
+.mp-font-medium {
+  font-weight: 500;
+}
+
+.mp-font-semibold {
+  font-weight: 600;
+}
+
+.mp-font-bold {
+  font-weight: 700;
+}
+
+.mp-font-extrabold {
+  font-weight: 800;
+}
+
+/* Text Colors */
+.mp-text-primary {
+  color: var(--mp-text);
+}
+
+.mp-text-muted {
+  color: var(--mp-text-muted);
+}
+
+/* Flexbox Utilities */
+.mp-flex {
+  display: flex;
+}
+
+.mp-flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.mp-flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.mp-items-center {
+  align-items: center;
+}
+
+.mp-justify-center {
+  justify-content: center;
+}
+
+.mp-justify-between {
+  justify-content: space-between;
+}
+
+.mp-flex-wrap {
+  flex-wrap: wrap;
+}
+
+/* Button Utilities */
+.mp-btn-standard {
+  --border-radius: 14px;
+}
+
+.mp-btn-pill {
+  --border-radius: var(--mp-r-pill);
+}
+
+/* Card Utilities */
+.mp-card {
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card);
+  padding: 18px;
+}
+
+.mp-card-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  margin-bottom: 12px;
+}
+
+.mp-card-content {
+  color: var(--mp-text);
+}
+
+/* Width Utilities */
+.mp-w-full {
+  width: 100%;
+}
