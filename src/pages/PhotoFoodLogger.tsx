@@ -258,9 +258,12 @@ const PhotoFoodLogger: React.FC = () => {
             // Skip matches without proper identification
             if (!match.code && !match.product_name) return false;
             
-            // Use code or normalized product_name as deduplication key
-            const key = match.code || (match.product_name || '').toLowerCase().trim();
+            // Use code as primary key, or normalized product_name as fallback
+            const key = match.code ? match.code : (match.product_name || '').toLowerCase().trim();
+            
+            // Defensive check: skip if key is empty or already seen
             if (!key || seen.has(key)) return false;
+            
             seen.add(key);
             return true;
           });

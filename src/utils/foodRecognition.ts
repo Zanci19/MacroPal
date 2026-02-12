@@ -360,7 +360,7 @@ export async function searchOpenFoodFacts(
     const foods = Array.isArray(data?.products) ? data.products : [];
     
     // Filter out foods without any meaningful nutrition data
-    // (but allow zero-calorie foods if they have other nutrients)
+    // Requires at least one macro nutrient (calories, carbs, protein, or fat) to be > 0
     const validFoods = foods.filter(food => {
       const nutri = food.nutriments;
       if (!nutri) return false;
