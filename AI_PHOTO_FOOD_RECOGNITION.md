@@ -26,9 +26,12 @@ MacroPal now includes AI-powered food recognition that allows users to take phot
 - Requires API key configuration
 
 ### 3. **Food Matching**
-- AI predictions are matched against MacroPal's food database
-- Shows multiple matches with nutrition data per 100g
+- AI predictions are matched against **both** MacroPal's local database AND the comprehensive OpenFoodFacts database
+- Searches happen in parallel for optimal performance  
+- OpenFoodFacts provides access to **millions of foods** worldwide
+- Shows multiple matches with complete nutrition data per 100g
 - Smart scoring algorithm prioritizes best matches
+- Results are deduplicated and sorted by relevance
 
 ### 4. **Add to Diary**
 - Select recognized food
@@ -98,11 +101,17 @@ No additional setup required! The feature works out of the box with local AI.
 **New Files:**
 - `src/pages/PhotoFoodLogger.tsx` - Main component
 - `src/pages/PhotoFoodLogger.css` - Styling
-- `src/utils/foodRecognition.ts` - AI recognition logic
+- `src/utils/foodRecognition.ts` - AI recognition logic + OpenFoodFacts integration
 
 **Modified Files:**
 - `src/App.tsx` - Added route
 - `src/pages/home/Settings.tsx` - Added link
+- `.env.example` - Added Google Vision API key documentation
+- `package.json` - Added dependencies
+
+**Recent Updates (OpenFoodFacts Integration):**
+- `src/utils/foodRecognition.ts` - Added `searchOpenFoodFacts()` and `matchFoodWithOpenFoodFacts()` functions
+- `src/pages/PhotoFoodLogger.tsx` - Updated to search both local and OpenFoodFacts databases in parallel
 - `.env.example` - Added Google Vision API key documentation
 - `package.json` - Added dependencies
 
@@ -111,36 +120,46 @@ No additional setup required! The feature works out of the box with local AI.
 ```
 1. User takes photo
    ↓
-2. Photo → TensorFlow.js MobileNet
+2. Photo → TensorFlow.js MobileNet or Google Vision API
    ↓
-3. Get predictions (e.g., "pizza", "salad")
+3. Get predictions (e.g., "pizza", "salad", "chicken")
    ↓
-4. Match predictions to basicFoods.json database
+4. Parallel search in:
+   - Local basicFoods.json database (~6,000 foods)
+   - OpenFoodFacts API (millions of foods worldwide)
    ↓
-5. Display matches with nutrition per 100g
+5. Combine and deduplicate results (OpenFoodFacts prioritized)
    ↓
-6. User selects food & amount
+6. Display top matches with nutrition per 100g
    ↓
-7. Calculate total nutrition (amount/100 × per100g)
+7. User selects food & amount
    ↓
-8. Add to Firebase with same structure as AddFood.tsx
+8. Calculate total nutrition (amount/100 × per100g)
+   ↓
+9. Add to Firebase with same structure as AddFood.tsx
 ```
 
 ### Food Recognition Algorithm
 
-The system uses a two-step approach:
+The system uses a comprehensive three-step approach:
 
 1. **AI Recognition**: Identifies food types from image
    - TensorFlow MobileNet: General object/food classification
    - Google Vision: Labels + web entities for better accuracy
 
-2. **Database Matching**: Maps AI predictions to known foods
-   - Tokenizes prediction names
-   - Searches basicFoods.json database
+2. **Database Matching**: Maps AI predictions to known foods from multiple sources
+   - **Local Database**: Searches basicFoods.json (~6,000 curated foods)
+   - **OpenFoodFacts API**: Searches millions of foods worldwide via cloud function
+   - Both searches run in parallel for optimal performance
+   
+3. **Scoring & Ranking**: Intelligent result combination
+   - Tokenizes prediction names for fuzzy matching
    - Scores matches based on:
      - Name similarity (word-level matching)
      - Exact word matches (bonus points)
      - Brand matching (if applicable)
+   - Combines results with OpenFoodFacts prioritized
+   - Deduplicates by product code or normalized name
    - Returns top 5 matches per prediction
 
 ### Nutrition Calculation
@@ -175,12 +194,17 @@ const total = {
 - TensorFlow.js runs locally, no costs
 - No API limits or quotas
 
+### ✅ Comprehensive Food Database
+- Access to **millions of foods** via OpenFoodFacts
+- Local database + worldwide coverage
+- Constantly updated with new products
+
 ### ✅ Privacy-Focused
 - Photos can be processed entirely on-device
 - No data sent to third parties (unless user enables Google Vision)
 
 ### ✅ Accurate Nutrition Data
-- Uses MacroPal's curated food database
+- Uses OpenFoodFacts and MacroPal's curated food database
 - Complete macro breakdown (calories, protein, carbs, fat)
 - Supports micronutrients (sugar, fiber, saturated fat)
 
@@ -193,6 +217,11 @@ const total = {
 - Simple photo → analyze → add workflow
 - Visual confirmation of recognized foods
 - Adjustable serving sizes
+
+### ✅ Smart Search
+- Parallel database queries for speed
+- Intelligent result ranking and deduplication
+- OpenFoodFacts results prioritized for better matches
 
 ## Limitations
 
@@ -210,7 +239,7 @@ const total = {
 - Recognition quality depends on photo clarity
 - Works best with well-lit, clear photos
 - May need manual selection from multiple matches
-- Not all foods in database may be recognized
+- OpenFoodFacts provides extensive coverage but recognition still depends on AI accuracy
 
 ## Future Enhancements
 

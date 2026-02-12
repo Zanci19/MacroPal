@@ -48,6 +48,7 @@ import {
   recognizeFood,
   type FoodPrediction,
   matchFoodToDatabase,
+  matchFoodWithOpenFoodFacts,
 } from "../utils/foodRecognition";
 import basicFoods from "../data/basicFoods.json";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
@@ -238,19 +239,59 @@ const PhotoFoodLogger: React.FC = () => {
       if (result.success && result.predictions.length > 0) {
         setPredictions(result.predictions);
         
-        // Match predictions to food database
-        const matches = matchFoodToDatabase(result.predictions, basicFoods as any[]);
-        setMatchedFoods(matches.filter(m => m.matches.length > 0));
+        // Search both local database and OpenFoodFacts API
+        console.log('[PhotoFoodLogger] Searching local database and OpenFoodFacts...');
+        const [localMatches, offMatches] = await Promise.all([
+          Promise.resolve(matchFoodToDatabase(result.predictions, basicFoods as any[])),
+          matchFoodWithOpenFoodFacts(result.predictions)
+        ]);
         
+        // Combine results with OpenFoodFacts prioritized by array order
+        const combinedMatches = result.predictions.map((prediction, idx) => {
+          const local = localMatches[idx]?.matches || [];
+          const off = offMatches[idx]?.matches || [];
+          
+          // Combine with OFF first (prioritization), then deduplicate by product code or name
+          const allMatches = [...off, ...local];
+          const seen = new Set<string>();
+          const unique = allMatches.filter(match => {
+            // Skip matches without proper identification
+            if (!match.code && !match.product_name) return false;
+            
+            // Use code as primary key, or normalized product_name as fallback
+            const key = match.code ? match.code : (match.product_name || '').toLowerCase().trim();
+            
+            // Defensive check: skip if key is empty or already seen
+            if (!key || seen.has(key)) return false;
+            
+            seen.add(key);
+            return true;
+          });
+          
+          // Sort by match score and take top 5
+          const topMatches = unique
+            .sort((a, b) => b.matchScore - a.matchScore)
+            .slice(0, 5);
+          
+          return {
+            prediction,
+            matches: topMatches
+          };
+        });
+        
+        setMatchedFoods(combinedMatches.filter(m => m.matches.length > 0));
+        
+        const totalMatches = combinedMatches.reduce((sum, m) => sum + m.matches.length, 0);
         setToast({
           show: true,
-          message: `Found ${result.predictions.length} food items!`,
+          message: `Found ${result.predictions.length} food items with ${totalMatches} matches!`,
           color: "success",
         });
         
         trackEvent("photo_food_logger_analyze_success", {
           predictionsCount: result.predictions.length,
-          matchesCount: matches.filter(m => m.matches.length > 0).length,
+          matchesCount: combinedMatches.filter(m => m.matches.length > 0).length,
+          totalMatches,
           source: result.predictions[0]?.source,
         });
       } else {

@@ -314,6 +314,73 @@ export async function recognizeFood(
   }
 }
 
+// OpenFoodFacts API configuration
+const OPENFOODFACTS_API_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
+
+// Type for OpenFoodFacts search response
+interface OpenFoodFactsSearchResponse {
+  products: Array<{
+    product_name: string;
+    code?: string;
+    nutriments?: any;
+    serving_size?: string;
+    brands?: string;
+  }>;
+}
+
+/**
+ * Search OpenFoodFacts database for foods matching a query
+ * Uses the same cloud function as AddFood.tsx for consistency
+ */
+export async function searchOpenFoodFacts(
+  query: string,
+  pageSize = 10
+): Promise<Array<{
+  product_name: string;
+  code?: string;
+  nutriments?: any;
+  serving_size?: string;
+  brands?: string;
+}>> {
+  try {
+    const url = new URL(`${OPENFOODFACTS_API_BASE}/offSearch`);
+    url.searchParams.set('q', query);
+    url.searchParams.set('page', '1');
+    url.searchParams.set('page_size', String(pageSize));
+
+    console.log('[FoodRecognition] Searching OpenFoodFacts for:', query);
+    
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      console.error('[FoodRecognition] OpenFoodFacts search failed:', response.statusText);
+      return [];
+    }
+
+    const data: OpenFoodFactsSearchResponse = await response.json();
+    const foods = Array.isArray(data?.products) ? data.products : [];
+    
+    // Filter out foods without any meaningful nutrition data
+    // Requires at least one macro nutrient (calories, carbs, protein, or fat) to be > 0
+    const validFoods = foods.filter(food => {
+      const nutri = food.nutriments;
+      if (!nutri) return false;
+      
+      const calories = nutri['energy-kcal_100g'] ?? 0;
+      const carbs = nutri['carbohydrates_100g'] ?? 0;
+      const protein = nutri['proteins_100g'] ?? 0;
+      const fat = nutri['fat_100g'] ?? 0;
+      
+      return calories > 0 || carbs > 0 || protein > 0 || fat > 0;
+    });
+    
+    console.log('[FoodRecognition] OpenFoodFacts returned', validFoods.length, 'valid foods');
+    return validFoods;
+  } catch (error) {
+    console.error('[FoodRecognition] Error searching OpenFoodFacts:', error);
+    return [];
+  }
+}
+
 /**
  * Match recognized food names to items in the food database
  * Returns matches with full nutrition data
@@ -373,4 +440,68 @@ export function matchFoodToDatabase(
       matches
     };
   });
+}
+
+/**
+ * Match recognized food names by searching OpenFoodFacts API
+ * This provides comprehensive search results beyond the local database
+ */
+export async function matchFoodWithOpenFoodFacts(
+  predictions: FoodPrediction[]
+): Promise<Array<{
+  prediction: FoodPrediction;
+  matches: Array<{
+    product_name: string;
+    code?: string;
+    nutriments?: any;
+    serving_size?: string;
+    brands?: string;
+    matchScore: number;
+  }>;
+}>> {
+  const results = await Promise.all(
+    predictions.map(async (prediction) => {
+      // Search OpenFoodFacts with the prediction name
+      const searchResults = await searchOpenFoodFacts(prediction.name, 10);
+      
+      // Score the results similar to matchFoodToDatabase
+      const searchTerms = prediction.name.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
+      
+      const scoredMatches = searchResults.map(food => {
+        const foodName = food.product_name.toLowerCase();
+        const brandName = (food.brands || '').toLowerCase();
+        
+        // Calculate match score
+        let score = 0;
+        for (const term of searchTerms) {
+          if (foodName.includes(term)) score += 2;
+          if (brandName.includes(term)) score += 1;
+        }
+        
+        // Bonus for exact word matches
+        const foodWords = foodName.split(/\s+/);
+        for (const term of searchTerms) {
+          if (foodWords.includes(term)) score += 3;
+        }
+        
+        return {
+          ...food,
+          matchScore: score
+        };
+      });
+      
+      // Sort by score and return top matches
+      const topMatches = scoredMatches
+        .filter(food => food.matchScore > 0)
+        .sort((a, b) => b.matchScore - a.matchScore)
+        .slice(0, 5);
+      
+      return {
+        prediction,
+        matches: topMatches
+      };
+    })
+  );
+  
+  return results;
 }
