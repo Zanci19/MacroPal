@@ -2767,7 +2767,7 @@ const AddFood: React.FC = () => {
 
       <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
         {quickAddFromQuery && (
-          <IonItem lines="none" style={{ marginBottom: 12 }}>
+          <IonItem lines="none" className="mp-mb-md">
             <IonLabel>For which meal?</IonLabel>
             <IonSelect
               value={meal}
@@ -2784,22 +2784,22 @@ const AddFood: React.FC = () => {
         )}
         <IonChip
           color="primary"
-          style={{ marginBottom: 12 }}
+          className="mp-mb-md"
           onClick={() => {
             console.log(`[USER ACTION] AddFood: Date/meal chip clicked to open meal picker`, { currentMeal: meal, date: dateKey });
             setShowMealPicker(true);
           }}
         >
           <IonIcon icon={calendarOutline} />
-          <span style={{ marginLeft: 6 }}>
+          <span className="mp-ml-sm">
             {friendlyDate} · {meal}
           </span>
         </IonChip>
 
         {showSmartRecommendation && targets && dayTotals && recommendation && (
-          <IonCard style={{ marginBottom: 12 }}>
+          <IonCard className="mp-mb-md">
             <IonCardHeader>
-              <IonCardTitle style={{ fontSize: 16 }}>Smart recommendation</IonCardTitle>
+              <IonCardTitle className="mp-text-base">Smart recommendation</IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               {recommendation.isClose ? (

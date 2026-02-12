@@ -40,3 +40,74 @@
   background: var(--mp-border);
   border-radius: 2px;
 }
+
+/* AddFood specific utilities to replace inline styles */
+.add-food-actions-grid {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.add-food-recent-section {
+  margin-top: 8px;
+}
+
+.add-food-favorites-section {
+  margin-top: 12px;
+}
+
+.add-food-results-list {
+  margin-top: 8px;
+}
+
+.add-food-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.add-food-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.add-food-favorites-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-food-pagination {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.add-food-section-text {
+  padding: 4px 12px;
+  display: block;
+  color: var(--mp-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.add-food-favorites-list {
+  margin-top: 4px;
+}
+
+.add-food-empty-state {
+  padding: 12px;
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+.add-food-loading-state {
+  padding: 16px;
+}
+
+.add-food-loading-state-sm {
+  padding: 8px;
+}
