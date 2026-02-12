@@ -124,20 +124,23 @@ export interface RecognitionResult {
  * Adjusts contrast, brightness, and normalizes the image
  */
 function preprocessImage(imageElement: HTMLImageElement): tf.Tensor3D {
-  // Convert image to tensor
-  let tensor = tf.browser.fromPixels(imageElement);
-  
-  // Normalize to [0, 1]
-  tensor = tf.div(tensor, 255.0);
-  
-  // Adjust contrast (1.2x)
-  const mean = tf.mean(tensor);
-  tensor = tf.add(tf.mul(tf.sub(tensor, mean), 1.2), mean);
-  
-  // Clip values to [0, 1]
-  tensor = tf.clipByValue(tensor, 0, 1);
-  
-  return tensor as tf.Tensor3D;
+  // Use tf.tidy to automatically clean up intermediate tensors
+  return tf.tidy(() => {
+    // Convert image to tensor
+    let tensor = tf.browser.fromPixels(imageElement);
+    
+    // Normalize to [0, 1]
+    tensor = tf.div(tensor, 255.0);
+    
+    // Adjust contrast (1.2x)
+    const mean = tf.mean(tensor);
+    tensor = tf.add(tf.mul(tf.sub(tensor, mean), 1.2), mean);
+    
+    // Clip values to [0, 1]
+    tensor = tf.clipByValue(tensor, 0, 1);
+    
+    return tensor as tf.Tensor3D;
+  });
 }
 
 /**
@@ -163,17 +166,20 @@ async function estimatePortionSize(
       return undefined;
     }
     
+    // Pre-calculate areas for efficiency
+    const objectsWithArea = foodObjects.map(obj => ({
+      ...obj,
+      area: obj.bbox[2] * obj.bbox[3] // width * height
+    }));
+    
     // Use the largest detected object
-    const largestObject = foodObjects.reduce((max, obj) => {
-      const area = obj.bbox[2] * obj.bbox[3]; // width * height
-      const maxArea = max.bbox[2] * max.bbox[3];
-      return area > maxArea ? obj : max;
-    });
+    const largestObject = objectsWithArea.reduce((max, obj) => 
+      obj.area > max.area ? obj : max
+    );
     
     // Calculate relative size based on bounding box area
     const imageArea = imageElement.width * imageElement.height;
-    const objectArea = largestObject.bbox[2] * largestObject.bbox[3];
-    const relativeSize = objectArea / imageArea;
+    const relativeSize = largestObject.area / imageArea;
     
     // Estimate size category and approximate grams
     let size: PortionEstimate['size'];
@@ -239,15 +245,20 @@ export async function recognizeFoodWithMobileNet(
     // Also try with original image for comparison
     const originalPredictions = await model.classify(imageElement);
     
-    // Combine and deduplicate predictions
+    // Combine and deduplicate predictions using Map for O(n) performance
     const allPredictions = [...predictions, ...originalPredictions];
-    const uniquePredictions = allPredictions.reduce((acc, pred) => {
-      const existing = acc.find(p => p.className.toLowerCase() === pred.className.toLowerCase());
+    const predictionMap = new Map<string, typeof predictions[0]>();
+    
+    for (const pred of allPredictions) {
+      const key = pred.className.toLowerCase();
+      const existing = predictionMap.get(key);
+      // Keep prediction with higher probability
       if (!existing || pred.probability > existing.probability) {
-        return [...acc.filter(p => p.className.toLowerCase() !== pred.className.toLowerCase()), pred];
+        predictionMap.set(key, pred);
       }
-      return acc;
-    }, [] as typeof predictions);
+    }
+    
+    const uniquePredictions = Array.from(predictionMap.values());
     
     // Filter and map predictions to food-related items with higher confidence threshold
     const foodPredictions: FoodPrediction[] = uniquePredictions
