@@ -64,7 +64,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .add-food-chips-container {
@@ -90,7 +90,7 @@
   padding: 4px 12px;
   display: block;
   color: var(--mp-text-muted);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -101,7 +101,7 @@
 .add-food-empty-state {
   padding: 12px;
   opacity: 0.7;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .add-food-loading-state {

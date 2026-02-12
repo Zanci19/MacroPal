@@ -68,6 +68,28 @@
   margin-bottom: 4px;
 }
 
+/* Fix select text color to be visible in both themes */
+.setup-item ion-select {
+  color: var(--mp-text);
+}
+
+@media (prefers-color-scheme: light) {
+  .setup-item ion-select {
+    color: #121212;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .setup-item ion-select {
+    color: #f9fafb;
+  }
+}
+
+/* Ensure the selected value text is visible */
+.setup-item .select-text {
+  color: inherit !important;
+}
+
 .setup-goal-row {
   --inner-padding-top: 4px;
   --inner-padding-bottom: 4px;
