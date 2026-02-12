@@ -246,17 +246,18 @@ const PhotoFoodLogger: React.FC = () => {
           matchFoodWithOpenFoodFacts(result.predictions)
         ]);
         
-        // Combine results, preferring OpenFoodFacts matches when available
+        // Combine results with OpenFoodFacts prioritized by array order
         const combinedMatches = result.predictions.map((prediction, idx) => {
           const local = localMatches[idx]?.matches || [];
           const off = offMatches[idx]?.matches || [];
           
-          // Combine and deduplicate by product code or name
+          // Combine with OFF first (prioritization), then deduplicate by product code or name
           const allMatches = [...off, ...local];
           const seen = new Set<string>();
           const unique = allMatches.filter(match => {
-            const key = match.code || match.product_name.toLowerCase();
-            if (seen.has(key)) return false;
+            // Use normalized product_name as fallback if code is missing
+            const key = match.code || (match.product_name || '').toLowerCase().trim();
+            if (!key || seen.has(key)) return false;
             seen.add(key);
             return true;
           });

@@ -359,14 +359,14 @@ export async function searchOpenFoodFacts(
     const data: OpenFoodFactsSearchResponse = await response.json();
     const foods = Array.isArray(data?.products) ? data.products : [];
     
-    // Filter out foods without nutrition data
+    // Filter out foods without nutrition data (but allow zero values for things like water, diet drinks)
     const validFoods = foods.filter(food => {
       const nutri = food.nutriments;
       return nutri && (
-        nutri['energy-kcal_100g'] > 0 ||
-        nutri['carbohydrates_100g'] > 0 ||
-        nutri['proteins_100g'] > 0 ||
-        nutri['fat_100g'] > 0
+        nutri['energy-kcal_100g'] !== undefined ||
+        nutri['carbohydrates_100g'] !== undefined ||
+        nutri['proteins_100g'] !== undefined ||
+        nutri['fat_100g'] !== undefined
       );
     });
     
