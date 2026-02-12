@@ -233,21 +233,43 @@ export async function recognizeFoodWithMobileNet(
     console.log('[FoodRecognition] Loading MobileNet model...');
     const model = await mobilenet.load();
     
-    // Preprocess image for better recognition
-    const processedTensor = preprocessImage(imageElement);
+    let predictions: Array<{className: string; probability: number}> = [];
+    let originalPredictions: Array<{className: string; probability: number}> = [];
     
-    console.log('[FoodRecognition] Running predictions with preprocessing...');
-    const predictions = await model.classify(processedTensor);
+    // Try with original image first (most reliable)
+    try {
+      console.log('[FoodRecognition] Running predictions on original image...');
+      originalPredictions = await model.classify(imageElement);
+      console.log('[FoodRecognition] Original predictions:', originalPredictions);
+    } catch (err) {
+      console.warn('[FoodRecognition] Original image prediction failed:', err);
+    }
     
-    // Clean up tensor
-    processedTensor.dispose();
+    // Try preprocessing for potentially better results
+    try {
+      console.log('[FoodRecognition] Preprocessing image...');
+      const processedTensor = preprocessImage(imageElement);
+      
+      console.log('[FoodRecognition] Running predictions with preprocessing...');
+      predictions = await model.classify(processedTensor);
+      console.log('[FoodRecognition] Preprocessed predictions:', predictions);
+      
+      // Clean up tensor
+      processedTensor.dispose();
+    } catch (err) {
+      console.warn('[FoodRecognition] Preprocessed image prediction failed:', err);
+      // If preprocessing fails, use only original predictions
+      predictions = [];
+    }
     
-    // Also try with original image for comparison
-    const originalPredictions = await model.classify(imageElement);
+    // If both failed, throw error
+    if (predictions.length === 0 && originalPredictions.length === 0) {
+      throw new Error('Failed to get predictions from image');
+    }
     
     // Combine and deduplicate predictions using Map for O(n) performance
     const allPredictions = [...predictions, ...originalPredictions];
-    const predictionMap = new Map<string, typeof predictions[0]>();
+    const predictionMap = new Map<string, typeof allPredictions[0]>();
     
     for (const pred of allPredictions) {
       const key = pred.className.toLowerCase();
@@ -259,13 +281,15 @@ export async function recognizeFoodWithMobileNet(
     }
     
     const uniquePredictions = Array.from(predictionMap.values());
+    console.log('[FoodRecognition] Unique predictions after deduplication:', uniquePredictions.length);
     
-    // Filter and map predictions to food-related items with higher confidence threshold
+    // Filter and map predictions to food-related items with LOWER confidence threshold
     const foodPredictions: FoodPrediction[] = uniquePredictions
       .filter(pred => {
         const className = pred.className.toLowerCase();
         const isFoodRelated = FOOD_KEYWORDS.some(keyword => className.includes(keyword));
-        return isFoodRelated && pred.probability > 0.1; // Increased threshold
+        // Lowered threshold from 0.1 to 0.05 for better results
+        return isFoodRelated && pred.probability > 0.05;
       })
       .map(pred => ({
         name: pred.className,
@@ -275,13 +299,22 @@ export async function recognizeFoodWithMobileNet(
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 5); // Top 5 results
     
-    // Try to estimate portion size
-    const portionEstimate = await estimatePortionSize(imageElement);
+    console.log('[FoodRecognition] Food-related predictions:', foodPredictions);
     
-    // If no food-specific predictions, return top 3 general predictions
+    // Try to estimate portion size
+    let portionEstimate: PortionEstimate | undefined;
+    try {
+      portionEstimate = await estimatePortionSize(imageElement);
+    } catch (err) {
+      console.warn('[FoodRecognition] Portion estimation failed:', err);
+      portionEstimate = undefined;
+    }
+    
+    // If no food-specific predictions with new threshold, return top 5 general predictions
     if (foodPredictions.length === 0) {
+      console.log('[FoodRecognition] No food keywords matched, returning top general predictions');
       return {
-        predictions: uniquePredictions.slice(0, 3).map(pred => ({
+        predictions: uniquePredictions.slice(0, 5).map(pred => ({
           name: pred.className,
           confidence: pred.probability,
           source: 'mobilenet' as const
@@ -291,7 +324,7 @@ export async function recognizeFoodWithMobileNet(
       };
     }
     
-    console.log('[FoodRecognition] Predictions:', foodPredictions);
+    console.log('[FoodRecognition] Final predictions:', foodPredictions);
     console.log('[FoodRecognition] Portion estimate:', portionEstimate);
     
     return {
