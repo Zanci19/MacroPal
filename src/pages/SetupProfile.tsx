@@ -102,16 +102,10 @@ const computeTargets = (
   return { calories, proteinG, fatG, carbsG };
 };
 
-const DEFAULTS = {
-  age: 25,
-  weight: 70,
-  height: 170,
-};
-
 const SetupProfile: React.FC = () => {
-  const [age, setAge] = useState<number | null>(DEFAULTS.age);
-  const [weight, setWeight] = useState<number | null>(DEFAULTS.weight);
-  const [height, setHeight] = useState<number | null>(DEFAULTS.height);
+  const [age, setAge] = useState<number | null>(null);
+  const [weight, setWeight] = useState<number | null>(null);
+  const [height, setHeight] = useState<number | null>(null);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [gender, setGender] = useState<Gender>("male");
   const [activity, setActivity] = useState<Activity>("sedentary");
