@@ -87,11 +87,28 @@ export const useDemoFirestore = () => {
     [isDemoMode]
   );
 
+  /**
+   * Get all documents in a collection
+   */
+  const getCollectionDocs = useCallback(
+    async (collectionPath: string): Promise<Array<{ id: string; data: unknown }>> => {
+      if (isDemoMode) {
+        // Demo mode - use demo firestore
+        return demoFirestore.getCollectionDocs(collectionPath);
+      }
+
+      // Normal mode - not implemented in this hook, should use getDocs directly
+      throw new Error("getCollectionDocs is only for demo mode. Use Firebase getDocs directly in normal mode.");
+    },
+    [isDemoMode]
+  );
+
   return {
     isDemoMode,
     onSnapshotDoc,
     setDocData,
     getDocData,
+    getCollectionDocs,
     arrayUnionField,
   };
 };

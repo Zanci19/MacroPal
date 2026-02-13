@@ -130,6 +130,23 @@ class DemoFirestore {
     };
   }
 
+  // Get all documents in a collection (for demo mode getDocs equivalent)
+  getCollectionDocs(collectionPath: string): Array<{ id: string; data: unknown }> {
+    const results: Array<{ id: string; data: unknown }> = [];
+    this.docs.forEach((doc, path) => {
+      // Check if this document path matches the collection path
+      // e.g., "users/demo-user-id/weighins/2024-01-01" matches collection "users/demo-user-id/weighins"
+      if (path.startsWith(collectionPath + "/")) {
+        const docId = path.substring(collectionPath.length + 1);
+        // Only include direct children, not nested subcollections
+        if (!docId.includes("/")) {
+          results.push({ id: docId, data: doc.data });
+        }
+      }
+    });
+    return results;
+  }
+
   // Clear all data (for demo reset)
   clear() {
     this.docs.clear();

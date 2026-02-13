@@ -40,6 +40,7 @@ import {
 
 import { db, trackEvent } from "../../firebase";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { useDemoFirestore } from "../../hooks/useDemoFirestore";
 
 // Recharts
 import {
@@ -170,6 +171,7 @@ function movingAvg(vals: number[], w: number) {
 const Analytics: React.FC = () => {
   const history = useHistory();
   const { uid, loading: authLoading, profile } = useProfile();
+  const { isDemoMode, getDocData, getCollectionDocs } = useDemoFirestore();
 
   const [loading, setLoading] = useState(true); // loading for analytics data
   const [tf, setTf] = useState<TF>("30d");
@@ -223,36 +225,71 @@ const Analytics: React.FC = () => {
       const keys = Array.from({ length: 60 }, (_, i) =>
         dayKey(addDays(today, -i))
       );
-      const reads = keys.map((k) => getDoc(doc(db, "users", uid, "foods", k)));
-      const snaps = await Promise.all(reads);
+      
+      // Fetch food entries - use demo firestore in demo mode
+      let list: DayRoll[];
+      if (isDemoMode) {
+        const reads = keys.map((k) => getDocData(`users/${uid}/foods/${k}`));
+        const results = await Promise.all(reads);
+        list = results
+          .map((raw, i) => {
+            const data: DayDiaryDoc = {
+              breakfast: (raw as Partial<DayDiaryDoc>)?.breakfast ?? [],
+              lunch: (raw as Partial<DayDiaryDoc>)?.lunch ?? [],
+              dinner: (raw as Partial<DayDiaryDoc>)?.dinner ?? [],
+              snacks: (raw as Partial<DayDiaryDoc>)?.snacks ?? [],
+            };
+            return { key: keys[i], data, roll: sumDay(data) };
+          })
+          .reverse(); // oldest first
+      } else {
+        const reads = keys.map((k) => getDoc(doc(db, "users", uid, "foods", k)));
+        const snaps = await Promise.all(reads);
+        list = snaps
+          .map((s, i) => {
+            const raw = (s.data() || {}) as Partial<DayDiaryDoc>;
+            const data: DayDiaryDoc = {
+              breakfast: raw.breakfast ?? [],
+              lunch: raw.lunch ?? [],
+              dinner: raw.dinner ?? [],
+              snacks: raw.snacks ?? [],
+            };
+            return { key: keys[i], data, roll: sumDay(data) };
+          })
+          .reverse(); // oldest first
+      }
 
-      const list: DayRoll[] = snaps
-        .map((s, i) => {
-          const raw = (s.data() || {}) as Partial<DayDiaryDoc>;
-          const data: DayDiaryDoc = {
-            breakfast: raw.breakfast ?? [],
-            lunch: raw.lunch ?? [],
-            dinner: raw.dinner ?? [],
-            snacks: raw.snacks ?? [],
-          };
-          return { key: keys[i], data, roll: sumDay(data) };
-        })
-        .reverse(); // oldest first
-
-      const weighSnap = await getDocs(
-        collection(db, "users", uid, "weighins")
-      );
-      const weighList = weighSnap.docs
-        .map((d) => {
-          const data = d.data() as Partial<WeighInEntry>;
-          const date = typeof data.date === "string" ? data.date : d.id;
-          const weight =
-            typeof data.weight === "number" ? data.weight : Number(data.weight);
-          if (!date || !Number.isFinite(weight)) return null;
-          return { ...data, date, weight } as WeighInEntry;
-        })
-        .filter((entry): entry is WeighInEntry => !!entry)
-        .sort((a, b) => a.date.localeCompare(b.date));
+      // Fetch weight entries - use demo firestore in demo mode
+      let weighList: WeighInEntry[];
+      if (isDemoMode) {
+        const weighDocs = await getCollectionDocs(`users/${uid}/weighins`);
+        weighList = weighDocs
+          .map((d) => {
+            const data = d.data as Partial<WeighInEntry>;
+            const date = typeof data.date === "string" ? data.date : d.id;
+            const weight =
+              typeof data.weight === "number" ? data.weight : Number(data.weight);
+            if (!date || !Number.isFinite(weight)) return null;
+            return { ...data, date, weight } as WeighInEntry;
+          })
+          .filter((entry): entry is WeighInEntry => !!entry)
+          .sort((a, b) => a.date.localeCompare(b.date));
+      } else {
+        const weighSnap = await getDocs(
+          collection(db, "users", uid, "weighins")
+        );
+        weighList = weighSnap.docs
+          .map((d) => {
+            const data = d.data() as Partial<WeighInEntry>;
+            const date = typeof data.date === "string" ? data.date : d.id;
+            const weight =
+              typeof data.weight === "number" ? data.weight : Number(data.weight);
+            if (!date || !Number.isFinite(weight)) return null;
+            return { ...data, date, weight } as WeighInEntry;
+          })
+          .filter((entry): entry is WeighInEntry => !!entry)
+          .sort((a, b) => a.date.localeCompare(b.date));
+      }
 
       setDays(list);
       setWeightEntries(weighList);
@@ -264,7 +301,7 @@ const Analytics: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [uid]);
+  }, [uid, isDemoMode, getDocData, getCollectionDocs]);
 
   const handleRefresh = useCallback(
     async (event: CustomEvent<RefresherEventDetail>) => {
