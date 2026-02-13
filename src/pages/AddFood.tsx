@@ -1573,7 +1573,19 @@ const AddFood: React.FC = () => {
 
   const takeAiPhoto = async () => {
     try {
+      console.log('[AI Photo] Starting photo capture...');
       trackEvent("ai_photo_camera_open", { meal, date: dateKey });
+      
+      // Check if PWA elements are available
+      if (typeof window !== 'undefined' && !customElements.get('pwa-camera-modal')) {
+        console.error('[AI Photo] PWA camera modal not registered');
+        setToast({
+          show: true,
+          message: "Camera not available. Please refresh the page and try again.",
+          color: "danger",
+        });
+        return;
+      }
       
       const photo = await Camera.getPhoto({
         quality: 90,
@@ -2923,9 +2935,9 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                onClick={() => {
+                onClick={async () => {
                   console.log(`[USER ACTION] AddFood: AI Photo button clicked`);
-                  takeAiPhoto();
+                  await takeAiPhoto();
                 }}
                 disabled={aiPhotoAnalyzing}
               >

@@ -75,6 +75,7 @@ class DemoFirestore {
   }
 
   // Array union operation (mimics Firestore's arrayUnion)
+  // Only adds items that don't already exist in the array
   arrayUnion(path: string, field: string, items: unknown[]) {
     let doc = this.docs.get(path);
     if (!doc) {
@@ -85,8 +86,15 @@ class DemoFirestore {
     const currentData = doc.data as Record<string, unknown>;
     const currentArray = Array.isArray(currentData[field]) ? currentData[field] : [];
     
-    // Add items to array (arrayUnion adds items that don't exist)
-    const newArray = [...currentArray, ...items];
+    // Filter out items that already exist (basic deep equality check)
+    const itemsToAdd = items.filter(newItem => {
+      return !currentArray.some(existingItem => 
+        JSON.stringify(existingItem) === JSON.stringify(newItem)
+      );
+    });
+    
+    // Add only new items to array
+    const newArray = [...currentArray, ...itemsToAdd];
     doc.data = { ...currentData, [field]: newArray };
     
     this.saveToStorage();

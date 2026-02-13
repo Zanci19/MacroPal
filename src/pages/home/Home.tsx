@@ -766,7 +766,9 @@ const Home: React.FC = () => {
     });
     cleanupFns.push(workoutsUnsub);
 
-    // Skip meal templates in demo mode for now (collection queries are complex)
+    // TODO: Implement meal templates support for demo mode
+    // Collection queries are more complex and require additional abstraction
+    // For now, skip meal templates in demo mode as they're not critical for basic functionality
     if (!isDemoMode) {
       const templatesRef = collection(db, "users", uid, "mealTemplates");
       const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));

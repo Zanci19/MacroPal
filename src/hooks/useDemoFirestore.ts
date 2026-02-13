@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { doc, onSnapshot, setDoc, getDoc, DocumentReference } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc, DocumentReference, arrayUnion as firestoreArrayUnion } from "firebase/firestore";
 import { db } from "../firebase";
 import { demoFirestore } from "../utils/demoFirestore";
 
@@ -63,7 +63,6 @@ export const useDemoFirestore = () => {
       // Normal mode - use real Firestore arrayUnion
       const pathParts = path.split("/");
       const docRef = doc(db, pathParts[0], pathParts[1], ...pathParts.slice(2)) as DocumentReference;
-      const { arrayUnion: firestoreArrayUnion } = await import("firebase/firestore");
       await setDoc(docRef, { [field]: firestoreArrayUnion(...items) }, { merge: true });
     },
     [isDemoMode]
