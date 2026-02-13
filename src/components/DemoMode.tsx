@@ -81,35 +81,32 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
     }
   }, [isDemoMode, showVideo, resetInactivityTimer]);
 
-  const handleMouseMove = useCallback(() => {
+  const handleKeyDown = useCallback(() => {
     if (!isDemoMode || showVideo) return;
     
-    const now = Date.now();
-    // Throttle mouse move events to avoid too many timer resets
-    if (now - lastActivityRef.current > 1000) {
-      lastActivityRef.current = now;
-      resetInactivityTimer();
-    }
+    // User is active in the demo via keyboard
+    lastActivityRef.current = Date.now();
+    resetInactivityTimer();
   }, [isDemoMode, showVideo, resetInactivityTimer]);
 
   useEffect(() => {
     if (!isDemoMode) return;
 
-    // Add event listeners for user activity
+    // Add event listeners for user activity (clicks and keyboard only)
     window.addEventListener("click", handleClick);
-    window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("touchstart", handleClick);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       window.removeEventListener("click", handleClick);
-      window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("touchstart", handleClick);
+      window.removeEventListener("keydown", handleKeyDown);
       
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [isDemoMode, handleClick, handleMouseMove]);
+  }, [isDemoMode, handleClick, handleKeyDown]);
 
   useEffect(() => {
     if (!isDemoMode || !showVideo) return;
