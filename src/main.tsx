@@ -20,8 +20,25 @@ addIcons({
 const container = document.getElementById("root");
 const root = createRoot(container!);
 
-// Ensure PWA elements are fully loaded before rendering the app
-defineCustomElements(window).then(() => {
+// Initialize PWA elements and ensure they're ready before rendering the app
+const initializePWAElements = async () => {
+  try {
+    console.log('[PWA Elements] Initializing...');
+    await defineCustomElements(window);
+    console.log('[PWA Elements] Initialized successfully');
+    
+    // Wait a bit for custom elements to be fully registered
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    return true;
+  } catch (error) {
+    console.error('[PWA Elements] Failed to initialize:', error);
+    return false;
+  }
+};
+
+// Initialize PWA elements then render app
+initializePWAElements().then(() => {
   root.render(
     <React.StrictMode>
       <ErrorBoundary>
@@ -30,7 +47,7 @@ defineCustomElements(window).then(() => {
     </React.StrictMode>
   );
 }).catch((error) => {
-  console.error("Failed to initialize PWA elements:", error);
+  console.error('[PWA Elements] Critical error:', error);
   // Still render the app even if PWA elements fail to load
   root.render(
     <React.StrictMode>

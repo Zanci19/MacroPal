@@ -88,6 +88,7 @@ import type {
 } from "../../types";
 import type { WeighInEntry } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
+import { useDemoFirestore } from "../../hooks/useDemoFirestore";
 import {
   fromMetricWeight,
   getUnitSystem,
@@ -466,6 +467,7 @@ const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+  const { onSnapshotDoc } = useDemoFirestore();
 
   const { uid, profile, announcementNum, hasViewedTutorial, loading: profileLoading } = useProfile();
   const [demoAnnouncementNum, setDemoAnnouncementNum] = useState<number | null>(() => {
@@ -695,9 +697,9 @@ const Home: React.FC = () => {
 
     const cleanupFns: Array<() => void> = [];
 
-    const foodsRef = doc(db, "users", uid, "foods", activeDateKey);
-    const foodsUnsub = onSnapshot(foodsRef, (snap) => {
-      const raw = snap.data() as Partial<DayDiaryDoc> | undefined;
+    const foodsPath = `users/${uid}/foods/${activeDateKey}`;
+    const foodsUnsub = onSnapshotDoc(foodsPath, (data) => {
+      const raw = data as Partial<DayDiaryDoc> | undefined;
       const nextDay: DayDiaryDoc = {
         breakfast: raw?.breakfast ?? [],
         lunch: raw?.lunch ?? [],
@@ -738,9 +740,9 @@ const Home: React.FC = () => {
     });
     cleanupFns.push(foodsUnsub);
 
-    const workoutsRef = doc(db, "users", uid, "workouts", activeDateKey);
-    const workoutsUnsub = onSnapshot(workoutsRef, (snap) => {
-      const raw = snap.data() as WorkoutDayDoc | undefined;
+    const workoutsPath = `users/${uid}/workouts/${activeDateKey}`;
+    const workoutsUnsub = onSnapshotDoc(workoutsPath, (data) => {
+      const raw = data as WorkoutDayDoc | undefined;
       const activities = raw?.activities ?? [];
 
       const totalBonus = activities.reduce((sum, activity) => {
@@ -764,21 +766,26 @@ const Home: React.FC = () => {
     });
     cleanupFns.push(workoutsUnsub);
 
-    const templatesRef = collection(db, "users", uid, "mealTemplates");
-    const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
-    const templatesUnsub = onSnapshot(templatesQuery, (snapshot) => {
-      const next = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        data: docSnap.data() as MealTemplate,
-      }));
-      setMealTemplates(next);
-    });
-    cleanupFns.push(templatesUnsub);
+    // TODO: Implement meal templates support for demo mode
+    // Collection queries are more complex and require additional abstraction
+    // For now, skip meal templates in demo mode as they're not critical for basic functionality
+    if (!isDemoMode) {
+      const templatesRef = collection(db, "users", uid, "mealTemplates");
+      const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
+      const templatesUnsub = onSnapshot(templatesQuery, (snapshot) => {
+        const next = snapshot.docs.map((docSnap) => ({
+          id: docSnap.id,
+          data: docSnap.data() as MealTemplate,
+        }));
+        setMealTemplates(next);
+      });
+      cleanupFns.push(templatesUnsub);
+    }
 
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [activeDateKey, autoExpandMealsEnabled, mealSignature, shouldTrackSnapshot, uid]);
+  }, [activeDateKey, autoExpandMealsEnabled, mealSignature, shouldTrackSnapshot, uid, isDemoMode, onSnapshotDoc]);
 
   useEffect(() => {
     if (!isViewActive) return;

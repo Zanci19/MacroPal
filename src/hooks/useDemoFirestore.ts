@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { doc, onSnapshot, setDoc, getDoc, DocumentReference } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc, DocumentReference, arrayUnion as firestoreArrayUnion } from "firebase/firestore";
 import { db } from "../firebase";
 import { demoFirestore } from "../utils/demoFirestore";
 
@@ -34,17 +34,36 @@ export const useDemoFirestore = () => {
    * Set document data
    */
   const setDocData = useCallback(
-    async (path: string, data: unknown) => {
+    async (path: string, data: unknown, options?: { merge?: boolean }) => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
-        demoFirestore.setData(path, data);
+        demoFirestore.setData(path, data, options);
         return;
       }
 
       // Normal mode - use real Firestore
       const pathParts = path.split("/");
       const docRef = doc(db, pathParts[0], pathParts[1], ...pathParts.slice(2)) as DocumentReference;
-      await setDoc(docRef, data as Record<string, unknown>, { merge: true });
+      await setDoc(docRef, data as Record<string, unknown>, { merge: options?.merge !== false });
+    },
+    [isDemoMode]
+  );
+
+  /**
+   * Array union operation
+   */
+  const arrayUnionField = useCallback(
+    async (path: string, field: string, items: unknown[]) => {
+      if (isDemoMode) {
+        // Demo mode - use demo firestore array union
+        demoFirestore.arrayUnion(path, field, items);
+        return;
+      }
+
+      // Normal mode - use real Firestore arrayUnion
+      const pathParts = path.split("/");
+      const docRef = doc(db, pathParts[0], pathParts[1], ...pathParts.slice(2)) as DocumentReference;
+      await setDoc(docRef, { [field]: firestoreArrayUnion(...items) }, { merge: true });
     },
     [isDemoMode]
   );
@@ -73,5 +92,6 @@ export const useDemoFirestore = () => {
     onSnapshotDoc,
     setDocData,
     getDocData,
+    arrayUnionField,
   };
 };
