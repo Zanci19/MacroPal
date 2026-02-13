@@ -36,6 +36,7 @@ import {
 import { Keyboard } from "@capacitor/keyboard";
 import { useLocation, useHistory } from "react-router";
 import { auth, db, storage, trackEvent } from "../firebase";
+import { getCurrentUser } from "../utils/demoAuth";
 import { isFeatureEnabled, useRemoteConfig } from "../UpdateGate";
 import {
   doc,
@@ -652,7 +653,7 @@ const AddFood: React.FC = () => {
   }, [meal, dateKey]);
 
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     (async () => {
@@ -708,7 +709,7 @@ const AddFood: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const ref = doc(db, "users", user.uid, "foods", dateKey);
@@ -1016,7 +1017,7 @@ const AddFood: React.FC = () => {
 
   // Defer favorites loading to avoid congestion on mobile
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     // Delay loading favorites by 300ms to prioritize critical data
@@ -1059,7 +1060,7 @@ const AddFood: React.FC = () => {
 
   // Defer recent foods loading to avoid congestion on mobile
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     // Delay loading recent foods by 500ms
@@ -1096,7 +1097,7 @@ const AddFood: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
     let cancelled = false;
 
@@ -1164,7 +1165,7 @@ const AddFood: React.FC = () => {
 
   // Defer meal presets loading to avoid congestion on mobile
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
     
     // Delay loading meal presets by 700ms
@@ -1750,7 +1751,7 @@ const AddFood: React.FC = () => {
 
   const uploadPhotoToStorage = useCallback(async (base64Data: string, fileName: string): Promise<string | null> => {
     try {
-      const user = auth.currentUser;
+      const user = getCurrentUser();
       if (!user) return null;
 
       // Convert base64 to blob
@@ -1787,7 +1788,7 @@ const AddFood: React.FC = () => {
 
   const addFoodToMeal = async () => {
     console.log(`[USER ACTION] AddFood: Add/Save food to meal clicked`, { meal, editMode: !!editEntry });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     if (addingFood) return;
@@ -2053,7 +2054,7 @@ const AddFood: React.FC = () => {
 
   const saveCurrentSelectionAsFavorite = async () => {
     console.log(`[USER ACTION] AddFood: Save as favorite clicked`, { foodName: selectedFood?.product_name });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user || !selectedFood) return;
 
     const payload = computeCurrentSelection();
@@ -2135,7 +2136,7 @@ const AddFood: React.FC = () => {
 
   const createCustomFood = async () => {
     console.log(`[USER ACTION] AddFood: Create custom food clicked`, { name: customName });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     // Validate inputs
@@ -2258,7 +2259,7 @@ const AddFood: React.FC = () => {
 
   const addFavoriteToMeal = async (fav: FavoriteFood) => {
     console.log(`[USER ACTION] AddFood: Favorite clicked to add to meal`, { favoriteId: fav.id || 'unknown', meal });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const item = {
@@ -2298,7 +2299,7 @@ const AddFood: React.FC = () => {
     brand?: string | null;
     code?: string | null;
   }) => {
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const key =
@@ -2320,7 +2321,7 @@ const AddFood: React.FC = () => {
     );
 
     try {
-      const user = auth.currentUser;
+      const user = getCurrentUser();
       if (!user) return;
 
       const ref = collection(db, "users", user.uid, "recentFoods");
@@ -2347,7 +2348,7 @@ const AddFood: React.FC = () => {
 
   const addHistoryFoodToMeal = async (src: DiaryEntryDoc) => {
     console.log(`[USER ACTION] AddFood: Recent food clicked to add to meal`, { foodName: src.name, meal });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const totalRaw: MacroSet =
@@ -2390,7 +2391,7 @@ const AddFood: React.FC = () => {
 
   const createMealPreset = async () => {
     console.log(`[USER ACTION] AddFood: Create custom meal clicked`, { name: mealPresetName });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const name = mealPresetName.trim() || "(no name)";
@@ -2447,7 +2448,7 @@ const AddFood: React.FC = () => {
 
   const addMealPresetToMeal = async (preset: CustomMealPreset) => {
     console.log(`[USER ACTION] AddFood: Custom meal clicked to add to meal`, { presetName: preset.name, meal });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user) return;
 
     const item = {
@@ -2484,7 +2485,7 @@ const AddFood: React.FC = () => {
 
   const confirmDeleteFavorite = async () => {
     console.log(`[USER ACTION] AddFood: Confirm delete favorite clicked`, { favoriteName: favoriteToDelete?.name });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user || !favoriteToDelete) {
       setFavoriteToDelete(null);
       return;
@@ -2521,7 +2522,7 @@ const AddFood: React.FC = () => {
 
   const confirmDeleteMealPreset = async () => {
     console.log(`[USER ACTION] AddFood: Confirm delete custom meal clicked`, { presetName: mealPresetToDelete?.name });
-    const user = auth.currentUser;
+    const user = getCurrentUser();
     if (!user || !mealPresetToDelete) {
       setMealPresetToDelete(null);
       return;
