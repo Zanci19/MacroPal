@@ -91,12 +91,16 @@ export function seedDemoData(): void {
   }
 
   // Seed weight data for the past 30 days (one entry every 3 days)
+  const BASE_WEIGHT_KG = 70; // Baseline weight in kg for demo
+  const VARIATION_PERIOD_DAYS = 5; // Period of weight oscillation
+  const VARIATION_AMPLITUDE_KG = 0.5; // Maximum weight variation in kg
+  
   for (let daysAgo = 0; daysAgo < 30; daysAgo += 3) {
     const dateKey = getDateKey(daysAgo);
     const weightPath = `users/${DEMO_USER_ID}/weighins/${dateKey}`;
     
-    // Simulate a gradual weight change (70kg baseline with small variations)
-    const weight = 70 + Math.sin(daysAgo / 5) * 0.5;
+    // Simulate a gradual weight change with natural-looking variations
+    const weight = BASE_WEIGHT_KG + Math.sin(daysAgo / VARIATION_PERIOD_DAYS) * VARIATION_AMPLITUDE_KG;
     
     demoFirestore.setData(
       weightPath,
