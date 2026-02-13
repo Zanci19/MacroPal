@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { initializeDemoData } from "../utils/demoDataSeed";
 import "./DemoMode.css";
 
 interface DemoModeProps {
@@ -73,6 +74,10 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
       setShowVideo(false);
       setIsDemoActive(true);
       lastActivityRef.current = Date.now();
+      
+      // Initialize demo data on first transition
+      initializeDemoData();
+      
       resetInactivityTimer();
     } else {
       // User is active in the demo
