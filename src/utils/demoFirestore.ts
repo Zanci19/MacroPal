@@ -53,13 +53,42 @@ class DemoFirestore {
   }
 
   // Set document data
-  setData(path: string, data: unknown) {
+  setData(path: string, data: unknown, options?: { merge?: boolean }) {
     let doc = this.docs.get(path);
     if (!doc) {
       doc = { data: {}, listeners: new Set() };
       this.docs.set(path, doc);
     }
-    doc.data = { ...doc.data as object, ...data as object };
+    
+    if (options?.merge === false) {
+      doc.data = data;
+    } else {
+      doc.data = { ...doc.data as object, ...data as object };
+    }
+    
+    this.saveToStorage();
+    
+    // Notify listeners
+    doc.listeners.forEach((listener) => {
+      listener(doc.data);
+    });
+  }
+
+  // Array union operation (mimics Firestore's arrayUnion)
+  arrayUnion(path: string, field: string, items: unknown[]) {
+    let doc = this.docs.get(path);
+    if (!doc) {
+      doc = { data: {}, listeners: new Set() };
+      this.docs.set(path, doc);
+    }
+
+    const currentData = doc.data as Record<string, unknown>;
+    const currentArray = Array.isArray(currentData[field]) ? currentData[field] : [];
+    
+    // Add items to array (arrayUnion adds items that don't exist)
+    const newArray = [...currentArray, ...items];
+    doc.data = { ...currentData, [field]: newArray };
+    
     this.saveToStorage();
     
     // Notify listeners

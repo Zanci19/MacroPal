@@ -53,6 +53,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useDemoFirestore } from "../hooks/useDemoFirestore";
 
 import { calendarOutline, starOutline, trashOutline, cameraOutline, sparklesOutline } from "ionicons/icons";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
@@ -466,6 +467,7 @@ function pickRandom(list: string[]): string {
 const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
+  const { arrayUnionField } = useDemoFirestore();
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
   const remoteConfig = useRemoteConfig();
@@ -1955,8 +1957,6 @@ const AddFood: React.FC = () => {
         weightQtyForSel,
       } = payload;
 
-      const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
       const perBaseClean = stripUndefined({
         calories: safeNum(perBase.calories, 0),
         carbs: safeNum(perBase.carbs, 2),
@@ -2014,7 +2014,8 @@ const AddFood: React.FC = () => {
         addedAt: new Date().toISOString(),
       };
 
-      await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+      const foodsPath = `users/${user.uid}/foods/${dateKey}`;
+      await arrayUnionField(foodsPath, meal, [item]);
       await upsertRecentFood({
         name: item.name,
         brand: item.brand,
@@ -2260,8 +2261,6 @@ const AddFood: React.FC = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
     const item = {
       code: fav.code,
       name: fav.name,
@@ -2274,7 +2273,8 @@ const AddFood: React.FC = () => {
       addedAt: new Date().toISOString(),
     };
 
-    await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+    const foodsPath = `users/${user.uid}/foods/${dateKey}`;
+    await arrayUnionField(foodsPath, meal, [item]);
     await upsertRecentFood({
       name: item.name,
       brand: item.brand,
@@ -2350,8 +2350,6 @@ const AddFood: React.FC = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
     const totalRaw: MacroSet =
       src.total || ({ calories: 0, carbs: 0, protein: 0, fat: 0 } as MacroSet);
 
@@ -2376,7 +2374,8 @@ const AddFood: React.FC = () => {
       addedAt: new Date().toISOString(),
     };
 
-    await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+    const foodsPath = `users/${user.uid}/foods/${dateKey}`;
+    await arrayUnionField(foodsPath, meal, [item]);
 
     trackEvent("diary_add_from_history", {
       uid: user.uid,
@@ -2451,8 +2450,6 @@ const AddFood: React.FC = () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
     const item = {
       code: null,
       name: preset.name,
@@ -2470,7 +2467,8 @@ const AddFood: React.FC = () => {
       addedAt: new Date().toISOString(),
     };
 
-    await setDoc(userRef, { [meal]: arrayUnion(item) }, { merge: true });
+    const foodsPath = `users/${user.uid}/foods/${dateKey}`;
+    await arrayUnionField(foodsPath, meal, [item]);
 
     trackEvent("diary_add_from_meal_preset", {
       uid: user.uid,
