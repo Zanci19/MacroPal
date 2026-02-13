@@ -1073,19 +1073,34 @@ const Home: React.FC = () => {
     setLastDeleted(null);
 
     try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", dayKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
+      if (isDemoMode) {
+        // Demo mode - use demo firestore
+        const path = `users/${uid}/foods/${dayKey}`;
+        const data = (await getDocData(path)) as DayDiaryDoc || {};
         const cur: DiaryEntry[] = [...(data[meal] || [])];
 
         const exists = cur.some((x) => x.addedAt === item.addedAt);
         if (!exists) {
           const pos = Math.min(Math.max(index, 0), cur.length);
           cur.splice(pos, 0, item);
-          tx.set(ref, { [meal]: cur }, { merge: true });
+          await setDocData(path, { [meal]: cur }, { merge: true });
         }
-      });
+      } else {
+        // Normal mode - use Firebase transaction
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "users", uid, "foods", dayKey);
+          const snap = await tx.get(ref);
+          const data = snap.data() || {};
+          const cur: DiaryEntry[] = [...(data[meal] || [])];
+
+          const exists = cur.some((x) => x.addedAt === item.addedAt);
+          if (!exists) {
+            const pos = Math.min(Math.max(index, 0), cur.length);
+            cur.splice(pos, 0, item);
+            tx.set(ref, { [meal]: cur }, { merge: true });
+          }
+        });
+      }
 
       trackEvent("food_undo_delete_success", {
         uid,
