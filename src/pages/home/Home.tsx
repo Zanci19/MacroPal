@@ -1009,7 +1009,7 @@ const Home: React.FC = () => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
         const path = `users/${uid}/foods/${dayKey}`;
-        const data = (await getDocData(path)) as DayDiaryDoc || {};
+        const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const arr: DiaryEntry[] = [...(data[meal] || [])];
         const idx = arr.findIndex((x) => x.addedAt === item.addedAt);
         if (idx >= 0) arr.splice(idx, 1);
@@ -1076,7 +1076,7 @@ const Home: React.FC = () => {
       if (isDemoMode) {
         // Demo mode - use demo firestore
         const path = `users/${uid}/foods/${dayKey}`;
-        const data = (await getDocData(path)) as DayDiaryDoc || {};
+        const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const cur: DiaryEntry[] = [...(data[meal] || [])];
 
         const exists = cur.some((x) => x.addedAt === item.addedAt);
