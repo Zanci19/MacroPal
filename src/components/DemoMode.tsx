@@ -144,7 +144,7 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
             Your browser does not support the video tag.
           </video>
           <div className="demo-video-overlay">
-            <p className="demo-video-text"><b>Klikni za predogled aplikacije!</b></p>
+            <p className="demo-video-text"><b>Klikni za preizkus aplikacije!</b></p>
           </div>
         </div>
       ) : (
