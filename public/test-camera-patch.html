@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test PWA Camera Modal Patch</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Camera Modal Patch Test</h1>
+    
+    <div id="test-results"></div>
+    
+    <button id="runTests">Run Tests</button>
+    <button id="testCamera">Test Camera Modal</button>
+    
+    <script type="module">
+        const resultsDiv = document.getElementById('test-results');
+        
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        async function runTests() {
+            resultsDiv.innerHTML = '';
+            addResult('Starting tests...', 'info');
+            
+            try {
+                // Test 1: Check if PWA elements are available
+                addResult('Test 1: Checking if @ionic/pwa-elements is loaded...', 'info');
+                
+                // Load PWA elements
+                const { defineCustomElements } = await import('/node_modules/@ionic/pwa-elements/loader/index.js');
+                await defineCustomElements(window);
+                
+                addResult('✓ PWA Elements loaded successfully', 'success');
+                
+                // Wait for custom element to be defined
+                await customElements.whenDefined('pwa-camera-modal');
+                addResult('✓ pwa-camera-modal custom element is defined', 'success');
+                
+                // Test 2: Check if patch is applied
+                addResult('Test 2: Checking if patch is applied...', 'info');
+                
+                // Apply our patch (simulating what capacitorCameraPatch.ts does)
+                const cameraModalConstructor = customElements.get('pwa-camera-modal');
+                const originalPrototype = cameraModalConstructor.prototype;
+                const facingModeDescriptor = Object.getOwnPropertyDescriptor(originalPrototype, 'facingMode');
+                
+                if (facingModeDescriptor) {
+                    addResult('✓ facingMode property descriptor found', 'success');
+                } else {
+                    addResult('✗ facingMode property descriptor not found', 'error');
+                }
+                
+                // Test 3: Test setting facingMode before append (the bug scenario)
+                addResult('Test 3: Testing facingMode set before append...', 'info');
+                
+                const modal = document.createElement('pwa-camera-modal');
+                
+                // This is what causes the original error - setting property before append
+                try {
+                    modal.facingMode = 'environment';
+                    addResult('✓ facingMode set before append without error', 'success');
+                    
+                    // Now append and check if it works
+                    document.body.appendChild(modal);
+                    await modal.componentOnReady();
+                    
+                    const currentValue = modal.facingMode;
+                    addResult(`✓ facingMode value after componentOnReady: ${currentValue}`, 'success');
+                    
+                    // Cleanup
+                    document.body.removeChild(modal);
+                    
+                    if (currentValue === 'environment') {
+                        addResult('✓ All tests passed! The patch works correctly.', 'success');
+                    } else {
+                        addResult(`✗ facingMode value mismatch: expected 'environment', got '${currentValue}'`, 'error');
+                    }
+                } catch (error) {
+                    addResult(`✗ Error setting facingMode: ${error.message}`, 'error');
+                    console.error(error);
+                }
+                
+            } catch (error) {
+                addResult(`✗ Test failed with error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        async function testCameraModal() {
+            resultsDiv.innerHTML = '';
+            addResult('Testing camera modal creation (simulating Camera.getPhoto)...', 'info');
+            
+            try {
+                if (!customElements.get('pwa-camera-modal')) {
+                    addResult('✗ pwa-camera-modal not defined. Run tests first.', 'error');
+                    return;
+                }
+                
+                // Simulate what @capacitor/camera does
+                const cameraModal = document.createElement('pwa-camera-modal');
+                cameraModal.facingMode = 'environment'; // Set before append (the bug scenario)
+                
+                addResult('✓ Created modal and set facingMode', 'success');
+                
+                document.body.appendChild(cameraModal);
+                addResult('✓ Appended modal to body', 'success');
+                
+                await cameraModal.componentOnReady();
+                addResult('✓ componentOnReady completed', 'success');
+                
+                cameraModal.addEventListener('onPhoto', (e) => {
+                    addResult('Photo event received', 'info');
+                    document.body.removeChild(cameraModal);
+                });
+                
+                cameraModal.present();
+                addResult('✓ Modal presented successfully!', 'success');
+                addResult('Close the modal to complete the test.', 'info');
+                
+            } catch (error) {
+                addResult(`✗ Error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        document.getElementById('runTests').addEventListener('click', runTests);
+        document.getElementById('testCamera').addEventListener('click', testCameraModal);
+        
+        // Auto-run tests on load
+        addResult('Page loaded. Click "Run Tests" to start.', 'info');
+    </script>
+</body>
+</html>

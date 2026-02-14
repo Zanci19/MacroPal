@@ -10,6 +10,15 @@
  * property sets until the component is connected and initialized.
  */
 
+// Type for Stencil component with internal properties
+interface StencilElement extends HTMLElement {
+  $instanceValues$?: Record<string, unknown>;
+  _facingMode?: string;
+  _pendingFacingMode?: string;
+  componentOnReady?: () => Promise<void>;
+  forceUpdate?: () => void;
+}
+
 // Wait for custom elements to be defined
 const patchCameraModal = () => {
   const cameraModalConstructor = customElements.get('pwa-camera-modal');
@@ -22,41 +31,41 @@ const patchCameraModal = () => {
     
     // Create a new property descriptor that handles early sets
     Object.defineProperty(originalPrototype, 'facingMode', {
-      get() {
+      get(this: StencilElement) {
         // If instance is initialized, use original getter
-        if ((this as any).$instanceValues$ !== undefined) {
-          return facingModeDescriptor?.get?.call(this) ?? (this as any)._facingMode;
+        if (this.$instanceValues$ !== undefined) {
+          return facingModeDescriptor?.get?.call(this) ?? this._facingMode;
         }
         // Otherwise return pending value
-        return (this as any)._pendingFacingMode ?? 'user';
+        return this._pendingFacingMode ?? 'user';
       },
-      set(value: string) {
+      set(this: StencilElement, value: string) {
         // If instance is initialized, use original setter
-        if ((this as any).$instanceValues$ !== undefined) {
+        if (this.$instanceValues$ !== undefined) {
           if (facingModeDescriptor?.set) {
             facingModeDescriptor.set.call(this, value);
           } else {
-            (this as any)._facingMode = value;
+            this._facingMode = value;
           }
         } else {
           // Store for later when component is connected
-          (this as any)._pendingFacingMode = value;
+          this._pendingFacingMode = value;
           
           // Set it when component is ready
-          if ((this as any).componentOnReady) {
-            (this as any).componentOnReady().then(() => {
-              if ((this as any)._pendingFacingMode !== undefined) {
-                const pendingValue = (this as any)._pendingFacingMode;
-                delete (this as any)._pendingFacingMode;
+          if (this.componentOnReady) {
+            this.componentOnReady().then(() => {
+              if (this._pendingFacingMode !== undefined) {
+                const pendingValue = this._pendingFacingMode;
+                delete this._pendingFacingMode;
                 
                 // Now set it properly
                 if (facingModeDescriptor?.set) {
                   facingModeDescriptor.set.call(this, pendingValue);
-                } else if ((this as any).$instanceValues$ !== undefined) {
-                  (this as any)._facingMode = pendingValue;
+                } else if (this.$instanceValues$ !== undefined) {
+                  this._facingMode = pendingValue;
                   // Trigger re-render if needed
-                  if (typeof (this as any).forceUpdate === 'function') {
-                    (this as any).forceUpdate();
+                  if (typeof this.forceUpdate === 'function') {
+                    this.forceUpdate();
                   }
                 }
               }
