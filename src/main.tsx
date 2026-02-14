@@ -27,6 +27,9 @@ const initializePWAElements = async () => {
     await defineCustomElements(window);
     console.log('[PWA Elements] Initialized successfully');
     
+    // Apply the camera patch after PWA elements are loaded
+    await import('./utils/capacitorCameraPatch');
+    
     // Wait a bit for custom elements to be fully registered
     await new Promise(resolve => setTimeout(resolve, 100));
     
