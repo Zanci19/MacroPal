@@ -36,7 +36,7 @@ const patchCameraModal = () => {
         if (this.$instanceValues$ !== undefined) {
           return facingModeDescriptor?.get?.call(this) ?? this._facingMode;
         }
-        // Otherwise return pending value
+        // Otherwise return pending value ('user' is the default front-facing camera)
         return this._pendingFacingMode ?? 'user';
       },
       set(this: StencilElement, value: string) {
@@ -93,7 +93,7 @@ if (!patchCameraModal()) {
     window.customElements.whenDefined('pwa-camera-modal').then(() => {
       patchCameraModal();
     }).catch((err) => {
-      console.error('[Capacitor Camera Patch] Error waiting for pwa-camera-modal:', err);
+      console.error('[Capacitor Camera Patch] Failed to initialize camera patch - camera functionality may not work correctly:', err);
     });
   }
 }
