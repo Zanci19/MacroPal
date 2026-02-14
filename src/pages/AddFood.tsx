@@ -1587,14 +1587,36 @@ const AddFood: React.FC = () => {
         return;
       }
       
-      const photo = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.DataUrl,
-        source: CameraSource.Camera,
-      });
+      let photo;
 
-      if (photo.dataUrl) {
+      try {
+        photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+        });
+      } catch (err) {
+        const errorMessage = String(err);
+        const isPwaCameraModalError = errorMessage.includes('$instanceValues$') || errorMessage.includes('facingMode');
+
+        if (!isPwaCameraModalError) {
+          throw err;
+        }
+
+        console.warn('[AI Photo] PWA camera modal failed; retrying with browser file input fallback', err);
+        trackEvent('ai_photo_camera_fallback_web_input', { meal, date: dateKey, error: errorMessage });
+
+        photo = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+          webUseInput: true,
+        });
+      }
+
+      if (photo?.dataUrl) {
         setAiPhotoDataUrl(photo.dataUrl);
         await analyzeAiPhoto(photo.dataUrl);
       }
@@ -1610,7 +1632,7 @@ const AddFood: React.FC = () => {
       
       setToast({
         show: true,
-        message: "Failed to take photo. Please try again.",
+        message: "Failed to open the camera. Please try again or refresh the page.",
         color: "danger",
       });
       trackEvent("ai_photo_camera_error", { meal, date: dateKey, error: String(err) });
