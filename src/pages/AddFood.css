@@ -84,6 +84,29 @@
   display: flex;
   gap: 8px;
   justify-content: center;
+  align-items: center;
+}
+
+.add-food-pagination--sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: var(--ion-background-color, #fff);
+  padding: 8px 16px;
+  border-top: 1px solid var(--mp-border, var(--ion-border-color, #e0e0e0));
+  /* Small shadow so it visually separates from the list */
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Spacer that reserves the same height as the sticky bar so the last
+   food item can be scrolled fully into view above the bar */
+.add-food-pagination-spacer {
+  height: 60px;
+}
+
+.add-food-end-of-results {
+  font-size: 0.875rem;
+  padding: 0 8px;
 }
 
 .add-food-section-text {

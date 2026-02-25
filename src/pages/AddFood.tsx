@@ -507,6 +507,8 @@ const AddFood: React.FC = () => {
   const [results, setResults] = useState<OFFSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [foodDetailsLoading, setFoodDetailsLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<OFFProduct | null>(null);
   const [useServing, setUseServing] = useState<boolean>(false);
@@ -586,6 +588,7 @@ const AddFood: React.FC = () => {
 
   const searchAbortRef = useRef<AbortController | null>(null);
   const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
+  const hasMoreCacheRef = useRef<Map<string, boolean>>(new Map());
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const contentRef = useRef<HTMLIonContentElement | null>(null);
@@ -1316,6 +1319,7 @@ const AddFood: React.FC = () => {
     if (cached) {
       setResults(cached);
       setPage(pageNumber);
+      setHasMore(hasMoreCacheRef.current.get(cacheKey) ?? true);
       return cached.length;
     }
 
@@ -1445,12 +1449,15 @@ const AddFood: React.FC = () => {
 
       const deduped: OFFSearchHit[] = [];
       const seen = new Set<string>();
-      for (const item of localResults) {
-        const f = item;
-        const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        deduped.push(f);
+      // Only include local results on the first page to keep per-page counts consistent
+      if (pageNumber === 1) {
+        for (const item of localResults) {
+          const f = item;
+          const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(f);
+        }
       }
       for (const item of kept) {
         const f = item.food;
@@ -1460,10 +1467,16 @@ const AddFood: React.FC = () => {
         deduped.push(f);
       }
 
+      // Determine if there are more pages: the API returned a full page of results
+      const apiPageSize = 20;
+      const moreAvailable = foods.length >= apiPageSize;
+      setHasMore(moreAvailable);
+
       setResults(deduped);
       setPage(pageNumber);
 
       searchCacheRef.current.set(cacheKey, deduped);
+      hasMoreCacheRef.current.set(cacheKey, moreAvailable);
 
       recordRecentQuery(raw);
 
@@ -1530,6 +1543,7 @@ const AddFood: React.FC = () => {
       return;
     }
 
+    setFoodDetailsLoading(true);
     try {
       const r = await fetch(
         `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
@@ -1568,6 +1582,8 @@ const AddFood: React.FC = () => {
         code,
         error: e?.message || String(e),
       });
+    } finally {
+      setFoodDetailsLoading(false);
     }
   };
 
@@ -3047,6 +3063,7 @@ const AddFood: React.FC = () => {
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
                     button
+                    disabled={foodDetailsLoading}
                     onClick={() => {
                       console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
                       trackEvent("search_result_click", {
@@ -3073,31 +3090,47 @@ const AddFood: React.FC = () => {
               })}
             </IonList>
 
-            {results.length > 0 && (
-              <div className="add-food-pagination">
-                <IonButton
-                  size="small"
-                  disabled={page <= 1 || loading}
-                  onClick={() => {
-                    console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
-                    trackEvent("food_search_page_prev", { page, query });
-                    foodsSearch(query.trim(), page - 1);
-                  }}
-                >
-                  Previous
-                </IonButton>
-                <IonButton
-                  size="small"
-                  disabled={loading}
-                  onClick={() => {
-                    console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
-                    trackEvent("food_search_page_next", { page, query });
-                    foodsSearch(query.trim(), page + 1);
-                  }}
-                >
-                  Next
-                </IonButton>
+            {foodDetailsLoading && (
+              <div className="ion-text-center add-food-loading-state-sm">
+                <IonSpinner name="crescent" />
               </div>
+            )}
+
+            {results.length > 0 && (
+              <>
+                {/* Spacer so the last result can be scrolled above the sticky bar */}
+                <div className="add-food-pagination-spacer" />
+                <div className="add-food-pagination add-food-pagination--sticky">
+                  <IonButton
+                    fill="outline"
+                    disabled={page <= 1 || loading}
+                    onClick={() => {
+                      console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
+                      trackEvent("food_search_page_prev", { page, query });
+                      foodsSearch(query.trim(), page - 1);
+                    }}
+                  >
+                    ← Prev
+                  </IonButton>
+                  {hasMore ? (
+                    <IonButton
+                      fill="outline"
+                      disabled={loading}
+                      onClick={() => {
+                        console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
+                        trackEvent("food_search_page_next", { page, query });
+                        foodsSearch(query.trim(), page + 1);
+                      }}
+                    >
+                      Next →
+                    </IonButton>
+                  ) : (
+                    <IonText color="medium" className="add-food-end-of-results">
+                      You've reached the end!
+                    </IonText>
+                  )}
+                </div>
+              </>
             )}
           </>
         )}
