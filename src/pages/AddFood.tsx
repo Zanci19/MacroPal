@@ -31,6 +31,7 @@ import {
   IonIcon,
   IonAlert,
   IonActionSheet,
+  IonFooter,
 } from "@ionic/react";
 
 import { Keyboard } from "@capacitor/keyboard";
@@ -507,8 +508,10 @@ const AddFood: React.FC = () => {
   const [results, setResults] = useState<OFFSearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
+  const [noMoreResults, setNoMoreResults] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedFood, setSelectedFood] = useState<OFFProduct | null>(null);
+  const [foodDetailLoading, setFoodDetailLoading] = useState<string | null>(null);
   const [useServing, setUseServing] = useState<boolean>(false);
   const [servingsQty, setServingsQty] = useState<number>(1);
   const [weightQty, setWeightQty] = useState<number>(100);
@@ -1306,6 +1309,10 @@ const AddFood: React.FC = () => {
     }
     forceResultsScrollRef.current = true;
 
+    if (pageNumber === 1) {
+      setNoMoreResults(false);
+    }
+
     const normalizedQuery = normalizeText(raw);
     const queryTokens = tokenize(raw);
     const expandedTokens = queryTokens.map(expandToken);
@@ -1445,12 +1452,14 @@ const AddFood: React.FC = () => {
 
       const deduped: OFFSearchHit[] = [];
       const seen = new Set<string>();
-      for (const item of localResults) {
-        const f = item;
-        const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        deduped.push(f);
+      if (pageNumber === 1) {
+        for (const item of localResults) {
+          const f = item;
+          const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(f);
+        }
       }
       for (const item of kept) {
         const f = item.food;
@@ -1460,8 +1469,20 @@ const AddFood: React.FC = () => {
         deduped.push(f);
       }
 
+      // Determine if there are more pages based on API total count
+      const hasMorePages = typeof data.count === 'number'
+        ? pageNumber * 20 < data.count
+        : foods.length >= 20;
+
+      // If navigating forward and got no new results, stay on current page
+      if (pageNumber > 1 && deduped.length === 0) {
+        setNoMoreResults(true);
+        return 0;
+      }
+
       setResults(deduped);
       setPage(pageNumber);
+      setNoMoreResults(!hasMorePages);
 
       searchCacheRef.current.set(cacheKey, deduped);
 
@@ -1515,6 +1536,8 @@ const AddFood: React.FC = () => {
       date: dateKey,
     });
 
+    setFoodDetailLoading(code);
+
     const localMatch = BASIC_FOODS_BY_CODE.get(code);
     if (localMatch) {
       setSelectedFood({ ...localMatch, dataSource: "local" });
@@ -1522,6 +1545,7 @@ const AddFood: React.FC = () => {
       setServingsQty(1);
       setWeightQty(100);
       setOpen(true);
+      setFoodDetailLoading(null);
       trackEvent("food_details_by_code_success", {
         code,
         hasServing: false,
@@ -1568,6 +1592,8 @@ const AddFood: React.FC = () => {
         code,
         error: e?.message || String(e),
       });
+    } finally {
+      setFoodDetailLoading(null);
     }
   };
 
@@ -3047,6 +3073,7 @@ const AddFood: React.FC = () => {
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
                     button
+                    disabled={foodDetailLoading !== null}
                     onClick={() => {
                       console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
                       trackEvent("search_result_click", {
@@ -3068,36 +3095,16 @@ const AddFood: React.FC = () => {
                           } g · Fat ${preview.fat || 0} g`}
                       </p>
                     </IonLabel>
+                    {foodDetailLoading === food.code && (
+                      <IonSpinner slot="end" name="crescent" />
+                    )}
                   </IonItem>
                 );
               })}
             </IonList>
 
-            {results.length > 0 && (
-              <div className="add-food-pagination">
-                <IonButton
-                  size="small"
-                  disabled={page <= 1 || loading}
-                  onClick={() => {
-                    console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
-                    trackEvent("food_search_page_prev", { page, query });
-                    foodsSearch(query.trim(), page - 1);
-                  }}
-                >
-                  Previous
-                </IonButton>
-                <IonButton
-                  size="small"
-                  disabled={loading}
-                  onClick={() => {
-                    console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
-                    trackEvent("food_search_page_next", { page, query });
-                    foodsSearch(query.trim(), page + 1);
-                  }}
-                >
-                  Next
-                </IonButton>
-              </div>
+            {noMoreResults && results.length > 0 && (
+              <p className="add-food-end-of-results">You've reached the end!</p>
             )}
           </>
         )}
@@ -4067,6 +4074,39 @@ const AddFood: React.FC = () => {
           ]}
         />
       </IonContent>
+
+      {tab === "search" && results.length > 0 && (
+        <IonFooter>
+          <IonToolbar className="add-food-pagination-toolbar">
+            <div className="add-food-pagination">
+              <IonButton
+                expand="block"
+                fill="outline"
+                disabled={page <= 1 || loading}
+                onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
+                  trackEvent("food_search_page_prev", { page, query });
+                  foodsSearch(query.trim(), page - 1);
+                }}
+              >
+                ← Prev
+              </IonButton>
+              <IonButton
+                expand="block"
+                fill="outline"
+                disabled={loading || noMoreResults}
+                onClick={() => {
+                  console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
+                  trackEvent("food_search_page_next", { page, query });
+                  foodsSearch(query.trim(), page + 1);
+                }}
+              >
+                Next →
+              </IonButton>
+            </div>
+          </IonToolbar>
+        </IonFooter>
+      )}
     </IonPage>
   );
 };
