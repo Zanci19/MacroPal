@@ -83,7 +83,24 @@
 .add-food-pagination {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  padding: 4px 8px;
+}
+
+.add-food-pagination ion-button {
+  flex: 1;
+}
+
+.add-food-pagination-toolbar {
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+.add-food-end-of-results {
+  text-align: center;
+  padding: 12px;
+  opacity: 0.6;
+  font-size: 0.875rem;
+  font-style: italic;
 }
 
 .add-food-section-text {
