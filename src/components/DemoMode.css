@@ -33,12 +33,12 @@
   background-color: rgba(0, 0, 0, 0.7);
   border-radius: 8px;
   pointer-events: none;
-  opacity: 0.75;
+  opacity: 0.55;
 }
 
 .demo-video-text {
   color: #ffae00;
-  font-size: 52px;
+  font-size: 88px;
   margin: 0;
   text-align: center;
   font-weight: 500;
