@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -16,14 +16,18 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import "./CheckLogin.css";
 
 type Phase = "checking" | "offline" | "error";
+const AUTH_CHECK_TIMEOUT_MS = 12000;
 
 const CheckLogin: React.FC = () => {
   const history = useHistory();
   const [phase, setPhase] = useState<Phase>("checking");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [showSlowMessage, setShowSlowMessage] = useState(false);
+  const checkCleanupRef = useRef<(() => void) | null>(null);
 
   const startCheck = () => {
+    checkCleanupRef.current?.();
+
     // If we're offline, redirect to offline page immediately
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       history.replace("/offline");
@@ -33,11 +37,31 @@ const CheckLogin: React.FC = () => {
     setPhase("checking");
     setErrorMsg("");
 
-    const unsub = onAuthStateChanged(
+    let settled = false;
+    let unsub: (() => void) | null = null;
+
+    const finishCheck = () => {
+      settled = true;
+      timeoutId && clearTimeout(timeoutId);
+      unsub?.();
+      unsub = null;
+    };
+
+    const timeoutId = window.setTimeout(() => {
+      if (settled) return;
+
+      finishCheck();
+      setErrorMsg(
+        "Account check timed out. Please verify your internet connection and try again."
+      );
+      setPhase("error");
+    }, AUTH_CHECK_TIMEOUT_MS);
+
+    unsub = onAuthStateChanged(
       auth,
       async (user) => {
         // We only care about the first value
-        unsub?.();
+        finishCheck();
 
         // If we lost connection in the meantime, redirect to offline
         if (typeof navigator !== "undefined" && !navigator.onLine) {
@@ -78,6 +102,10 @@ const CheckLogin: React.FC = () => {
         setPhase("error");
       }
     );
+
+    checkCleanupRef.current = () => {
+      finishCheck();
+    };
   };
 
   useEffect(() => {
@@ -96,6 +124,7 @@ const CheckLogin: React.FC = () => {
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      checkCleanupRef.current?.();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
