@@ -13,7 +13,7 @@ import {
   checkmarkCircleOutline,
 } from "ionicons/icons";
 import { db } from "../firebase";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { auth } from "../firebase";
 import "./WaterIntake.css";
 
@@ -36,31 +36,36 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Load water intake data
+  // Load water intake data with real-time listener
   useEffect(() => {
-    const loadWaterData = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const waterDocRef = doc(db, `users/${user.uid}/water/${dateKey}`);
-        const waterDoc = await getDoc(waterDocRef);
-
-        if (waterDoc.exists()) {
-          const data = waterDoc.data() as WaterIntakeData;
+    const waterDocRef = doc(db, `users/${user.uid}/water/${dateKey}`);
+    const unsub = onSnapshot(
+      waterDocRef,
+      (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as WaterIntakeData;
           setWaterData({
             glasses: data.glasses || 0,
             goal: data.goal || 8,
           });
+        } else {
+          setWaterData({ glasses: 0, goal: 8 });
         }
-      } catch (error) {
+        setLoading(false);
+      },
+      (error) => {
         console.error("Error loading water data:", error);
-      } finally {
         setLoading(false);
       }
-    };
+    );
 
-    loadWaterData();
+    return unsub;
   }, [dateKey]);
 
   const updateWaterIntake = async (newGlasses: number) => {

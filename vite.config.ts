@@ -24,7 +24,6 @@ export default defineConfig({
           'ionic-core': ['@ionic/react', '@ionic/react-router'],
           'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           'recharts': ['recharts'],
-          'swiper': ['swiper'],
         },
       },
     },
