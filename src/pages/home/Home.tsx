@@ -47,11 +47,8 @@ import {
   chevronDownOutline,
   rocketOutline,
 } from "ionicons/icons";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/pagination";
 import type { Swiper as SwiperClass } from "swiper";
+import type { SwiperProps, SwiperSlideProps } from "swiper/react";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
 import {
@@ -648,15 +645,15 @@ const Home: React.FC = () => {
       : 0;
   }, [profile]);
 
-  const shouldTrackSnapshot = useCallback((key: "day" | "workout") => {
+  const shouldTrackSnapshotRef = useRef((key: "day" | "workout") => {
     const now = Date.now();
     const last = snapshotTrackRef.current[key];
     if (now - last < 10000) return false;
     snapshotTrackRef.current[key] = now;
     return true;
-  }, []);
+  });
 
-  const mealSignature = useCallback((entries: DiaryEntry[]) => {
+  const mealSignatureRef = useRef((entries: DiaryEntry[]) => {
     if (entries.length === 0) return "0";
     let calories = 0;
     let latest = "";
@@ -667,7 +664,7 @@ const Home: React.FC = () => {
       }
     }
     return `${entries.length}:${Math.round(calories * 100) / 100}:${latest}`;
-  }, []);
+  });
 
   const dayDataSignatureRef = useRef<string>("");
 
@@ -710,10 +707,10 @@ const Home: React.FC = () => {
         snacks: raw?.snacks ?? [],
       };
       const nextSignature = [
-        mealSignature(nextDay.breakfast),
-        mealSignature(nextDay.lunch),
-        mealSignature(nextDay.dinner),
-        mealSignature(nextDay.snacks),
+        mealSignatureRef.current(nextDay.breakfast),
+        mealSignatureRef.current(nextDay.lunch),
+        mealSignatureRef.current(nextDay.dinner),
+        mealSignatureRef.current(nextDay.snacks),
       ].join("|");
       if (nextSignature !== dayDataSignatureRef.current) {
         dayDataSignatureRef.current = nextSignature;
@@ -733,7 +730,7 @@ const Home: React.FC = () => {
         nextDay.dinner.length +
         nextDay.snacks.length;
 
-      if (shouldTrackSnapshot("day")) {
+      if (shouldTrackSnapshotRef.current("day")) {
         trackEvent("day_diary_snapshot", {
           uid,
           date: activeDateKey,
@@ -758,7 +755,7 @@ const Home: React.FC = () => {
 
       setWorkoutCalories(Math.max(0, Math.round(totalBonus)));
 
-      if (shouldTrackSnapshot("workout")) {
+      if (shouldTrackSnapshotRef.current("workout")) {
         trackEvent("workout_snapshot", {
           uid,
           date: activeDateKey,
@@ -788,7 +785,7 @@ const Home: React.FC = () => {
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [activeDateKey, mealSignature, shouldTrackSnapshot, uid, isDemoMode, onSnapshotDoc]);
+  }, [activeDateKey, uid, isDemoMode, onSnapshotDoc]);
 
   useEffect(() => {
     if (!isViewActive) return;
@@ -821,6 +818,24 @@ const Home: React.FC = () => {
   const showWellnessTip = profile?.showWellnessTip ?? true;
   const showAchievements = profile?.showAchievements ?? true;
   const summarySwiperRef = useRef<SwiperClass | null>(null);
+
+  // Lazily load Swiper when the Home page mounts (avoids including the 67KB chunk in the initial bundle)
+  const [swiperParts, setSwiperParts] = useState<{
+    Swiper: React.ComponentType<SwiperProps>;
+    SwiperSlide: React.ComponentType<SwiperSlideProps>;
+    Pagination: unknown;
+  } | null>(null);
+
+  useEffect(() => {
+    void Promise.all([
+      import("swiper/react"),
+      import("swiper/modules"),
+      import("swiper/css"),
+      import("swiper/css/pagination"),
+    ]).then(([{ Swiper, SwiperSlide }, { Pagination }]) => {
+      setSwiperParts({ Swiper, SwiperSlide, Pagination });
+    });
+  }, []);
 
   useEffect(() => {
     if (quoteDateKey === todayKey) {
@@ -2160,6 +2175,10 @@ const Home: React.FC = () => {
     }
   }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading, showTutorialWithDelay]);
 
+  // Unwrap lazily-loaded Swiper components for use in JSX
+  const SwiperComp = swiperParts?.Swiper;
+  const SwiperSlideComp = swiperParts?.SwiperSlide;
+  const PaginationMod = swiperParts?.Pagination;
 
   return (
     <IonPage>
@@ -2236,8 +2255,9 @@ const Home: React.FC = () => {
         </div>
 
         <IonCard className="fs-summary">
-          <Swiper
-            modules={[Pagination]}
+          {SwiperComp && SwiperSlideComp && PaginationMod ? (
+          <SwiperComp
+            modules={[PaginationMod as never]}
             pagination={{ clickable: true }}
             slidesPerView={1}
             autoHeight
@@ -2251,7 +2271,7 @@ const Home: React.FC = () => {
             }}
             onSlideChange={handleSummarySlideChange}
           >
-            <SwiperSlide>
+            <SwiperSlideComp>
               <div className="fs-summary__slide">
                 <IonCardHeader className="fs-summary__hdr">
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -2497,9 +2517,9 @@ const Home: React.FC = () => {
                   </div>
                 )}
               </div>
-            </SwiperSlide>
+            </SwiperSlideComp>
 
-            <SwiperSlide>
+            <SwiperSlideComp>
               <div className="fs-summary__slide">
                 <IonCardHeader className="fs-summary__hdr">
                   <IonCardTitle>Nutrition breakdown</IonCardTitle>
@@ -2529,9 +2549,9 @@ const Home: React.FC = () => {
                   )}
                 </IonCardContent>
               </div>
-            </SwiperSlide>
+            </SwiperSlideComp>
 
-            <SwiperSlide>
+            <SwiperSlideComp>
               <div className="fs-summary__slide">
                 <IonCardHeader className="fs-summary__hdr">
                   <IonCardTitle>Weigh-in</IonCardTitle>
@@ -2545,9 +2565,9 @@ const Home: React.FC = () => {
                   </IonButton>
                 </IonCardContent>
               </div>
-            </SwiperSlide>
+            </SwiperSlideComp>
 
-            <SwiperSlide>
+            <SwiperSlideComp>
               <div className="fs-summary__slide">
                 <IonCardHeader className="fs-summary__hdr">
                   <IonCardTitle>Water Intake</IonCardTitle>
@@ -2556,10 +2576,10 @@ const Home: React.FC = () => {
                   <WaterIntake dateKey={activeDateKey} />
                 </IonCardContent>
               </div>
-            </SwiperSlide>
+            </SwiperSlideComp>
 
             {showAchievements && (
-              <SwiperSlide>
+              <SwiperSlideComp>
                 <div className="fs-summary__slide">
                   <IonCardHeader className="fs-summary__hdr">
                     <IonCardTitle>Achievements</IonCardTitle>
@@ -2588,11 +2608,11 @@ const Home: React.FC = () => {
                     )}
                   </IonCardContent>
                 </div>
-              </SwiperSlide>
+              </SwiperSlideComp>
             )}
 
             {showWellnessTip && (
-              <SwiperSlide>
+              <SwiperSlideComp>
                 <div className="fs-summary__slide">
                   <IonCardHeader className="fs-tip-card__hdr">
                     <div className="fs-tip-card__title">
@@ -2616,9 +2636,12 @@ const Home: React.FC = () => {
                     )}
                   </IonCardContent>
                 </div>
-              </SwiperSlide>
+              </SwiperSlideComp>
             )}
-          </Swiper>
+          </SwiperComp>
+          ) : (
+            <div className="ion-padding ion-text-center"><IonSpinner name="dots" /></div>
+          )}
         </IonCard>
 
         {loading && (

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -84,6 +84,8 @@ import "./Analytics.css";
    Types / constants
    ============================ */
 type TF = "7d" | "30d" | "60d";
+
+const TF_DAYS: Record<TF, number> = { "7d": 7, "30d": 30, "60d": 60 };
 
 const MEALS: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
 
@@ -176,6 +178,8 @@ const Analytics: React.FC = () => {
   const [loading, setLoading] = useState(true); // loading for analytics data
   const [tf, setTf] = useState<TF>("30d");
   const [days, setDays] = useState<DayRoll[]>([]);
+  // Track how many days have been fetched so we don't re-fetch smaller ranges
+  const fetchedCountRef = useRef(0);
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isViewActive, setIsViewActive] = useState(true);
@@ -210,8 +214,8 @@ const Analytics: React.FC = () => {
     setIsViewActive(false);
   });
 
-  // Fetch last 60 days whenever we have a uid and auth has settled
-  const fetchDays = useCallback(async () => {
+  // Fetch the most recent `count` days of diary and weight data
+  const fetchDays = useCallback(async (count: number) => {
     if (!uid) {
       setDays([]);
       setWeightEntries([]);
@@ -222,7 +226,7 @@ const Analytics: React.FC = () => {
     setLoading(true);
     try {
       const today = new Date();
-      const keys = Array.from({ length: 60 }, (_, i) =>
+      const keys = Array.from({ length: count }, (_, i) =>
         dayKey(addDays(today, -i))
       );
       
@@ -293,6 +297,7 @@ const Analytics: React.FC = () => {
 
       setDays(list);
       setWeightEntries(weighList);
+      fetchedCountRef.current = count;
     } catch (error) {
       console.error("Error fetching analytics data:", error);
       trackEvent("analytics_fetch_error", {
@@ -308,19 +313,23 @@ const Analytics: React.FC = () => {
       console.log(`[USER ACTION] Analytics: Pull-to-refresh triggered`);
       try {
         trackEvent("analytics_refresh");
-        await fetchDays();
+        const needed = TF_DAYS[tf];
+        fetchedCountRef.current = 0; // force re-fetch
+        await fetchDays(needed);
       } finally {
         event.detail.complete();
       }
     },
-    [fetchDays]
+    [fetchDays, tf]
   );
 
+  // Only fetch when switching to a larger timeframe than already cached
   useEffect(() => {
-    if (!authLoading) {
-      void fetchDays();
-    }
-  }, [authLoading, fetchDays]);
+    if (authLoading) return;
+    const needed = TF_DAYS[tf];
+    if (fetchedCountRef.current >= needed) return;
+    void fetchDays(needed);
+  }, [authLoading, tf, fetchDays]);
 
   // timeframe slice
   const view = useMemo(() => {
@@ -553,7 +562,7 @@ const Analytics: React.FC = () => {
       .slice(0, 10);
   }, [nonEmptyView]);
 
-  const timeframeDays = tf === "7d" ? 7 : tf === "30d" ? 30 : 60;
+  const timeframeDays = TF_DAYS[tf];
   const weightView = useMemo(() => {
     if (!weightEntries.length) return [];
     const end = new Date();
