@@ -518,11 +518,6 @@ ion-list {
   }
 }
 
-ion-card,
-ion-item {
-  animation: mp-fade-in-up .24s ease both;
-}
-
 html,
 body,
 ion-content {

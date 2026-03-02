@@ -232,7 +232,11 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   // Refs for tracking tab navigation state across renders
   const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
   const lastDirectionRef = useRef<"forward" | "back" | null>(null);
-  
+  // Mutable ref updated synchronously each render so the animation builder can read
+  // the current pathname without being recreated on every navigation.
+  const locationPathnameRef = useRef(location.pathname);
+  locationPathnameRef.current = location.pathname;
+
   // Track animation preference
   const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => {
     const stored = localStorage.getItem("mp_tab_animations");
@@ -345,7 +349,18 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         return rootAnimation;
       }
 
-      const currentTabIndex = getTabIndex(getActiveTab());
+      // Read current path from ref (updated synchronously on every render) so the
+      // animation builder doesn't need location in its deps and won't be recreated
+      // on every navigation — only when animationsEnabled changes.
+      const activePath = locationPathnameRef.current || "";
+      const currentTabIndex = getTabIndex(
+        activePath.startsWith("/app/analytics") ? "analytics" :
+        activePath.startsWith("/app/home") ? "home" :
+        activePath.startsWith("/app/workout") ? "workout" :
+        activePath.startsWith("/app/settings") ? "settings" :
+        activePath.startsWith("/app/changelog") ? "settings" :
+        "home"
+      );
       const previousTabIndex = previousTabIndexRef.current;
 
       const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
@@ -394,7 +409,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             )
         );
 
-      // Leaving page slides out 50% for iPhone-style parallax effect (overlapped by entering page)
+      // Leaving page slides out 35% for iPhone-style parallax effect (overlapped by entering page)
       if (leavingEl) {
         rootAnimation.addAnimation(
           createAnimation()
@@ -418,7 +433,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
       return rootAnimation;
     },
-    [animationsEnabled, getActiveTab] // Re-create animation when preference or active tab logic changes
+    [animationsEnabled] // Only recreate when animation enabled/disabled preference changes
   );
 
   const tabClass = (tabName: string) =>

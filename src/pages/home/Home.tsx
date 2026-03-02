@@ -551,6 +551,9 @@ const Home: React.FC = () => {
   const [autoExpandMealsEnabled, setAutoExpandMealsEnabled] = useState<boolean>(() => {
     return getAutoExpandMealsPreference();
   });
+  // Ref so startHomeListeners can read the latest value without being recreated when it changes
+  const autoExpandMealsEnabledRef = useRef(autoExpandMealsEnabled);
+  autoExpandMealsEnabledRef.current = autoExpandMealsEnabled;
   const [showMealCountsEnabled, setShowMealCountsEnabled] = useState<boolean>(() => {
     return getMealCountPreference();
   });
@@ -717,7 +720,7 @@ const Home: React.FC = () => {
         setDayData(nextDay);
         if (collapsedInitKeyRef.current !== activeDateKey) {
           collapsedInitKeyRef.current = activeDateKey;
-          if (autoExpandMealsEnabled) {
+          if (autoExpandMealsEnabledRef.current) {
             setCollapsedMeals(computeCollapsedMeals(nextDay));
           }
         }
@@ -785,7 +788,7 @@ const Home: React.FC = () => {
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [activeDateKey, autoExpandMealsEnabled, mealSignature, shouldTrackSnapshot, uid, isDemoMode, onSnapshotDoc]);
+  }, [activeDateKey, mealSignature, shouldTrackSnapshot, uid, isDemoMode, onSnapshotDoc]);
 
   useEffect(() => {
     if (!isViewActive) return;
