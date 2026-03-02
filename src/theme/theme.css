@@ -408,8 +408,10 @@ body.dark ion-alert .alert-button {
   background: var(--mp-text-muted);
 }
 
-/* Performance optimizations: CSS containment for layout performance */
-ion-page,
+/* Performance optimizations: CSS containment for layout performance.
+   NOTE: ion-page is intentionally excluded — Ionic manages its own containment
+   (contain: layout style size) and overriding with `paint` creates a new stacking
+   context that can break z-index during slide transitions. */
 ion-content,
 ion-card,
 ion-item,
