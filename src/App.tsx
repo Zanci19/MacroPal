@@ -108,6 +108,7 @@ const LAZY_ROUTE_IMPORTS = [
   importWorkout,
   importChangelog,
   importScanBarcode,
+  importRecipeCalculator,
   importPhotoFoodLogger,
 ];
 
@@ -200,12 +201,29 @@ const ScanBarcodeRoute: React.FC<RouteComponentProps> = (props) => {
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "home", "workout", "settings"];
+const SETTINGS_PATH_PREFIXES = [
+  "/app/settings",
+  "/app/changelog",
+  "/app/energy-needs",
+  "/app/units",
+  "/app/reminders",
+  "/app/data-privacy",
+];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
 const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
 const QUICK_ADD_URL = "/add-food?autoMeal=1&quickAdd=1";
+
+const resolveTabFromPath = (path: string) => {
+  if (path.startsWith("/app/analytics")) return "analytics";
+  if (path.startsWith("/app/home")) return "home";
+  if (path.startsWith("/app/workout")) return "workout";
+  if (SETTINGS_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return "settings";
+
+  return "home";
+};
 
 // Detect reduced motion preference safely
 const getPrefersReducedMotion = () => {
@@ -259,19 +277,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     };
   }, []);
 
-  const getActiveTab = useCallback(() => {
-    const path = location.pathname || "";
-
-    if (path.startsWith("/app/analytics")) return "analytics";
-    if (path.startsWith("/app/home")) return "home";
-    if (path.startsWith("/app/workout")) return "workout";
-    if (path.startsWith("/app/changelog")) return "settings";
-    if (path.startsWith("/app/settings")) return "settings";
-
-    return "home";
-  }, [location.pathname]);
-
-  const activeTab = getActiveTab();
+  const activeTab = useMemo(() => resolveTabFromPath(location.pathname || ""), [location.pathname]);
   const isTabRootRoute = (path: string) =>
     [
       "/app/analytics",
@@ -288,7 +294,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     href: string,
   ) => {
     console.log(`[USER ACTION] Tab Navigation: Clicked ${tabName} tab`, {
-      from: getActiveTab(),
+      from: activeTab,
       to: tabName,
       href,
       eventType: event.type,
@@ -297,7 +303,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     if ("preventDefault" in event && typeof event.preventDefault === "function") {
       event.preventDefault();
     }
-    const currentTab = getActiveTab();
+    const currentTab = activeTab;
     if (currentTab === tabName) return;
 
     const currentTabIndex = getTabIndex(currentTab);
@@ -353,14 +359,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       // animation builder doesn't need location in its deps and won't be recreated
       // on every navigation — only when animationsEnabled changes.
       const activePath = locationPathnameRef.current || "";
-      const currentTabIndex = getTabIndex(
-        activePath.startsWith("/app/analytics") ? "analytics" :
-        activePath.startsWith("/app/home") ? "home" :
-        activePath.startsWith("/app/workout") ? "workout" :
-        activePath.startsWith("/app/settings") ? "settings" :
-        activePath.startsWith("/app/changelog") ? "settings" :
-        "home"
-      );
+      const currentTabIndex = getTabIndex(resolveTabFromPath(activePath));
       const previousTabIndex = previousTabIndexRef.current;
 
       const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
@@ -501,31 +500,33 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       </IonRouterOutlet>
 
       <IonTabBar slot="bottom" className="mp-tabbar">
-        <IonTabButton
-          tab="analytics"
-          href="/app/analytics"
-          onClick={(event) => navigateToTab(event, "analytics", "/app/analytics")}
-          className={tabClass("analytics")}
-        >
-          <IonIcon
-            aria-hidden="true"
-            icon={activeTab === "analytics" ? analyticsSharp : analytics}
-          />
-          <IonLabel>Analytics</IonLabel>
-        </IonTabButton>
-
-        <IonTabButton
-          tab="home"
-          href="/app/home"
-          onClick={(event) => navigateToTab(event, "home", "/app/home")}
-          className={tabClass("home")}
-        >
-          <IonIcon
-            aria-hidden="true"
-            icon={activeTab === "home" ? home : homeOutline}
-          />
-          <IonLabel>Home</IonLabel>
-        </IonTabButton>
+        {[
+          {
+            tab: "analytics",
+            href: "/app/analytics",
+            label: "Analytics",
+            activeIcon: analyticsSharp,
+            inactiveIcon: analytics,
+          },
+          {
+            tab: "home",
+            href: "/app/home",
+            label: "Home",
+            activeIcon: home,
+            inactiveIcon: homeOutline,
+          },
+        ].map(({ tab, href, label, activeIcon, inactiveIcon }) => (
+          <IonTabButton
+            key={tab}
+            tab={tab}
+            href={href}
+            onClick={(event) => navigateToTab(event, tab, href)}
+            className={tabClass(tab)}
+          >
+            <IonIcon aria-hidden="true" icon={activeTab === tab ? activeIcon : inactiveIcon} />
+            <IonLabel>{label}</IonLabel>
+          </IonTabButton>
+        ))}
 
         <IonTabButton
           tab="quick-add"
@@ -543,31 +544,33 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
           <span className="mp-tab-btn__hidden-label">Add food</span>
         </IonTabButton>
 
-        <IonTabButton
-          tab="workout"
-          href="/app/workout"
-          onClick={(event) => navigateToTab(event, "workout", "/app/workout")}
-          className={tabClass("workout")}
-        >
-          <IonIcon
-            aria-hidden="true"
-            icon={activeTab === "workout" ? fitness : fitnessOutline}
-          />
-          <IonLabel>Workout</IonLabel>
-        </IonTabButton>
-
-        <IonTabButton
-          tab="settings"
-          href="/app/settings"
-          onClick={(event) => navigateToTab(event, "settings", "/app/settings")}
-          className={tabClass("settings")}
-        >
-          <IonIcon
-            aria-hidden="true"
-            icon={activeTab === "settings" ? settings : settingsOutline}
-          />
-          <IonLabel>Settings</IonLabel>
-        </IonTabButton>
+        {[
+          {
+            tab: "workout",
+            href: "/app/workout",
+            label: "Workout",
+            activeIcon: fitness,
+            inactiveIcon: fitnessOutline,
+          },
+          {
+            tab: "settings",
+            href: "/app/settings",
+            label: "Settings",
+            activeIcon: settings,
+            inactiveIcon: settingsOutline,
+          },
+        ].map(({ tab, href, label, activeIcon, inactiveIcon }) => (
+          <IonTabButton
+            key={tab}
+            tab={tab}
+            href={href}
+            onClick={(event) => navigateToTab(event, tab, href)}
+            className={tabClass(tab)}
+          >
+            <IonIcon aria-hidden="true" icon={activeTab === tab ? activeIcon : inactiveIcon} />
+            <IonLabel>{label}</IonLabel>
+          </IonTabButton>
+        ))}
       </IonTabBar>
     </IonTabs>
   );
