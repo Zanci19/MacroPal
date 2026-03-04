@@ -23,6 +23,7 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 LOG_FILE="$LOGS_DIR/test-run-$TIMESTAMP.log"
 DEV_SERVER_PORT=5173
 DEV_SERVER_PID=""
+UNIT_TIMEOUT_SECONDS="${UNIT_TIMEOUT_SECONDS:-300}"
 
 # ── Flags ─────────────────────────────────────────────────────────────────────
 RUN_UNIT=true
@@ -55,6 +56,19 @@ run_logged() {
   return "${PIPESTATUS[0]}"
 }
 
+run_logged_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+
+  if command -v timeout >/dev/null 2>&1; then
+    timeout --kill-after=10s "$timeout_seconds" "$@" 2>&1 | tee -a "$LOG_FILE"
+    return "${PIPESTATUS[0]}"
+  fi
+
+  log "⚠️  'timeout' command not available; running without timeout guard."
+  run_logged "$@"
+}
+
 cleanup() {
   if [[ -n "$DEV_SERVER_PID" ]]; then
     log "Stopping dev server (PID $DEV_SERVER_PID)…"
@@ -78,7 +92,12 @@ E2E_RESULT=0
 # ── Unit tests (Vitest) ───────────────────────────────────────────────────────
 if [[ "$RUN_UNIT" == "true" ]]; then
   section "Unit Tests (Vitest)"
-  run_logged npx vitest run --reporter=verbose || UNIT_RESULT=$?
+  log "Running unit tests with timeout guard (${UNIT_TIMEOUT_SECONDS}s)…"
+  run_logged_with_timeout "$UNIT_TIMEOUT_SECONDS" npx vitest run --reporter=verbose || UNIT_RESULT=$?
+
+  if [[ "$UNIT_RESULT" -eq 124 ]]; then
+    log "❌  Unit tests timed out after ${UNIT_TIMEOUT_SECONDS}s (possible hanging worker)."
+  fi
 
   if [[ "$UNIT_RESULT" -eq 0 ]]; then
     log "✅  Unit tests PASSED"
