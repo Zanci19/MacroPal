@@ -23,7 +23,9 @@ const Offline: React.FC = () => {
 
   const continueOffline = () => {
     console.log('[USER ACTION] Offline: Continue offline button clicked');
-    history.replace("/app/home");
+    // Route through check-login so Firebase Auth + Firestore can load from
+    // their local caches and navigate to the correct screen (home or onboarding).
+    history.replace("/check-login");
   };
 
   useEffect(() => {

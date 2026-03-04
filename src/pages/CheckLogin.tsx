@@ -28,12 +28,6 @@ const CheckLogin: React.FC = () => {
   const startCheck = () => {
     checkCleanupRef.current?.();
 
-    // If we're offline, redirect to offline page immediately
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      history.replace("/offline");
-      return;
-    }
-
     setPhase("checking");
     setErrorMsg("");
 
@@ -62,12 +56,6 @@ const CheckLogin: React.FC = () => {
       async (user) => {
         // We only care about the first value
         finishCheck();
-
-        // If we lost connection in the meantime, redirect to offline
-        if (typeof navigator !== "undefined" && !navigator.onLine) {
-          history.replace("/offline");
-          return;
-        }
 
         try {
           if (!user) {
@@ -112,21 +100,16 @@ const CheckLogin: React.FC = () => {
     startCheck();
 
     const handleOnline = () => {
-      // If we come back online while on the offline screen, user can tap "Try again"
-      // (You could auto-call startCheck() here if you want auto-retry.)
-    };
-
-    const handleOffline = () => {
-      history.replace("/offline");
+      // If we come back online, auto-retry the check so the user doesn't
+      // have to tap "Try again" manually.
+      startCheck();
     };
 
     window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
 
     return () => {
       checkCleanupRef.current?.();
       window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -148,11 +131,6 @@ const CheckLogin: React.FC = () => {
 
   const handleRetry = () => {
     console.log('[USER ACTION] CheckLogin: Try again button clicked', { phase, isOnline: navigator.onLine });
-    // IMPORTANT: do NOT switch to "checking" if still offline
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setPhase("offline");
-      return;
-    }
     startCheck();
   };
 
