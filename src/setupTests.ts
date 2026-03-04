@@ -5,6 +5,39 @@
 import "@testing-library/jest-dom/extend-expect";
 import { vi } from "vitest";
 
+const createMemoryStorage = () => {
+  let store: Record<string, string> = {};
+
+  return {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+  };
+};
+
+if (typeof window !== "undefined") {
+  Object.defineProperty(window, "localStorage", {
+    value: createMemoryStorage(),
+    writable: true,
+  });
+
+  Object.defineProperty(window, "sessionStorage", {
+    value: createMemoryStorage(),
+    writable: true,
+  });
+}
+
 // Mock matchmedia for Ionic components that rely on it
 if (typeof window !== "undefined") {
   window.matchMedia =
