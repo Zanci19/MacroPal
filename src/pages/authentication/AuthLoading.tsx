@@ -40,12 +40,6 @@ const AuthLoading: React.FC = () => {
   const [showSlowMessage, setShowSlowMessage] = useState(false);
 
   useEffect(() => {
-    // Check offline status immediately
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
-      history.replace("/offline");
-      return;
-    }
-
     let progressInterval: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
     let slowMessageTimer: NodeJS.Timeout | null = null;
@@ -162,19 +156,10 @@ const AuthLoading: React.FC = () => {
 
     run();
 
-    // Listen for offline events
-    const handleOffline = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (progressInterval) clearInterval(progressInterval);
-      history.replace("/offline");
-    };
-
-    window.addEventListener("offline", handleOffline);
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (progressInterval) clearInterval(progressInterval);
       if (slowMessageTimer) clearTimeout(slowMessageTimer);
-      window.removeEventListener("offline", handleOffline);
     };
   }, [history]);
 

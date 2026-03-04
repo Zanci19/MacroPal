@@ -823,6 +823,32 @@ const AddFood: React.FC = () => {
         });
 
         try {
+          // When offline, skip remote barcode lookup and fall back to local search
+          if (typeof navigator !== "undefined" && !navigator.onLine) {
+            const localMatch = BASIC_FOODS_BY_CODE.get(code);
+            if (localMatch) {
+              const ps = macrosPerServing(localMatch.nutriments);
+              const canServing =
+                !!localMatch.serving_size &&
+                !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+              setSelectedFood({ ...localMatch, dataSource: "local" });
+              setUseServing(canServing);
+              setServingsQty(1);
+              setWeightQty(100);
+              setOpen(true);
+            } else {
+              setToast({
+                show: true,
+                message: "You're offline — showing local search.",
+                color: "warning",
+              });
+              setQuery(code);
+              await foodsSearch(code, 1);
+            }
+            cleanUrl();
+            return;
+          }
+
           const r = await fetch(
             `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
           );
@@ -1411,6 +1437,23 @@ const AddFood: React.FC = () => {
     const localResults = localKept.map((item) => item.food);
 
     try {
+      // When offline, skip the remote API and return only local results
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setResults(localResults);
+        setPage(pageNumber);
+        setNoMoreResults(true);
+        searchCacheRef.current.set(cacheKey, localResults);
+        recordRecentQuery(raw);
+        if (localResults.length === 0) {
+          setToast({
+            show: true,
+            message: "No offline results found. Try a different search.",
+            color: "medium",
+          });
+        }
+        return localResults.length;
+      }
+
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
@@ -1555,6 +1598,15 @@ const AddFood: React.FC = () => {
     }
 
     try {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        setToast({
+          show: true,
+          message: "You're offline. Food details are only available for locally stored foods.",
+          color: "warning",
+        });
+        return;
+      }
+
       const r = await fetch(
         `${FN_BASE}/offBarcode?code=${encodeURIComponent(code)}`
       );
