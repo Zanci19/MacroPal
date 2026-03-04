@@ -9,6 +9,9 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
+    "test.all": "bash scripts/run-tests.sh",
+    "test.all.unit-only": "bash scripts/run-tests.sh --unit-only",
+    "detect-features": "node scripts/detect-features.js",
     "lint": "eslint"
   },
   "dependencies": {
