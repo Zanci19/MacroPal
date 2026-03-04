@@ -58,8 +58,15 @@ export function isProfile(value: unknown): value is Profile {
   
   // Check required fields
   const hasRequiredFields = (
-    typeof obj.email === 'string' &&
-    typeof obj.userId === 'string'
+    typeof obj.age === 'number' &&
+    Number.isFinite(obj.age) &&
+    typeof obj.weight === 'number' &&
+    Number.isFinite(obj.weight) &&
+    typeof obj.height === 'number' &&
+    Number.isFinite(obj.height) &&
+    ['male', 'female'].includes(obj.gender as string) &&
+    ['lose', 'maintain', 'gain'].includes(obj.goal as string) &&
+    ['sedentary', 'light', 'moderate', 'very', 'extra'].includes(obj.activity as string)
   );
   
   if (!hasRequiredFields) return false;
@@ -77,11 +84,15 @@ export function isProfile(value: unknown): value is Profile {
     return false;
   }
   
-  if (obj.gender !== undefined && !['male', 'female', 'other'].includes(obj.gender as string)) {
+  if (obj.gender !== undefined && !['male', 'female'].includes(obj.gender as string)) {
     return false;
   }
   
   if (obj.goal !== undefined && !['lose', 'maintain', 'gain'].includes(obj.goal as string)) {
+    return false;
+  }
+
+  if (obj.activity !== undefined && !['sedentary', 'light', 'moderate', 'very', 'extra'].includes(obj.activity as string)) {
     return false;
   }
   
