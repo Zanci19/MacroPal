@@ -12,7 +12,7 @@ export interface ValidationResult {
  * Validates a meal/food title
  */
 export function validateTitle(title: string | undefined | null): ValidationResult {
-  if (!title || typeof title !== 'string') {
+  if (title === null || title === undefined || typeof title !== 'string') {
     return { isValid: false, error: 'Title is required' };
   }
 
