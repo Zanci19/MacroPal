@@ -38,9 +38,9 @@ describe("getMacroInsight", () => {
     const result = getMacroInsight({
       ...BASE,
       caloriesConsumed: 1200,
-      proteinConsumed: 40,   // 73 % deficit
-      carbsConsumed: 180,    // 10 % deficit
-      fatConsumed: 60,       // 14 % deficit
+      proteinConsumed: 40,   // 73% deficit
+      carbsConsumed: 180,    // 10% deficit
+      fatConsumed: 60,       // 14% deficit
     });
     expect(result.type).toBe("protein");
     expect(result.headline).toMatch(/protein/i);
@@ -50,9 +50,9 @@ describe("getMacroInsight", () => {
     const result = getMacroInsight({
       ...BASE,
       caloriesConsumed: 900,
-      proteinConsumed: 120,  // 20 % deficit
-      carbsConsumed: 50,     // 75 % deficit
-      fatConsumed: 55,       // 21 % deficit
+      proteinConsumed: 120,  // 20% deficit
+      carbsConsumed: 50,     // 75% deficit
+      fatConsumed: 55,       // 21% deficit
     });
     expect(result.type).toBe("carbs");
     expect(result.headline).toMatch(/carb/i);
@@ -62,9 +62,9 @@ describe("getMacroInsight", () => {
     const result = getMacroInsight({
       ...BASE,
       caloriesConsumed: 1400,
-      proteinConsumed: 130,  // 13 % deficit — below threshold
-      carbsConsumed: 180,    // 10 % deficit — below threshold
-      fatConsumed: 10,       // 86 % deficit
+      proteinConsumed: 130,  // 13% deficit — below threshold
+      carbsConsumed: 180,    // 10% deficit — below threshold
+      fatConsumed: 10,       // 86% deficit
     });
     expect(result.type).toBe("fat");
     expect(result.headline).toMatch(/fat/i);
@@ -74,9 +74,9 @@ describe("getMacroInsight", () => {
     const result = getMacroInsight({
       ...BASE,
       caloriesConsumed: 1800,
-      proteinConsumed: 130,  // 13 % deficit
-      carbsConsumed: 180,    // 10 % deficit
-      fatConsumed: 60,       // 14 % deficit
+      proteinConsumed: 130,  // 13% deficit
+      carbsConsumed: 180,    // 10% deficit
+      fatConsumed: 60,       // 14% deficit
     });
     expect(result.type).toBe("balanced");
   });

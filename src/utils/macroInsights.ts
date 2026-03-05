@@ -123,7 +123,7 @@ export function getMacroInsight(input: MacroInsightInput): MacroInsight {
   const fatDeficit = deficitFraction(fatConsumed, fatGoal);
 
   // Minimum deficit worth calling out (25 % of the daily target)
-  const THRESHOLD = 0.25;
+  const THRESHOLD = 0.25; // minimum 25% deficit worth calling out
 
   const deficits = [
     { key: "protein" as const, value: proteinDeficit },

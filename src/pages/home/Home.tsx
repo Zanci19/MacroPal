@@ -1756,7 +1756,7 @@ const Home: React.FC = () => {
       }
       if (quoteHasLoadedRef.current) return;
       // Slides: 0=Summary, 1=Nutrition, 2=Weigh-in, 3=Water, 4=Insight,
-      // then optionally 5=Achievements, then optionally 5 or 6=Quote
+      // 5=Achievements (if shown), then Quote at 5 (no achievements) or 6 (with achievements)
       const quoteSlideIndex = showAchievements ? 5 : 4;
       if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
