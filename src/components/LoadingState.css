@@ -71,8 +71,9 @@
 .loading-overlay__content {
   position: relative;
   z-index: 1;
-  background: var(--ion-background-color, #fff);
-  border-radius: 12px;
+  background: var(--mp-surface, #fff);
+  border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--mp-shadow-strong, 0 4px 16px rgba(0, 0, 0, 0.15));
+  border: 1px solid var(--mp-border, rgba(0, 0, 0, 0.1));
 }

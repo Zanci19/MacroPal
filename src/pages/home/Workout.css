@@ -26,10 +26,11 @@
 }
 
 .workout-summary__stat {
-  padding: 12px;
+  padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--mp-border);
-  background: color-mix(in srgb, var(--mp-surface) 92%, transparent);
+  background: var(--mp-surface-muted);
+  transition: box-shadow 0.2s ease;
 }
 
 .workout-summary__stat-label {
