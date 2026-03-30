@@ -14,10 +14,19 @@
   --mp-text-muted: #5f6368;
   --mp-border: #e0e0e0;
 
-  --mp-shadow-soft: none;
-  --mp-shadow-strong: none;
+  --mp-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --mp-shadow-strong: 0 4px 16px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.07);
 
-  --mp-chip-bg: #f5f5f5;
+  --mp-chip-bg: #f0f0f0;
+
+  /* Macro accent colors */
+  --mp-color-protein: #357be4;
+  --mp-color-carbs: #f59e0b;
+  --mp-color-fat: #ef4444;
+  --mp-color-fiber: #22c55e;
+
+  /* Reusable transition timing */
+  --mp-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 
   --ion-background-color: var(--mp-bg);
   --ion-text-color: var(--mp-text);
@@ -40,10 +49,16 @@ body.dark {
   --mp-text-muted: #a0a0a0;
   --mp-border: #2a2a2a;
 
-  --mp-shadow-soft: none;
-  --mp-shadow-strong: none;
+  --mp-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.20);
+  --mp-shadow-strong: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.30);
 
-  --mp-chip-bg: #1e1e1e;
+  --mp-chip-bg: #252525;
+
+  /* Macro accent colors (darkened for dark mode) */
+  --mp-color-protein: #5a9cf6;
+  --mp-color-carbs: #f6b144;
+  --mp-color-fat: #f06060;
+  --mp-color-fiber: #3dd075;
 
   --ion-background-color: var(--mp-bg);
   --ion-text-color: var(--mp-text);
@@ -120,9 +135,9 @@ ion-card {
   --color: var(--mp-text);
   border-radius: 18px;
   border: 1px solid var(--mp-border);
-  box-shadow: none;
+  box-shadow: var(--mp-shadow-soft);
   overflow: hidden;
-  transition: border-color 0.2s ease, background-color 0.3s ease;
+  transition: border-color 0.2s ease, background-color 0.3s ease, box-shadow 0.2s ease;
 }
 
 ion-card-header {
@@ -140,16 +155,17 @@ ion-card-content {
 
 ion-button {
   --background: var(--ion-color-primary);
-  --background-hover: var(--ion-color-primary);
+  --background-hover: var(--ion-color-primary-shade);
   --border-radius: 14px;
-  --box-shadow: none;
+  --box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb), 0.32);
   --color: #ffffff;
   font-weight: 700;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 ion-button:hover {
   transform: translateY(-1px);
+  --box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.38);
 }
 
 ion-button:active {
@@ -215,7 +231,7 @@ ion-textarea {
   --background: var(--mp-surface-muted);
   --border-radius: 14px;
   --highlight-color-focused: var(--ion-color-primary);
-  border: none;
+  border: 1.5px solid var(--mp-border);
   box-shadow: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -223,7 +239,8 @@ ion-textarea {
 ion-input:focus-within,
 ion-select:focus-within,
 ion-textarea:focus-within {
-  border-color: var(--mp-primary);
+  border-color: var(--ion-color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.14);
 }
 
 ion-item {
@@ -256,7 +273,7 @@ ion-tab-bar {
   --color: var(--mp-text-muted);
   --color-selected: var(--mp-text);
   border-top: 1px solid var(--mp-border);
-  box-shadow: none;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
   transition: background 0.3s ease;
   /* Handle Android navigation bar overlap - supports both approaches */
   /* Use Capacitor 8 injected CSS variable first, fallback to env() */
@@ -267,7 +284,7 @@ ion-tab-bar {
 
 body.dark ion-tab-bar {
   --background: var(--mp-surface);
-  box-shadow: none;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .mp-tabbar {
@@ -315,7 +332,7 @@ ion-tab-button.mp-tab-btn--add::part(native) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.45);
   transform: translateY(-16px);
   /* Ensure button appears above content */
   position: relative;
@@ -348,7 +365,7 @@ ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
 ion-modal {
   --background: var(--mp-surface);
   --box-shadow: var(--mp-shadow-strong);
-  --border-radius: 18px;
+  --border-radius: 20px;
   --border-color: var(--mp-border);
 }
 
@@ -405,8 +422,11 @@ ion-refresher-content .refresher-refreshing-icon {
 ion-toast {
   --background: var(--mp-surface);
   --color: var(--mp-text);
-  --border-radius: 12px;
-  --box-shadow: var(--mp-shadow-soft);
+  --border-radius: 14px;
+  --box-shadow: var(--mp-shadow-strong);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: var(--mp-border);
 }
 
 /* Alert styling for all themes */
