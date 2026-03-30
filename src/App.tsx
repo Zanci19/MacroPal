@@ -613,9 +613,18 @@ const App: React.FC = () => {
       if (currentTheme !== "system") return;
       document.body.classList.toggle("dark", event.matches);
     };
+    if ("addEventListener" in prefersDark) {
+      prefersDark.addEventListener("change", listener);
+      return () => prefersDark.removeEventListener("change", listener);
+    }
 
-    prefersDark.addEventListener("change", listener);
-    return () => prefersDark.removeEventListener("change", listener);
+    // Fallback for older WebViews/Safari versions.
+    const legacyMatchMedia = prefersDark as MediaQueryList & {
+      addListener: (callback: (event: MediaQueryListEvent) => void) => void;
+      removeListener: (callback: (event: MediaQueryListEvent) => void) => void;
+    };
+    legacyMatchMedia.addListener(listener);
+    return () => legacyMatchMedia.removeListener(listener);
   }, []);
 
   useEffect(() => {
@@ -657,18 +666,31 @@ const App: React.FC = () => {
       document.body.classList.toggle("has-softkeys", clampedSoftkeyHeight > 16);
     };
 
+    let rafId: number | null = null;
+    const queueSoftkeyUpdate = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateSoftkeyPadding();
+      });
+    };
+
     updateSoftkeyPadding();
 
     const resizeSource = window.visualViewport;
-    resizeSource?.addEventListener("resize", updateSoftkeyPadding);
-    window.addEventListener("resize", updateSoftkeyPadding);
-    window.addEventListener("orientationchange", updateSoftkeyPadding);
+    resizeSource?.addEventListener("resize", queueSoftkeyUpdate);
+    window.addEventListener("resize", queueSoftkeyUpdate, { passive: true });
+    window.addEventListener("orientationchange", queueSoftkeyUpdate, { passive: true });
 
     return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
       setSoftkeyInset(0);
-      resizeSource?.removeEventListener("resize", updateSoftkeyPadding);
-      window.removeEventListener("resize", updateSoftkeyPadding);
-      window.removeEventListener("orientationchange", updateSoftkeyPadding);
+      document.body.classList.remove("has-softkeys");
+      resizeSource?.removeEventListener("resize", queueSoftkeyUpdate);
+      window.removeEventListener("resize", queueSoftkeyUpdate);
+      window.removeEventListener("orientationchange", queueSoftkeyUpdate);
     };
   }, []);
 
