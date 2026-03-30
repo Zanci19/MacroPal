@@ -547,7 +547,7 @@ const AddFood: React.FC = () => {
   const [photoRemoved, setPhotoRemoved] = useState(false);
 
   // AI Photo Recognition state
-  const [aiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
+  const [isAiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
   const [aiPhotoDataUrl, setAiPhotoDataUrl] = useState<string | null>(null);
   const [aiMatches, setAiMatches] = useState<any[]>([]);
 
@@ -3039,11 +3039,11 @@ const AddFood: React.FC = () => {
                   console.log(`[USER ACTION] AddFood: AI Photo button clicked`);
                   await takeAiPhoto();
                 }}
-                disabled={aiPhotoAnalyzing}
+                disabled={isAiPhotoAnalyzing}
               >
                 <IonIcon slot="start" icon={cameraOutline} />
-                {aiPhotoAnalyzing ? "Analyzing..." : "AI Photo Recognition"}
-                {aiPhotoAnalyzing && <IonSpinner name="crescent" slot="end" />}
+                {isAiPhotoAnalyzing ? "Analyzing..." : "AI Photo Recognition"}
+                {isAiPhotoAnalyzing && <IonSpinner name="crescent" slot="end" />}
               </IonButton>
             </div>
 
