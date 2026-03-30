@@ -578,6 +578,13 @@ const Home: React.FC = () => {
 
   const unitSystem = getUnitSystem(profile?.units);
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
+  }, []);
+
   useEffect(() => {
     const pref =
       typeof profile === "object" && profile && "autoExpandMeals" in profile
@@ -2219,6 +2226,9 @@ const Home: React.FC = () => {
             refreshingSpinner="crescent"
           />
         </IonRefresher>
+        <div className="fs-greeting" aria-hidden="true">
+          <span className="fs-greeting__text">{greeting}</span>
+        </div>
         <div className="fs-datebar" role="group" aria-label="Select day">
           <IonButton
             fill="clear"
