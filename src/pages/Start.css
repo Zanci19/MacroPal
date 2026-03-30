@@ -102,14 +102,14 @@
 }
 
 .start-logo-wrap {
-  width: 96px;
-  height: 96px;
+  width: 100px;
+  height: 100px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   display: grid;
   place-items: center;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
   animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -130,12 +130,13 @@
 }
 
 .start-title {
-  font-size: 2.2rem;
-  font-weight: 700;
+  font-size: 2.4rem;
+  font-weight: 800;
   margin: 0;
-  line-height: 1.15;
+  line-height: 1.12;
   color: #f7f8fb;
   animation: fadeInUp 0.6s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+  letter-spacing: -0.02em;
 }
 
 .start-highlights {
@@ -148,13 +149,14 @@
 }
 
 .start-highlight {
-  padding: 0.45rem 0.9rem;
+  padding: 0.48rem 0.95rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.20);
   font-size: 0.85rem;
   font-weight: 600;
   color: rgba(247, 248, 251, 0.92);
+  backdrop-filter: blur(4px);
 }
 
 .start-actions {
@@ -221,7 +223,7 @@
 
 @media (max-width: 480px) {
   .start-title {
-    font-size: 1.9rem;
+    font-size: 2rem;
   }
 }
 

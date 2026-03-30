@@ -5,18 +5,19 @@
 .verification-card {
   max-width: 420px;
   margin: 12vh auto 0;
-  padding: 24px;
-  border-radius: 18px;
+  padding: 28px 24px;
+  border-radius: 22px;
   background: var(--mp-surface);
   border: 1px solid var(--mp-border);
-  box-shadow: none;
+  box-shadow: var(--mp-shadow-strong);
   text-align: center;
 }
 
 .verification-title h2 {
   margin: 0 0 8px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--mp-text);
+  font-size: 1.5rem;
 }
 
 .verification-actions {

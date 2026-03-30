@@ -3,7 +3,8 @@
 }
 
 .nutrition-card.per-serving {
-  background: var(--ion-color-primary-tint);
+  background: rgba(var(--ion-color-success-rgb), 0.06);
+  border-color: rgba(var(--ion-color-success-rgb), 0.2);
 }
 
 .nutrition-grid {
@@ -22,8 +23,9 @@
 
 .nutrition-value {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--ion-color-primary);
+  letter-spacing: -0.02em;
 }
 
 .per-serving .nutrition-value {
@@ -31,9 +33,11 @@
 }
 
 .nutrition-label {
-  font-size: 0.8rem;
-  color: var(--ion-color-medium);
+  font-size: 0.75rem;
+  color: var(--mp-text-muted);
   text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 576px) {

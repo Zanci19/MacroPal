@@ -156,10 +156,11 @@ ion-card {
 }
 
 .ring-pct {
-  font-weight: 800;
-  font-size: 0.95rem;
+  font-weight: 900;
+  font-size: 0.88rem;
   color: var(--mp-text);
-  opacity: 0.9;
+  opacity: 0.95;
+  letter-spacing: -0.03em;
 }
 
 .fs-summary__mid {
@@ -295,10 +296,17 @@ ion-card {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
+  padding: 5px 12px 5px 8px;
   border-radius: 9999px;
   background-color: var(--mp-chip-bg);
   border: 1px solid var(--mp-border);
+}
+
+.fs-macro__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .fs-macro__label {
@@ -336,7 +344,7 @@ body.dark .fs-macro__val {
   border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
   background: var(--mp-surface);
-  box-shadow: none;
+  box-shadow: var(--mp-shadow-soft);
 }
 
 .fs-meal__hdr {
@@ -455,11 +463,12 @@ body.dark .fs-macro__val {
   width: fit-content;
   align-self: center;
   font: 600 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
-  color: var(--mp-text);
-  padding: 8px 12px;
+  color: var(--mp-text-muted);
+  padding: 7px 14px;
   border-radius: 12px;
   background: var(--mp-chip-bg);
   border: 1px dashed var(--mp-border);
+  font-size: 0.85rem;
 }
 
 ion-list {
@@ -495,10 +504,11 @@ ion-list {
 
 .kcal-badge {
   font-weight: 700;
-  padding: 6px 10px;
+  padding: 5px 10px;
   border-radius: 10px;
-  background: var(--mp-chip-bg);
-  border: 1px solid var(--mp-border);
+  background: rgba(var(--ion-color-primary-rgb), 0.10);
+  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.22);
+  color: var(--ion-color-primary);
   min-width: 86px;
   text-align: center;
 }

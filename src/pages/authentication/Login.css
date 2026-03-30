@@ -1,10 +1,18 @@
 .login-page {
   --background: transparent;
-  background: var(--mp-surface-glow), var(--mp-bg);
+  background: var(--mp-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
+}
+
+body:not(.dark) .login-page {
+  background: linear-gradient(160deg, rgba(53, 123, 228, 0.06) 0%, var(--mp-bg) 55%);
+}
+
+body.dark .login-page {
+  background: radial-gradient(circle at 30% 20%, rgba(53, 123, 228, 0.08), transparent 60%), var(--mp-bg);
 }
 
 .login-card {
@@ -12,10 +20,10 @@
   max-width: 420px;
   margin: 0 auto;
   padding: 28px 22px 22px;
-  border-radius: 20px;
-  background: color-mix(in srgb, var(--mp-surface) 92%, transparent);
+  border-radius: 22px;
+  background: var(--mp-surface);
   backdrop-filter: none;
-  box-shadow: none;
+  box-shadow: var(--mp-shadow-strong);
   border: 1px solid var(--mp-border);
   color: var(--mp-text);
 }

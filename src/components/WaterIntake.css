@@ -7,14 +7,16 @@
 }
 
 .water-progress {
-  height: 12px;
-  border-radius: 6px;
+  height: 14px;
+  border-radius: 7px;
   margin-bottom: 12px;
   --progress-background: var(--ion-color-primary);
+  --buffer-background: rgba(var(--ion-color-primary-rgb), 0.15);
 }
 
 .water-progress.goal-reached {
   --progress-background: var(--ion-color-success);
+  --buffer-background: rgba(var(--ion-color-success-rgb), 0.15);
 }
 
 .water-stats {
@@ -23,8 +25,9 @@
 
 .water-stats h3 {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .water-volume {
@@ -48,11 +51,12 @@
 }
 
 .goal-message {
-  margin-top: 12px;
+  margin-top: 14px;
   text-align: center;
-  padding: 8px;
-  background: var(--ion-color-success-tint);
-  border-radius: 8px;
+  padding: 10px 14px;
+  background: rgba(var(--ion-color-success-rgb), 0.12);
+  border: 1px solid rgba(var(--ion-color-success-rgb), 0.25);
+  border-radius: 10px;
   animation: slideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -69,5 +73,10 @@
 
 .goal-message p {
   margin: 0;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--ion-color-success-shade);
+}
+
+body.dark .goal-message p {
+  color: var(--ion-color-success-tint);
 }
