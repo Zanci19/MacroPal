@@ -34,14 +34,11 @@
       rgba(255, 166, 120, 0.35),
       transparent 60%
     );
-  filter: blur(14px);
-  animation: bgFloat 14s ease-in-out infinite;
   background-size: 140% 140%;
 }
 
 .bg-motion__layer--alt {
   opacity: 0.75;
-  animation: bgFloatAlt 18s ease-in-out infinite;
   mix-blend-mode: screen;
 }
 
@@ -180,7 +177,6 @@
 .start-btn-primary {
   --background: #2f80ff;
   --background-hover: #2f80ff;
-  --box-shadow: 0 18px 35px rgba(47, 128, 255, 0.35);
 }
 
 .start-btn-secondary {

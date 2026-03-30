@@ -17,7 +17,6 @@ import {
   IonItem,
   IonLabel,
   IonBadge,
-  IonChip,
   IonModal,
   IonInput,
   IonTextarea,
@@ -32,11 +31,15 @@ import {
 } from "@ionic/react";
 import {
   addCircleOutline,
+  add,
   calendarOutline,
   chevronBackOutline,
   chevronForwardOutline,
   fitnessOutline,
   timerOutline,
+  flameOutline,
+  barbellOutline,
+  trashOutline,
 } from "ionicons/icons";
 import { useHistory, useLocation } from "react-router";
 import { doc, getDoc, onSnapshot, runTransaction } from "firebase/firestore";
@@ -320,6 +323,19 @@ const Workout: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Workouts</IonTitle>
+          <IonButtons slot="end">
+            <IonButton
+              fill="clear"
+              onClick={() => {
+                console.log('[USER ACTION] Workout: Add activity button (header) clicked');
+                setShowForm(true);
+                syncCaloriesFromPreset(selectedPresetId, draft.durationMinutes, true);
+              }}
+              aria-label="Add activity"
+            >
+              <IonIcon slot="icon-only" icon={add} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -345,13 +361,14 @@ const Workout: React.FC = () => {
 
           <IonButton
             className="fs-datebtn"
+            fill="outline"
             onClick={() => {
               console.log('[USER ACTION] Workout: Date picker button clicked', { currentDate: activeDateKey });
               setShowDatePicker(true);
             }}
             aria-label="Pick a date"
           >
-            <IonIcon icon={calendarOutline} />
+            <IonIcon slot="start" icon={calendarOutline} />
             <span className="fs-datebtn__label">{activeDateLabel}</span>
             {isToday && (
               <IonBadge color="success" className="fs-datebtn__badge">
@@ -378,10 +395,6 @@ const Workout: React.FC = () => {
           <IonCardHeader className="workout-summary__header">
             <IonCardTitle className="mp-card-title">
               Daily activity
-              <IonChip color="tertiary" className="workout-summary__chip">
-                <IonIcon icon={fitnessOutline} />
-                <span>+{Math.round(totalCalories)} kcal</span>
-              </IonChip>
             </IonCardTitle>
             <IonCardSubtitle className="mp-card-subtitle">
               Log movement and keep your daily calorie target up to date.
@@ -391,31 +404,28 @@ const Workout: React.FC = () => {
           <IonCardContent>
             {loading ? (
               <div className="workout-summary__loading">
-                <IonBadge color="medium">Loading</IonBadge>
+                <IonBadge color="medium">Loading…</IonBadge>
               </div>
             ) : (
               <div className="workout-summary__stats">
                 <div className="workout-summary__stat">
+                  <IonIcon icon={flameOutline} className="workout-summary__stat-icon" aria-hidden="true" />
                   <div className="workout-summary__stat-label">Calories added</div>
                   <div className="workout-summary__stat-value">
-                    {Math.round(totalCalories)} kcal
+                    +{Math.round(totalCalories)} kcal
                   </div>
                 </div>
                 <div className="workout-summary__stat">
-                  <div className="workout-summary__stat-label">Activities logged</div>
+                  <IonIcon icon={barbellOutline} className="workout-summary__stat-icon" aria-hidden="true" />
+                  <div className="workout-summary__stat-label">Activities</div>
                   <div className="workout-summary__stat-value">{activities.length}</div>
-                </div>
-                <div className="workout-summary__stat">
-                  <div className="workout-summary__stat-label">Date</div>
-                  <div className="workout-summary__stat-value">{activeDateLabel}</div>
                 </div>
               </div>
             )}
 
             <div className="workout-summary__actions">
               <IonButton
-                fill="outline"
-                size="small"
+                expand="block"
                 onClick={() => {
                   console.log('[USER ACTION] Workout: Add activity button (summary card) clicked');
                   setShowForm(true);
@@ -424,7 +434,7 @@ const Workout: React.FC = () => {
                 aria-label="Add activity"
               >
                 <IonIcon icon={addCircleOutline} slot="start" />
-                Add activity
+                Log activity
               </IonButton>
             </div>
           </IonCardContent>
@@ -433,44 +443,43 @@ const Workout: React.FC = () => {
         <IonCard>
           <IonCardHeader className="workout-log__header">
             <IonCardTitle className="mp-card-title">Activity log</IonCardTitle>
-            <IonCardSubtitle className="mp-card-subtitle">
-              Every session you add boosts your daily allowance.
-            </IonCardSubtitle>
           </IonCardHeader>
           <IonCardContent className="workout-log__content">
             {activities.length === 0 ? (
-              <p className="workout-empty">
-                No activities yet. Add one to boost your calories.
-              </p>
+              <div className="workout-empty-state">
+                <IonIcon icon={barbellOutline} className="workout-empty-state__icon" aria-hidden="true" />
+                <p className="workout-empty-state__text">No activities yet.</p>
+                <p className="workout-empty-state__hint">Log a workout to boost your daily calorie allowance.</p>
+              </div>
             ) : (
               <IonList lines="full">
                 {activities.map((act, idx) => (
                   <IonItem key={act.addedAt || idx} className="workout-activity-row">
+                    <IonIcon icon={fitnessOutline} slot="start" className="workout-activity-icon" aria-hidden="true" />
                     <IonLabel>
                       <div className="workout-activity-title">{act.title}</div>
                       <div className="workout-activity-meta">
                         <span>
                           <IonIcon icon={timerOutline} aria-hidden="true" />
-                          {act.durationMinutes ? `${act.durationMinutes} min` : "Quick"}
+                          {act.durationMinutes ? `${act.durationMinutes} min` : "Quick session"}
                         </span>
                         {act.intensity && <IonBadge color="medium">{act.intensity}</IonBadge>}
+                        <span className="workout-activity-kcal">+{Math.round(act.calories)} kcal</span>
                       </div>
                       {act.note && <p className="workout-activity-note">{act.note}</p>}
                     </IonLabel>
-                    <div className="workout-activity-kcal">
-                      +{Math.round(act.calories)} kcal
-                    </div>
                     <IonButton
                       fill="clear"
-                      color="danger"
+                      color="medium"
                       size="small"
+                      slot="end"
                       onClick={() => {
-                      console.log('[USER ACTION] Workout: Remove button clicked in activity list', { index: idx, activityTitle: act.title });
-                      deleteActivity(idx);
-                    }}
+                        console.log('[USER ACTION] Workout: Remove button clicked in activity list', { index: idx, activityTitle: act.title });
+                        deleteActivity(idx);
+                      }}
                       aria-label={`Delete ${act.title}`}
                     >
-                      Remove
+                      <IonIcon slot="icon-only" icon={trashOutline} />
                     </IonButton>
                   </IonItem>
                 ))}
