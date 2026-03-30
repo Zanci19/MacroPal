@@ -39,11 +39,16 @@
   justify-content: center;
   cursor: pointer;
   font-size: 24px;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
 .announcement-popup-close:hover {
   background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.08);
+}
+
+.announcement-popup-close:active {
+  transform: scale(0.94);
 }
 
 .announcement-popup-close ion-icon {
@@ -54,7 +59,7 @@
   position: relative;
   width: 100%;
   flex: 0 0 60%;
-  background: var(--ion-color-light, #f4f5f8);
+  background: var(--mp-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -96,6 +101,18 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  animation: announceFadeIn 0.35s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes announceFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .announcement-popup-title {
@@ -114,6 +131,12 @@
   margin: 0 0 24px 0;
   flex: 1;
   text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-popup-body {
+    animation: none;
+  }
 }
 
 .announcement-popup-button {

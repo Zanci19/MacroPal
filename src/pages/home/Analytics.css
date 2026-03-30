@@ -2,15 +2,391 @@
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: 0.01em;
-  color: var(--mp-text);          /* uses your light/dark theme vars */
+  color: var(--mp-text);
 }
 
 .mp-card-subtitle {
   font-size: 0.9rem;
-  color: var(--mp-text-muted);    /* softer but still readable */
+  color: var(--mp-text-muted);
 }
 
-/* optional: tighten spacing inside cards a bit */
-ion-card-header {
+/* ── Controls bar ───────────────────────────────────── */
+.an-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0 8px;
+}
+
+.an-controls ion-segment {
+  flex: 1;
+}
+
+/* ── Section labels ─────────────────────────────────── */
+.an-section-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 2px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--mp-text-muted);
+}
+
+.an-section-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--mp-border);
+}
+
+/* ── At-a-glance summary strip ─────────────────────── */
+.an-summary-strip {
+  display: flex;
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.an-summary-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 6px;
+  border-right: 1px solid var(--mp-border);
+}
+
+.an-summary-stat:last-child {
+  border-right: none;
+}
+
+.an-summary-stat__value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--mp-text);
+  line-height: 1;
+}
+
+.an-summary-stat__label {
+  font-size: 0.65rem;
+  color: var(--mp-text-muted);
+  margin-top: 4px;
+  text-align: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Macro bars (average day + goal targets) ────────── */
+.an-macro-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0;
+}
+
+.an-macro-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.an-macro-bar__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mp-text-muted);
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.an-macro-bar__track {
+  flex: 1;
+  height: 8px;
+  background: var(--mp-surface-muted);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.an-macro-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 3px;
+}
+
+.an-macro-bar__value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  min-width: 50px;
+  text-align: right;
+}
+
+/* ── Goal progress bar (calorie target card) ────────── */
+.an-goal-wrap {
+  padding: 4px 0;
+}
+
+.an-goal-percent {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: var(--mp-text);
+  text-align: center;
+  margin-bottom: 14px;
+  line-height: 1;
+}
+
+.an-goal-bar__track {
+  height: 14px;
+  background: var(--mp-surface-muted);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.an-goal-bar__fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.4s ease;
+  min-width: 6px;
+}
+
+.an-goal-bar__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.an-goal-bar__label {
+  font-size: 0.72rem;
+  color: var(--mp-text-muted);
+}
+
+.an-goal-bar__value {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* ── Macro goal rows ────────────────────────────────── */
+.an-goal-macro__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+
+.an-goal-macro__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mp-text-muted);
+}
+
+.an-goal-macro__stat {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* ── Stat grid (best / lowest day) ─────────────────── */
+.an-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.an-stat-cell {
+  background: var(--mp-surface-muted);
+  border-radius: var(--mp-r-md);
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.an-stat-cell__value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mp-text);
+}
+
+.an-stat-cell__label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--mp-text-muted);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Chart legend ───────────────────────────────────── */
+.an-legend {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--mp-text-muted);
+}
+
+.an-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.an-legend__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Top foods table ────────────────────────────────── */
+.an-foods-header {
+  display: grid;
+  grid-template-columns: 22px 1fr 70px 44px;
+  gap: 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mp-text-muted);
   padding-bottom: 8px;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.an-foods-header > div:nth-child(3),
+.an-foods-header > div:nth-child(4) {
+  text-align: right;
+}
+
+.an-foods-row {
+  display: grid;
+  grid-template-columns: 22px 1fr 70px 44px;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--mp-border);
+  align-items: center;
+}
+
+.an-foods-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.an-foods-rank {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--mp-text-muted);
+  text-align: center;
+}
+
+.an-foods-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--mp-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.an-foods-brand {
+  font-size: 0.72rem;
+  color: var(--mp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.an-foods-kcal {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  text-align: right;
+}
+
+.an-foods-count {
+  font-size: 0.8rem;
+  color: var(--mp-text-muted);
+  text-align: right;
+}
+
+/* ── Daily log rows ─────────────────────────────────── */
+.an-day-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.an-day-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.an-day-row__date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  min-width: 52px;
+  flex-shrink: 0;
+}
+
+.an-day-row__pills {
+  display: flex;
+  gap: 5px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.an-day-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--mp-surface-muted);
+  border-radius: var(--mp-r-pill);
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--mp-text-muted);
+}
+
+.an-day-pill--kcal {
+  background: rgba(var(--ion-color-primary-rgb), 0.12);
+  color: var(--ion-color-primary);
+}
+
+/* ── Empty state ────────────────────────────────────── */
+.an-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px;
+  gap: 10px;
+}
+
+.an-empty__emoji {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.an-empty__title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--mp-text);
+  margin: 0;
+}
+
+.an-empty__subtitle {
+  font-size: 0.95rem;
+  color: var(--mp-text-muted);
+  margin: 0;
+  max-width: 260px;
+  line-height: 1.5;
 }

@@ -1,6 +1,6 @@
 .onboarding-profile-page {
-  --background: #121212;
-  background: #121212;
+  --background: var(--mp-bg);
+  background: var(--mp-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,21 +13,14 @@
   margin: 0 auto;
   padding: 28px 24px 22px;
   border-radius: 18px;
-  background: #121212;
+  background: var(--mp-surface);
   backdrop-filter: none;
   box-shadow: none;
-  color: var(--ion-text-color, #f9fafb);
+  color: var(--mp-text);
   display: flex;
   flex-direction: column;
   gap: 18px;
   overflow: hidden;
-}
-
-@media (prefers-color-scheme: light) {
-  .onboarding-card {
-    background: rgba(255, 255, 255, 0.96);
-    color: #121212;
-  }
 }
 
 .onboarding-step {
@@ -119,18 +112,6 @@
 /* Fix select option text color to be visible in both themes */
 .onboarding-select ion-select {
   color: var(--mp-text);
-}
-
-@media (prefers-color-scheme: light) {
-  .onboarding-select ion-select {
-    color: #121212;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .onboarding-select ion-select {
-    color: #f9fafb;
-  }
 }
 
 /* Ensure the selected value text is visible */

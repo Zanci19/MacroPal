@@ -3,6 +3,10 @@
   --padding-end: 8px;
 }
 
+.quick-food-item:active {
+  --background: var(--mp-primary-soft, rgba(31, 41, 55, 0.08));
+}
+
 .food-emoji {
   font-size: 1.5rem;
   margin-right: 8px;
@@ -19,10 +23,17 @@
   margin: 0;
   height: 28px;
   font-size: 0.75rem;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
 }
 
 .meal-chips ion-chip:hover {
-  opacity: 0.8;
+  opacity: 0.85;
+  transform: scale(1.06);
+}
+
+.meal-chips ion-chip:active {
+  transform: scale(0.94);
+  opacity: 1;
 }
 
 .quick-food-item ion-label h2 {
@@ -34,4 +45,15 @@
 .quick-food-item ion-label p {
   font-size: 0.85rem;
   color: var(--ion-color-medium);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meal-chips ion-chip {
+    transition: none;
+  }
+
+  .meal-chips ion-chip:hover,
+  .meal-chips ion-chip:active {
+    transform: none;
+  }
 }

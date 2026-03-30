@@ -121,8 +121,8 @@
 }
 
 .tutorial-close:hover {
-  background: var(--ion-color-light, #f4f5f8);
-  color: var(--ion-color-dark, #222428);
+  background: var(--mp-surface-muted);
+  color: var(--mp-text);
 }
 
 .tutorial-close ion-icon {
@@ -162,7 +162,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ion-color-light, #f4f5f8);
+  background: var(--mp-border);
   transition: all 0.3s ease;
 }
 
@@ -203,14 +203,4 @@
 
 .dark .tutorial-spotlight {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
-}
-
-@media (prefers-color-scheme: dark) {
-  body:not(.light) .tutorial-backdrop {
-    background: rgba(0, 0, 0, 0.85);
-  }
-
-  body:not(.light) .tutorial-spotlight {
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
-  }
 }
