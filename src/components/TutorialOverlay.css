@@ -121,8 +121,8 @@
 }
 
 .tutorial-close:hover {
-  background: var(--ion-color-light, #f4f5f8);
-  color: var(--ion-color-dark, #222428);
+  background: var(--mp-surface-muted);
+  color: var(--mp-text);
 }
 
 .tutorial-close ion-icon {
@@ -162,7 +162,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ion-color-light, #f4f5f8);
+  background: var(--mp-border);
   transition: all 0.3s ease;
 }
 

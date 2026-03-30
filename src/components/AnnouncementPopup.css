@@ -59,7 +59,7 @@
   position: relative;
   width: 100%;
   flex: 0 0 60%;
-  background: var(--ion-color-light, #f4f5f8);
+  background: var(--mp-surface-muted);
   display: flex;
   align-items: center;
   justify-content: center;
