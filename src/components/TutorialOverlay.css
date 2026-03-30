@@ -204,13 +204,3 @@
 .dark .tutorial-spotlight {
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
 }
-
-@media (prefers-color-scheme: dark) {
-  body:not(.light) .tutorial-backdrop {
-    background: rgba(0, 0, 0, 0.85);
-  }
-
-  body:not(.light) .tutorial-spotlight {
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.85);
-  }
-}

@@ -1,6 +1,6 @@
 .setup-profile-page {
-  --background: #121212;
-  background: #121212;
+  --background: var(--mp-bg);
+  background: var(--mp-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,17 +13,10 @@
   margin: 0 auto;
   padding: 24px 20px 20px;
   border-radius: 18px;
-  background: #121212;
+  background: var(--mp-surface);
   backdrop-filter: none;
   box-shadow: none;
-  color: var(--ion-text-color, #f9fafb);
-}
-
-@media (prefers-color-scheme: light) {
-  .setup-card {
-    background: rgba(255, 255, 255, 0.95);
-    color: #121212;
-  }
+  color: var(--mp-text);
 }
 
 .setup-header {
