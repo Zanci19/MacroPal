@@ -19,7 +19,6 @@ import {
   IonSpinner,
   IonButton,
   IonIcon,
-  IonChip,
   IonActionSheet,
   IonRefresher,
   IonRefresherContent,
@@ -30,12 +29,6 @@ import {
 import { shareOrDownload } from "../../utils/exportUtils";
 import {
   downloadOutline,
-  barChartOutline,
-  pieChartOutline,
-  trendingUpOutline,
-  timeOutline,
-  analyticsOutline,
-  medalOutline,
 } from "ionicons/icons";
 
 import { db, trackEvent } from "../../firebase";
@@ -710,6 +703,7 @@ const Analytics: React.FC = () => {
             refreshingSpinner="crescent"
           />
         </IonRefresher>
+
         {(authLoading || loading) && (
           <div className="ion-text-center" style={{ padding: 24 }}>
             <IonSpinner name="dots" />
@@ -720,123 +714,177 @@ const Analytics: React.FC = () => {
           <>
             {hasAnyData ? (
               <>
-                {/* Controls */}
-                <IonGrid>
-                  <IonRow className="ion-align-items-center">
-                    <IonCol size="12" sizeMd="7">
-                      <IonSegment
-                        value={tf}
-                        onIonChange={(e) => {
-                          console.log(`[USER ACTION] Analytics: Time period segment changed`, { newValue: e.detail.value });
-                          setTf((e.detail.value as TF) ?? "30d");
-                        }}
-                      >
-                        <IonSegmentButton value="7d">
-                          <IonLabel>7 days</IonLabel>
-                        </IonSegmentButton>
-                        <IonSegmentButton value="30d">
-                          <IonLabel>30 days</IonLabel>
-                        </IonSegmentButton>
-                        <IonSegmentButton value="60d">
-                          <IonLabel>60 days</IonLabel>
-                        </IonSegmentButton>
-                      </IonSegment>
-                    </IonCol>
-                    <IonCol
-                      size="12"
-                      sizeMd="5"
-                      className="ion-text-right ion-padding-top"
-                    >
-                      <IonButton
-                        fill="outline"
-                        style={{ marginBottom: 8 }}
-                        disabled={!hasFoodData}
-                        onClick={() => {
-                          console.log(`[USER ACTION] Analytics: Export button clicked`);
-                          setExportMenuOpen(true);
-                        }}
-                      >
-                        <IonIcon icon={downloadOutline} slot="start" />
-                        Export
-                      </IonButton>
-                    </IonCol>
-                  </IonRow>
-                </IonGrid>
+                {/* ── Controls bar ── */}
+                <div className="an-controls">
+                  <IonSegment
+                    value={tf}
+                    onIonChange={(e) => {
+                      console.log(`[USER ACTION] Analytics: Time period segment changed`, { newValue: e.detail.value });
+                      setTf((e.detail.value as TF) ?? "30d");
+                    }}
+                  >
+                    <IonSegmentButton value="7d">
+                      <IonLabel>7 days</IonLabel>
+                    </IonSegmentButton>
+                    <IonSegmentButton value="30d">
+                      <IonLabel>30 days</IonLabel>
+                    </IonSegmentButton>
+                    <IonSegmentButton value="60d">
+                      <IonLabel>60 days</IonLabel>
+                    </IonSegmentButton>
+                  </IonSegment>
+                  <IonButton
+                    fill="outline"
+                    disabled={!hasFoodData}
+                    onClick={() => {
+                      console.log(`[USER ACTION] Analytics: Export button clicked`);
+                      setExportMenuOpen(true);
+                    }}
+                  >
+                    <IonIcon icon={downloadOutline} slot="icon-only" />
+                  </IonButton>
+                </div>
 
+                {/* ── At-a-glance summary strip ── */}
+                {hasFoodData && (
+                  <div className="an-summary-strip">
+                    <div className="an-summary-stat">
+                      <span className="an-summary-stat__value">{avg.calories}</span>
+                      <span className="an-summary-stat__label">Avg kcal</span>
+                    </div>
+                    <div className="an-summary-stat">
+                      <span className="an-summary-stat__value">{nonEmptyDayTable.length}</span>
+                      <span className="an-summary-stat__label">Days logged</span>
+                    </div>
+                    <div className="an-summary-stat">
+                      <span className="an-summary-stat__value">
+                        {Math.round(totals.calories / 1000)}k
+                      </span>
+                      <span className="an-summary-stat__label">Total kcal</span>
+                    </div>
+                    {caloriesTarget != null && (
+                      <div className="an-summary-stat">
+                        <span
+                          className="an-summary-stat__value"
+                          style={{
+                            color: avg.calories > caloriesTarget ? "var(--ion-color-danger)" : "var(--ion-color-success)",
+                          }}
+                        >
+                          {avg.calories > caloriesTarget ? "+" : ""}
+                          {avg.calories - caloriesTarget}
+                        </span>
+                        <span className="an-summary-stat__label">vs goal</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Body (weight) ── */}
                 {hasWeightData && (
-                  <IonCard>
-                    <IonCardHeader>
-                      <IonCardTitle className="mp-card-title">
-                        Weigh-ins
-                        <IonChip color="medium" style={{ marginLeft: 8 }}>
-                          <IonIcon icon={timeOutline} />
-                          &nbsp;{tf}
-                        </IonChip>
-                      </IonCardTitle>
-                      <IonCardSubtitle className="mp-card-subtitle">
-                        {latestWeight
-                          ? `Latest ${
-                              Math.round(
-                                fromMetricWeight(latestWeight.weight, unitSystem) *
-                                  10
-                              ) / 10
-                            } ${weightLabel(unitSystem)} on ${latestWeight.date}`
-                          : "Track your weight trend over time."}
-                      </IonCardSubtitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      {weightChartData.length ? (
-                        <ChartContainer height={260} enabled={chartsEnabled}>
-                          <LineChart data={weightChartData}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line
-                              type="monotone"
-                              dataKey="weight"
-                              name={`Weight (${weightLabel(unitSystem)})`}
-                              stroke={palette[4]}
-                              dot={false}
-                              strokeWidth={2}
-                              isAnimationActive={chartAnimationsEnabled}
-                            />
-                          </LineChart>
-                        </ChartContainer>
-                      ) : (
-                        <div style={{ fontSize: 14, opacity: 0.75 }}>
-                          No weigh-ins in this range yet. Log one from Home to see it
-                          here.
-                        </div>
-                      )}
-                    </IonCardContent>
-                  </IonCard>
+                  <>
+                    <div className="an-section-label">Body</div>
+                    <IonCard>
+                      <IonCardHeader>
+                        <IonCardTitle className="mp-card-title">Weigh-ins</IonCardTitle>
+                        <IonCardSubtitle className="mp-card-subtitle">
+                          {latestWeight
+                            ? `Latest: ${
+                                Math.round(
+                                  fromMetricWeight(latestWeight.weight, unitSystem) * 10
+                                ) / 10
+                              } ${weightLabel(unitSystem)} · ${latestWeight.date}`
+                            : `No entries in the last ${tf}`}
+                        </IonCardSubtitle>
+                      </IonCardHeader>
+                      <IonCardContent>
+                        {weightChartData.length ? (
+                          <ChartContainer height={220} enabled={chartsEnabled}>
+                            <LineChart data={weightChartData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="var(--mp-border)" />
+                              <XAxis
+                                dataKey="date"
+                                tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <YAxis
+                                tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                                axisLine={false}
+                                tickLine={false}
+                              />
+                              <Tooltip
+                                contentStyle={{
+                                  background: "var(--mp-surface)",
+                                  border: "1px solid var(--mp-border)",
+                                  borderRadius: 8,
+                                  color: "var(--mp-text)",
+                                  fontSize: 12,
+                                }}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="weight"
+                                name={`Weight (${weightLabel(unitSystem)})`}
+                                stroke={palette[4]}
+                                dot={false}
+                                strokeWidth={2}
+                                isAnimationActive={chartAnimationsEnabled}
+                              />
+                            </LineChart>
+                          </ChartContainer>
+                        ) : (
+                          <div style={{ fontSize: 14, color: "var(--mp-text-muted)" }}>
+                            No weigh-ins in this range yet. Log one from Home to see it here.
+                          </div>
+                        )}
+                      </IonCardContent>
+                    </IonCard>
+                  </>
                 )}
 
                 {hasFoodData ? (
                   <>
-                    {/* Overview cards */}
+                    {/* ── Overview ── */}
+                    <div className="an-section-label">Overview</div>
                     <IonGrid>
                       <IonRow>
                         <IonCol size="12" sizeMd="6">
                           <IonCard>
                             <IonCardHeader>
-                              <IonCardTitle className="mp-card-title">
-                                Average day
-                                <IonChip color="success" style={{ marginLeft: 8 }}>
-                                  <IonIcon icon={trendingUpOutline} />
-                                  &nbsp;{avg.calories} kcal
-                                </IonChip>
-                              </IonCardTitle>
+                              <IonCardTitle className="mp-card-title">Average day</IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
-                                Across the selected range
+                                {avg.calories} kcal · {nonEmptyDayTable.length} days logged
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <div>Carbohydrates: {avg.carbs.toFixed(0)} g</div>
-                              <div>Protein: {avg.protein.toFixed(0)} g</div>
-                              <div>Fat: {avg.fat.toFixed(0)} g</div>
+                              {(() => {
+                                const total = (avg.carbs + avg.protein + avg.fat) || 1;
+                                return (
+                                  <div className="an-macro-bars">
+                                    {[
+                                      { label: "Carbs", value: avg.carbs, color: palette[0] },
+                                      { label: "Protein", value: avg.protein, color: palette[1] },
+                                      { label: "Fat", value: avg.fat, color: palette[2] },
+                                    ].map((m) => (
+                                      <div key={m.label} className="an-macro-bar__row">
+                                        <span className="an-macro-bar__label">{m.label}</span>
+                                        <div className="an-macro-bar__track">
+                                          <div
+                                            className="an-macro-bar__fill"
+                                            style={{
+                                              width: `${(m.value / total) * 100}%`,
+                                              background: m.color,
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="an-macro-bar__value">
+                                          {m.value.toFixed(0)} g
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
                             </IonCardContent>
                           </IonCard>
                         </IonCol>
@@ -848,76 +896,54 @@ const Analytics: React.FC = () => {
                                 Calories by meal
                               </IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
-                                Aggregate share
+                                Share across the last {tf}
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260} enabled={chartsEnabled}>
+                              <ChartContainer height={200} enabled={chartsEnabled}>
                                 <PieChart>
                                   <Pie
                                     data={[
-                                      {
-                                        name: "Breakfast",
-                                        value: mealShare.breakfast,
-                                      },
+                                      { name: "Breakfast", value: mealShare.breakfast },
                                       { name: "Lunch", value: mealShare.lunch },
                                       { name: "Dinner", value: mealShare.dinner },
                                       { name: "Snacks", value: mealShare.snacks },
                                     ]}
                                     dataKey="value"
                                     nameKey="name"
-                                    innerRadius={58}
-                                    outerRadius={96}
+                                    innerRadius={54}
+                                    outerRadius={86}
                                     paddingAngle={2}
                                     cx="50%"
                                     cy="50%"
                                     isAnimationActive={chartAnimationsEnabled}
                                   >
-                                    {["Breakfast", "Lunch", "Dinner", "Snacks"].map(
-                                      (_, i) => (
-                                        <Cell
-                                          key={i}
-                                          fill={palette[i % palette.length]}
-                                        />
-                                      )
-                                    )}
+                                    {["Breakfast", "Lunch", "Dinner", "Snacks"].map((_, i) => (
+                                      <Cell key={i} fill={palette[i % palette.length]} />
+                                    ))}
                                   </Pie>
-                                  <Tooltip />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: "var(--mp-surface)",
+                                      border: "1px solid var(--mp-border)",
+                                      borderRadius: 8,
+                                      color: "var(--mp-text)",
+                                      fontSize: 12,
+                                    }}
+                                  />
                                 </PieChart>
                               </ChartContainer>
-
-                              {/* Custom legend below chart */}
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 12,
-                                  justifyContent: "center",
-                                  flexWrap: "wrap",
-                                  marginTop: 8,
-                                  fontSize: 12,
-                                }}
-                              >
+                              <div className="an-legend">
                                 {[
                                   { label: "Breakfast", color: palette[0] },
                                   { label: "Lunch", color: palette[1] },
                                   { label: "Dinner", color: palette[2] },
                                   { label: "Snacks", color: palette[3] },
                                 ].map((it) => (
-                                  <div
-                                    key={it.label}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 6,
-                                    }}
-                                  >
+                                  <div key={it.label} className="an-legend__item">
                                     <span
-                                      style={{
-                                        width: 10,
-                                        height: 10,
-                                        borderRadius: "50%",
-                                        background: it.color,
-                                      }}
+                                      className="an-legend__dot"
+                                      style={{ background: it.color }}
                                     />
                                     <span>{it.label}</span>
                                   </div>
@@ -929,22 +955,18 @@ const Analytics: React.FC = () => {
                       </IonRow>
                     </IonGrid>
 
-                    {/* Calories trend + MA7 */}
+                    {/* ── Trends ── */}
+                    <div className="an-section-label">Trends</div>
+
                     <IonCard>
                       <IonCardHeader>
-                        <IonCardTitle className="mp-card-title">
-                          Calories trend
-                          <IonChip color="medium" style={{ marginLeft: 8 }}>
-                            <IonIcon icon={timeOutline} />
-                            &nbsp;{tf}
-                          </IonChip>
-                        </IonCardTitle>
+                        <IonCardTitle className="mp-card-title">Calories over time</IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Daily calories and 7-day moving average
+                          Daily intake and 7-day moving average
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <ChartContainer height={300} enabled={chartsEnabled}>
+                        <ChartContainer height={260} enabled={chartsEnabled}>
                           <ComposedChart
                             data={view.map((d, i) => ({
                               date: fmtDate(d.key),
@@ -952,11 +974,30 @@ const Analytics: React.FC = () => {
                               ma7: isNaN(kcalMA7[i]) ? null : kcalMA7[i],
                             }))}
                           >
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--mp-border)" />
+                            <XAxis
+                              dataKey="date"
+                              tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <YAxis
+                              tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: "var(--mp-surface)",
+                                border: "1px solid var(--mp-border)",
+                                borderRadius: 8,
+                                color: "var(--mp-text)",
+                                fontSize: 12,
+                              }}
+                            />
+                            <Legend
+                              wrapperStyle={{ fontSize: 12, color: "var(--mp-text-muted)" }}
+                            />
                             <Area
                               type="monotone"
                               dataKey="kcal"
@@ -980,46 +1021,58 @@ const Analytics: React.FC = () => {
                       </IonCardContent>
                     </IonCard>
 
-                    {/* Macro energy stacked bars */}
                     <IonCard>
                       <IonCardHeader>
-                        <IonCardTitle className="mp-card-title">
-                          Macro energy split
-                          <IonChip color="tertiary" style={{ marginLeft: 8 }}>
-                            <IonIcon icon={barChartOutline} />
-                            &nbsp;kcal by day
-                          </IonChip>
-                        </IonCardTitle>
+                        <IonCardTitle className="mp-card-title">Macro energy split</IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Carbohydrates, protein, fat as kcal
+                          Carbohydrates, protein and fat as kcal per day
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <ChartContainer height={260} enabled={chartsEnabled}>
+                        <ChartContainer height={240} enabled={chartsEnabled}>
                           <BarChart data={macroEnergyByDay}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                            <XAxis dataKey="date" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--mp-border)" />
+                            <XAxis
+                              dataKey="date"
+                              tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <YAxis
+                              tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                background: "var(--mp-surface)",
+                                border: "1px solid var(--mp-border)",
+                                borderRadius: 8,
+                                color: "var(--mp-text)",
+                                fontSize: 12,
+                              }}
+                            />
+                            <Legend
+                              wrapperStyle={{ fontSize: 12, color: "var(--mp-text-muted)" }}
+                            />
                             <Bar
                               dataKey="carbsK"
                               stackId="a"
-                              name="Carbohydrates kcal:"
+                              name="Carbs kcal"
                               fill={palette[0]}
                               isAnimationActive={chartAnimationsEnabled}
                             />
                             <Bar
                               dataKey="proteinK"
                               stackId="a"
-                              name="Protein kcal:"
+                              name="Protein kcal"
                               fill={palette[1]}
                               isAnimationActive={chartAnimationsEnabled}
                             />
                             <Bar
                               dataKey="fatK"
                               stackId="a"
-                              name="Fat kcal:"
+                              name="Fat kcal"
                               fill={palette[2]}
                               isAnimationActive={chartAnimationsEnabled}
                             />
@@ -1028,7 +1081,9 @@ const Analytics: React.FC = () => {
                       </IonCardContent>
                     </IonCard>
 
-                    {/* Macro ratio donut and radar vs averages */}
+                    {/* ── Macro Analysis ── */}
+                    <div className="an-section-label">Macro Analysis</div>
+
                     <IonGrid>
                       <IonRow>
                         <IonCol size="12" sizeMd="6">
@@ -1036,71 +1091,50 @@ const Analytics: React.FC = () => {
                             <IonCardHeader>
                               <IonCardTitle className="mp-card-title">
                                 Macro energy ratio
-                                <IonChip color="primary" style={{ marginLeft: 8 }}>
-                                  <IonIcon icon={pieChartOutline} />
-                                  &nbsp;Total mix
-                                </IonChip>
                               </IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
-                                Share of kcal from macros
+                                Share of total kcal from each macro
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260} enabled={chartsEnabled}>
+                              <ChartContainer height={200} enabled={chartsEnabled}>
                                 <PieChart>
                                   <Pie
                                     data={macroDonut}
                                     dataKey="value"
                                     nameKey="name"
-                                    innerRadius={58}
-                                    outerRadius={96}
+                                    innerRadius={54}
+                                    outerRadius={86}
                                     paddingAngle={1}
                                     cx="50%"
                                     cy="50%"
                                     isAnimationActive={chartAnimationsEnabled}
                                   >
                                     {macroDonut.map((_, i) => (
-                                      <Cell
-                                        key={i}
-                                        fill={palette[i % palette.length]}
-                                      />
+                                      <Cell key={i} fill={palette[i % palette.length]} />
                                     ))}
                                   </Pie>
-                                  <Tooltip />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: "var(--mp-surface)",
+                                      border: "1px solid var(--mp-border)",
+                                      borderRadius: 8,
+                                      color: "var(--mp-text)",
+                                      fontSize: 12,
+                                    }}
+                                  />
                                 </PieChart>
                               </ChartContainer>
-
-                              {/* Custom legend below chart */}
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 12,
-                                  justifyContent: "center",
-                                  flexWrap: "wrap",
-                                  marginTop: 8,
-                                  fontSize: 12,
-                                }}
-                              >
+                              <div className="an-legend">
                                 {[
                                   { label: "Carbohydrates", color: palette[0] },
                                   { label: "Protein", color: palette[1] },
                                   { label: "Fat", color: palette[2] },
                                 ].map((it) => (
-                                  <div
-                                    key={it.label}
-                                    style={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 6,
-                                    }}
-                                  >
+                                  <div key={it.label} className="an-legend__item">
                                     <span
-                                      style={{
-                                        width: 10,
-                                        height: 10,
-                                        borderRadius: "50%",
-                                        background: it.color,
-                                      }}
+                                      className="an-legend__dot"
+                                      style={{ background: it.color }}
                                     />
                                     <span>{it.label}</span>
                                   </div>
@@ -1114,18 +1148,14 @@ const Analytics: React.FC = () => {
                           <IonCard>
                             <IonCardHeader>
                               <IonCardTitle className="mp-card-title">
-                                Macro grams vs average
-                                <IonChip color="success" style={{ marginLeft: 8 }}>
-                                  <IonIcon icon={analyticsOutline} />
-                                  &nbsp;Radar
-                                </IonChip>
+                                Macro gram profile
                               </IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
                                 Average daily grams across timeframe
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
-                              <ChartContainer height={260} enabled={chartsEnabled}>
+                              <ChartContainer height={200} enabled={chartsEnabled}>
                                 <RadarChart
                                   data={[
                                     { metric: "Carbohydrates", g: avg.carbs },
@@ -1133,9 +1163,14 @@ const Analytics: React.FC = () => {
                                     { metric: "Fat", g: avg.fat },
                                   ]}
                                 >
-                                  <PolarGrid />
-                                  <PolarAngleAxis dataKey="metric" />
-                                  <PolarRadiusAxis />
+                                  <PolarGrid stroke="var(--mp-border)" />
+                                  <PolarAngleAxis
+                                    dataKey="metric"
+                                    tick={{ fill: "var(--mp-text-muted)", fontSize: 11 }}
+                                  />
+                                  <PolarRadiusAxis
+                                    tick={{ fill: "var(--mp-text-muted)", fontSize: 10 }}
+                                  />
                                   <Radar
                                     name="Avg g"
                                     dataKey="g"
@@ -1144,8 +1179,15 @@ const Analytics: React.FC = () => {
                                     fillOpacity={0.35}
                                     isAnimationActive={chartAnimationsEnabled}
                                   />
-                                  <Legend />
-                                  <Tooltip />
+                                  <Tooltip
+                                    contentStyle={{
+                                      background: "var(--mp-surface)",
+                                      border: "1px solid var(--mp-border)",
+                                      borderRadius: 8,
+                                      color: "var(--mp-text)",
+                                      fontSize: 12,
+                                    }}
+                                  />
                                 </RadarChart>
                               </ChartContainer>
                             </IonCardContent>
@@ -1154,123 +1196,149 @@ const Analytics: React.FC = () => {
                       </IonRow>
                     </IonGrid>
 
-                    {/* Calorie target */}
-                    <IonCard>
-                      <IonCardHeader>
-                        <IonCardTitle className="mp-card-title">
-                          Calorie target
-                          <IonChip color="tertiary" style={{ marginLeft: 8 }}>
-                            <IonIcon icon={barChartOutline} />
-                            &nbsp;Goal
-                          </IonChip>
-                        </IonCardTitle>
-                        <IonCardSubtitle className="mp-card-subtitle">
-                          Current average vs target
-                        </IonCardSubtitle>
-                      </IonCardHeader>
-                      <IonCardContent>
-                        {caloriesTarget ? (
-                          <ChartContainer height={220} enabled={chartsEnabled}>
-                            <BarChart
-                              data={[
-                                {
-                                  metric: "Calories",
-                                  average: avg.calories,
-                                  target: caloriesTarget,
-                                },
-                              ]}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis dataKey="metric" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Bar
-                                dataKey="average"
-                                name="Current avg (kcal)"
-                                fill={palette[0]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                              <Bar
-                                dataKey="target"
-                                name="Target (kcal)"
-                                fill={palette[3]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                            </BarChart>
-                          </ChartContainer>
-                        ) : (
-                          <div style={{ fontSize: 14, opacity: 0.75 }}>
-                            Set a calorie target in your profile to see it here.
-                          </div>
-                        )}
-                      </IonCardContent>
-                    </IonCard>
+                    {/* ── Goals ── */}
+                    <div className="an-section-label">Goals</div>
 
-                    {/* Macro targets */}
-                    <IonCard>
-                      <IonCardHeader>
-                        <IonCardTitle className="mp-card-title">
-                          Macro targets
-                          <IonChip color="secondary" style={{ marginLeft: 8 }}>
-                            <IonIcon icon={analyticsOutline} />
-                            &nbsp;Goals
-                          </IonChip>
-                        </IonCardTitle>
-                        <IonCardSubtitle className="mp-card-subtitle">
-                          Current averages vs targets
-                        </IonCardSubtitle>
-                      </IonCardHeader>
-                      <IonCardContent>
-                        {macroTargets ? (
-                          <ChartContainer height={260} enabled={chartsEnabled}>
-                            <BarChart
-                              data={[
-                                {
-                                  metric: "Carbohydrates",
-                                  average: Math.round(avg.carbs),
-                                  target: macroTargets.carbsG,
-                                },
-                                {
-                                  metric: "Protein",
-                                  average: Math.round(avg.protein),
-                                  target: macroTargets.proteinG,
-                                },
-                                {
-                                  metric: "Fat",
-                                  average: Math.round(avg.fat),
-                                  target: macroTargets.fatG,
-                                },
-                              ]}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                              <XAxis dataKey="metric" />
-                              <YAxis />
-                              <Tooltip />
-                              <Legend />
-                              <Bar
-                                dataKey="average"
-                                name="Current avg (g)"
-                                fill={palette[0]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                              <Bar
-                                dataKey="target"
-                                name="Target (g)"
-                                fill={palette[1]}
-                                isAnimationActive={chartAnimationsEnabled}
-                              />
-                            </BarChart>
-                          </ChartContainer>
-                        ) : (
-                          <div style={{ fontSize: 14, opacity: 0.75 }}>
-                            Set macro targets in your profile to see them here.
-                          </div>
-                        )}
-                      </IonCardContent>
-                    </IonCard>
+                    <IonGrid>
+                      <IonRow>
+                        <IonCol size="12" sizeMd="6">
+                          <IonCard>
+                            <IonCardHeader>
+                              <IonCardTitle className="mp-card-title">
+                                Calorie target
+                              </IonCardTitle>
+                              <IonCardSubtitle className="mp-card-subtitle">
+                                {caloriesTarget
+                                  ? `${avg.calories} kcal avg vs ${caloriesTarget} kcal goal`
+                                  : "Set a calorie goal in your profile"}
+                              </IonCardSubtitle>
+                            </IonCardHeader>
+                            <IonCardContent>
+                              {caloriesTarget ? (
+                                <div className="an-goal-wrap">
+                                  <div className="an-goal-percent">
+                                    {Math.round((avg.calories / caloriesTarget) * 100)}%
+                                  </div>
+                                  <div className="an-goal-bar__track">
+                                    <div
+                                      className="an-goal-bar__fill"
+                                      style={{
+                                        width: `${Math.min(
+                                          100,
+                                          (avg.calories / caloriesTarget) * 100
+                                        )}%`,
+                                        background:
+                                          avg.calories > caloriesTarget
+                                            ? "var(--ion-color-danger)"
+                                            : palette[0],
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="an-goal-bar__meta">
+                                    <span className="an-goal-bar__label">0</span>
+                                    <span
+                                      className="an-goal-bar__value"
+                                      style={{
+                                        color:
+                                          avg.calories > caloriesTarget
+                                            ? "var(--ion-color-danger)"
+                                            : "var(--ion-color-success)",
+                                      }}
+                                    >
+                                      {avg.calories > caloriesTarget
+                                        ? `+${avg.calories - caloriesTarget} over goal`
+                                        : `${caloriesTarget - avg.calories} under goal`}
+                                    </span>
+                                    <span className="an-goal-bar__label">
+                                      {caloriesTarget}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 14, color: "var(--mp-text-muted)" }}>
+                                  Set a calorie target in your profile to see it here.
+                                </div>
+                              )}
+                            </IonCardContent>
+                          </IonCard>
+                        </IonCol>
 
-                    {/* Best and lowest days */}
+                        <IonCol size="12" sizeMd="6">
+                          <IonCard>
+                            <IonCardHeader>
+                              <IonCardTitle className="mp-card-title">
+                                Macro targets
+                              </IonCardTitle>
+                              <IonCardSubtitle className="mp-card-subtitle">
+                                Average daily intake vs goals
+                              </IonCardSubtitle>
+                            </IonCardHeader>
+                            <IonCardContent>
+                              {macroTargets ? (
+                                <div className="an-macro-bars">
+                                  {[
+                                    {
+                                      label: "Carbs",
+                                      avg: Math.round(avg.carbs),
+                                      target: macroTargets.carbsG,
+                                      color: palette[0],
+                                    },
+                                    {
+                                      label: "Protein",
+                                      avg: Math.round(avg.protein),
+                                      target: macroTargets.proteinG,
+                                      color: palette[1],
+                                    },
+                                    {
+                                      label: "Fat",
+                                      avg: Math.round(avg.fat),
+                                      target: macroTargets.fatG,
+                                      color: palette[2],
+                                    },
+                                  ].map((m) => (
+                                    <div key={m.label}>
+                                      <div className="an-goal-macro__header">
+                                        <span className="an-goal-macro__name">{m.label}</span>
+                                        <span
+                                          className="an-goal-macro__stat"
+                                          style={{
+                                            color:
+                                              m.avg > m.target ? "var(--ion-color-danger)" : "var(--mp-text)",
+                                          }}
+                                        >
+                                          {m.avg} / {m.target} g
+                                        </span>
+                                      </div>
+                                      <div className="an-macro-bar__track">
+                                        <div
+                                          className="an-macro-bar__fill"
+                                          style={{
+                                            width: `${Math.min(
+                                              100,
+                                              m.target ? (m.avg / m.target) * 100 : 0
+                                            )}%`,
+                                            background:
+                                              m.avg > m.target ? "var(--ion-color-danger)" : m.color,
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 14, color: "var(--mp-text-muted)" }}>
+                                  Set macro targets in your profile to see them here.
+                                </div>
+                              )}
+                            </IonCardContent>
+                          </IonCard>
+                        </IonCol>
+                      </IonRow>
+                    </IonGrid>
+
+                    {/* ── Performance ── */}
+                    <div className="an-section-label">Performance</div>
+
                     <IonGrid>
                       <IonRow>
                         <IonCol size="12" sizeMd="6">
@@ -1278,34 +1346,46 @@ const Analytics: React.FC = () => {
                             <IonCardHeader>
                               <IonCardTitle className="mp-card-title">
                                 Highest intake
-                                <IonChip color="warning" style={{ marginLeft: 8 }}>
-                                  <IonIcon icon={medalOutline} />
-                                  &nbsp;
-                                  {bestDay
-                                    ? Math.round(bestDay.roll.macros.calories)
-                                    : "–"}{" "}
-                                  kcal
-                                </IonChip>
                               </IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
-                                {bestDay?.key || "—"}
+                                {bestDay
+                                  ? `${bestDay.key} · ${Math.round(
+                                      bestDay.roll.macros.calories
+                                    )} kcal`
+                                  : "—"}
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
                               {bestDay ? (
-                                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                                  <li>
-                                    Carbohydrates{" "}
-                                    {bestDay.roll.macros.carbs.toFixed(0)} g
-                                  </li>
-                                  <li>
-                                    Protein{" "}
-                                    {bestDay.roll.macros.protein.toFixed(0)} g
-                                  </li>
-                                  <li>
-                                    Fat {bestDay.roll.macros.fat.toFixed(0)} g
-                                  </li>
-                                </ul>
+                                <div className="an-stat-grid">
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[0] }}
+                                    >
+                                      {bestDay.roll.macros.carbs.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Carbs g</div>
+                                  </div>
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[1] }}
+                                    >
+                                      {bestDay.roll.macros.protein.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Protein g</div>
+                                  </div>
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[2] }}
+                                    >
+                                      {bestDay.roll.macros.fat.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Fat g</div>
+                                  </div>
+                                </div>
                               ) : (
                                 "—"
                               )}
@@ -1320,24 +1400,44 @@ const Analytics: React.FC = () => {
                                 Lowest intake
                               </IonCardTitle>
                               <IonCardSubtitle className="mp-card-subtitle">
-                                {lowDay?.key || "—"}
+                                {lowDay
+                                  ? `${lowDay.key} · ${Math.round(
+                                      lowDay.roll.macros.calories
+                                    )} kcal`
+                                  : "—"}
                               </IonCardSubtitle>
                             </IonCardHeader>
                             <IonCardContent>
                               {lowDay ? (
-                                <ul style={{ margin: 0, paddingLeft: 16 }}>
-                                  <li>
-                                    Carbohydrates{" "}
-                                    {lowDay.roll.macros.carbs.toFixed(0)} g
-                                  </li>
-                                  <li>
-                                    Protein{" "}
-                                    {lowDay.roll.macros.protein.toFixed(0)} g
-                                  </li>
-                                  <li>
-                                    Fat {lowDay.roll.macros.fat.toFixed(0)} g
-                                  </li>
-                                </ul>
+                                <div className="an-stat-grid">
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[0] }}
+                                    >
+                                      {lowDay.roll.macros.carbs.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Carbs g</div>
+                                  </div>
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[1] }}
+                                    >
+                                      {lowDay.roll.macros.protein.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Protein g</div>
+                                  </div>
+                                  <div className="an-stat-cell">
+                                    <div
+                                      className="an-stat-cell__value"
+                                      style={{ color: palette[2] }}
+                                    >
+                                      {lowDay.roll.macros.fat.toFixed(0)}
+                                    </div>
+                                    <div className="an-stat-cell__label">Fat g</div>
+                                  </div>
+                                </div>
                               ) : (
                                 "—"
                               )}
@@ -1347,146 +1447,99 @@ const Analytics: React.FC = () => {
                       </IonRow>
                     </IonGrid>
 
-                    {/* Top foods table */}
+                    {/* ── History ── */}
+                    <div className="an-section-label">History</div>
+
                     <IonCard>
                       <IonCardHeader>
                         <IonCardTitle className="mp-card-title">
                           Top foods by calories
                         </IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Across the selected timeframe
+                          Most-consumed across the last {tf}
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <div style={{ fontSize: 14 }}>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 120px 80px",
-                              fontWeight: 700,
-                              opacity: 0.8,
-                            }}
-                          >
-                            <div>Food</div>
-                            <div className="ion-text-right">Calories</div>
-                            <div className="ion-text-right">Logs</div>
-                          </div>
-                          {topFoods.map((f, i) => (
-                            <div
-                              key={i}
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "1fr 120px 80px",
-                                padding: "6px 0",
-                                borderBottom: "1px solid rgba(255,255,255,.08)",
-                              }}
-                            >
-                              <div>
-                                {f.name}
-                                {f.brand ? ` · ${f.brand}` : ""}
-                              </div>
-                              <div className="ion-text-right">
-                                {Math.round(f.calories)}
-                              </div>
-                              <div className="ion-text-right">{f.count}</div>
-                            </div>
-                          ))}
+                        <div className="an-foods-header">
+                          <div>#</div>
+                          <div>Food</div>
+                          <div>Calories</div>
+                          <div>Logs</div>
                         </div>
+                        {topFoods.map((f, i) => (
+                          <div key={i} className="an-foods-row">
+                            <div className="an-foods-rank">{i + 1}</div>
+                            <div>
+                              <div className="an-foods-name">{f.name}</div>
+                              {f.brand && (
+                                <div className="an-foods-brand">{f.brand}</div>
+                              )}
+                            </div>
+                            <div className="an-foods-kcal">{Math.round(f.calories)}</div>
+                            <div className="an-foods-count">{f.count}×</div>
+                          </div>
+                        ))}
                       </IonCardContent>
                     </IonCard>
 
-                    {/* Daily rollup list */}
                     <IonCard>
                       <IonCardHeader>
-                        <IonCardTitle className="mp-card-title">
-                          Daily rollup
-                        </IonCardTitle>
+                        <IonCardTitle className="mp-card-title">Daily log</IonCardTitle>
                         <IonCardSubtitle className="mp-card-subtitle">
-                          Carbohydrates, protein, fat per day
+                          All logged days in the selected range
                         </IonCardSubtitle>
                       </IonCardHeader>
                       <IonCardContent>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            lineHeight: 1.6,
-                            opacity: 0.9,
-                          }}
-                        >
-                          {nonEmptyDayTable.map((d) => (
-                            <div
-                              key={d.date}
-                              style={{
-                                display: "grid",
-                                gridTemplateColumns: "110px 1fr auto",
-                                gap: 10,
-                                alignItems: "center",
+                        {nonEmptyDayTable.map((d) => (
+                          <div key={d.date} className="an-day-row">
+                            <span className="an-day-row__date">{d.date.slice(5)}</span>
+                            <div className="an-day-row__pills">
+                              <span className="an-day-pill an-day-pill--kcal">
+                                {d.calories} kcal
+                              </span>
+                              <span className="an-day-pill">C {d.carbs.toFixed(0)}</span>
+                              <span className="an-day-pill">P {d.protein.toFixed(0)}</span>
+                              <span className="an-day-pill">F {d.fat.toFixed(0)}</span>
+                            </div>
+                            <IonButton
+                              size="small"
+                              fill="outline"
+                              onClick={() => {
+                                console.log(
+                                  `[USER ACTION] Analytics: View day button clicked (from list)`,
+                                  { date: d.date }
+                                );
+                                viewDay(d.date);
                               }}
                             >
-                              <div style={{ fontWeight: 700 }}>{d.date}</div>
-                              <div>
-                                {d.calories} kcal · Carbohydrates{" "}
-                                {d.carbs.toFixed(0)} g · Protein{" "}
-                                {d.protein.toFixed(0)} g · Fat{" "}
-                                {d.fat.toFixed(0)} g
-                              </div>
-                              <IonButton
-                                size="small"
-                                fill="outline"
-                                onClick={() => {
-                                  console.log(`[USER ACTION] Analytics: View day button clicked (from list)`, { date: d.date });
-                                  viewDay(d.date);
-                                }}
-                              >
-                                View day
-                              </IonButton>
-                            </div>
-                          ))}
-                        </div>
+                              View
+                            </IonButton>
+                          </div>
+                        ))}
                       </IonCardContent>
                     </IonCard>
                   </>
                 ) : (
                   <IonCard>
                     <IonCardHeader>
-                      <IonCardTitle className="mp-card-title">
-                        Nutrition insights
-                      </IonCardTitle>
+                      <IonCardTitle className="mp-card-title">Nutrition insights</IonCardTitle>
                       <IonCardSubtitle className="mp-card-subtitle">
                         Log meals to unlock calorie and macro analytics.
                       </IonCardSubtitle>
                     </IonCardHeader>
                     <IonCardContent>
-                      Add some meals in Home to see calorie trends, macro splits,
-                      and top foods here.
+                      Add some meals in Home to see calorie trends, macro splits, and top
+                      foods here.
                     </IonCardContent>
                   </IonCard>
                 )}
               </>
             ) : (
-              <div
-                style={{
-                  height: "100%",
-                  width: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                  padding: "20px",
-                }}
-              >
-                <h2 style={{ margin: 0, fontSize: "2rem", fontWeight: 700 }}>
-                  No analytics yet!
-                </h2>
-                <p
-                  style={{
-                    marginTop: "10px",
-                    fontSize: "1.1rem",
-                    opacity: 0.8,
-                  }}
-                >
-                  Log some food to unlock your stats 🚀
+              <div className="an-empty">
+                <div className="an-empty__emoji">📊</div>
+                <p className="an-empty__title">No analytics yet</p>
+                <p className="an-empty__subtitle">
+                  Start logging meals in Home to unlock your nutrition insights.
                 </p>
               </div>
             )}
