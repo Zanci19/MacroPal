@@ -39,19 +39,26 @@ ion-title {
   letter-spacing: 0.2px;
 }
 
+/* ---- Date navigation bar ---- */
+
 .fs-datebar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   margin-bottom: 16px;
+  padding: 4px 0;
 }
 
 .fs-datebar ion-button[fill="clear"] {
   --padding-start: 6px;
   --padding-end: 6px;
-  --background-hover: rgba(255, 255, 255, 0.05);
+  --background-hover: rgba(0, 0, 0, 0.05);
   border-radius: 9999px;
+}
+
+body.dark .fs-datebar ion-button[fill="clear"] {
+  --background-hover: rgba(255, 255, 255, 0.05);
 }
 
 .fs-datebtn {
@@ -63,6 +70,8 @@ ion-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  max-width: 240px;
 }
 
 .fs-datebtn__label {
@@ -507,7 +516,6 @@ ion-list {
 /* Misc */
 .ion-text-center ion-spinner {
   transform: translateZ(0);
-  filter: drop-shadow(0 1px 8px rgba(0, 0, 0, 0.25));
 }
 
 @keyframes mp-fade-in-up {

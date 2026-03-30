@@ -32,6 +32,8 @@ import {
   IonAlert,
   IonActionSheet,
   IonFooter,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from "@ionic/react";
 
 import { Keyboard } from "@capacitor/keyboard";
@@ -660,6 +662,24 @@ const AddFood: React.FC = () => {
   useEffect(() => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
+
+  // When navigating from the "+" nav button (quickAdd=1), automatically show
+  // the meal picker so the user explicitly picks a meal.
+  const quickAddPickerShownRef = useRef(false);
+  const locationSearchRef = useRef(location.search);
+  locationSearchRef.current = location.search;
+
+  useIonViewDidEnter(() => {
+    const params = new URLSearchParams(locationSearchRef.current);
+    if (params.get("quickAdd") === "1" && !quickAddPickerShownRef.current) {
+      quickAddPickerShownRef.current = true;
+      setShowMealPicker(true);
+    }
+  });
+
+  useIonViewDidLeave(() => {
+    quickAddPickerShownRef.current = false;
+  });
 
   useEffect(() => {
     const user = getCurrentUser();

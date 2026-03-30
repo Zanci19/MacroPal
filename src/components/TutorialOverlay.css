@@ -31,10 +31,10 @@
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 128, 255, 0.5);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
   }
   50% {
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 128, 255, 0.8);
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
   }
 }
 

@@ -2185,6 +2185,30 @@ const Home: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>Home</IonTitle>
+          <IonButtons slot="end">
+            <IonButton
+              fill="clear"
+              onClick={() => {
+                console.log(`[USER ACTION] Home: Quick add button clicked from header`);
+                setShowQuickAdd(true);
+                trackEvent("quick_add_open_from_topbar", { uid, date: activeDateKey });
+              }}
+              aria-label="Quick add food"
+            >
+              <IonIcon slot="icon-only" icon={rocketOutline} />
+            </IonButton>
+            <IonButton
+              fill="clear"
+              onClick={() => {
+                console.log(`[USER ACTION] Home: Opened day menu`, { date: activeDateKey });
+                setDayMenuOpen(true);
+                trackEvent("day_menu_open", { uid, date: activeDateKey });
+              }}
+              aria-label="Day options"
+            >
+              <IonIcon slot="icon-only" icon={ellipsisVertical} />
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -2223,34 +2247,6 @@ const Home: React.FC = () => {
             disabled={isToday}
           >
             <IonIcon icon={chevronForwardOutline} />
-          </IonButton>
-
-          <IonButton
-            fill="clear"
-            shape="round"
-            onClick={() => {
-              console.log(`[USER ACTION] Home: Quick add button clicked from top bar`);
-              setShowQuickAdd(true);
-              trackEvent("quick_add_open_from_topbar", { uid, date: activeDateKey });
-            }}
-            aria-label="Quick add food"
-          >
-            <IonIcon icon={rocketOutline} />
-          </IonButton>
-
-          <IonButton
-            fill="clear"
-            shape="round"
-            onClick={() => {
-              console.log(`[USER ACTION] Home: Opened day menu`, {
-                date: activeDateKey,
-              });
-              setDayMenuOpen(true);
-              trackEvent("day_menu_open", { uid, date: activeDateKey });
-            }}
-            aria-label="Day options"
-          >
-            <IonIcon icon={ellipsisVertical} />
           </IonButton>
         </div>
 
