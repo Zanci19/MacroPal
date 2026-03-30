@@ -157,15 +157,15 @@ ion-button {
   --background: var(--ion-color-primary);
   --background-hover: var(--ion-color-primary-shade);
   --border-radius: 14px;
-  --box-shadow: 0 4px 14px rgba(var(--ion-color-primary-rgb), 0.32);
+  --box-shadow: none;
   --color: #ffffff;
   font-weight: 700;
-  transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 ion-button:hover {
   transform: translateY(-1px);
-  --box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.38);
+  --box-shadow: none;
 }
 
 ion-button:active {
@@ -240,7 +240,6 @@ ion-input:focus-within,
 ion-select:focus-within,
 ion-textarea:focus-within {
   border-color: var(--ion-color-primary);
-  box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.14);
 }
 
 ion-item {
@@ -332,7 +331,7 @@ ion-tab-button.mp-tab-btn--add::part(native) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 20px rgba(var(--ion-color-primary-rgb), 0.45);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   transform: translateY(-16px);
   /* Ensure button appears above content */
   position: relative;
@@ -343,7 +342,7 @@ ion-tab-button.mp-tab-btn--add::part(native) {
 .mp-tab-btn__add-circle:active,
 ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
   transform: translateY(-16px) scale(0.92);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .mp-tab-btn__add-circle ion-icon {

@@ -45,7 +45,7 @@
 
 .settings-avatar:hover ion-avatar {
   border-color: var(--ion-color-primary);
-  box-shadow: 0 0 0 3px rgba(var(--ion-color-primary-rgb), 0.18);
+  box-shadow: none;
 }
 
 .settings-avatar ion-icon {

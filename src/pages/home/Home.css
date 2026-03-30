@@ -39,20 +39,33 @@ ion-title {
   letter-spacing: 0.2px;
 }
 
+/* ---- Greeting ---- */
+
+.fs-greeting {
+  padding: 4px 4px 12px;
+}
+
+.fs-greeting__text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  letter-spacing: -0.01em;
+}
+
 /* ---- Date navigation bar ---- */
 
 .fs-datebar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 16px;
-  padding: 4px 0;
+  padding: 0;
 }
 
 .fs-datebar ion-button[fill="clear"] {
-  --padding-start: 6px;
-  --padding-end: 6px;
+  --padding-start: 4px;
+  --padding-end: 4px;
   --background-hover: rgba(0, 0, 0, 0.05);
   border-radius: 9999px;
 }
@@ -63,24 +76,32 @@ body.dark .fs-datebar ion-button[fill="clear"] {
 
 .fs-datebtn {
   --border-radius: 9999px;
-  --padding-start: 18px;
-  --padding-end: 18px;
-  --padding-top: 10px;
-  --padding-bottom: 10px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  --background: var(--mp-surface);
+  --background-hover: var(--mp-surface-muted);
+  --color: var(--mp-text);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: var(--mp-border);
+  --box-shadow: none;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   flex: 1;
-  max-width: 240px;
+  max-width: 230px;
 }
 
 .fs-datebtn__label {
-  font-weight: 700;
-  letter-spacing: 0.2px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.1px;
 }
 
 .fs-datebtn__badge {
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 ion-card {
@@ -92,8 +113,11 @@ ion-card {
   transition: border-color 0.2s ease;
 }
 
+/* ---- Summary card ---- */
+
 .fs-summary {
   padding-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .fs-meal {
@@ -111,13 +135,18 @@ ion-card {
 }
 
 .fs-summary__hdr {
-  padding: 12px 16px;
+  padding: 14px 16px 10px;
   background: transparent;
 }
 
 .fs-summary__hdr ion-card-title {
-  font-weight: 800;
-  letter-spacing: 0.2px;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.1px;
+  color: var(--mp-text-muted) !important;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
 }
 
 .fs-tip-card {
@@ -134,12 +163,13 @@ ion-card {
   color: var(--mp-text) !important;
 }
 
+/* Calorie hero row */
 .fs-summary__row {
   display: grid;
-  grid-template-columns: 64px 1fr auto;
+  grid-template-columns: 72px 1fr auto;
   align-items: center;
   gap: 14px;
-  padding: 10px 14px 8px 14px;
+  padding: 4px 16px 12px;
 }
 
 .fs-summary__left {
@@ -157,25 +187,28 @@ ion-card {
 
 .ring-pct {
   font-weight: 900;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   color: var(--mp-text);
-  opacity: 0.95;
+  opacity: 0.9;
   letter-spacing: -0.03em;
 }
 
 .fs-summary__mid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fs-metric-title {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--mp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .fs-summary__right {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   justify-items: end;
 }
 
@@ -187,32 +220,55 @@ ion-card {
 
 .fs-summary__meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  padding: 0 16px 14px;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 0;
+  padding: 0;
   border-top: 1px solid var(--mp-border);
-  background: var(--mp-surface);
+  background: var(--mp-surface-muted);
+}
+
+.fs-summary__meta > div {
+  padding: 10px 16px;
+  border-right: 1px solid var(--mp-border);
+}
+
+.fs-summary__meta > div:last-child {
+  border-right: none;
 }
 
 .fs-summary__meta-label {
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   color: var(--mp-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .fs-summary__meta-value {
-  font-weight: 800;
-  font-size: 1.05rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--mp-text);
+  margin-top: 2px;
 }
 
 .fs-metric-value {
   font-weight: 800;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  color: var(--mp-text);
+}
+
+/* Macro bars */
+.fs-macro-bars {
+  padding: 0 16px 14px;
+  display: grid;
+  gap: 10px;
 }
 
 .fs-macros {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 14px 12px 14px;
   border-top: 1px solid var(--mp-border);
 }
@@ -271,8 +327,9 @@ ion-card {
 .fs-tip-card__text {
   margin: 0;
   color: var(--mp-text-muted);
-  line-height: 1.4;
+  line-height: 1.5;
   flex: 1;
+  font-size: 0.92rem;
 }
 
 .fs-weighin ion-card-title {
@@ -295,34 +352,36 @@ ion-card {
 .fs-macro {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px 5px 8px;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
   border-radius: 9999px;
   background-color: var(--mp-chip-bg);
   border: 1px solid var(--mp-border);
 }
 
 .fs-macro__dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
 .fs-macro__label {
-  font-weight: 800;
+  font-weight: 700;
+  font-size: 0.8rem;
   opacity: 0.9;
 }
 
 .fs-macro__val {
   color: var(--mp-text);
   font-weight: 600;
+  font-size: 0.8rem;
 }
 
 /* DARK MODE: improve macro chip visibility */
 body.dark .fs-macros {
   background-color: color-mix(in srgb, var(--mp-bg) 80%, var(--mp-surface));
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.dark .fs-macro {
@@ -336,7 +395,6 @@ body.dark .fs-macro__val {
 }
 
 
-
 /* ---------- MEALS ---------- */
 
 .fs-meal {
@@ -344,7 +402,7 @@ body.dark .fs-macro__val {
   border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
   background: var(--mp-surface);
-  box-shadow: var(--mp-shadow-soft);
+  box-shadow: none;
 }
 
 .fs-meal__hdr {
@@ -354,24 +412,24 @@ body.dark .fs-macro__val {
 /* IonItem renders full width */
 
 .fs-meal__row {
-  --padding-start: 14px;
-  --inner-padding-end: 10px;
-  --inner-padding-top: 8px;
-  --inner-padding-bottom: 8px;
-  --min-height: 58px;
+  --padding-start: 16px;
+  --inner-padding-end: 12px;
+  --inner-padding-top: 10px;
+  --inner-padding-bottom: 10px;
+  --min-height: 60px;
   width: 100%;
   background: transparent;
   align-items: center;
 }
 
 .fs-meal__icon {
-  font-size: 20px;
-  opacity: .95;
+  font-size: 18px;
+  opacity: .8;
 }
 
 .fs-meal__title-text {
-  font-size: 1.06rem;
-  font-weight: 800;
+  font-size: 0.95rem;
+  font-weight: 700;
   letter-spacing: .1px;
   color: var(--mp-text);
   margin: 0;
@@ -384,6 +442,7 @@ body.dark .fs-macro__val {
   --padding-start: 0;
   --padding-end: 0;
   --border-radius: 9999px;
+  --box-shadow: none;
   width: 36px;
   height: 36px;
   display: grid;
@@ -393,9 +452,9 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__add ion-icon {
-  font-size: 24px;
-  opacity: 0.95;
-  color: var(--mp-ring-accent);
+  font-size: 22px;
+  opacity: 0.9;
+  color: var(--ion-color-primary);
 }
 
 .fs-meal__add:hover {
@@ -404,33 +463,33 @@ body.dark .fs-macro__val {
 
 /* Content area – stretch left */
 .fs-meal ion-card-content {
-  padding: 12px 12px 14px 12px;
+  padding: 10px 12px 14px 12px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
 }
 
 .fs-meal__chevron {
-  font-size: 22px;
-  opacity: 0.7;
-  margin-inline-end: 4px;
+  font-size: 18px;
+  opacity: 0.45;
+  margin-inline-end: 2px;
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
   transform: rotate(0deg);
 }
 
 .fs-meal.is-open .fs-meal__chevron {
   transform: rotate(180deg);
-  opacity: 1;
+  opacity: 0.7;
 }
 
 .meal-item-macros {
-  font-size: 0.85rem;
-  opacity: 0.9;
+  font-size: 0.82rem;
+  opacity: 0.85;
 }
 
 .meal-item-micros {
-  font-size: 0.8rem;
-  opacity: 0.7;
+  font-size: 0.78rem;
+  opacity: 0.65;
 }
 
 .fs-meal__title {
@@ -441,8 +500,8 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__title-text {
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   margin: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -450,8 +509,8 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__totals {
-  font-size: 0.8rem;
-  opacity: 0.8;
+  font-size: 0.78rem;
+  opacity: 0.7;
   line-height: 1.3;
   white-space: normal;
   word-break: break-word;
@@ -462,13 +521,12 @@ body.dark .fs-macro__val {
   text-align: center;
   width: fit-content;
   align-self: center;
-  font: 600 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
+  font: 500 0.85rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial;
   color: var(--mp-text-muted);
-  padding: 7px 14px;
-  border-radius: 12px;
+  padding: 6px 14px;
+  border-radius: 10px;
   background: var(--mp-chip-bg);
   border: 1px dashed var(--mp-border);
-  font-size: 0.85rem;
 }
 
 ion-list {
@@ -477,9 +535,9 @@ ion-list {
 }
 
 .meal-item {
-  --padding-start: 12px;
-  --inner-padding-end: 8px;
-  --min-height: 56px;
+  --padding-start: 14px;
+  --inner-padding-end: 10px;
+  --min-height: 58px;
   --background: transparent;
   --border-color: var(--mp-border);
   --border-style: solid;
@@ -492,6 +550,7 @@ ion-list {
 
 .meal-item h2 {
   font-weight: 600;
+  font-size: 0.9rem;
   margin: 0 0 2px 0;
   color: var(--mp-text);
 }
@@ -503,13 +562,14 @@ ion-list {
 }
 
 .kcal-badge {
-  font-weight: 700;
-  padding: 5px 10px;
-  border-radius: 10px;
-  background: rgba(var(--ion-color-primary-rgb), 0.10);
-  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.22);
-  color: var(--ion-color-primary);
-  min-width: 86px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--mp-border);
+  color: var(--mp-text-muted);
+  min-width: 68px;
   text-align: center;
 }
 
@@ -540,18 +600,18 @@ ion-content {
 /* Small phones */
 @media (max-width: 420px) {
   .fs-summary__row {
-    grid-template-columns: 56px 1fr auto;
+    grid-template-columns: 60px 1fr auto;
     gap: 10px;
   }
 
   .fs-metric-value {
-    font-size: 1.15rem;
+    font-size: 1.2rem;
   }
 
   .fs-meal__row {
     --padding-start: 12px;
     --inner-padding-end: 8px;
-    --min-height: 54px;
+    --min-height: 56px;
   }
 
   .fs-meal__add {
