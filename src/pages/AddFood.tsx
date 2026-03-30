@@ -484,6 +484,12 @@ const AddFood: React.FC = () => {
     const value = params.get("quickAdd");
     return value === "1" || value === "true";
   }, [location.search]);
+  const hasMealInQuery = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const mealParam = (params.get("meal") || "").toLowerCase();
+    return MEAL_ORDER.includes(mealParam as MealKey);
+  }, [location.search]);
+  const shouldShowMealSelection = quickAddFromQuery || !hasMealInQuery;
   const autoMealPendingRef = useRef<boolean>(autoMealFromQuery);
   useEffect(() => {
     autoMealPendingRef.current = autoMealFromQuery;
@@ -2877,7 +2883,7 @@ const AddFood: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
-        {quickAddFromQuery && (
+        {shouldShowMealSelection && (
           <IonItem lines="none" className="mp-mb-md">
             <IonLabel>For which meal?</IonLabel>
             <IonSelect
