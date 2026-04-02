@@ -16,10 +16,10 @@ body.dark .fs-datepicker {
   --ion-text-color: var(--mp-text);
   --ion-text-color-rgb: 255, 255, 255;
 
-  --ion-color-step-50: #121212;
-  --ion-color-step-100: #121212;
-  --ion-color-step-150: #121212;
-  --ion-color-step-200: #121212;
+  --ion-color-step-50: #040A18;
+  --ion-color-step-100: #040A18;
+  --ion-color-step-150: #040A18;
+  --ion-color-step-200: #040A18;
 }
 
 /* Light theme datepicker styling */
@@ -380,8 +380,8 @@ ion-card {
 
 /* DARK MODE: improve macro chip visibility */
 body.dark .fs-macros {
-  background-color: color-mix(in srgb, var(--mp-bg) 80%, var(--mp-surface));
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: color-mix(in srgb, var(--mp-surface) 90%, var(--mp-bg) 10%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 body.dark .fs-macro {
