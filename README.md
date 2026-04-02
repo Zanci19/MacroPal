@@ -211,6 +211,15 @@ Then build and run from Android Studio.
 
 ## 📱 Usage
 
+### ⚠️ Important: No Music Playlist/Broadcast Feature
+
+MacroPal is a **nutrition and fitness tracking app**. It does **not** include:
+- music playlists
+- audio playback controls
+- DJ/live broadcast streaming
+
+If you are seeing an empty playlist in another product, you are likely in a different app, account, or service than MacroPal.
+
 ### Getting Started
 
 1. **Create an Account**
@@ -240,6 +249,26 @@ Then build and run from Android Studio.
    - Add activities and durations
    - View estimated calories burned
    - Track your fitness journey
+
+## ❓ Troubleshooting
+
+### "There is nothing in the playlist. No music."
+
+That is expected in MacroPal, because no music system is implemented in this project.
+
+### How to use MacroPal correctly (step-by-step)
+
+1. Launch the app and sign in (or create an account).
+2. Complete your profile (goal, weight, activity level, preferences).
+3. Tap **+** to add a food entry.
+4. Use search, barcode scan, or custom food input to log meals.
+5. Open **Analytics** to review calories and macros.
+6. Open **Workout** to log physical activities.
+7. Open **Settings** to export or manage your data.
+
+### If you actually need music playback/broadcast
+
+Use a dedicated music platform (for example: Spotify, YouTube Music, Apple Music, SoundCloud, OBS+streaming service). MacroPal is not designed for music distribution or broadcasting.
 
 ### Pro Tips
 
