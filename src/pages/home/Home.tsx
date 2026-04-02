@@ -270,6 +270,10 @@ const MealCard: React.FC<{
       ? ` • ${items.length} ${items.length === 1 ? "food" : "foods"}`
       : "";
   const mealTitle = `${pretty(meal)}${mealCountLabel}`;
+  const mealRdi = Math.min(
+    100,
+    Math.max(0, Math.round((mealTotals.calories / 2000) * 100))
+  );
 
   return (
     <IonCard
@@ -293,14 +297,8 @@ const MealCard: React.FC<{
 
           <div className="fs-meal__title">
             <h2 className="fs-meal__title-text">{mealTitle}</h2>
-
-            {hasMealTotals && !isCollapsed && (
-              <div className="fs-meal__totals">
-                {Math.round(mealTotals.calories)} kcal · Carbohydrates{" "}
-                {mealTotals.carbs.toFixed(0)} g · Protein{" "}
-                {mealTotals.protein.toFixed(0)} g · Fat{" "}
-                {mealTotals.fat.toFixed(0)} g
-              </div>
+            {hasMealTotals && (
+              <div className="fs-meal__kcal">{Math.round(mealTotals.calories)} Calories</div>
             )}
           </div>
 
@@ -328,12 +326,16 @@ const MealCard: React.FC<{
 
       {!isCollapsed && (
         <IonCardContent>
-          <IonButton
-            size="small"
-            fill="outline"
-            onClick={onMoreOptions}
-            style={{ marginBottom: 8 }}
-          >
+          {hasMealTotals && (
+            <div className="fs-meal__macro-grid">
+              <div><span>Fat</span><strong>{mealTotals.fat.toFixed(1)}</strong></div>
+              <div><span>Carbs</span><strong>{mealTotals.carbs.toFixed(1)}</strong></div>
+              <div><span>Prot</span><strong>{mealTotals.protein.toFixed(1)}</strong></div>
+              <div><span>RDI</span><strong>{mealRdi}%</strong></div>
+            </div>
+          )}
+
+          <IonButton size="small" fill="clear" onClick={onMoreOptions} className="fs-meal__more">
             More options
           </IonButton>
 
@@ -393,6 +395,9 @@ const MealCard: React.FC<{
                         {it.name}
                         {it.brand ? ` · ${it.brand}` : ""}
                       </h2>
+                      {it.selection?.note && (
+                        <p className="meal-item-serving">{it.selection.note}</p>
+                      )}
                       <p className="meal-item-macros">
                         Carbs {carbs.toFixed(1)} g · Protein{" "}
                         {protein.toFixed(1)} g · Fat{" "}

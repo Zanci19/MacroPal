@@ -2893,12 +2893,17 @@ const AddFood: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
+      <IonHeader className="add-food-header">
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/app/home?date=${dateKey}`} />
+            <IonBackButton defaultHref={`/app/home?date=${dateKey}`} text="" />
           </IonButtons>
-          <IonTitle>Add Food</IonTitle>
+          <IonTitle>{meal[0].toUpperCase() + meal.slice(1)}</IonTitle>
+          <IonButtons slot="end">
+            <IonButton fill="clear" onClick={() => history.push(`/app/home?date=${dateKey}`)}>
+              Cancel
+            </IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
 
@@ -2974,6 +2979,7 @@ const AddFood: React.FC = () => {
         )}
 
         <IonSegment
+          className="add-food-mode-segment"
           value={tab}
           onIonChange={(e) => {
             console.log(`[USER ACTION] AddFood: Tab changed`, { from: tab, to: e.detail.value });
@@ -2983,19 +2989,22 @@ const AddFood: React.FC = () => {
           }}
           style={{ marginBottom: 12 }}
         >
+          <IonSegmentButton value="favorites">
+            <IonLabel>Cook Book</IonLabel>
+          </IonSegmentButton>
           <IonSegmentButton value="search">
-            <IonLabel>Search</IonLabel>
+            <IonLabel>Food</IonLabel>
           </IonSegmentButton>
           <IonSegmentButton value="favorites">
-            <IonLabel>Favorites</IonLabel>
+            <IonLabel>Recently Eaten</IonLabel>
           </IonSegmentButton>
         </IonSegment>
 
         {tab === "search" && (
           <>
-            <IonItem>
+            <IonItem className="add-food-search-input">
               <IonInput
-                placeholder={`Search food to add to ${meal}...`}
+                placeholder="Search for Food"
                 value={query}
                 debounce={SEARCH_DEBOUNCE_MS}
                 ref={searchInputRef}
