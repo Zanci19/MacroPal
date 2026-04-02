@@ -428,8 +428,8 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__title-text {
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1.05rem;
+  font-weight: 800;
   letter-spacing: .1px;
   color: var(--mp-text);
   margin: 0;
@@ -452,7 +452,7 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__add ion-icon {
-  font-size: 22px;
+  font-size: 44px;
   opacity: 0.9;
   color: var(--ion-color-primary);
 }
@@ -463,7 +463,7 @@ body.dark .fs-macro__val {
 
 /* Content area – stretch left */
 .fs-meal ion-card-content {
-  padding: 10px 12px 14px 12px;
+  padding: 0 0 8px 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -516,6 +516,38 @@ body.dark .fs-macro__val {
   word-break: break-word;
 }
 
+.fs-meal__kcal {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.fs-meal__macro-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  text-align: center;
+  border-top: 1px solid var(--mp-border);
+  border-bottom: 1px solid var(--mp-border);
+  padding: 10px 4px;
+}
+
+.fs-meal__macro-grid span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-meal__macro-grid strong {
+  font-size: 1.05rem;
+  line-height: 1.1;
+}
+
+.fs-meal__more {
+  margin: 8px 12px;
+  --color: var(--mp-text-muted);
+  text-transform: none;
+}
+
 .meal-total {
   margin: 2px 0 10px 0;
   text-align: center;
@@ -535,9 +567,9 @@ ion-list {
 }
 
 .meal-item {
-  --padding-start: 14px;
-  --inner-padding-end: 10px;
-  --min-height: 58px;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  --min-height: 74px;
   --background: transparent;
   --border-color: var(--mp-border);
   --border-style: solid;
@@ -549,10 +581,15 @@ ion-list {
 }
 
 .meal-item h2 {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 500;
+  font-size: 1rem;
   margin: 0 0 2px 0;
   color: var(--mp-text);
+}
+
+.meal-item-serving {
+  color: var(--ion-color-success);
+  font-size: 0.95rem;
 }
 
 .meal-item p {
@@ -562,14 +599,14 @@ ion-list {
 }
 
 .kcal-badge {
-  font-weight: 600;
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0;
+  border-radius: 0;
   background: transparent;
-  border: 1px solid var(--mp-border);
-  color: var(--mp-text-muted);
-  min-width: 68px;
+  border: none;
+  color: var(--mp-text);
+  min-width: auto;
   text-align: center;
 }
 
