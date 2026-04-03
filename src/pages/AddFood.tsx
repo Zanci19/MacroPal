@@ -2989,14 +2989,11 @@ const AddFood: React.FC = () => {
           }}
           style={{ marginBottom: 12 }}
         >
-          <IonSegmentButton value="favorites">
-            <IonLabel>Cook Book</IonLabel>
-          </IonSegmentButton>
           <IonSegmentButton value="search">
-            <IonLabel>Food</IonLabel>
+            <IonLabel>Search</IonLabel>
           </IonSegmentButton>
           <IonSegmentButton value="favorites">
-            <IonLabel>Recently Eaten</IonLabel>
+            <IonLabel>Favourites</IonLabel>
           </IonSegmentButton>
         </IonSegment>
 

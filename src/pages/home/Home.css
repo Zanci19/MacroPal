@@ -87,7 +87,7 @@
   margin-right: 4px;
 }
 
-/* Green left accent on meal cards */
+/* Left accent on meal cards using primary color */
 .fs-meal {
   border-left: 4px solid var(--ion-color-primary) !important;
 }
