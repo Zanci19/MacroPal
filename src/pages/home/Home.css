@@ -3,6 +3,95 @@
   --mp-sub: 0.95rem;
 }
 
+/* ---- FatSecret-style calorie summary table ---- */
+
+.fs-cal-summary {
+  padding: 0 0 4px;
+}
+
+.fs-cal-remaining {
+  padding: 16px 16px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--mp-border);
+}
+
+.fs-cal-streak {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.fs-cal-remaining__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mp-text-muted);
+  margin-bottom: 4px;
+}
+
+.fs-cal-remaining__value {
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--ion-color-primary);
+}
+
+.fs-cal-table {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  gap: 2px;
+}
+
+.fs-cal-table__cell {
+  flex: 1;
+  text-align: center;
+  padding: 4px 2px;
+}
+
+.fs-cal-table__val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  line-height: 1.2;
+}
+
+.fs-cal-table__lbl {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mp-text-muted);
+  margin-top: 2px;
+}
+
+.fs-cal-table__op {
+  font-size: 1.1rem;
+  font-weight: 300;
+  color: var(--mp-text-muted);
+  padding: 0 2px;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ---- FatSecret-style meal header ---- */
+
+.fs-meal__kcal-badge {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--mp-text-muted);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+/* Green left accent on meal cards */
+.fs-meal {
+  border-left: 4px solid var(--ion-color-primary) !important;
+}
+
 body.dark .fs-summary__hdr ion-card-title {
   color: var(--mp-text) !important;
 }

@@ -1,3 +1,68 @@
+/* ---- FatSecret-style search bar ---- */
+
+.fs-search-bar {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--mp-border);
+  border-radius: 9999px;
+  padding: 4px 4px 4px 14px;
+  background: var(--mp-surface);
+  margin-bottom: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.fs-search-bar:focus-within {
+  border-color: var(--ion-color-primary);
+}
+
+.fs-search-bar__icon {
+  font-size: 18px;
+  color: var(--mp-text-muted);
+  flex-shrink: 0;
+  margin-right: 4px;
+}
+
+.fs-search-bar__input {
+  flex: 1;
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 1rem;
+}
+
+.fs-search-bar__action {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --border-radius: 9999px;
+  flex-shrink: 0;
+  color: var(--mp-text-muted);
+}
+
+/* FatSecret-style search results list items */
+.add-food-results-list ion-item h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mp-text);
+}
+
+.add-food-results-list ion-item p {
+  font-size: 0.8rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-result-kcal {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--mp-text);
+  min-width: 48px;
+  text-align: right;
+}
+
+.fs-result-kcal__unit {
+  font-size: 0.65rem;
+  font-weight: 500;
+  opacity: 0.7;
+}
+
 .add-food-page {
   display: flex;
   flex-direction: column;
@@ -13,7 +78,6 @@
 .add-food-header ion-title {
   text-align: left;
   font-size: 1.1rem;
-  text-decoration: underline;
 }
 
 .add-food-mode-segment {

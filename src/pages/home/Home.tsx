@@ -297,10 +297,13 @@ const MealCard: React.FC<{
 
           <div className="fs-meal__title">
             <h2 className="fs-meal__title-text">{mealTitle}</h2>
-            {hasMealTotals && (
-              <div className="fs-meal__kcal">{Math.round(mealTotals.calories)} Calories</div>
-            )}
           </div>
+
+          {hasMealTotals && (
+            <div slot="end" className="fs-meal__kcal-badge">
+              {Math.round(mealTotals.calories)} kcal
+            </div>
+          )}
 
           <IonIcon
             slot="end"
@@ -2196,7 +2199,7 @@ const Home: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Home</IonTitle>
+          <IonTitle>Food Diary</IonTitle>
           <IonButtons slot="end">
             <IonButton
               fill="clear"
@@ -2284,66 +2287,47 @@ const Home: React.FC = () => {
           >
             <SwiperSlideComp>
               <div className="fs-summary__slide">
-                <IonCardHeader className="fs-summary__hdr">
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <IonCardTitle>{isToday ? "Today" : "Summary"}</IonCardTitle>
-                    {streak > 1 && (
-                      <IonChip color="success" style={{ marginInlineStart: 8 }}>
-                        <IonIcon icon={flameOutline} />
-                        <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
-                      </IonChip>
-                    )}
+                {!profile || caloriesNeeded == null ? (
+                  <div className="ion-text-center" style={{ padding: 24 }}>
+                    <IonSpinner name="dots" />
                   </div>
-                </IonCardHeader>
-
-                <IonCardContent className="fs-summary__row">
-                  {!profile || caloriesNeeded == null ? (
-                    <div className="ion-text-center" style={{ padding: 24 }}>
-                      <IonSpinner name="dots" />
+                ) : (
+                  <div className="fs-cal-summary">
+                    <div className="fs-cal-remaining">
+                      {streak > 1 && (
+                        <div className="fs-cal-streak">
+                          <IonChip color="success">
+                            <IonIcon icon={flameOutline} />
+                            <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
+                          </IonChip>
+                        </div>
+                      )}
+                      <div className="fs-cal-remaining__label">{summaryDifferenceLabel}</div>
+                      <div className="fs-cal-remaining__value" style={{ color: ringColor }}>
+                        {summaryDifferenceValue}
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="fs-summary__left" style={{ color: ringColor }}>
-                        <ProgressRing size={64} stroke={8} progress={progress} />
+                    <div className="fs-cal-table">
+                      <div className="fs-cal-table__cell">
+                        <div className="fs-cal-table__val">{kcalGoal}</div>
+                        <div className="fs-cal-table__lbl">Goal</div>
                       </div>
-                      <div className="fs-summary__mid">
-                        <div className="fs-metric-title">
-                          {summaryDifferenceLabel}
-                        </div>
-                        <div className="fs-metric-title">Calories Consumed</div>
+                      <div className="fs-cal-table__op">−</div>
+                      <div className="fs-cal-table__cell">
+                        <div className="fs-cal-table__val">{kcalConsumed}</div>
+                        <div className="fs-cal-table__lbl">Food</div>
                       </div>
-                      <div className="fs-summary__right">
-                        <div className="fs-metric-value">
-                          {summaryDifferenceValue}
-                        </div>
-                        <div className="fs-metric-value">{kcalConsumed}</div>
+                      <div className="fs-cal-table__op">+</div>
+                      <div className="fs-cal-table__cell">
+                        <div className="fs-cal-table__val">{workoutCalories}</div>
+                        <div className="fs-cal-table__lbl">Exercise</div>
                       </div>
-                    </>
-                  )}
-                </IonCardContent>
-
-                {profile && caloriesNeeded != null && (
-                  <div className="fs-summary__meta">
-                    <div>
-                      <div className="fs-summary__meta-label">Base goal</div>
-                      <div className="fs-summary__meta-value">{baseKcalGoal}</div>
+                      <div className="fs-cal-table__op">=</div>
+                      <div className="fs-cal-table__cell">
+                        <div className="fs-cal-table__val" style={{ color: ringColor }}>{summaryDifferenceValue}</div>
+                        <div className="fs-cal-table__lbl">Remaining</div>
+                      </div>
                     </div>
-                    {workoutCalories > 0 && (
-                      <>
-                        <div>
-                          <div className="fs-summary__meta-label">
-                            Activity bonus
-                          </div>
-                          <div className="fs-summary__meta-value">
-                            +{workoutCalories} kcal
-                          </div>
-                        </div>
-                        <div>
-                          <div className="fs-summary__meta-label">Adjusted goal</div>
-                          <div className="fs-summary__meta-value">{kcalGoal}</div>
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 
