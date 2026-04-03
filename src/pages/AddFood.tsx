@@ -59,7 +59,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useDemoFirestore } from "../hooks/useDemoFirestore";
 
-import { calendarOutline, starOutline, trashOutline, cameraOutline, sparklesOutline } from "ionicons/icons";
+import { calendarOutline, starOutline, trashOutline, cameraOutline, sparklesOutline, barcodeOutline, searchOutline } from "ionicons/icons";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import {
   recognizeFood,
@@ -2989,21 +2989,20 @@ const AddFood: React.FC = () => {
           }}
           style={{ marginBottom: 12 }}
         >
-          <IonSegmentButton value="favorites">
-            <IonLabel>Cook Book</IonLabel>
-          </IonSegmentButton>
           <IonSegmentButton value="search">
-            <IonLabel>Food</IonLabel>
+            <IonLabel>Search</IonLabel>
           </IonSegmentButton>
           <IonSegmentButton value="favorites">
-            <IonLabel>Recently Eaten</IonLabel>
+            <IonLabel>Favourites</IonLabel>
           </IonSegmentButton>
         </IonSegment>
 
         {tab === "search" && (
           <>
-            <IonItem className="add-food-search-input">
+            <div className="fs-search-bar">
+              <IonIcon icon={searchOutline} className="fs-search-bar__icon" />
               <IonInput
+                className="fs-search-bar__input"
                 placeholder="Search for Food"
                 value={query}
                 debounce={SEARCH_DEBOUNCE_MS}
@@ -3021,34 +3020,10 @@ const AddFood: React.FC = () => {
                   }
                 }}
               />
-            </IonItem>
-
-            <div className="add-food-actions-grid">
               <IonButton
-                expand="block"
-                disabled={!query || loading}
-                onClick={() => {
-                  console.log(`[USER ACTION] AddFood: Search button clicked`, { query: query.trim() });
-                  if (!query.trim()) return;
-                  trackEvent("food_search_button_click", { query: query.trim(), meal, date: dateKey });
-                  hideKeyboard();
-                  foodsSearch(query.trim(), 1);
-                }}
-              >
-                {loading ? (
-                  <>
-                    <IonSpinner name="dots" />
-                    &nbsp;Searching…
-                  </>
-                ) : (
-                  "Search"
-                )}
-              </IonButton>
-
-              <IonButton
-                expand="block"
-                fill="outline"
-                color={barcodeScannerEnabled ? undefined : "medium"}
+                fill="clear"
+                className="fs-search-bar__action"
+                color="medium"
                 onClick={() => {
                   console.log(`[USER ACTION] AddFood: Barcode scanner button clicked`, { enabled: barcodeScannerEnabled });
                   if (!barcodeScannerEnabled) {
@@ -3063,24 +3038,46 @@ const AddFood: React.FC = () => {
                   trackEvent("navigate_to_scan_barcode", { meal, date: dateKey });
                   history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`);
                 }}
+                aria-label="Barcode scanner"
               >
-                Barcode scanner
+                <IonIcon slot="icon-only" icon={barcodeOutline} />
               </IonButton>
-
               <IonButton
-                expand="block"
-                fill="outline"
+                fill="clear"
+                className="fs-search-bar__action"
                 onClick={async () => {
                   console.log(`[USER ACTION] AddFood: AI Photo button clicked`);
                   await takeAiPhoto();
                 }}
                 disabled={isAiPhotoAnalyzing}
+                aria-label="AI photo recognition"
               >
-                <IonIcon slot="start" icon={cameraOutline} />
-                {isAiPhotoAnalyzing ? "Analyzing..." : "AI Photo Recognition"}
-                {isAiPhotoAnalyzing && <IonSpinner name="crescent" slot="end" />}
+                {isAiPhotoAnalyzing
+                  ? <IonSpinner name="crescent" style={{ width: 20, height: 20 }} />
+                  : <IonIcon slot="icon-only" icon={cameraOutline} />}
               </IonButton>
             </div>
+
+            <IonButton
+              expand="block"
+              disabled={!query || loading}
+              onClick={() => {
+                console.log(`[USER ACTION] AddFood: Search button clicked`, { query: query.trim() });
+                if (!query.trim()) return;
+                trackEvent("food_search_button_click", { query: query.trim(), meal, date: dateKey });
+                hideKeyboard();
+                foodsSearch(query.trim(), 1);
+              }}
+            >
+              {loading ? (
+                <>
+                  <IonSpinner name="dots" />
+                  &nbsp;Searching…
+                </>
+              ) : (
+                "Search"
+              )}
+            </IonButton>
 
             {showRecentSearchesEnabled && recentQueries.length > 0 && (
               <div className="add-food-recent-section">
@@ -3176,15 +3173,13 @@ const AddFood: React.FC = () => {
                         {food.brands ? ` · ${food.brands}` : ""}
                       </h2>
                       <p>
-                        {(food.serving_size ? `Serving: ${food.serving_size} · ` : "") +
-                          `${preview.calories || 0} kcal/100g · Carbohydrates ${preview.carbs || 0} g · Protein ${
-                            preview.protein || 0
-                          } g · Fat ${preview.fat || 0} g`}
+                        {food.serving_size ? `Per serving: ${food.serving_size}` : "Per 100g"} · C {preview.carbs || 0}g · P {preview.protein || 0}g · F {preview.fat || 0}g
                       </p>
                     </IonLabel>
-                    {foodDetailLoading === food.code && (
-                      <IonSpinner slot="end" name="crescent" />
-                    )}
+                    {foodDetailLoading === food.code
+                      ? <IonSpinner slot="end" name="crescent" />
+                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<br /><span className="fs-result-kcal__unit">kcal</span></div>
+                    }
                   </IonItem>
                 );
               })}
@@ -3242,12 +3237,15 @@ const AddFood: React.FC = () => {
                           {item.brand ? ` · ${item.brand}` : ""}
                         </h2>
                         <p>
-                          {Math.round(item.total?.calories || 0)} kcal · Carbs{" "}
-                          {(item.total?.carbs ?? 0).toFixed(1)} g · Protein{" "}
-                          {(item.total?.protein ?? 0).toFixed(1)} g · Fat{" "}
-                          {(item.total?.fat ?? 0).toFixed(1)} g
+                          C {(item.total?.carbs ?? 0).toFixed(1)}g · P{" "}
+                          {(item.total?.protein ?? 0).toFixed(1)}g · F{" "}
+                          {(item.total?.fat ?? 0).toFixed(1)}g
                         </p>
                       </IonLabel>
+                      <div slot="end" className="fs-result-kcal">
+                        {Math.round(item.total?.calories || 0)}<br />
+                        <span className="fs-result-kcal__unit">kcal</span>
+                      </div>
                     </IonItem>
                   ))}
                 </IonList>
@@ -3289,28 +3287,32 @@ const AddFood: React.FC = () => {
                           {fav.brand ? ` · ${fav.brand}` : ""}
                         </h2>
                         <p>
-                          {Math.round(fav.total.calories)} kcal · Carbs {fav.total.carbs.toFixed(1)} g · Protein{" "}
-                          {fav.total.protein.toFixed(1)} g · Fat {fav.total.fat.toFixed(1)} g
+                          C {fav.total.carbs.toFixed(1)}g · P {fav.total.protein.toFixed(1)}g · F {fav.total.fat.toFixed(1)}g
                         </p>
                         <p style={{ fontSize: 12, opacity: 0.7 }}>{fav.selection.note}</p>
                       </IonLabel>
 
-                      <IonButton
-                        slot="end"
-                        fill="clear"
-                        color="danger"
-                        onClick={(e) => {
-                          console.log(`[USER ACTION] AddFood: Delete favorite button clicked`, { favoriteId: fav.id, name: fav.name });
-                          e.stopPropagation();
-                          setFavoriteToDelete(fav);
-                          trackEvent("favorite_delete_prompt_open", {
-                            favorite_id: fav.id,
-                          });
-                        }}
-                        aria-label={`Delete favorite ${fav.name}`}
-                      >
-                        <IonIcon icon={trashOutline} />
-                      </IonButton>
+                      <div slot="end" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <div className="fs-result-kcal">
+                          {Math.round(fav.total.calories)}<br />
+                          <span className="fs-result-kcal__unit">kcal</span>
+                        </div>
+                        <IonButton
+                          fill="clear"
+                          color="danger"
+                          onClick={(e) => {
+                            console.log(`[USER ACTION] AddFood: Delete favorite button clicked`, { favoriteId: fav.id, name: fav.name });
+                            e.stopPropagation();
+                            setFavoriteToDelete(fav);
+                            trackEvent("favorite_delete_prompt_open", {
+                              favorite_id: fav.id,
+                            });
+                          }}
+                          aria-label={`Delete favorite ${fav.name}`}
+                        >
+                          <IonIcon icon={trashOutline} />
+                        </IonButton>
+                      </div>
                     </IonItem>
                   ))}
                 </IonList>
