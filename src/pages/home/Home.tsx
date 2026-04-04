@@ -101,6 +101,7 @@ import AnnouncementPopup, {
 import TutorialOverlay from "../../components/TutorialOverlay";
 import { WaterIntake } from "../../components/WaterIntake";
 import { QuickAddModal } from "../../components/QuickAddModal";
+import { getMacroInsight } from "../../utils/macroInsights";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -1768,7 +1769,9 @@ const Home: React.FC = () => {
         return;
       }
       if (quoteHasLoadedRef.current) return;
-      const quoteSlideIndex = showAchievements ? 4 : 3;
+      // Slides: 0=Summary, 1=Nutrition, 2=Weigh-in, 3=Water, 4=Insight,
+      // 5=Achievements (if shown), then Quote at 5 (no achievements) or 6 (with achievements)
+      const quoteSlideIndex = showAchievements ? 5 : 4;
       if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
     },
@@ -1966,6 +1969,21 @@ const Home: React.FC = () => {
     return entries;
   }, [nutritionTotals]);
 
+  const macroInsight = useMemo(() => {
+    if (!macroTargets) return null;
+    return getMacroInsight({
+      caloriesConsumed: totals.day.calories,
+      proteinConsumed: totals.day.protein,
+      carbsConsumed: totals.day.carbs,
+      fatConsumed: totals.day.fat,
+      caloriesGoal: kcalGoal,
+      proteinGoal: macroTargets.proteinG,
+      carbsGoal: macroTargets.carbsG,
+      fatGoal: macroTargets.fatG,
+      goal: profile?.goal,
+    });
+  }, [macroTargets, totals.day, kcalGoal, profile?.goal]);
+
   const formatNutritionLabel = (key: string) => {
     if (nutritionLabels[key]?.label) return nutritionLabels[key].label;
     const cleaned = key.replace(/_100g|_serving/g, "").replace(/[_-]+/g, " ");
@@ -1994,6 +2012,7 @@ const Home: React.FC = () => {
     nutritionEntries,
     streak,
     showWellnessTip,
+    macroInsight,
   ]);
 
   const fetchAnnouncement = useCallback(
@@ -2568,6 +2587,40 @@ const Home: React.FC = () => {
                 </IonCardHeader>
                 <IonCardContent>
                   <WaterIntake dateKey={activeDateKey} />
+                </IonCardContent>
+              </div>
+            </SwiperSlideComp>
+
+            <SwiperSlideComp>
+              <div className="fs-summary__slide">
+                <IonCardHeader className="fs-summary__hdr">
+                  <IonCardTitle>Today's Insight</IonCardTitle>
+                </IonCardHeader>
+                <IonCardContent className="fs-tip-card__content">
+                  {macroInsight ? (
+                    <>
+                      <p
+                        className="fs-tip-card__text"
+                        style={{ fontSize: "1.5rem", marginBottom: 8 }}
+                        aria-hidden="true"
+                      >
+                        {macroInsight.emoji}
+                      </p>
+                      <p
+                        className="fs-tip-card__text"
+                        style={{ fontWeight: 600 }}
+                      >
+                        {macroInsight.headline}
+                      </p>
+                      <IonText color="medium">
+                        <p style={{ marginTop: 4 }}>{macroInsight.detail}</p>
+                      </IonText>
+                    </>
+                  ) : (
+                    <IonText color="medium">
+                      <p>Set up your profile to see a personalised insight.</p>
+                    </IonText>
+                  )}
                 </IonCardContent>
               </div>
             </SwiperSlideComp>
