@@ -2482,7 +2482,7 @@ const Home: React.FC = () => {
                         gap: "6px 12px",
                         alignItems: "center",
                         fontSize: 11,
-                        color: "var(--ion-color-medium)",
+                        color: "var(--mp-text-muted)",
                       }}
                     >
                       {[

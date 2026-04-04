@@ -44,7 +44,7 @@
 
 .quick-food-item ion-label p {
   font-size: 0.85rem;
-  color: var(--ion-color-medium);
+  color: var(--mp-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -103,12 +103,12 @@ body.dark ion-modal {
 body.dark .fs-datepicker {
   --background: var(--mp-bg);
   --ion-text-color: var(--mp-text);
-  --ion-text-color-rgb: 255, 255, 255;
+  --ion-text-color-rgb: 230, 230, 230;
 
-  --ion-color-step-50: #040A18;
-  --ion-color-step-100: #040A18;
-  --ion-color-step-150: #040A18;
-  --ion-color-step-200: #040A18;
+  --ion-color-step-50: #36393e;
+  --ion-color-step-100: #36393e;
+  --ion-color-step-150: #36393e;
+  --ion-color-step-200: #36393e;
 }
 
 /* Light theme datepicker styling */
@@ -230,12 +230,10 @@ ion-card {
 
 .fs-summary__hdr ion-card-title {
   font-weight: 700;
-  font-size: 1rem;
-  letter-spacing: 0.1px;
-  color: var(--mp-text-muted) !important;
-  text-transform: uppercase;
   font-size: 0.72rem;
   letter-spacing: 0.08em;
+  color: var(--mp-text-muted) !important;
+  text-transform: uppercase;
 }
 
 .fs-tip-card {

@@ -79,7 +79,7 @@
 }
 
 .announcement-popup-image-error p {
-  color: var(--ion-color-medium, #92949c);
+  color: var(--mp-text-muted);
   font-size: 14px;
 }
 
@@ -127,7 +127,7 @@
 .announcement-popup-message {
   font-size: 16px;
   line-height: 1.6;
-  color: var(--ion-color-medium-shade, #808289);
+  color: var(--mp-text-muted);
   margin: 0 0 24px 0;
   flex: 1;
   text-align: center;

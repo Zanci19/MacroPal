@@ -129,8 +129,6 @@ import "@ionic/react/css/display.css";
 
 import "@ionic/react/css/palettes/dark.class.css";
 
-import "./theme/variables.css";
-
 import { trackEvent } from "./firebase";
 import UpdateGate, { isFeatureEnabled, useRemoteConfig } from "./UpdateGate";
 import DebugOverlay from "./components/DebugOverlay";

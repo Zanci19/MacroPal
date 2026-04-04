@@ -33,7 +33,7 @@
 .water-volume {
   margin: 4px 0 0 0;
   font-size: 0.9rem;
-  color: var(--ion-color-medium);
+  color: var(--mp-text-muted);
 }
 
 .water-controls {
@@ -74,7 +74,7 @@
 .goal-message p {
   margin: 0;
   font-weight: 600;
-  color: var(--ion-color-success-shade);
+  color: var(--ion-color-success);
 }
 
 body.dark .goal-message p {
