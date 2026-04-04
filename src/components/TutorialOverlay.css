@@ -104,7 +104,7 @@
   top: 12px;
   right: 12px;
   background: transparent;
-  color: var(--ion-color-medium, #92949c);
+  color: var(--mp-text-muted);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -139,7 +139,7 @@
 .tutorial-description {
   font-size: 16px;
   line-height: 1.6;
-  color: var(--ion-color-medium-shade, #808289);
+  color: var(--mp-text-muted);
   margin: 0 0 24px 0;
 }
 
@@ -182,7 +182,7 @@
 }
 
 .tutorial-skip-button {
-  --color: var(--ion-color-medium, #92949c);
+  --color: var(--mp-text-muted);
   font-size: 14px;
 }
 
