@@ -92,6 +92,10 @@ const Register: React.FC = () => {
       } catch (error: unknown) {
         const err = error as Error & { code?: string };
         if (!active) return;
+        if (err?.code === "auth/argument-error") {
+          // No pending redirect result; safe to ignore on some environments.
+          return;
+        }
         trackEvent("register_google_error", { code: err?.code || "unknown" });
         showToast(handleError("register", err));
       } finally {

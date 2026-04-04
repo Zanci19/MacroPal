@@ -33,7 +33,6 @@ import {
   type RefresherEventDetail,
 } from "@ionic/react";
 import {
-  addCircleOutline,
   sunnyOutline,
   restaurantOutline,
   cafeOutline,
@@ -322,7 +321,7 @@ const MealCard: React.FC<{
             }}
             aria-label={`Add to ${meal}`}
           >
-            <IonIcon icon={addCircleOutline} />
+            <span className="fs-meal__add-plus" aria-hidden="true">+</span>
           </IonButton>
         </IonItem>
       </IonCardHeader>

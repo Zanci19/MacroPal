@@ -94,10 +94,7 @@ body.dark .register-page {
 
 .register-divider::before,
 .register-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--mp-border);
+  content: none;
 }
 
 .register-google-button {

@@ -127,10 +127,7 @@ body.dark .login-page {
 
 .login-divider::before,
 .login-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--mp-border);
+  content: none;
 }
 
 .login-google-button {
