@@ -59,6 +59,8 @@ const importChangelog = () => import("./pages/Changelog");
 const importScanBarcode = () => import("./pages/ScanBarcode");
 const importRecipeCalculator = () => import("./pages/RecipeCalculator");
 const importPhotoFoodLogger = () => import("./pages/PhotoFoodLogger");
+const importSharing = () => import("./pages/home/Sharing");
+const importSharedUserView = () => import("./pages/home/SharedUserView");
 
 const Login = lazy(importLogin);
 const Register = lazy(importRegister);
@@ -84,6 +86,8 @@ const Changelog = lazy(importChangelog);
 const ScanBarcode = lazy(importScanBarcode);
 const RecipeCalculator = lazy(importRecipeCalculator);
 const PhotoFoodLogger = lazy(importPhotoFoodLogger);
+const Sharing = lazy(importSharing);
+const SharedUserView = lazy(importSharedUserView);
 
 const LAZY_ROUTE_IMPORTS = [
   importLogin,
@@ -110,6 +114,8 @@ const LAZY_ROUTE_IMPORTS = [
   importScanBarcode,
   importRecipeCalculator,
   importPhotoFoodLogger,
+  importSharing,
+  importSharedUserView,
 ];
 
 const preloadLazyRoutes = async () => {
@@ -494,6 +500,8 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <Route exact path="/app/units" render={(props) => <LazyRoute component={Units} {...props} />} />
         <Route exact path="/app/reminders" render={(props) => <LazyRoute component={Reminders} {...props} />} />
         <Route exact path="/app/data-privacy" render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
+        <Route exact path="/app/sharing" render={(props) => <LazyRoute component={Sharing} {...props} />} />
+        <Route exact path="/app/shared-user/:uid" render={(props) => <LazyRoute component={SharedUserView} {...props} />} />
         <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 

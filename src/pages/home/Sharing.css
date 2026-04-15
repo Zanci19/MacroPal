@@ -1,0 +1,131 @@
+.sharing-page {
+  padding: 1rem;
+}
+
+.sharing-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.sharing-page ion-card {
+  margin: 0;
+}
+
+.sharing-page ion-card-header {
+  padding-bottom: 8px;
+}
+
+.sharing-card-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+  color: var(--mp-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sharing-title-icon {
+  font-size: 1.2rem;
+  color: var(--ion-color-primary);
+}
+
+.sharing-help-text {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+.sharing-uid-box {
+  background: var(--mp-surface-muted);
+  border: 1px solid var(--mp-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  overflow-x: auto;
+}
+
+.sharing-uid-box code {
+  font-family: monospace;
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+  word-break: break-all;
+}
+
+/* ── Pairing code display ──────────────── */
+.sharing-code-display {
+  background: var(--mp-surface-muted);
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+}
+
+.sharing-code-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.35em;
+  color: var(--ion-color-primary);
+  font-family: monospace;
+  margin-bottom: 8px;
+}
+
+.sharing-code-meta {
+  margin-bottom: 10px;
+}
+
+.sharing-code-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ── Redeem row ────────────────────────── */
+.sharing-redeem-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sharing-code-input {
+  flex: 1;
+  --background: var(--mp-surface-muted);
+  --border-radius: 8px;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  font-size: 1.1rem;
+  letter-spacing: 0.15em;
+  font-family: monospace;
+  border: 1px solid var(--mp-border);
+  border-radius: 8px;
+}
+
+.sharing-generate-btn {
+  margin-top: 4px;
+}
+
+/* ── Lists ─────────────────────────────── */
+.sharing-list-section {
+  margin-top: 16px;
+}
+
+.sharing-list-heading {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.sharing-list-section ion-list {
+  padding: 0;
+}
+
+/* ── Loading ───────────────────────────── */
+.sharing-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 12px;
+  color: var(--mp-text-muted);
+}

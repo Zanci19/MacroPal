@@ -146,6 +146,42 @@ export interface WeighInEntry {
 }
 
 /** =========================
+ *  Sharing / Pairing
+ *  ========================= */
+
+/** A pairing code document stored at `pairingCodes/{code}` */
+export interface PairingCodeDoc {
+  /** UID of the user who generated this code (the sharer) */
+  ownerUid: string;
+  /** Display name of the sharer */
+  ownerName: string;
+  /** ISO timestamp when the code was created */
+  createdAt: string;
+  /** ISO timestamp when the code expires (createdAt + 5 min) */
+  expiresAt: string;
+}
+
+/** An entry in a viewer's list of watched users (stored in `users/{uid}`) */
+export interface SharedUserEntry {
+  /** UID of the paired user whose data the viewer can see */
+  uid: string;
+  /** Display name at the time of pairing */
+  displayName: string;
+  /** ISO timestamp when the pairing was created */
+  pairedAt: string;
+}
+
+/** An entry in a sharer's list of who can view them (stored in `users/{uid}`) */
+export interface ViewerEntry {
+  /** UID of the viewer */
+  uid: string;
+  /** Display name at the time of pairing */
+  displayName: string;
+  /** ISO timestamp when the pairing was created */
+  pairedAt: string;
+}
+
+/** =========================
  *  Open Food Facts (subset)
  *  ========================= */
 

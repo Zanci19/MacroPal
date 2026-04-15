@@ -1,0 +1,122 @@
+.shared-user-page {
+  padding: 1rem;
+}
+
+/* ── Date navigator ────────────────────── */
+.shared-date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+/* ── View toggle ───────────────────────── */
+.shared-view-toggle {
+  margin-bottom: 14px;
+}
+
+/* ── Diary cards ───────────────────────── */
+.shared-diary-sections {
+  display: grid;
+  gap: 14px;
+}
+
+.shared-diary-sections ion-card {
+  margin: 0;
+}
+
+.shared-meal-title {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--mp-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-empty-text {
+  font-size: 0.88rem;
+  font-style: italic;
+}
+
+.shared-brand {
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+}
+
+.shared-entry-macros {
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+}
+
+/* ── Summary ───────────────────────────── */
+.shared-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.shared-summary ion-card {
+  margin: 0;
+}
+
+.shared-summary-icon {
+  font-size: 1.2rem;
+  color: var(--ion-color-primary);
+}
+
+.shared-stat {
+  text-align: center;
+  padding: 8px 4px;
+}
+
+.shared-stat-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--mp-text);
+}
+
+.shared-stat-protein {
+  color: var(--mp-color-protein);
+}
+
+.shared-stat-carbs {
+  color: var(--mp-color-carbs);
+}
+
+.shared-stat-fat {
+  color: var(--mp-color-fat);
+}
+
+.shared-stat-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--mp-text-muted);
+  margin-top: 2px;
+}
+
+.shared-items-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 0.9rem;
+  color: var(--mp-text-muted);
+}
+
+.shared-capitalize {
+  text-transform: capitalize;
+}
+
+/* ── Loading ───────────────────────────── */
+.shared-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 12px;
+  color: var(--mp-text-muted);
+}

@@ -35,6 +35,7 @@ import {
   keyOutline,
   newspaperOutline,
   chevronDownOutline,
+  peopleOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
@@ -896,6 +897,20 @@ const Settings: React.FC = () => {
                   }}
                 >
                   <IonLabel>Data & privacy</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to sharing page`);
+                    history.push("/app/sharing");
+                  }}
+                >
+                  <IonIcon slot="start" icon={peopleOutline} />
+                  <IonLabel>
+                    <h2>Sharing</h2>
+                    <p>Pair with a dietitian, parent, or friend</p>
+                  </IonLabel>
                 </IonItem>
               </IonList>
             </IonCardContent>
