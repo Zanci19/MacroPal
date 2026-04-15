@@ -126,7 +126,7 @@ const Sharing: React.FC = () => {
 
   const handleRedeem = async () => {
     const trimmed = codeInput.trim();
-    if (trimmed.length !== 8 || !/^\d{8}$/.test(trimmed)) {
+    if (!/^\d{8}$/.test(trimmed)) {
       setToast({ show: true, message: "Please enter a valid 8-digit code", color: "warning" });
       return;
     }

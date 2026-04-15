@@ -114,12 +114,8 @@ const SharedUserView: React.FC = () => {
         if (snap.exists()) {
           const data = snap.data();
           setProfile((data.profile as Profile) ?? null);
-          // Try to find a name: profile might not have it, try displayName field
-          const name =
-            data.displayName ||
-            data.profile?.displayName ||
-            data.email ||
-            "User";
+          // Prefer top-level displayName (set by Firebase Auth), then email, fallback
+          const name = data.displayName || data.email || "User";
           setDisplayName(String(name));
         }
       } catch (err) {

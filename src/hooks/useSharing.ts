@@ -120,8 +120,18 @@ export function useSharing() {
 
     const now = new Date().toISOString();
 
-    // Add the sharer to MY (viewer's) sharedUsers list
+    // Check for existing pairing to prevent duplicates
     const viewerRef = doc(db, "users", user.uid);
+    const viewerSnap = await getDoc(viewerRef);
+    const viewerData = viewerSnap.data() || {};
+    const existingShared: SharedUserEntry[] = viewerData.sharedUsers ?? [];
+    if (existingShared.some((s) => s.uid === data.ownerUid)) {
+      // Already paired – just delete the code and return
+      await deleteDoc(codeRef);
+      throw new Error("You are already paired with this user");
+    }
+
+    // Add the sharer to MY (viewer's) sharedUsers list
     const newSharedUser: SharedUserEntry = {
       uid: data.ownerUid,
       displayName: data.ownerName,
