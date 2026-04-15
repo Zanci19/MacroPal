@@ -86,6 +86,10 @@ def chunked(iterable: Iterable[tuple[str, ...]], chunk_size: int) -> Iterable[li
 
 
 def open_csv_reader(url: str) -> csv.DictReader:
+    # Open Food Facts exports are TSV files even when the extension is .csv.
+    # See: https://wiki.openfoodfacts.org/Reusing_Open_Food_Facts_Data
+    csv.field_size_limit(sys.maxsize)
+
     response = urlopen(url)
     lower_url = url.lower()
 
@@ -99,7 +103,7 @@ def open_csv_reader(url: str) -> csv.DictReader:
     else:
         file_obj = io.TextIOWrapper(response, encoding="utf-8", errors="replace", newline="")
 
-    return csv.DictReader(file_obj)
+    return csv.DictReader(file_obj, delimiter="\t")
 
 
 def main() -> int:
