@@ -1,0 +1,134 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function roleOf(uid) {
+      return userDoc(uid).data.role;
+    }
+
+    function isClinician(uid) {
+      return roleOf(uid) in ["clinician", "admin"];
+    }
+
+    function isAdmin(uid) {
+      return roleOf(uid) == "admin";
+    }
+
+    function isAssigned(clinicianUid, userUid) {
+      return exists(/databases/$(database)/documents/users/$(clinicianUid)/assignedUsers/$(userUid));
+    }
+
+    function canReadUser(userUid) {
+      return isSelf(userUid) || (signedIn() && isAssigned(request.auth.uid, userUid));
+    }
+
+    match /users/{uid} {
+      allow read: if canReadUser(uid);
+      allow create: if isSelf(uid);
+      allow update, delete: if isSelf(uid);
+
+      match /foods/{dateKey} {
+        allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /workouts/{dateKey} {
+        allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /weighins/{dateKey} {
+        allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /water/{dateKey} {
+        allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /plans/{dateKey} {
+        allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /favorites/{favoriteId} {
+        allow read, write: if isSelf(uid);
+      }
+
+      match /recentFoods/{foodId} {
+        allow read, write: if isSelf(uid);
+      }
+
+      match /mealTemplates/{templateId} {
+        allow read, write: if isSelf(uid);
+      }
+
+      match /mealPresets/{presetId} {
+        allow read, write: if isSelf(uid);
+      }
+
+      match /assignedUsers/{userUid} {
+        allow read: if isSelf(uid) || isAdmin(request.auth.uid);
+        allow create, update, delete: if isSelf(uid) && isClinician(request.auth.uid);
+      }
+
+      match /carePlanTemplates/{templateId} {
+        allow read, write: if isSelf(uid) && isClinician(request.auth.uid);
+      }
+
+      match /carePlans/{planId} {
+        allow read: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+        allow create: if signedIn() && isAssigned(request.auth.uid, uid);
+        allow update: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+        allow delete: if signedIn() && isAssigned(request.auth.uid, uid);
+      }
+
+      match /alerts/{alertId} {
+        allow read: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+        allow update: if signedIn() && isAssigned(request.auth.uid, uid);
+      }
+
+      match /reports/{reportId} {
+        allow read: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+      }
+
+      match /messages/{threadId} {
+        allow read: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+        allow create, update: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+
+        match /items/{messageId} {
+          allow read: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+          allow create: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
+        }
+      }
+    }
+
+    match /pairingCodes/{code} {
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow read: if signedIn();
+      allow delete: if signedIn();
+    }
+
+    match /clinicianInvites/{code} {
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn() && (
+        request.resource.data.clinicianUid == request.auth.uid ||
+        resource.data.clinicianUid == request.auth.uid ||
+        isAdmin(request.auth.uid)
+      );
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if signedIn() && isAdmin(request.auth.uid);
+      allow create: if signedIn() && (isClinician(request.auth.uid) || isAdmin(request.auth.uid));
+    }
+  }
+}

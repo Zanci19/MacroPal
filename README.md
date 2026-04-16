@@ -100,6 +100,16 @@ Built with modern web technologies and wrapped in a native mobile experience usi
 - **Private Data**: Your nutrition data is yours alone
 - **Secure Cloud Sync**: All data encrypted and synced via Firebase
 
+## 👥 Consumer mode vs clinician collaboration mode
+
+- **Consumer mode (default):** Existing logging, analytics, workouts, sharing, and settings flows continue unchanged for all users.
+- **Clinician collaboration mode (opt-in):** Enabled only when the `clinicianCollaboration` feature flag is on and the user is role/assignment-authorized.
+- **Roles:** `user` (default), `clinician`, `admin`.
+- **Assignment gating:** Clinicians can access only explicitly assigned users (`users/{clinicianUid}/assignedUsers/{userUid}`).
+- **Consent-based linking:** Users connect with clinician invite codes (`clinicianInvites/{code}`), which writes `users/{uid}.clinicianLink`.
+- **Care workflows:** Assigned clinicians can create templates, assign care plans, review adherence/risk flags, exchange secure messages, and review consultation report payloads.
+- **Backwards compatibility:** Existing users are backfilled to `role="user"` by app and Cloud Functions without blocking UX.
+
 ### 🌍 **Multi-Platform**
 - **iOS**: Native iOS app via Capacitor
 - **Android**: Native Android app via Capacitor

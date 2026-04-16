@@ -220,3 +220,99 @@ export interface OFFSearchHit {
 
   [k: string]: unknown;
 }
+
+/** =========================
+ *  Clinician collaboration
+ *  ========================= */
+
+export type UserRole = "user" | "clinician" | "admin";
+
+export interface ClinicianLink {
+  clinicianUid: string;
+  clinicianName: string;
+  consentedAt: string;
+  linkedAt: string;
+  status: "active" | "revoked";
+  inviteCode?: string;
+}
+
+export interface ClinicianAssignment {
+  uid: string;
+  displayName: string;
+  assignedAt: string;
+  assignedBy?: string;
+}
+
+export interface RiskThresholds {
+  adherence7dMin: number;
+  adherence30dMin: number;
+}
+
+export interface AlertDoc {
+  severity: "low" | "medium" | "high" | "critical";
+  reasonCode: string;
+  status: "open" | "acknowledged" | "resolved";
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CarePlanTemplateDoc {
+  name: string;
+  description?: string;
+  tasks: string[];
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+}
+
+export interface CarePlanDoc {
+  name: string;
+  description?: string;
+  tasks: string[];
+  completedTasks?: string[];
+  status: "active" | "completed" | "paused";
+  assignedAt: string;
+  assignedBy: string;
+  templateId?: string;
+}
+
+export interface ConsultationReportPayload {
+  reportType: "weekly" | "monthly";
+  periodStart: string;
+  periodEnd: string;
+  adherence7d: number;
+  adherence30d: number;
+  trendDelta: number;
+  openAlerts: number;
+  keyNotes: string[];
+  generatedAt: string;
+}
+
+export interface ClinicianInviteDoc {
+  clinicianUid: string;
+  clinicianName: string;
+  createdAt: string;
+  expiresAt: string;
+  redeemedAt?: string;
+  redeemedBy?: string;
+  status: "active" | "redeemed" | "expired";
+}
+
+export interface MessageThreadDoc {
+  clinicianUid: string;
+  userUid: string;
+  updatedAt: string;
+  unreadForUser: number;
+  unreadForClinician: number;
+  lastMessage?: string;
+  lastMessageAt?: string;
+}
+
+export interface MessageItemDoc {
+  senderUid: string;
+  senderRole: UserRole;
+  body: string;
+  createdAt: string;
+}
