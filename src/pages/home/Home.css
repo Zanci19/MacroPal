@@ -105,10 +105,10 @@ body.dark .fs-datepicker {
   --ion-text-color: var(--mp-text);
   --ion-text-color-rgb: 230, 230, 230;
 
-  --ion-color-step-50: #36393e;
-  --ion-color-step-100: #36393e;
-  --ion-color-step-150: #36393e;
-  --ion-color-step-200: #36393e;
+  --ion-color-step-50: var(--mp-bg);
+  --ion-color-step-100: var(--mp-bg);
+  --ion-color-step-150: var(--mp-bg);
+  --ion-color-step-200: var(--mp-bg);
 }
 
 /* Light theme datepicker styling */

@@ -39,20 +39,20 @@
 }
 
 body.dark {
-  --mp-bg: #36393e;
-  --mp-surface: #42454b;
-  --mp-surface-muted: #3a3d42;
+  --mp-bg: #121212;
+  --mp-surface: #1e1e1e;
+  --mp-surface-muted: #232323;
 
   --mp-surface-glow: none;
 
   --mp-text: #e6e6e6;
-  --mp-text-muted: #a0a0a8;
-  --mp-border: #51555d;
+  --mp-text-muted: #b0b0b0;
+  --mp-border: #2a2a2a;
 
   --mp-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.20);
   --mp-shadow-strong: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.30);
 
-  --mp-chip-bg: #4a4d53;
+  --mp-chip-bg: #2a2a2a;
 
   /* Macro accent colors (darkened for dark mode) */
   --mp-color-protein: #5a9cf6;
@@ -64,8 +64,8 @@ body.dark {
   --ion-text-color: var(--mp-text);
   --ion-item-background: var(--mp-surface);
   --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgb(54, 57, 62);
-  --ion-tab-bar-background: rgba(54, 57, 62, 0.85);
+  --ion-toolbar-background: rgb(18, 18, 18);
+  --ion-tab-bar-background: rgba(18, 18, 18, 0.92);
 
   color-scheme: dark;
 }
@@ -282,7 +282,7 @@ ion-tab-bar {
 }
 
 body.dark ion-tab-bar {
-  --background: #2d3035;
+  --background: #181818;
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
 }
 

@@ -7,7 +7,7 @@ export function setupPlatform() {
   StatusBar.setOverlaysWebView({ overlay: false }).catch(() => {});
 
   const isDarkMode = document.body.classList.contains("dark");
-  const statusBarColor = isDarkMode ? "#36393E" : "#FFFFFF";
+  const statusBarColor = isDarkMode ? "#121212" : "#FFFFFF";
 
   if (Capacitor.getPlatform() === "android") {
     // Use explicit hex colors on Android so dark mode system bars match app theme.
