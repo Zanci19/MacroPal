@@ -89,6 +89,15 @@ const AuthLoading: React.FC = () => {
 
         if (snap.exists()) {
           const data = snap.data();
+          if (!data.role) {
+            await setDoc(
+              userRef,
+              {
+                role: "user",
+              },
+              { merge: true }
+            );
+          }
           const profile = data.profile as Record<string, unknown> | undefined;
           applyProfilePreferences(profile);
           setProgress(PROGRESS_STAGES.PREFERENCES_APPLIED);
@@ -129,6 +138,7 @@ const AuthLoading: React.FC = () => {
               displayName: user.displayName ?? null,
               createdAt: serverTimestamp(),
               announcementNum: 0,
+              role: "user",
             },
             { merge: true }
           );

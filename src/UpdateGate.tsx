@@ -8,6 +8,7 @@ import { APP_VERSION } from "./hooks/version";
 type FeatureFlags = {
   barcodeScanner?: boolean;
   debugOverlay?: boolean;
+  clinicianCollaboration?: boolean;
 };
 
 type AppConfig = {
@@ -28,6 +29,7 @@ type AppConfig = {
 const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
   barcodeScanner: true,
   debugOverlay: false,
+  clinicianCollaboration: false,
 };
 
 const mergeFeatureFlags = (config?: AppConfig | null): FeatureFlags => ({

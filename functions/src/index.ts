@@ -1,20 +1,22 @@
-import { onRequest, Response as HttpsResponse } from "firebase-functions/v2/https";
-import { onDocumentWritten } from "firebase-functions/v2/firestore";
+import { onRequest } from "firebase-functions/v2/https";
+import { onDocumentCreated, onDocumentWritten, onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import type { Response as ExpressResponse } from "express";
 
 initializeApp();
 const firestore = getFirestore();
 
 /* ============ Shared helpers ============ */
-function setCors(res: HttpsResponse) {
+function setCors(res: ExpressResponse) {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.set("Vary", "Origin");
 }
 
-function setCaching(res: HttpsResponse) {
+function setCaching(res: ExpressResponse) {
   // Client cache 60s, CDN/edge cache 300s, serve stale 600s
   res.set("Cache-Control", "public, max-age=60, s-maxage=300, stale-while-revalidate=600");
 }
@@ -261,5 +263,278 @@ export const updateStreakCache = onDocumentWritten(
     } catch (error) {
       console.error("updateStreakCache failed:", error);
     }
+  }
+);
+
+type Role = "user" | "clinician" | "admin";
+
+const ROLE_USER: Role = "user";
+const DAY_MS = 24 * 60 * 60 * 1000;
+const ADHERENCE_7D_MIN = 0.5;
+const ADHERENCE_30D_MIN = 0.6;
+
+const hasAnyEntries = (data: Record<string, unknown> | undefined): boolean =>
+  !!(
+    (data?.breakfast as unknown[] | undefined)?.length ||
+    (data?.lunch as unknown[] | undefined)?.length ||
+    (data?.dinner as unknown[] | undefined)?.length ||
+    (data?.snacks as unknown[] | undefined)?.length
+  );
+
+const countLoggedDays = async (uid: string, days: number): Promise<number> => {
+  const today = new Date();
+  const refs = Array.from({ length: days }, (_, idx) => {
+    const day = new Date(today.getTime() - idx * DAY_MS);
+    const key = toDateKey(day);
+    return firestore.doc(`users/${uid}/foods/${key}`);
+  });
+
+  const docs = await firestore.getAll(...refs);
+  return docs.filter((entry) => hasAnyEntries(entry.data() as Record<string, unknown> | undefined)).length;
+};
+
+const adherenceRate = (daysLogged: number, windowDays: number): number =>
+  Number((Math.max(0, Math.min(daysLogged, windowDays)) / windowDays).toFixed(2));
+
+const buildRiskReasons = (adherence7d: number, adherence30d: number): string[] => {
+  const reasons: string[] = [];
+  if (adherence7d < ADHERENCE_7D_MIN) reasons.push("low_adherence_7d");
+  if (adherence30d < ADHERENCE_30D_MIN) reasons.push("low_adherence_30d");
+  return reasons;
+};
+
+const upsertAlert = async (uid: string, reasonCode: string, payload: {
+  severity: "low" | "medium" | "high" | "critical";
+  message: string;
+  metadata?: Record<string, unknown>;
+}) => {
+  const nowIso = new Date().toISOString();
+  await firestore.doc(`users/${uid}/alerts/${reasonCode}`).set(
+    {
+      reasonCode,
+      severity: payload.severity,
+      message: payload.message,
+      status: "open",
+      metadata: payload.metadata ?? {},
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    },
+    { merge: true }
+  );
+};
+
+const evaluateAndWriteAlerts = async (uid: string) => {
+  const [logged7, logged30] = await Promise.all([
+    countLoggedDays(uid, 7),
+    countLoggedDays(uid, 30),
+  ]);
+  const adherence7d = adherenceRate(logged7, 7);
+  const adherence30d = adherenceRate(logged30, 30);
+  const reasons = buildRiskReasons(adherence7d, adherence30d);
+
+  for (const reason of reasons) {
+    await upsertAlert(uid, reason, {
+      severity: "medium",
+      message:
+        reason === "low_adherence_7d"
+          ? "Low logging adherence in the last 7 days."
+          : "Low logging adherence in the last 30 days.",
+      metadata: { adherence7d, adherence30d },
+    });
+  }
+
+  return { adherence7d, adherence30d, reasons };
+};
+
+const writeReport = async (uid: string, reportType: "weekly" | "monthly") => {
+  const now = new Date();
+  const periodDays = reportType === "weekly" ? 7 : 30;
+  const periodEnd = toDateKey(now);
+  const periodStart = toDateKey(new Date(now.getTime() - (periodDays - 1) * DAY_MS));
+  const [logged7, logged30, alertsSnap] = await Promise.all([
+    countLoggedDays(uid, 7),
+    countLoggedDays(uid, 30),
+    firestore.collection(`users/${uid}/alerts`).where("status", "==", "open").get(),
+  ]);
+  const adherence7d = adherenceRate(logged7, 7);
+  const adherence30d = adherenceRate(logged30, 30);
+  const trendDelta = Number((adherence7d - adherence30d).toFixed(2));
+  const reportId = `${reportType}-${periodEnd}`;
+
+  await firestore.doc(`users/${uid}/reports/${reportId}`).set(
+    {
+      reportType,
+      periodStart,
+      periodEnd,
+      adherence7d,
+      adherence30d,
+      trendDelta,
+      openAlerts: alertsSnap.size,
+      keyNotes: [
+        `7d adherence ${Math.round(adherence7d * 100)}%`,
+        `30d adherence ${Math.round(adherence30d * 100)}%`,
+      ],
+      generatedAt: now.toISOString(),
+    },
+    { merge: true }
+  );
+};
+
+export const ensureUserRoleOnCreate = onDocumentCreated(
+  { region: "us-central1", document: "users/{uid}" },
+  async (event) => {
+    const snapshot = event.data;
+    if (!snapshot?.exists) return;
+
+    const data = snapshot.data();
+    if (data?.role === ROLE_USER || data?.role === "clinician" || data?.role === "admin") return;
+
+    await snapshot.ref.set({ role: ROLE_USER }, { merge: true });
+  }
+);
+
+export const ensureUserRoleOnWrite = onDocumentWritten(
+  { region: "us-central1", document: "users/{uid}" },
+  async (event) => {
+    const after = event.data?.after;
+    if (!after?.exists) return;
+    const data = after.data();
+    if (data?.role === ROLE_USER || data?.role === "clinician" || data?.role === "admin") return;
+    await after.ref.set({ role: ROLE_USER }, { merge: true });
+  }
+);
+
+export const backfillUserRoles = onSchedule(
+  { region: "us-central1", schedule: "every day 03:00" },
+  async () => {
+    const usersSnap = await firestore.collection("users").limit(500).get();
+    if (usersSnap.empty) return;
+
+    const batch = firestore.batch();
+    let updates = 0;
+
+    usersSnap.docs.forEach((entry) => {
+      const existingRole = entry.data().role;
+      if (existingRole === ROLE_USER || existingRole === "clinician" || existingRole === "admin") return;
+      batch.set(entry.ref, { role: ROLE_USER }, { merge: true });
+      updates += 1;
+    });
+
+    if (updates > 0) {
+      await batch.commit();
+      console.log(`backfillUserRoles updated ${updates} users`);
+    }
+  }
+);
+
+export const evaluateAlertsOnFoodWrite = onDocumentWritten(
+  { region: "us-central1", document: "users/{uid}/foods/{dateKey}" },
+  async (event) => {
+    const uid = event.params.uid as string | undefined;
+    if (!uid) return;
+
+    const userSnap = await firestore.doc(`users/${uid}`).get();
+    const linkStatus = userSnap.data()?.clinicianLink?.status;
+    if (linkStatus !== "active") return;
+
+    await evaluateAndWriteAlerts(uid);
+  }
+);
+
+export const scheduledAlertSweep = onSchedule(
+  { region: "us-central1", schedule: "every day 05:00" },
+  async () => {
+    const linkedUsers = await firestore
+      .collection("users")
+      .where("clinicianLink.status", "==", "active")
+      .limit(200)
+      .get();
+
+    for (const entry of linkedUsers.docs) {
+      await evaluateAndWriteAlerts(entry.id);
+    }
+  }
+);
+
+export const generateWeeklyConsultationReports = onSchedule(
+  { region: "us-central1", schedule: "every monday 06:00" },
+  async () => {
+    const linkedUsers = await firestore
+      .collection("users")
+      .where("clinicianLink.status", "==", "active")
+      .limit(200)
+      .get();
+    for (const entry of linkedUsers.docs) {
+      await writeReport(entry.id, "weekly");
+    }
+  }
+);
+
+export const generateMonthlyConsultationReports = onSchedule(
+  { region: "us-central1", schedule: "1 of month 06:15" },
+  async () => {
+    const linkedUsers = await firestore
+      .collection("users")
+      .where("clinicianLink.status", "==", "active")
+      .limit(200)
+      .get();
+    for (const entry of linkedUsers.docs) {
+      await writeReport(entry.id, "monthly");
+    }
+  }
+);
+
+const writeAuditLog = async (payload: {
+  actorUid: string;
+  action: string;
+  targetUid?: string;
+  details?: Record<string, unknown>;
+}) => {
+  await firestore.collection("auditLogs").add({
+    actorUid: payload.actorUid,
+    action: payload.action,
+    targetUid: payload.targetUid ?? null,
+    details: payload.details ?? {},
+    createdAt: new Date().toISOString(),
+  });
+};
+
+export const auditAssignmentChanges = onDocumentWrittenWithAuthContext(
+  { region: "us-central1", document: "users/{clinicianUid}/assignedUsers/{userUid}" },
+  async (event) => {
+    const clinicianUid = event.params.clinicianUid as string;
+    const userUid = event.params.userUid as string;
+    const actorUid = event.authId || clinicianUid;
+
+    await writeAuditLog({
+      actorUid,
+      action: "assignment_updated",
+      targetUid: userUid,
+      details: {
+        clinicianUid,
+        beforeExists: event.data?.before.exists ?? false,
+        afterExists: event.data?.after.exists ?? false,
+      },
+    });
+  }
+);
+
+export const auditCarePlanChanges = onDocumentWrittenWithAuthContext(
+  { region: "us-central1", document: "users/{uid}/carePlans/{planId}" },
+  async (event) => {
+    const uid = event.params.uid as string;
+    const planId = event.params.planId as string;
+    const actorUid = event.authId || "unknown";
+
+    await writeAuditLog({
+      actorUid,
+      action: "care_plan_updated",
+      targetUid: uid,
+      details: {
+        planId,
+        beforeExists: event.data?.before.exists ?? false,
+        afterExists: event.data?.after.exists ?? false,
+      },
+    });
   }
 );

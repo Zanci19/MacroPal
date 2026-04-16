@@ -61,6 +61,8 @@ const importRecipeCalculator = () => import("./pages/RecipeCalculator");
 const importPhotoFoodLogger = () => import("./pages/PhotoFoodLogger");
 const importSharing = () => import("./pages/home/Sharing");
 const importSharedUserView = () => import("./pages/home/SharedUserView");
+const importClinicianConnect = () => import("./pages/home/ClinicianConnect");
+const importClinicianDashboard = () => import("./pages/home/ClinicianDashboard");
 
 const Login = lazy(importLogin);
 const Register = lazy(importRegister);
@@ -88,6 +90,8 @@ const RecipeCalculator = lazy(importRecipeCalculator);
 const PhotoFoodLogger = lazy(importPhotoFoodLogger);
 const Sharing = lazy(importSharing);
 const SharedUserView = lazy(importSharedUserView);
+const ClinicianConnect = lazy(importClinicianConnect);
+const ClinicianDashboard = lazy(importClinicianDashboard);
 
 const LAZY_ROUTE_IMPORTS = [
   importLogin,
@@ -116,6 +120,8 @@ const LAZY_ROUTE_IMPORTS = [
   importPhotoFoodLogger,
   importSharing,
   importSharedUserView,
+  importClinicianConnect,
+  importClinicianDashboard,
 ];
 
 const preloadLazyRoutes = async () => {
@@ -212,6 +218,8 @@ const SETTINGS_PATH_PREFIXES = [
   "/app/units",
   "/app/reminders",
   "/app/data-privacy",
+  "/app/clinician-connect",
+  "/app/clinician-dashboard",
 ];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const ANDROID_ANIMATION_DURATION_MS = 250;
@@ -502,6 +510,8 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <Route exact path="/app/data-privacy" render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
         <Route exact path="/app/sharing" render={(props) => <LazyRoute component={Sharing} {...props} />} />
         <Route exact path="/app/shared-user/:uid" render={(props) => <LazyRoute component={SharedUserView} {...props} />} />
+        <Route exact path="/app/clinician-connect" render={(props) => <LazyRoute component={ClinicianConnect} {...props} />} />
+        <Route exact path="/app/clinician-dashboard" render={(props) => <LazyRoute component={ClinicianDashboard} {...props} />} />
         <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 

@@ -36,6 +36,7 @@ import {
   newspaperOutline,
   chevronDownOutline,
   peopleOutline,
+  medicalOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
@@ -67,6 +68,8 @@ import {
   type ThemeMode,
 } from "../../utils/preferences";
 import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../utils/image";
+import { isFeatureEnabled, useRemoteConfig } from "../../UpdateGate";
+import { useClinicianAccess } from "../../hooks/useClinicianAccess";
 
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
@@ -97,6 +100,9 @@ const Settings: React.FC = () => {
   const history = useHistory();
   const user = auth.currentUser;
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+  const remoteConfig = useRemoteConfig();
+  const clinicianCollabEnabled = isFeatureEnabled(remoteConfig, "clinicianCollaboration");
+  const { role, clinicianLink } = useClinicianAccess();
 
   const [toast, setToast] = React.useState<{
     show: boolean;
@@ -912,6 +918,35 @@ const Settings: React.FC = () => {
                     <p>Pair with a dietitian, parent, or friend</p>
                   </IonLabel>
                 </IonItem>
+                {clinicianCollabEnabled && (
+                  <IonItem
+                    lines="full"
+                    button
+                    onClick={() => {
+                      history.push(
+                        role === "clinician" || role === "admin"
+                          ? "/app/clinician-dashboard"
+                          : "/app/clinician-connect"
+                      );
+                    }}
+                  >
+                    <IonIcon slot="start" icon={medicalOutline} />
+                    <IonLabel>
+                      <h2>
+                        {role === "clinician" || role === "admin"
+                          ? "Clinician dashboard"
+                          : "Clinician collaboration"}
+                      </h2>
+                      <p>
+                        {role === "clinician" || role === "admin"
+                          ? "Assigned users, care plans, alerts, and secure messaging"
+                          : clinicianLink?.status === "active"
+                            ? `Connected to ${clinicianLink.clinicianName}`
+                            : "Connect to a clinician with consent"}
+                      </p>
+                    </IonLabel>
+                  </IonItem>
+                )}
               </IonList>
             </IonCardContent>
           </IonCard>
