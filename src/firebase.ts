@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { initializeAuth, indexedDBLocalPersistence } from "firebase/auth";
+import {
+  browserPopupRedirectResolver,
+  initializeAuth,
+  indexedDBLocalPersistence,
+} from "firebase/auth";
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -25,9 +29,17 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const auth = initializeAuth(app, {
-  persistence: indexedDBLocalPersistence,
-});
+const authSettings =
+  typeof window !== "undefined"
+    ? {
+        persistence: indexedDBLocalPersistence,
+        popupRedirectResolver: browserPopupRedirectResolver,
+      }
+    : {
+        persistence: indexedDBLocalPersistence,
+      };
+
+export const auth = initializeAuth(app, authSettings);
 const firestoreSettings =
   typeof window !== "undefined"
     ? {

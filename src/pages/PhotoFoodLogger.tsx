@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -36,7 +36,6 @@ import {
   cameraOutline,
   imagesOutline,
   sparklesOutline,
-  searchOutline,
   checkmarkCircleOutline,
   closeCircleOutline,
   addCircleOutline,
@@ -47,6 +46,8 @@ import { doc, setDoc, arrayUnion } from "firebase/firestore";
 import {
   recognizeFood,
   type FoodPrediction,
+  type FoodDatabaseItem,
+  type FoodNutriments,
   matchFoodToDatabase,
   matchFoodWithOpenFoodFacts,
 } from "../utils/foodRecognition";
@@ -69,7 +70,7 @@ type MacroSet = {
 type FoodMatch = {
   product_name: string;
   code?: string;
-  nutriments?: any;
+  nutriments?: FoodNutriments;
   serving_size?: string;
   brands?: string;
   matchScore: number;
@@ -98,7 +99,7 @@ function safeNum(n: unknown, dp = 2): number {
   return Number(v.toFixed(dp));
 }
 
-function macrosPer100g(nutri?: any): MacroSet {
+function macrosPer100g(nutri?: FoodNutriments): MacroSet {
   return {
     calories: safeNum(nutri?.["energy-kcal_100g"], 0),
     carbs: safeNum(nutri?.["carbohydrates_100g"], 2),
@@ -130,7 +131,6 @@ const PhotoFoodLogger: React.FC = () => {
 
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [predictions, setPredictions] = useState<FoodPrediction[]>([]);
   const [matchedFoods, setMatchedFoods] = useState<Array<{ prediction: FoodPrediction; matches: FoodMatch[] }>>([]);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState({ show: false, message: "", color: "success" });
@@ -161,7 +161,6 @@ const PhotoFoodLogger: React.FC = () => {
       if (photo.dataUrl) {
         setPhotoDataUrl(photo.dataUrl);
         setError(null);
-        setPredictions([]);
         setMatchedFoods([]);
         trackEvent("photo_food_logger_photo_taken");
       }
@@ -195,7 +194,6 @@ const PhotoFoodLogger: React.FC = () => {
       if (photo.dataUrl) {
         setPhotoDataUrl(photo.dataUrl);
         setError(null);
-        setPredictions([]);
         setMatchedFoods([]);
         trackEvent("photo_food_logger_photo_picked");
       }
@@ -220,7 +218,6 @@ const PhotoFoodLogger: React.FC = () => {
 
     setAnalyzing(true);
     setError(null);
-    setPredictions([]);
     setMatchedFoods([]);
 
     try {
@@ -237,12 +234,9 @@ const PhotoFoodLogger: React.FC = () => {
       );
 
       if (result.success && result.predictions.length > 0) {
-        setPredictions(result.predictions);
-        
         // Search both local database and OpenFoodFacts API
-        console.log('[PhotoFoodLogger] Searching local database and OpenFoodFacts...');
         const [localMatches, offMatches] = await Promise.all([
-          Promise.resolve(matchFoodToDatabase(result.predictions, basicFoods as any[])),
+          Promise.resolve(matchFoodToDatabase(result.predictions, basicFoods as FoodDatabaseItem[])),
           matchFoodWithOpenFoodFacts(result.predictions)
         ]);
         
@@ -384,7 +378,6 @@ const PhotoFoodLogger: React.FC = () => {
 
   const retakePhoto = () => {
     setPhotoDataUrl(null);
-    setPredictions([]);
     setMatchedFoods([]);
     setError(null);
     trackEvent("photo_food_logger_retake");

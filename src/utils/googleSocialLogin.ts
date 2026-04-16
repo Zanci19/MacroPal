@@ -24,6 +24,29 @@ const SocialLogin = registerPlugin<SocialLoginPlugin>("SocialLogin");
 
 let initPromise: Promise<void> | null = null;
 
+type SocialLoginErrorCode =
+  | "social_login_init_failed"
+  | "social_login_provider_error"
+  | "social_login_missing_tokens";
+
+type SocialLoginError = Error & {
+  code: SocialLoginErrorCode;
+  cause?: unknown;
+};
+
+const createSocialLoginError = (
+  code: SocialLoginErrorCode,
+  message: string,
+  cause?: unknown
+): SocialLoginError => {
+  const error = new Error(message) as SocialLoginError;
+  error.code = code;
+  if (cause !== undefined) {
+    error.cause = cause;
+  }
+  return error;
+};
+
 const initializeSocialLogin = async () => {
   if (initPromise) return initPromise;
 
@@ -38,7 +61,14 @@ const initializeSocialLogin = async () => {
         webClientId,
       },
     });
-  })();
+  })().catch((error) => {
+    initPromise = null;
+    throw createSocialLoginError(
+      "social_login_init_failed",
+      "Google sign-in setup failed. Please try again.",
+      error
+    );
+  });
 
   return initPromise;
 };
@@ -88,9 +118,17 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
 
   const loginWithTokens = async () => {
     console.log("[googleSocialLogin] Starting login...");
-    const response = await SocialLogin.login({
-      provider: "google",
-    });
+    const response = await SocialLogin
+      .login({
+        provider: "google",
+      })
+      .catch((error: unknown) => {
+        throw createSocialLoginError(
+          "social_login_provider_error",
+          "Google sign-in failed while contacting the provider.",
+          error
+        );
+      });
     
     const responseData = response as Record<string, unknown> & {
       result?: Record<string, unknown> & { authentication?: Record<string, unknown> };
@@ -125,7 +163,10 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
     console.log("[googleSocialLogin] Tokens extracted - idToken:", !!idToken, "accessToken:", !!accessToken);
 
     if (!idToken && !accessToken) {
-      throw new Error("Google sign-in did not return an auth token.");
+      throw createSocialLoginError(
+        "social_login_missing_tokens",
+        "Google sign-in did not return an auth token."
+      );
     }
 
     const credential = GoogleAuthProvider.credential(

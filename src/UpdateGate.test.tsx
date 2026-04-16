@@ -24,6 +24,11 @@ const DISMISSED_VERSION_KEY = 'mp_dismissed_update_version';
 type IonToastElement = HTMLElement & {
   buttons?: Array<{ text?: string; handler?: () => void }>;
 };
+const asGetDocResult = <T extends object>(data: T) =>
+  ({
+    exists: () => true,
+    data: () => data,
+  }) as unknown as Awaited<ReturnType<typeof getDoc>>;
 
 describe('UpdateGate - Announcement Fix', () => {
   beforeEach(() => {
@@ -44,13 +49,12 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Firebase returns version 1.1.0 as latest
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '1.1.0',
           minSupportedVersion: '1.0.0',
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -77,13 +81,12 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Firebase returns version 1.2.0 as latest (newer than dismissed)
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '1.2.0',
           minSupportedVersion: '1.0.0',
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -104,13 +107,12 @@ describe('UpdateGate - Announcement Fix', () => {
 
       // Firebase returns version 1.1.0 as latest
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '1.1.0',
           minSupportedVersion: '1.0.0',
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -127,13 +129,12 @@ describe('UpdateGate - Announcement Fix', () => {
 
     it('should save dismissed version to localStorage when user closes announcement', async () => {
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '1.1.0',
           minSupportedVersion: '1.0.0',
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -166,13 +167,12 @@ describe('UpdateGate - Announcement Fix', () => {
   describe('Version comparison logic', () => {
     it('should not show announcement when current version equals latest version', async () => {
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '1.0.0', // Same as APP_VERSION
           minSupportedVersion: '1.0.0',
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -190,13 +190,12 @@ describe('UpdateGate - Announcement Fix', () => {
 
     it('should show hard block when current version is below minimum supported', async () => {
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '2.0.0',
           minSupportedVersion: '1.5.0', // Higher than APP_VERSION (1.0.0)
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -216,15 +215,14 @@ describe('UpdateGate - Announcement Fix', () => {
   describe('Maintenance mode', () => {
     it('should block the app when maintenance mode is enabled', async () => {
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           maintenanceMode: {
             enabled: true,
             message: "Planned maintenance",
           },
-        }),
-      } as any);
+        })
+      );
 
       render(
         <UpdateGate>
@@ -243,13 +241,12 @@ describe('UpdateGate - Announcement Fix', () => {
   describe('Hard-blocked screen centering', () => {
     it('should have centered text alignment in hard-blocked screen', async () => {
       const mockGetDoc = vi.mocked(getDoc);
-      mockGetDoc.mockResolvedValue({
-        exists: () => true,
-        data: () => ({
+      mockGetDoc.mockResolvedValue(
+        asGetDocResult({
           latestVersion: '2.0.0',
           minSupportedVersion: '1.5.0',
-        }),
-      } as any);
+        })
+      );
 
       const { container } = render(
         <UpdateGate>

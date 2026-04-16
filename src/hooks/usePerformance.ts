@@ -1,4 +1,15 @@
-import React, { useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
+
+function areDepsEqual(
+  prevDeps: React.DependencyList,
+  nextDeps: React.DependencyList
+): boolean {
+  if (prevDeps.length !== nextDeps.length) return false;
+  for (let i = 0; i < prevDeps.length; i += 1) {
+    if (!Object.is(prevDeps[i], nextDeps[i])) return false;
+  }
+  return true;
+}
 
 /**
  * Hook for memoizing expensive calculations with dependencies
@@ -9,19 +20,24 @@ export function useExpensiveMemo<T>(
   deps: React.DependencyList,
   debugLabel?: string
 ): T {
-  return useMemo(() => {
+  const depsRef = useRef<React.DependencyList | null>(null);
+  const valueRef = useRef<T | null>(null);
+
+  if (!depsRef.current || !areDepsEqual(depsRef.current, deps)) {
     if (debugLabel && process.env.NODE_ENV === 'development') {
       console.time(`[Expensive Memo] ${debugLabel}`);
     }
     
-    const result = factory();
+    valueRef.current = factory();
     
     if (debugLabel && process.env.NODE_ENV === 'development') {
       console.timeEnd(`[Expensive Memo] ${debugLabel}`);
     }
-    
-    return result;
-  }, deps);
+
+    depsRef.current = [...deps];
+  }
+
+  return valueRef.current as T;
 }
 
 /**
@@ -113,20 +129,32 @@ export function useAsyncMemo<T>(
 ): T {
   const [value, setValue] = React.useState<T>(initialValue);
   const isMounted = useIsMounted();
+  const depsRef = useRef<React.DependencyList | null>(null);
 
   useEffect(() => {
+    if (depsRef.current && areDepsEqual(depsRef.current, deps)) {
+      return;
+    }
+    depsRef.current = [...deps];
+
     let cancelled = false;
 
-    factory().then((result) => {
-      if (!cancelled && isMounted()) {
-        setValue(result);
-      }
-    });
+    void factory()
+      .then((result) => {
+        if (!cancelled && isMounted()) {
+          setValue(result);
+        }
+      })
+      .catch((error: unknown) => {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('[useAsyncMemo] Failed to refresh async value', error);
+        }
+      });
 
     return () => {
       cancelled = true;
     };
-  }, deps);
+  });
 
   return value;
 }

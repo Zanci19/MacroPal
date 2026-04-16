@@ -16,6 +16,26 @@ import '@tensorflow/tfjs-backend-cpu';
 
 // Initialize TensorFlow backend
 let tfInitialized = false;
+const debugLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
+export type FoodNutriments = Record<string, number | undefined>;
+
+export interface FoodDatabaseItem {
+  product_name?: string;
+  code?: string;
+  nutriments?: FoodNutriments;
+  serving_size?: string;
+  brands?: string;
+}
+
+export interface FoodDatabaseMatch extends FoodDatabaseItem {
+  product_name: string;
+  matchScore: number;
+}
 
 async function initializeTensorFlow() {
   if (tfInitialized) return;
@@ -24,7 +44,7 @@ async function initializeTensorFlow() {
     // Try to set WebGL backend first (faster)
     await tf.setBackend('webgl');
     await tf.ready();
-    console.log('[FoodRecognition] TensorFlow.js initialized with WebGL backend');
+    debugLog('[FoodRecognition] TensorFlow.js initialized with WebGL backend');
     tfInitialized = true;
   } catch (error) {
     console.warn('[FoodRecognition] WebGL backend failed, falling back to CPU:', error);
@@ -32,7 +52,7 @@ async function initializeTensorFlow() {
       // Fall back to CPU backend
       await tf.setBackend('cpu');
       await tf.ready();
-      console.log('[FoodRecognition] TensorFlow.js initialized with CPU backend');
+      debugLog('[FoodRecognition] TensorFlow.js initialized with CPU backend');
       tfInitialized = true;
     } catch (cpuError) {
       console.error('[FoodRecognition] Failed to initialize any TensorFlow backend:', cpuError);
@@ -150,7 +170,7 @@ async function estimatePortionSize(
   imageElement: HTMLImageElement
 ): Promise<PortionEstimate | undefined> {
   try {
-    console.log('[FoodRecognition] Loading CocoSSD for portion estimation...');
+    debugLog('[FoodRecognition] Loading CocoSSD for portion estimation...');
     const model = await cocoSsd.load();
     
     const predictions = await model.detect(imageElement);
@@ -199,7 +219,7 @@ async function estimatePortionSize(
       estimatedGrams = 300;
     }
     
-    console.log('[FoodRecognition] Portion estimate:', { size, estimatedGrams, relativeSize });
+    debugLog('[FoodRecognition] Portion estimate:', { size, estimatedGrams, relativeSize });
     
     return {
       size,
@@ -230,7 +250,7 @@ export async function recognizeFoodWithMobileNet(
     // Initialize TensorFlow backend first
     await initializeTensorFlow();
     
-    console.log('[FoodRecognition] Loading MobileNet model...');
+    debugLog('[FoodRecognition] Loading MobileNet model...');
     const model = await mobilenet.load();
     
     let predictions: Array<{className: string; probability: number}> = [];
@@ -238,21 +258,21 @@ export async function recognizeFoodWithMobileNet(
     
     // Try with original image first (most reliable)
     try {
-      console.log('[FoodRecognition] Running predictions on original image...');
+      debugLog('[FoodRecognition] Running predictions on original image...');
       originalPredictions = await model.classify(imageElement);
-      console.log('[FoodRecognition] Original predictions:', originalPredictions);
+      debugLog('[FoodRecognition] Original predictions:', originalPredictions);
     } catch (err) {
       console.warn('[FoodRecognition] Original image prediction failed:', err);
     }
     
     // Try preprocessing for potentially better results
     try {
-      console.log('[FoodRecognition] Preprocessing image...');
+      debugLog('[FoodRecognition] Preprocessing image...');
       const processedTensor = preprocessImage(imageElement);
       
-      console.log('[FoodRecognition] Running predictions with preprocessing...');
+      debugLog('[FoodRecognition] Running predictions with preprocessing...');
       predictions = await model.classify(processedTensor);
-      console.log('[FoodRecognition] Preprocessed predictions:', predictions);
+      debugLog('[FoodRecognition] Preprocessed predictions:', predictions);
       
       // Clean up tensor
       processedTensor.dispose();
@@ -281,7 +301,7 @@ export async function recognizeFoodWithMobileNet(
     }
     
     const uniquePredictions = Array.from(predictionMap.values());
-    console.log('[FoodRecognition] Unique predictions after deduplication:', uniquePredictions.length);
+    debugLog('[FoodRecognition] Unique predictions after deduplication:', uniquePredictions.length);
     
     // Filter and map predictions to food-related items with LOWER confidence threshold
     const foodPredictions: FoodPrediction[] = uniquePredictions
@@ -299,7 +319,7 @@ export async function recognizeFoodWithMobileNet(
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 5); // Top 5 results
     
-    console.log('[FoodRecognition] Food-related predictions:', foodPredictions);
+    debugLog('[FoodRecognition] Food-related predictions:', foodPredictions);
     
     // Try to estimate portion size
     let portionEstimate: PortionEstimate | undefined;
@@ -312,7 +332,7 @@ export async function recognizeFoodWithMobileNet(
     
     // If no food-specific predictions with new threshold, return top 5 general predictions
     if (foodPredictions.length === 0) {
-      console.log('[FoodRecognition] No food keywords matched, returning top general predictions');
+      debugLog('[FoodRecognition] No food keywords matched, returning top general predictions');
       return {
         predictions: uniquePredictions.slice(0, 5).map(pred => ({
           name: pred.className,
@@ -324,8 +344,8 @@ export async function recognizeFoodWithMobileNet(
       };
     }
     
-    console.log('[FoodRecognition] Final predictions:', foodPredictions);
-    console.log('[FoodRecognition] Portion estimate:', portionEstimate);
+    debugLog('[FoodRecognition] Final predictions:', foodPredictions);
+    debugLog('[FoodRecognition] Portion estimate:', portionEstimate);
     
     return {
       predictions: foodPredictions,
@@ -362,7 +382,7 @@ export async function recognizeFoodWithGoogleVision(
   }
   
   try {
-    console.log('[FoodRecognition] Calling Google Cloud Vision API...');
+    debugLog('[FoodRecognition] Calling Google Cloud Vision API...');
     
     // Remove data URL prefix if present
     const base64Image = imageBase64.replace(/^data:image\/\w+;base64,/, '');
@@ -394,24 +414,36 @@ export async function recognizeFoodWithGoogleVision(
       throw new Error(`Google Vision API error: ${response.statusText}`);
     }
     
-    const data = await response.json();
-    const result = data.responses[0];
+    type GoogleVisionLabel = { description: string; score: number };
+    type GoogleVisionWebEntity = { description?: string; score?: number };
+    type GoogleVisionResult = {
+      error?: { message?: string };
+      labelAnnotations?: GoogleVisionLabel[];
+      webDetection?: { webEntities?: GoogleVisionWebEntity[] };
+    };
+    type GoogleVisionResponse = { responses?: GoogleVisionResult[] };
+
+    const data = (await response.json()) as GoogleVisionResponse;
+    const result = data.responses?.[0];
+    if (!result) {
+      throw new Error('Google Vision response was missing results');
+    }
     
     if (result.error) {
       throw new Error(result.error.message);
     }
     
     // Combine label and web detection results
-    const labels = result.labelAnnotations || [];
+    const labels: GoogleVisionLabel[] = result.labelAnnotations ?? [];
     const webEntities = result.webDetection?.webEntities || [];
     
     // Filter for food-related labels
     const foodLabels = labels
-      .filter((label: any) => {
+      .filter((label) => {
         const desc = label.description.toLowerCase();
         return FOOD_KEYWORDS.some(keyword => desc.includes(keyword));
       })
-      .map((label: any) => ({
+      .map((label) => ({
         name: label.description,
         confidence: label.score,
         source: 'google-vision' as const
@@ -419,8 +451,12 @@ export async function recognizeFoodWithGoogleVision(
     
     // Add web entities that might be food-related
     const foodEntities = webEntities
-      .filter((entity: any) => entity.description && entity.score > 0.5)
-      .map((entity: any) => ({
+      .filter((entity): entity is { description: string; score: number } =>
+        typeof entity.description === 'string' &&
+        typeof entity.score === 'number' &&
+        entity.score > 0.5
+      )
+      .map((entity) => ({
         name: entity.description,
         confidence: entity.score,
         source: 'google-vision' as const
@@ -430,7 +466,7 @@ export async function recognizeFoodWithGoogleVision(
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, 5);
     
-    console.log('[FoodRecognition] Google Vision predictions:', allPredictions);
+    debugLog('[FoodRecognition] Google Vision predictions:', allPredictions);
     
     return {
       predictions: allPredictions,
@@ -537,13 +573,7 @@ const OPENFOODFACTS_API_BASE = "https://europe-west1-macropal-zanci19.cloudfunct
 
 // Type for OpenFoodFacts search response
 interface OpenFoodFactsSearchResponse {
-  products: Array<{
-    product_name: string;
-    code?: string;
-    nutriments?: any;
-    serving_size?: string;
-    brands?: string;
-  }>;
+  products: FoodDatabaseItem[];
 }
 
 /**
@@ -553,20 +583,14 @@ interface OpenFoodFactsSearchResponse {
 export async function searchOpenFoodFacts(
   query: string,
   pageSize = 10
-): Promise<Array<{
-  product_name: string;
-  code?: string;
-  nutriments?: any;
-  serving_size?: string;
-  brands?: string;
-}>> {
+): Promise<FoodDatabaseItem[]> {
   try {
     const url = new URL(`${OPENFOODFACTS_API_BASE}/offSearch`);
     url.searchParams.set('q', query);
     url.searchParams.set('page', '1');
     url.searchParams.set('page_size', String(pageSize));
 
-    console.log('[FoodRecognition] Searching OpenFoodFacts for:', query);
+    debugLog('[FoodRecognition] Searching OpenFoodFacts for:', query);
     
     const response = await fetch(url.toString());
     if (!response.ok) {
@@ -591,7 +615,7 @@ export async function searchOpenFoodFacts(
       return calories > 0 || carbs > 0 || protein > 0 || fat > 0;
     });
     
-    console.log('[FoodRecognition] OpenFoodFacts returned', validFoods.length, 'valid foods');
+    debugLog('[FoodRecognition] OpenFoodFacts returned', validFoods.length, 'valid foods');
     return validFoods;
   } catch (error) {
     console.error('[FoodRecognition] Error searching OpenFoodFacts:', error);
@@ -605,28 +629,18 @@ export async function searchOpenFoodFacts(
  */
 export function matchFoodToDatabase(
   predictions: FoodPrediction[],
-  foodDatabase: Array<{ 
-    product_name: string; 
-    code?: string;
-    nutriments?: any;
-    serving_size?: string;
-    brands?: string;
-  }>
-): Array<{ 
-  prediction: FoodPrediction; 
-  matches: Array<{ 
-    product_name: string; 
-    code?: string;
-    nutriments?: any;
-    serving_size?: string;
-    brands?: string;
-    matchScore: number;
-  }> 
+  foodDatabase: FoodDatabaseItem[]
+): Array<{
+  prediction: FoodPrediction;
+  matches: FoodDatabaseMatch[];
 }> {
   return predictions.map(prediction => {
     const searchTerms = prediction.name.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
     
     const matches = foodDatabase
+      .filter((food): food is FoodDatabaseItem & { product_name: string } =>
+        typeof food.product_name === 'string' && food.product_name.trim().length > 0
+      )
       .map(food => {
         const foodName = food.product_name.toLowerCase();
         const brandName = (food.brands || '').toLowerCase();
@@ -668,14 +682,7 @@ export async function matchFoodWithOpenFoodFacts(
   predictions: FoodPrediction[]
 ): Promise<Array<{
   prediction: FoodPrediction;
-  matches: Array<{
-    product_name: string;
-    code?: string;
-    nutriments?: any;
-    serving_size?: string;
-    brands?: string;
-    matchScore: number;
-  }>;
+  matches: FoodDatabaseMatch[];
 }>> {
   const results = await Promise.all(
     predictions.map(async (prediction) => {
@@ -685,7 +692,11 @@ export async function matchFoodWithOpenFoodFacts(
       // Score the results similar to matchFoodToDatabase
       const searchTerms = prediction.name.toLowerCase().split(/[\s,]+/).filter(t => t.length > 2);
       
-      const scoredMatches = searchResults.map(food => {
+      const scoredMatches = searchResults
+        .filter((food): food is FoodDatabaseItem & { product_name: string } =>
+          typeof food.product_name === 'string' && food.product_name.trim().length > 0
+        )
+        .map(food => {
         const foodName = food.product_name.toLowerCase();
         const brandName = (food.brands || '').toLowerCase();
         

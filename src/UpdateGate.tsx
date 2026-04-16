@@ -41,9 +41,11 @@ const defaultConfig: AppConfig = {
 
 const RemoteConfigContext = createContext<AppConfig>(defaultConfig);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useRemoteConfig = () => useContext(RemoteConfigContext);
 
 // Returns the resolved feature flag value; falls back when a flag is undefined or not a boolean.
+// eslint-disable-next-line react-refresh/only-export-components
 export const isFeatureEnabled = (
   config: AppConfig | null | undefined,
   flag: keyof FeatureFlags,

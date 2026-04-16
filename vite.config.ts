@@ -12,6 +12,7 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     minify: 'terser',
+    chunkSizeWarningLimit: 900,
     terserOptions: {
       compress: {
         drop_console: true,
@@ -20,10 +21,22 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'ionic-core': ['@ionic/react', '@ionic/react-router'],
-          'firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-          'recharts': ['recharts'],
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          if (id.includes('@tensorflow-models')) return 'tensorflow-models';
+          if (id.includes('@tensorflow/tfjs-backend-webgl')) return 'tfjs-webgl';
+          if (id.includes('@tensorflow/tfjs-backend-cpu')) return 'tfjs-cpu';
+          if (id.includes('@tensorflow/tfjs-converter')) return 'tfjs-converter';
+          if (id.includes('@tensorflow/tfjs-layers')) return 'tfjs-layers';
+          if (id.includes('@tensorflow/tfjs-core')) return 'tfjs-core';
+          if (id.includes('@tensorflow/tfjs')) return 'tfjs-runtime';
+          if (id.includes('firebase/')) return 'firebase';
+          if (id.includes('recharts') || id.includes('d3-')) return 'recharts';
+          if (id.includes('@zxing/')) return 'zxing';
+          if (id.includes('@ionic/core/components')) return 'ionic-components';
+          if (id.includes('@ionic/react-router') || id.includes('@ionic/react')) return 'ionic-react';
+          if (id.includes('@ionic/')) return 'ionic-core';
         },
       },
     },

@@ -38,13 +38,12 @@ import {
 
 import { Keyboard } from "@capacitor/keyboard";
 import { useLocation, useHistory } from "react-router";
-import { auth, db, storage, trackEvent } from "../firebase";
+import { db, storage, trackEvent } from "../firebase";
 import { getCurrentUser } from "../utils/demoAuth";
 import { isFeatureEnabled, useRemoteConfig } from "../UpdateGate";
 import {
   doc,
   setDoc,
-  arrayUnion,
   collection,
   onSnapshot,
   deleteDoc,
@@ -59,11 +58,12 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useDemoFirestore } from "../hooks/useDemoFirestore";
 
-import { calendarOutline, starOutline, trashOutline, cameraOutline, sparklesOutline, barcodeOutline, searchOutline } from "ionicons/icons";
+import { calendarOutline, starOutline, trashOutline, cameraOutline, barcodeOutline, searchOutline } from "ionicons/icons";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import {
   recognizeFood,
   matchFoodToDatabase,
+  type FoodDatabaseItem,
 } from "../utils/foodRecognition";
 import {
   clampDateKeyToToday,
@@ -147,7 +147,7 @@ type OFFSearchHit = {
   image_front_url?: string | null;
   nutriscore_grade?: string | null;
   nutriments?: OFFNutriments;
-  dataSource?: "local" | "openfoodfacts";
+  dataSource?: "local" | "openfoodfacts" | "ai_recognition";
 };
 
 type OFFProduct = OFFSearchHit;
@@ -268,7 +268,6 @@ const FAVORITES_LOAD_DELAY_MS = 300;
 const RECENT_FOODS_LOAD_DELAY_MS = 500;
 const MEAL_PRESETS_LOAD_DELAY_MS = 700;
 const SEARCH_DEBOUNCE_MS = 300;
-const SCROLL_TO_TOP_DELAY_MS = 700;
 
 // Validation constants for custom food creation
 const MAX_CALORIES = 10000;
@@ -556,8 +555,6 @@ const AddFood: React.FC = () => {
 
   // AI Photo Recognition state
   const [isAiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
-  const [aiPhotoDataUrl, setAiPhotoDataUrl] = useState<string | null>(null);
-  const [aiMatches, setAiMatches] = useState<any[]>([]);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
   const [customName, setCustomName] = useState("");
@@ -1721,7 +1718,6 @@ const AddFood: React.FC = () => {
       }
 
       if (photo?.dataUrl) {
-        setAiPhotoDataUrl(photo.dataUrl);
         await analyzeAiPhoto(photo.dataUrl);
       }
     } catch (err) {
@@ -1745,7 +1741,6 @@ const AddFood: React.FC = () => {
 
   const analyzeAiPhoto = async (photoDataUrl: string) => {
     setAiPhotoAnalyzing(true);
-    setAiMatches([]);
 
     try {
       trackEvent("ai_photo_analyze_start", { meal, date: dateKey });
@@ -1758,21 +1753,23 @@ const AddFood: React.FC = () => {
 
       if (result.success && result.predictions.length > 0) {
         // Match predictions to food database
-        const matches = matchFoodToDatabase(result.predictions, basicFoods as any[]);
+        const matches = matchFoodToDatabase(
+          result.predictions,
+          BASIC_FOODS as FoodDatabaseItem[]
+        );
         const validMatches = matches.filter(m => m.matches.length > 0);
-        
-        setAiMatches(validMatches);
-        
+
         // If we have matches, automatically select the top match
         if (validMatches.length > 0 && validMatches[0].matches.length > 0) {
           const topMatch = validMatches[0].matches[0];
           // Convert to OFFProduct format and open modal
           const offProduct = {
             ...topMatch,
-            product_name: topMatch.product_name,
+            code: topMatch.code ?? `ai_${Date.now()}`,
+            product_name: topMatch.product_name ?? "",
             dataSource: "ai_recognition" as const,
           };
-          setSelectedFood(offProduct as any);
+          setSelectedFood(offProduct);
           setOpen(true);
           
           trackEvent("ai_photo_analyze_success", {

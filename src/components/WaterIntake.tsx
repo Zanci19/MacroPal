@@ -24,7 +24,7 @@ interface WaterIntakeProps {
 export interface WaterIntakeData {
   glasses: number; // Number of glasses consumed
   goal: number; // Daily goal in glasses
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 const GLASS_SIZE_ML = 250; // Standard glass size

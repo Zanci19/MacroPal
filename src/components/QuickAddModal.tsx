@@ -62,6 +62,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   onAddFood,
   dateKey,
 }) => {
+  void dateKey;
   const [searchText, setSearchText] = useState("");
 
   const filteredFoods = QUICK_FOODS.filter((food) =>

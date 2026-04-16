@@ -74,6 +74,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDemoContext = () => {
   const context = useContext(DemoContext);
   if (!context) {
@@ -82,6 +83,7 @@ export const useDemoContext = () => {
   return context;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDemoMode = () => {
   const context = useContext(DemoContext);
   return context?.isDemoMode ?? false;

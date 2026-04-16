@@ -8,7 +8,6 @@ import {
   isNonEmptyString,
   isPositiveNumber,
   isNonNegativeNumber,
-  parseFirestoreData,
 } from './typeGuards';
 
 describe('isMacros', () => {

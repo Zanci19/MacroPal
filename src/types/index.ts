@@ -36,7 +36,7 @@ export interface Profile {
   units?: "metric" | "imperial";
 
   // room for extra fields (targets, flags, etc.)
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 /** =========================
@@ -88,9 +88,11 @@ export interface DiaryEntry {
 
   /** ISO date-time string when entry was added */
   addedAt: string;
+  photoUrl?: string;
+  photoName?: string;
 
   /** Any extra nutritional fields you might attach (micros, tags, etc.) */
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 /** Day document in Firestore: foods for a given yyyy-mm-dd */
@@ -99,7 +101,7 @@ export interface DayDiaryDoc {
   lunch: DiaryEntry[];
   dinner: DiaryEntry[];
   snacks: DiaryEntry[];
-  [k: string]: any;
+  [k: string]: DiaryEntry[];
 }
 
 export interface WorkoutEntry {
@@ -109,12 +111,12 @@ export interface WorkoutEntry {
   intensity?: "easy" | "moderate" | "hard" | string;
   addedAt: string;
   note?: string;
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 export interface WorkoutDayDoc {
   activities: WorkoutEntry[];
-  [k: string]: any;
+  [k: string]: WorkoutEntry[];
 }
 
 export interface MealPlanEntry {
@@ -128,21 +130,21 @@ export interface MealPlanDoc {
   lunch: MealPlanEntry[];
   dinner: MealPlanEntry[];
   snacks: MealPlanEntry[];
-  [k: string]: any;
+  [k: string]: MealPlanEntry[];
 }
 
 export interface MealTemplate {
   name: string;
   items: DiaryEntry[];
   createdAt: string;
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 export interface WeighInEntry {
   date: string; // yyyy-mm-dd
   weight: number; // kg
   createdAt?: string;
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 /** =========================
@@ -204,7 +206,7 @@ export interface OFFProduct {
   image_front_url?: string;
   nutriments?: OFFNutriments;
 
-  [k: string]: any;
+  [k: string]: unknown;
 }
 
 /** Search hit from OFF search endpoint */
@@ -216,5 +218,5 @@ export interface OFFSearchHit {
   image_front_thumb_url?: string;
   nutriments?: OFFNutriments;
 
-  [k: string]: any;
+  [k: string]: unknown;
 }

@@ -17,12 +17,6 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   size = 'medium',
   fullPage = false,
 }) => {
-  const sizeMap = {
-    small: 'small',
-    medium: 'default',
-    large: 'large',
-  };
-
   const containerClass = fullPage
     ? 'loading-state loading-state--full-page'
     : 'loading-state';

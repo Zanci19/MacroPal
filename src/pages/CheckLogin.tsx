@@ -28,6 +28,13 @@ const CheckLogin: React.FC = () => {
   const startCheck = () => {
     checkCleanupRef.current?.();
 
+    if (!navigator.onLine) {
+      setErrorMsg("");
+      setPhase("offline");
+      checkCleanupRef.current = null;
+      return;
+    }
+
     setPhase("checking");
     setErrorMsg("");
 
@@ -36,7 +43,9 @@ const CheckLogin: React.FC = () => {
 
     const finishCheck = () => {
       settled = true;
-      timeoutId && clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       unsub?.();
       unsub = null;
     };
@@ -45,10 +54,15 @@ const CheckLogin: React.FC = () => {
       if (settled) return;
 
       finishCheck();
-      setErrorMsg(
-        "Account check timed out. Please verify your internet connection and try again."
-      );
-      setPhase("error");
+      if (!navigator.onLine) {
+        setErrorMsg("");
+        setPhase("offline");
+      } else {
+        setErrorMsg(
+          "Account check timed out. Please verify your internet connection and try again."
+        );
+        setPhase("error");
+      }
     }, AUTH_CHECK_TIMEOUT_MS);
 
     unsub = onAuthStateChanged(
@@ -84,6 +98,11 @@ const CheckLogin: React.FC = () => {
       },
       (err) => {
         console.error(err);
+        if (!navigator.onLine) {
+          setErrorMsg("");
+          setPhase("offline");
+          return;
+        }
         setErrorMsg(
           err?.message || "Unexpected error while checking your account."
         );
@@ -104,12 +123,19 @@ const CheckLogin: React.FC = () => {
       // have to tap "Try again" manually.
       startCheck();
     };
+    const handleOffline = () => {
+      checkCleanupRef.current?.();
+      setErrorMsg("");
+      setPhase("offline");
+    };
 
     window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
       checkCleanupRef.current?.();
       window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

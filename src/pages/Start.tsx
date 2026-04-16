@@ -23,10 +23,28 @@ const Start: React.FC = () => {
               </div>
               <p className="start-kicker">MACROPAL</p>
               <h1 className="start-title">Your macros. Simplified.</h1>
+              <p className="start-subtitle">
+                Track meals, stay consistent, and hit your goals with a clean
+                daily workflow.
+              </p>
               <div className="start-highlights">
                 <div className="start-highlight">Build balanced plans</div>
                 <div className="start-highlight">Log meals in seconds</div>
                 <div className="start-highlight">Track trends weekly</div>
+              </div>
+              <div className="start-metrics" aria-label="MacroPal benefits">
+                <div className="start-metric">
+                  <strong>Fast logging</strong>
+                  <span>Quick add and recent meals</span>
+                </div>
+                <div className="start-metric">
+                  <strong>Clear progress</strong>
+                  <span>Simple trends and summaries</span>
+                </div>
+                <div className="start-metric">
+                  <strong>Cross-platform</strong>
+                  <span>Web, iOS, and Android</span>
+                </div>
               </div>
             </section>
 
@@ -39,7 +57,7 @@ const Start: React.FC = () => {
                   router.push("/register");
                 }}
               >
-                Get Started
+                Create free account
               </IonButton>
               <IonButton
                 size="large"
@@ -50,8 +68,11 @@ const Start: React.FC = () => {
                   router.push("/login");
                 }}
               >
-                I already have an account
+                Log in
               </IonButton>
+              <p className="start-actions-note">
+                No ads, no credit card, just your data.
+              </p>
             </section>
           </div>
 

@@ -9,10 +9,12 @@
     "preview": "vite preview",
     "test.e2e": "cypress run",
     "test.unit": "vitest",
+    "test.unit.run": "vitest --run",
     "test.all": "bash scripts/run-tests.sh",
     "test.all.unit-only": "bash scripts/run-tests.sh --unit-only",
     "detect-features": "node scripts/detect-features.js",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check": "npm run lint && npm run build && npm run test.unit.run"
   },
   "dependencies": {
     "@capacitor/android": "8.0.0",

@@ -59,7 +59,12 @@ if (typeof window !== "undefined") {
 // --- Firebase mocks -------------------------------------------------------
 
 const mockApp = {} as Record<string, unknown>;
-const mockAuth = { currentUser: null } as { currentUser: any };
+type MockUser = {
+  uid: string;
+  emailVerified: boolean;
+  [k: string]: unknown;
+};
+const mockAuth: { currentUser: MockUser | null } = { currentUser: null };
 
 vi.mock("firebase/app", () => ({
   initializeApp: vi.fn(() => mockApp),
@@ -73,7 +78,7 @@ vi.mock("firebase/analytics", () => ({
 
 vi.mock("firebase/auth", () => {
   const noopPromise = () => Promise.resolve();
-  const fakeUser = { uid: "test", emailVerified: true } as any;
+  const fakeUser: MockUser = { uid: "test", emailVerified: true };
 
   return {
     getAuth: vi.fn(() => mockAuth),

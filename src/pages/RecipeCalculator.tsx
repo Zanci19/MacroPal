@@ -17,7 +17,6 @@ import {
   IonInput,
   IonSelect,
   IonSelectOption,
-  IonChip,
   IonBackButton,
   IonButtons,
   IonText,
@@ -28,12 +27,9 @@ import {
   addOutline,
   trashOutline,
   calculatorOutline,
-  saveOutline,
   downloadOutline,
 } from "ionicons/icons";
-import { useHistory } from "react-router";
 import basicFoods from "../data/basicFoods.json";
-import type { Macros } from "../types";
 import "./RecipeCalculator.css";
 
 interface BasicFood {
@@ -64,7 +60,6 @@ interface Recipe {
 }
 
 const RecipeCalculator: React.FC = () => {
-  const history = useHistory();
   const [recipe, setRecipe] = useState<Recipe>({
     name: "",
     servings: 1,

@@ -64,6 +64,7 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
 /**
  * Hook for managing toast notifications
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [config, setConfig] = React.useState<ToastConfig>({
