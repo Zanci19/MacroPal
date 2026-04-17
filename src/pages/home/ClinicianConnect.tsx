@@ -36,6 +36,7 @@ import {
 import { auth, db, trackEvent } from "../../firebase";
 import { useClinicianAccess } from "../../hooks/useClinicianAccess";
 import { isFeatureEnabled, useRemoteConfig } from "../../UpdateGate";
+import { isValidFirestorePathSegment } from "../../utils/clinician";
 import { sanitizeInput } from "../../utils/validation";
 import { handleError } from "../../utils/handleError";
 import type { AlertDoc, CarePlanDoc, ClinicianInviteDoc, MessageItemDoc } from "../../types";
@@ -58,7 +59,9 @@ const ClinicianConnect: React.FC = () => {
     color: "success" | "danger" | "warning";
   }>({ show: false, message: "", color: "success" });
 
-  const threadId = clinicianLink?.clinicianUid ?? "";
+  const threadId = isValidFirestorePathSegment(clinicianLink?.clinicianUid)
+    ? clinicianLink.clinicianUid
+    : "";
 
   useEffect(() => {
     if (!user || !clinicianLink || clinicianLink.status !== "active") {
@@ -151,6 +154,9 @@ const ClinicianConnect: React.FC = () => {
         if (invite.status !== "active") throw new Error("This invite is not active.");
         if (new Date(invite.expiresAt) <= new Date()) throw new Error("Invite code has expired.");
         if (invite.clinicianUid === user.uid) throw new Error("You cannot link to yourself.");
+        if (!isValidFirestorePathSegment(invite.clinicianUid)) {
+          throw new Error("Invite code is invalid.");
+        }
 
         const nowIso = new Date().toISOString();
         transaction.set(

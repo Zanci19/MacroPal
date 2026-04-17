@@ -2,6 +2,8 @@ import {
   calculateAdherenceRate,
   canClinicianAccessUser,
   evaluateRiskReasons,
+  hasActiveClinicianLink,
+  isValidFirestorePathSegment,
   isClinicianRole,
   resolveAlertSeverity,
   resolveUserRole,
@@ -49,6 +51,17 @@ describe("clinician utilities", () => {
     expect(canClinicianAccessUser("clinician", ["u1", "u2"], "u2")).toBe(true);
     expect(canClinicianAccessUser("clinician", ["u1"], "u3")).toBe(false);
     expect(canClinicianAccessUser("admin", [], "u3")).toBe(true);
+    expect(canClinicianAccessUser("admin", [], "messages/u3")).toBe(false);
+  });
+
+  it("rejects Firestore path segments that contain slashes", () => {
+    expect(isValidFirestorePathSegment("abc123")).toBe(true);
+    expect(isValidFirestorePathSegment("messages/abc123")).toBe(false);
+  });
+
+  it("requires a valid clinician UID in active links", () => {
+    expect(hasActiveClinicianLink({ clinicianUid: "c1", status: "active" })).toBe(true);
+    expect(hasActiveClinicianLink({ clinicianUid: "messages/c1", status: "active" })).toBe(false);
   });
 
   it("evaluates adherence and risk alert logic", () => {

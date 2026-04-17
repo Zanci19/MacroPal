@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import type { ClinicianLink, UserRole } from "../types";
-import { resolveUserRole } from "../utils/clinician";
+import { isClinicianLinkRecord, isValidFirestorePathSegment, resolveUserRole } from "../utils/clinician";
 
 type UserAccessState = {
   role: UserRole;
@@ -36,6 +36,15 @@ export function useClinicianAccess() {
       setState({ role: "user", clinicianLink: null, loading: false, displayName: "" });
       return;
     }
+    if (!isValidFirestorePathSegment(current.uid)) {
+      setState({
+        role: "user",
+        clinicianLink: null,
+        loading: false,
+        displayName: current.displayName || current.email || "User",
+      });
+      return;
+    }
 
     return onSnapshot(
       doc(db, "users", current.uid),
@@ -43,7 +52,9 @@ export function useClinicianAccess() {
         const data = snapshot.data() ?? {};
         setState({
           role: resolveUserRole(data.role),
-          clinicianLink: (data.clinicianLink as ClinicianLink | undefined) ?? null,
+          clinicianLink: isClinicianLinkRecord(data.clinicianLink)
+            ? (data.clinicianLink as ClinicianLink)
+            : null,
           loading: false,
           displayName:
             (typeof data.displayName === "string" && data.displayName) ||

@@ -42,6 +42,7 @@ import {
   calculateAdherenceRate,
   canClinicianAccessUser,
   evaluateRiskReasons,
+  isValidFirestorePathSegment,
   resolveAlertSeverity,
 } from "../../utils/clinician";
 import { sanitizeInput } from "../../utils/validation";
@@ -156,9 +157,10 @@ const ClinicianDashboard: React.FC = () => {
     const load = async () => {
       try {
         const assignedSnap = await getDocs(collection(db, "users", user.uid, "assignedUsers"));
-        const usersWithMetrics = await Promise.all(
+        const usersWithMetricsRaw: Array<DashboardUser | null> = await Promise.all(
           assignedSnap.docs.map(async (entry) => {
             const assignment = entry.data() as ClinicianAssignment;
+            if (!isValidFirestorePathSegment(assignment.uid)) return null;
             const today = todayDateKey();
 
             const dateKeys30 = Array.from({ length: 30 }, (_, idx) =>
@@ -199,8 +201,11 @@ const ClinicianDashboard: React.FC = () => {
               adherence30d,
               riskReasons,
               latestUpdate: foodDocs.find((snap) => snap.exists())?.id,
-            };
+            } satisfies DashboardUser;
           })
+        );
+        const usersWithMetrics = usersWithMetricsRaw.filter(
+          (entry): entry is DashboardUser => entry !== null
         );
         setAssignedUsers(usersWithMetrics);
         if (!selectedUid && usersWithMetrics.length > 0) {

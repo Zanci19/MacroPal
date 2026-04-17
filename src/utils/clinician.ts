@@ -1,4 +1,4 @@
-import type { RiskThresholds, UserRole } from "../types";
+import type { ClinicianLink, RiskThresholds, UserRole } from "../types";
 
 export const DEFAULT_RISK_THRESHOLDS: RiskThresholds = {
   adherence7dMin: 0.5,
@@ -15,15 +15,23 @@ export const resolveUserRole = (role: unknown): UserRole => {
 export const isClinicianRole = (role: unknown): boolean =>
   resolveUserRole(role) === "clinician" || resolveUserRole(role) === "admin";
 
+export const isValidFirestorePathSegment = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0 && !value.includes("/");
+
+export const isClinicianLinkRecord = (clinicianLink: unknown): clinicianLink is ClinicianLink => {
+  if (!clinicianLink || typeof clinicianLink !== "object") return false;
+  const link = clinicianLink as { clinicianUid?: unknown; status?: unknown };
+  const hasValidStatus = link.status === "active" || link.status === "revoked";
+  return hasValidStatus && isValidFirestorePathSegment(link.clinicianUid);
+};
+
 export const hasActiveClinicianLink = (
   clinicianLink: unknown
 ): clinicianLink is {
   clinicianUid: string;
   status: "active" | "revoked";
 } => {
-  if (!clinicianLink || typeof clinicianLink !== "object") return false;
-  const link = clinicianLink as { clinicianUid?: unknown; status?: unknown };
-  return typeof link.clinicianUid === "string" && link.status === "active";
+  return isClinicianLinkRecord(clinicianLink) && clinicianLink.status === "active";
 };
 
 export const shouldShowClinicianFeatures = (params: {
@@ -82,7 +90,10 @@ export const canClinicianAccessUser = (
   assignedUserIds: string[],
   userUid: string
 ): boolean => {
+  if (!isValidFirestorePathSegment(userUid)) return false;
   if (role === "admin") return true;
   if (role !== "clinician") return false;
-  return assignedUserIds.includes(userUid);
+  return assignedUserIds.some((assignedUid) =>
+    isValidFirestorePathSegment(assignedUid) && assignedUid === userUid
+  );
 };
