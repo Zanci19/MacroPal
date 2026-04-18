@@ -39,6 +39,10 @@
 }
 
 body.dark {
+  --mp-primary: #7bb2ff;
+  --mp-primary-strong: #5a9cf6;
+  --mp-primary-soft: rgba(123, 178, 255, 0.22);
+
   --mp-bg: #121212;
   --mp-surface: #1e1e1e;
   --mp-surface-muted: #232323;
