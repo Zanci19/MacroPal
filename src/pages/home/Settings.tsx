@@ -263,7 +263,7 @@ const Settings: React.FC = () => {
     try {
       await deleteUser(auth.currentUser);
       setToast({ show: true, message: "Account deleted.", color: "success" });
-      history.replace("/login");
+      history.replace("/start");
     } catch (error: unknown) {
       const e = error as Error;
       setToast({
@@ -757,15 +757,15 @@ const Settings: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent className="ion-padding tabbed-content settings-page">
-          <IonText color="medium">Please log in.</IonText>
+          <IonText color="medium">You are not logged in.</IonText>
           <IonButton
             className="ion-margin-top"
             onClick={() => {
-              console.log(`[USER ACTION] Settings: Navigate to login page`);
-              history.push("/login");
+              console.log(`[USER ACTION] Settings: Navigate to start page`);
+              history.push("/start");
             }}
           >
-            Go to Login
+            Go to Start page
           </IonButton>
         </IonContent>
       </IonPage>
@@ -1625,6 +1625,7 @@ const Settings: React.FC = () => {
                       return;
                     }
                     await signOut(auth);
+                    history.replace("/start");
                   }}
                 >
                   <IonIcon slot="start" icon={logOutOutline} />

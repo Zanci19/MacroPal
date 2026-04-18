@@ -1071,12 +1071,13 @@ const AddFood: React.FC = () => {
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
+    let unsub: (() => void) | null = null;
 
     // Delay loading favorites by 300ms to prioritize critical data
     const timer = setTimeout(() => {
       setFavoritesLoading(true);
       const ref = collection(db, "users", user.uid, "favorites");
-      const unsub = onSnapshot(
+      unsub = onSnapshot(
         ref,
         (snap) => {
           const list: FavoriteFood[] = snap.docs.map((d) => {
@@ -1104,23 +1105,26 @@ const AddFood: React.FC = () => {
           });
         }
       );
-      return () => unsub();
     }, FAVORITES_LOAD_DELAY_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      unsub?.();
+    };
   }, []);
 
   // Defer recent foods loading to avoid congestion on mobile
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
+    let unsub: (() => void) | null = null;
 
     // Delay loading recent foods by 500ms
     const timer = setTimeout(() => {
       const ref = collection(db, "users", user.uid, "recentFoods");
       const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
 
-      const unsub = onSnapshot(
+      unsub = onSnapshot(
         q,
         (snap) => {
           const list: RecentFood[] = snap.docs.map((d) => {
@@ -1141,11 +1145,12 @@ const AddFood: React.FC = () => {
           });
         }
       );
-
-      return () => unsub();
     }, RECENT_FOODS_LOAD_DELAY_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      unsub?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -1219,12 +1224,13 @@ const AddFood: React.FC = () => {
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
+    let unsub: (() => void) | null = null;
     
     // Delay loading meal presets by 700ms
     const timer = setTimeout(() => {
       setMealPresetsLoading(true);
       const ref = collection(db, "users", user.uid, "mealPresets");
-      const unsub = onSnapshot(
+      unsub = onSnapshot(
         ref,
         (snap) => {
           const list: CustomMealPreset[] = snap.docs.map((d) => {
@@ -1252,10 +1258,12 @@ const AddFood: React.FC = () => {
           });
         }
       );
-      return () => unsub();
     }, MEAL_PRESETS_LOAD_DELAY_MS);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      unsub?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -1747,8 +1755,7 @@ const AddFood: React.FC = () => {
 
       const result = await recognizeFood(
         photoDataUrl,
-        false, // Don't use Google Vision by default
-        import.meta.env.VITE_GOOGLE_VISION_API_KEY
+        false // Don't use Google Vision by default
       );
 
       if (result.success && result.predictions.length > 0) {

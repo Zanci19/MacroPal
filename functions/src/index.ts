@@ -1,6 +1,7 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated, onDocumentWritten, onDocumentWrittenWithAuthContext } from "firebase-functions/v2/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import type { Response as ExpressResponse } from "express";
@@ -11,7 +12,7 @@ const firestore = getFirestore();
 /* ============ Shared helpers ============ */
 function setCors(res: ExpressResponse) {
   res.set("Access-Control-Allow-Origin", "*");
-  res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.set("Vary", "Origin");
 }
@@ -68,6 +69,70 @@ async function raceOk(urls: string[], init: RequestInit) {
     }
   });
 }
+
+const googleVisionApiKey = defineSecret("GOOGLE_VISION_API_KEY");
+
+/* ============ Google Vision (proxy) ============ */
+export const visionRecognize = onRequest(
+  { region: "europe-west1", secrets: [googleVisionApiKey] },
+  async (req, res) => {
+    setCors(res);
+    if (req.method === "OPTIONS") return void res.status(204).send("");
+    if (req.method !== "POST") return void res.status(405).json({ error: "method_not_allowed" });
+
+    const imageBase64Raw = (req.body?.imageBase64 || "").toString();
+    const imageBase64 = imageBase64Raw.replace(/^data:image\/\w+;base64,/, "");
+    if (!imageBase64) return void res.status(400).json({ error: "missing_image_base64" });
+    if (imageBase64.length > 8_000_000) return void res.status(413).json({ error: "image_too_large" });
+
+    const key = googleVisionApiKey.value();
+    if (!key) return void res.status(500).json({ error: "vision_api_key_missing" });
+
+    try {
+      const upstream = await fetchWithTimeout(
+        `https://vision.googleapis.com/v1/images:annotate?key=${encodeURIComponent(key)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                image: { content: imageBase64 },
+                features: [
+                  { type: "LABEL_DETECTION", maxResults: 10 },
+                  { type: "WEB_DETECTION", maxResults: 5 },
+                ],
+              },
+            ],
+          }),
+        },
+        8000
+      );
+
+      const body = await upstream.text();
+      if (!upstream.ok) {
+        return void res.status(502).json({
+          error: "upstream_bad_gateway",
+          status: upstream.status,
+          message: body.slice(0, 500),
+        });
+      }
+
+      res.set("Content-Type", "application/json");
+      return void res.status(200).send(body);
+    } catch (error: unknown) {
+      const e = error as Error & { name?: string };
+      const aborted = e?.name === "AbortError";
+      console.error("visionRecognize error:", aborted ? "timeout" : e);
+      return void res
+        .status(aborted ? 504 : 502)
+        .json({ error: aborted ? "upstream_timeout" : "upstream_bad_gateway", message: e?.message ?? "unknown" });
+    }
+  }
+);
 
 /* ============ OFF: Barcode ============ */
 export const offBarcode = onRequest({ region: "europe-west1" }, async (req, res) => {

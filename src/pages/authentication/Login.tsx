@@ -29,12 +29,17 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
-import { useHistory } from "react-router-dom";
+import { useHistory, type RouteComponentProps } from "react-router-dom";
 import { handleError } from "../../utils/handleError";
 import { signInWithGoogleSocialLogin } from "../../utils/googleSocialLogin";
 import "./Login.css";
 
-const Login: React.FC = () => {
+type LoginProps = {
+  embedded?: boolean;
+  onSwitchToRegister?: () => void;
+} & Partial<RouteComponentProps>;
+
+const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) => {
   const history = useHistory();
 
   const [email, setEmail] = useState("");
@@ -336,13 +341,18 @@ const Login: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Log In</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+      {!embedded && (
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Log In</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+      )}
 
-      <IonContent className="login-page" fullscreen>
+      <IonContent
+        className={`login-page${embedded ? " login-page--embedded" : ""}`}
+        fullscreen
+      >
         <div className="login-card">
           <div className="login-header">
             <h1 className="login-title">Welcome back</h1>
@@ -445,6 +455,10 @@ const Login: React.FC = () => {
               onClick={() => {
                 console.log(`[USER ACTION] Login: Clicked create account link`);
                 trackEvent("navigate_to_register_from_login");
+                if (embedded) {
+                  onSwitchToRegister?.();
+                  return;
+                }
                 history.push("/register");
               }}
             >

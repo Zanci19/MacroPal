@@ -43,6 +43,14 @@ const AuthLoading: React.FC = () => {
     let progressInterval: NodeJS.Timeout | null = null;
     let timeoutId: NodeJS.Timeout | null = null;
     let slowMessageTimer: NodeJS.Timeout | null = null;
+    let navigationTimer: NodeJS.Timeout | null = null;
+
+    const scheduleNavigation = (path: string, delayMs: number) => {
+      if (navigationTimer) clearTimeout(navigationTimer);
+      navigationTimer = setTimeout(() => {
+        history.replace(path);
+      }, delayMs);
+    };
 
     slowMessageTimer = setTimeout(() => {
       setShowSlowMessage(true);
@@ -70,7 +78,7 @@ const AuthLoading: React.FC = () => {
         if (timeoutId) clearTimeout(timeoutId);
         if (progressInterval) clearInterval(progressInterval);
         setMessage("You're not logged in. Sending you to login…");
-        setTimeout(() => history.replace("/login"), 1500);
+        scheduleNavigation("/login", 1500);
         return;
       }
 
@@ -156,10 +164,10 @@ const AuthLoading: React.FC = () => {
 
         if (!navigator.onLine) {
           setMessage("No internet connection. Sending you to offline screen…");
-          setTimeout(() => history.replace("/offline"), 1500);
+          scheduleNavigation("/offline", 1500);
         } else {
           setMessage("Could not load your account. Sending you back to login…");
-          setTimeout(() => history.replace("/login"), 2000);
+          scheduleNavigation("/login", 2000);
         }
       }
     };
@@ -170,6 +178,7 @@ const AuthLoading: React.FC = () => {
       if (timeoutId) clearTimeout(timeoutId);
       if (progressInterval) clearInterval(progressInterval);
       if (slowMessageTimer) clearTimeout(slowMessageTimer);
+      if (navigationTimer) clearTimeout(navigationTimer);
     };
   }, [history]);
 
@@ -181,44 +190,24 @@ const AuthLoading: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding ion-text-center auth-loading-page">
-        <div style={{ marginTop: "30vh" }}>
+        <div className="auth-loading-panel">
           {!timedOut && <IonSpinner name="crescent" />}
           <IonText color={timedOut ? "warning" : "medium"}>
-            <p style={{ marginTop: "1rem" }}>{message}</p>
+            <p className="auth-loading-message">{message}</p>
           </IonText>
           {!timedOut && (
             <>
-              <IonProgressBar 
-                value={progress} 
-                style={{ 
-                  marginTop: "1rem", 
-                  width: "80%", 
-                  maxWidth: "300px",
-                  marginLeft: "auto",
-                  marginRight: "auto"
-                }}
-              />
+              <IonProgressBar value={progress} className="auth-loading-progress" />
               <IonText
                 color="medium"
-                style={{
-                  marginTop: "0.5rem",
-                  fontSize: "0.75rem",
-                  opacity: 0.7,
-                  display: "block",
-                }}
+                className="auth-loading-percent"
               >
                 {Math.round(progress * 100)}%
               </IonText>
               {showSlowMessage && (
                 <IonText
                   color="medium"
-                  style={{
-                    marginTop: "1.5rem",
-                    fontSize: "0.75rem",
-                    opacity: 0.7,
-                    display: "block",
-                    textAlign: "center",
-                  }}
+                  className="auth-loading-slow"
                 >
                   {SLOW_CONNECTION_MESSAGE}
                 </IonText>
@@ -226,14 +215,14 @@ const AuthLoading: React.FC = () => {
             </>
           )}
           {timedOut && (
-            <div style={{ marginTop: "1rem" }}>
-              <IonButton onClick={() => {
+            <div className="auth-loading-actions">
+              <IonButton expand="block" onClick={() => {
                 console.log(`[USER ACTION] Auth Loading: Clicked go to login button (timeout)`);
                 history.replace("/login");
               }}>
                 Go to Login
               </IonButton>
-              <IonButton fill="outline" onClick={() => {
+              <IonButton expand="block" fill="outline" onClick={() => {
                 console.log(`[USER ACTION] Auth Loading: Clicked retry button (timeout)`);
                 window.location.reload();
               }}>

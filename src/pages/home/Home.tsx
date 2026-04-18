@@ -471,7 +471,7 @@ const Home: React.FC = () => {
   const history = useHistory();
   const location = useLocation();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
-  const { onSnapshotDoc, setDocData, getDocData } = useDemoFirestore();
+  const { onSnapshotDoc, setDocData, getDocData, getCollectionDocs } = useDemoFirestore();
 
   const { uid, profile, announcementNum, hasViewedTutorial, loading: profileLoading } = useProfile();
   const [demoAnnouncementNum, setDemoAnnouncementNum] = useState<number | null>(() => {
@@ -780,10 +780,31 @@ const Home: React.FC = () => {
     });
     cleanupFns.push(workoutsUnsub);
 
-    // TODO: Implement meal templates support for demo mode
-    // Collection queries are more complex and require additional abstraction
-    // For now, skip meal templates in demo mode as they're not critical for basic functionality
-    if (!isDemoMode) {
+    if (isDemoMode) {
+      void getCollectionDocs(`users/${uid}/mealTemplates`)
+        .then((docs) => {
+          const next = docs
+            .map((item) => ({
+              id: item.id,
+              data: item.data as MealTemplate,
+            }))
+            .sort((a, b) =>
+              String(b.data.createdAt || "").localeCompare(
+                String(a.data.createdAt || "")
+              )
+            );
+          setMealTemplates(next);
+        })
+        .catch((error) => {
+          console.error("Failed to load demo meal templates:", error);
+          setMealTemplates([]);
+          trackEvent("meal_templates_load_error", {
+            uid,
+            mode: "demo",
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
+    } else {
       const templatesRef = collection(db, "users", uid, "mealTemplates");
       const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
       const templatesUnsub = onSnapshot(templatesQuery, (snapshot) => {
@@ -799,7 +820,7 @@ const Home: React.FC = () => {
     return () => {
       cleanupFns.forEach((fn) => fn());
     };
-  }, [activeDateKey, uid, isDemoMode, onSnapshotDoc]);
+  }, [activeDateKey, uid, isDemoMode, onSnapshotDoc, getCollectionDocs]);
 
   useEffect(() => {
     if (!isViewActive) return;
@@ -1336,11 +1357,33 @@ const Home: React.FC = () => {
     trackEvent("meal_template_save_attempt", { uid, meal, name: trimmedName });
 
     try {
-      await addDoc(collection(db, "users", uid, "mealTemplates"), {
+      const templateData: MealTemplate = {
         name: trimmedName,
         items,
         createdAt: new Date().toISOString(),
-      } satisfies MealTemplate);
+      };
+
+      if (isDemoMode) {
+        const templateId =
+          typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `demo-template-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+        await setDocData(
+          `users/${uid}/mealTemplates/${templateId}`,
+          templateData,
+          { merge: false }
+        );
+        setMealTemplates((prev) =>
+          [{ id: templateId, data: templateData }, ...prev].sort((a, b) =>
+            String(b.data.createdAt || "").localeCompare(
+              String(a.data.createdAt || "")
+            )
+          )
+        );
+      } else {
+        await addDoc(collection(db, "users", uid, "mealTemplates"), templateData);
+      }
       setToast({ open: true, message: `Saved template: ${trimmedName}.` });
       trackEvent("meal_template_save_success", { uid, meal, name: trimmedName });
     } catch (error) {
@@ -1375,14 +1418,22 @@ const Home: React.FC = () => {
     });
 
     try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", dayKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
+      if (isDemoMode) {
+        const path = `users/${uid}/foods/${dayKey}`;
+        const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const current: DiaryEntry[] = [...(data[meal] || [])];
         const updated = [...current, ...items];
-        tx.set(ref, { [meal]: updated }, { merge: true });
-      });
+        await setDocData(path, { [meal]: updated }, { merge: true });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "users", uid, "foods", dayKey);
+          const snap = await tx.get(ref);
+          const data = snap.data() || {};
+          const current: DiaryEntry[] = [...(data[meal] || [])];
+          const updated = [...current, ...items];
+          tx.set(ref, { [meal]: updated }, { merge: true });
+        });
+      }
 
       setDayData((prev) => ({
         ...prev,

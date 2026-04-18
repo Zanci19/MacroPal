@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -141,6 +141,13 @@ const PhotoFoodLogger: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [weightQty, setWeightQty] = useState(100);
   const [adding, setAdding] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Track screen view
   useIonViewDidEnter(() => {
@@ -229,9 +236,12 @@ const PhotoFoodLogger: React.FC = () => {
 
       const result = await recognizeFood(
         photoDataUrl,
-        useGoogleVision,
-        import.meta.env.VITE_GOOGLE_VISION_API_KEY
+        useGoogleVision
       );
+
+      if (!isMountedRef.current) {
+        return;
+      }
 
       if (result.success && result.predictions.length > 0) {
         // Search both local database and OpenFoodFacts API
@@ -239,6 +249,10 @@ const PhotoFoodLogger: React.FC = () => {
           Promise.resolve(matchFoodToDatabase(result.predictions, basicFoods as FoodDatabaseItem[])),
           matchFoodWithOpenFoodFacts(result.predictions)
         ]);
+
+        if (!isMountedRef.current) {
+          return;
+        }
         
         // Combine results with OpenFoodFacts prioritized by array order
         const combinedMatches = result.predictions.map((prediction, idx) => {
@@ -289,15 +303,21 @@ const PhotoFoodLogger: React.FC = () => {
           source: result.predictions[0]?.source,
         });
       } else {
-        setError(result.error || "No food items detected. Try a different photo or angle.");
+        if (isMountedRef.current) {
+          setError(result.error || "No food items detected. Try a different photo or angle.");
+        }
         trackEvent("photo_food_logger_analyze_no_results");
       }
     } catch (err) {
       console.error("Error analyzing photo:", err);
-      setError("Failed to analyze photo. Please try again.");
+      if (isMountedRef.current) {
+        setError("Failed to analyze photo. Please try again.");
+      }
       trackEvent("photo_food_logger_analyze_error", { error: String(err) });
     } finally {
-      setAnalyzing(false);
+      if (isMountedRef.current) {
+        setAnalyzing(false);
+      }
     }
   };
 
@@ -428,29 +448,20 @@ const PhotoFoodLogger: React.FC = () => {
               </div>
 
               {/* Google Vision Toggle */}
-              <IonItem lines="none" className="google-vision-toggle">
-                <IonIcon icon={sparklesOutline} slot="start" color={useGoogleVision ? "success" : "medium"} />
-                <IonLabel>
-                  <h3>Use Google Vision AI (Optional Upgrade)</h3>
-                  <p>
-                    {import.meta.env.VITE_GOOGLE_VISION_API_KEY 
-                      ? "More accurate • 1000 free/month" 
-                      : "Requires API key setup"}
-                  </p>
-                </IonLabel>
-                <IonToggle
-                  checked={useGoogleVision}
-                  onIonChange={(e) => setUseGoogleVision(e.detail.checked)}
-                  disabled={!import.meta.env.VITE_GOOGLE_VISION_API_KEY}
-                />
-              </IonItem>
-              {!import.meta.env.VITE_GOOGLE_VISION_API_KEY && (
-                <IonNote color="medium" className="ion-padding-start">
-                  💡 TensorFlow.js works great without any setup! Google Vision is optional for better accuracy.
-                  <br />
-                  See WHAT_IS_THIS_EXPLAINED.md for setup instructions.
-                </IonNote>
-              )}
+                <IonItem lines="none" className="google-vision-toggle">
+                  <IonIcon icon={sparklesOutline} slot="start" color={useGoogleVision ? "success" : "medium"} />
+                  <IonLabel>
+                    <h3>Use Google Vision AI (Optional Upgrade)</h3>
+                    <p>More accurate • processed via secure server proxy</p>
+                  </IonLabel>
+                  <IonToggle
+                    checked={useGoogleVision}
+                    onIonChange={(e) => setUseGoogleVision(e.detail.checked)}
+                  />
+                </IonItem>
+              <IonNote color="medium" className="ion-padding-start">
+                💡 TensorFlow.js works great without any setup! Google Vision is optional for better accuracy.
+              </IonNote>
             </IonCardContent>
           </IonCard>
 

@@ -29,7 +29,7 @@ import {
   signInWithRedirect,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
-import { useHistory } from "react-router-dom";
+import { useHistory, type RouteComponentProps } from "react-router-dom";
 import { handleError } from "../../utils/handleError";
 import { signInWithGoogleSocialLogin } from "../../utils/googleSocialLogin";
 import "./Register.css";
@@ -54,7 +54,15 @@ const formatIssues = (issues: string[]) => {
   return `${issues.slice(0, -1).join(", ")}, and ${issues.at(-1)}`;
 };
 
-const Register: React.FC = () => {
+type RegisterProps = {
+  embedded?: boolean;
+  onSwitchToLogin?: () => void;
+} & Partial<RouteComponentProps>;
+
+const Register: React.FC<RegisterProps> = ({
+  embedded = false,
+  onSwitchToLogin,
+}) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -322,13 +330,18 @@ const Register: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Create account</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+      {!embedded && (
+        <IonHeader>
+          <IonToolbar>
+            <IonTitle>Create account</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+      )}
 
-      <IonContent className="register-page" fullscreen>
+      <IonContent
+        className={`register-page${embedded ? " register-page--embedded" : ""}`}
+        fullscreen
+      >
         <div className="register-card">
           <div className="register-header">
             <h1 className="register-title">Get started</h1>
@@ -441,6 +454,10 @@ const Register: React.FC = () => {
               onClick={() => {
                 console.log(`[USER ACTION] Register: Clicked login link`);
                 trackEvent("navigate_to_login_from_register");
+                if (embedded) {
+                  onSwitchToLogin?.();
+                  return;
+                }
                 history.push("/login");
               }}
             >

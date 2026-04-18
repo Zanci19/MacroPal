@@ -110,6 +110,12 @@ const ClinicianDashboard: React.FC = () => {
   }>({ show: false, message: "", color: "success" });
 
   const assignedIds = useMemo(() => assignedUsers.map((entry) => entry.uid), [assignedUsers]);
+  const canAccessSelectedUser = useMemo(
+    () =>
+      isValidFirestorePathSegment(selectedUid) &&
+      canClinicianAccessUser(role, assignedIds, selectedUid),
+    [assignedIds, role, selectedUid]
+  );
 
   const selectedUser = useMemo(
     () => assignedUsers.find((entry) => entry.uid === selectedUid) ?? null,
@@ -117,7 +123,7 @@ const ClinicianDashboard: React.FC = () => {
   );
 
   useEffect(() => {
-    if (!user || !canClinicianAccessUser(role, assignedIds, selectedUid || "__none__")) {
+    if (!user || !canAccessSelectedUser) {
       setMessages([]);
       return;
     }
@@ -143,13 +149,13 @@ const ClinicianDashboard: React.FC = () => {
     };
 
     void load();
-  }, [assignedIds, role, selectedUid, user]);
+  }, [canAccessSelectedUser, selectedUid, user]);
 
   useEffect(() => {
-    if (!user || !canClinicianAccessUser(role, assignedIds, selectedUid || "__none__")) return;
+    if (!user || !canAccessSelectedUser) return;
     const threadRef = doc(db, "users", selectedUid, "messages", user.uid);
     void setDoc(threadRef, { unreadForClinician: 0, updatedAt: new Date().toISOString() }, { merge: true });
-  }, [assignedIds, role, selectedUid, user]);
+  }, [canAccessSelectedUser, selectedUid, user]);
 
   useEffect(() => {
     if (!user || (role !== "clinician" && role !== "admin")) return;

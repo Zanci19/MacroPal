@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -25,7 +25,7 @@ const CheckLogin: React.FC = () => {
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const checkCleanupRef = useRef<(() => void) | null>(null);
 
-  const startCheck = () => {
+  const startCheck = useCallback(() => {
     checkCleanupRef.current?.();
 
     if (!navigator.onLine) {
@@ -113,7 +113,7 @@ const CheckLogin: React.FC = () => {
     checkCleanupRef.current = () => {
       finishCheck();
     };
-  };
+  }, [history]);
 
   useEffect(() => {
     startCheck();
@@ -137,8 +137,7 @@ const CheckLogin: React.FC = () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [startCheck]);
 
   useEffect(() => {
     if (phase !== "checking") {

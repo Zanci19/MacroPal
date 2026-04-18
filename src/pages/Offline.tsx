@@ -54,20 +54,20 @@ const Offline: React.FC = () => {
       </IonHeader>
 
       <IonContent className="ion-padding ion-text-center offline-page">
-        <div style={{ marginTop: "20vh" }}>
-          <IonIcon icon={wifiOutline} style={{ fontSize: 64, opacity: 0.7 }} />
-          <h2 style={{ marginTop: 12 }}>You’re offline</h2>
+        <div className="offline-panel">
+          <IonIcon icon={wifiOutline} className="offline-icon" />
+          <h2 className="offline-title">You’re offline</h2>
           <IonText color="medium">
-            <p style={{ marginTop: 8 }}>
+            <p className="offline-copy">
               MacroPal can keep working offline with your cached data.
               <br />
               We’ll sync updates once you’re back online.
             </p>
           </IonText>
 
+          <div className="offline-actions">
           <IonButton
             expand="block"
-            style={{ marginTop: 24 }}
             onClick={() => {
               console.log('[USER ACTION] Offline: Try again button clicked (inline)');
               goBackToCheck();
@@ -79,7 +79,6 @@ const Offline: React.FC = () => {
           <IonButton
             expand="block"
             fill="outline"
-            style={{ marginTop: 12 }}
             onClick={() => {
               console.log('[USER ACTION] Offline: Continue offline button clicked (inline)');
               continueOffline();
@@ -88,6 +87,7 @@ const Offline: React.FC = () => {
             <IonIcon slot="start" icon={cloudOfflineOutline} />
             Continue offline
           </IonButton>
+          </div>
         </div>
       </IonContent>
     </IonPage>

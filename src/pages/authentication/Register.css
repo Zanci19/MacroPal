@@ -7,12 +7,25 @@
   padding: 16px;
 }
 
+.register-page--embedded {
+  background: transparent;
+  padding: 14px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+.register-page--embedded .register-card {
+  max-width: 480px;
+}
+
 body:not(.dark) .register-page {
   background: linear-gradient(160deg, rgba(53, 123, 228, 0.06) 0%, var(--mp-bg) 55%);
 }
 
 body.dark .register-page {
   background: radial-gradient(circle at 30% 20%, rgba(53, 123, 228, 0.08), transparent 60%), var(--mp-bg);
+}
+
+body .register-page.register-page--embedded {
+  background: transparent;
 }
 
 .register-card {

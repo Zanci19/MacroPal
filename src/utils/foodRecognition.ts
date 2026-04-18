@@ -16,6 +16,8 @@ import '@tensorflow/tfjs-backend-cpu';
 
 // Initialize TensorFlow backend
 let tfInitialized = false;
+let mobileNetModelPromise: Promise<mobilenet.MobileNet> | null = null;
+let cocoSsdModelPromise: Promise<cocoSsd.ObjectDetection> | null = null;
 const debugLog = (...args: unknown[]) => {
   if (import.meta.env.DEV) {
     console.log(...args);
@@ -59,6 +61,26 @@ async function initializeTensorFlow() {
       throw new Error('Failed to initialize TensorFlow.js backend');
     }
   }
+}
+
+async function getMobileNetModel() {
+  if (!mobileNetModelPromise) {
+    mobileNetModelPromise = mobilenet.load().catch((error) => {
+      mobileNetModelPromise = null;
+      throw error;
+    });
+  }
+  return mobileNetModelPromise;
+}
+
+async function getCocoSsdModel() {
+  if (!cocoSsdModelPromise) {
+    cocoSsdModelPromise = cocoSsd.load().catch((error) => {
+      cocoSsdModelPromise = null;
+      throw error;
+    });
+  }
+  return cocoSsdModelPromise;
 }
 
 // Food keywords that commonly appear in image classifications - Enhanced list
@@ -171,7 +193,7 @@ async function estimatePortionSize(
 ): Promise<PortionEstimate | undefined> {
   try {
     debugLog('[FoodRecognition] Loading CocoSSD for portion estimation...');
-    const model = await cocoSsd.load();
+    const model = await getCocoSsdModel();
     
     const predictions = await model.detect(imageElement);
     
@@ -251,7 +273,7 @@ export async function recognizeFoodWithMobileNet(
     await initializeTensorFlow();
     
     debugLog('[FoodRecognition] Loading MobileNet model...');
-    const model = await mobilenet.load();
+    const model = await getMobileNetModel();
     
     let predictions: Array<{className: string; probability: number}> = [];
     let originalPredictions: Array<{className: string; probability: number}> = [];
@@ -363,49 +385,24 @@ export async function recognizeFoodWithMobileNet(
 }
 
 /**
- * Recognize food using Google Cloud Vision API
- * Requires API key configured in environment variables
- * Free tier: 1000 requests per month
+ * Recognize food using Google Cloud Vision API through backend proxy.
+ * API credentials are kept server-side in Cloud Functions secrets.
  */
 export async function recognizeFoodWithGoogleVision(
-  imageBase64: string,
-  apiKey?: string
+  imageBase64: string
 ): Promise<RecognitionResult> {
-  const key = apiKey || import.meta.env.VITE_GOOGLE_VISION_API_KEY;
-  
-  if (!key) {
-    return {
-      predictions: [],
-      success: false,
-      error: 'Google Vision API key not configured'
-    };
-  }
-  
   try {
     debugLog('[FoodRecognition] Calling Google Cloud Vision API...');
-    
-    // Remove data URL prefix if present
-    const base64Image = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-    
+
     const response = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${key}`,
+      `${FUNCTIONS_API_BASE}/visionRecognize`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          requests: [
-            {
-              image: {
-                content: base64Image
-              },
-              features: [
-                { type: 'LABEL_DETECTION', maxResults: 10 },
-                { type: 'WEB_DETECTION', maxResults: 5 }
-              ]
-            }
-          ]
+          imageBase64,
         })
       }
     );
@@ -514,8 +511,7 @@ export function imageToBase64(image: HTMLImageElement): string {
  */
 export async function recognizeFood(
   imageDataUrl: string,
-  useGoogleVision = false,
-  googleApiKey?: string
+  useGoogleVision = false
 ): Promise<RecognitionResult> {
   try {
     // Load the image
@@ -529,9 +525,9 @@ export async function recognizeFood(
       return mobileNetResult;
     }
     
-    // If user wants Google Vision and has API key, try it
-    if (useGoogleVision && googleApiKey) {
-      const googleResult = await recognizeFoodWithGoogleVision(imageDataUrl, googleApiKey);
+    // If user wants Google Vision, try it through backend proxy
+    if (useGoogleVision) {
+      const googleResult = await recognizeFoodWithGoogleVision(imageDataUrl);
       
       // If Google Vision worked, combine results
       if (googleResult.success) {
@@ -568,8 +564,10 @@ export async function recognizeFood(
   }
 }
 
-// OpenFoodFacts API configuration
-const OPENFOODFACTS_API_BASE = "https://europe-west1-macropal-zanci19.cloudfunctions.net";
+// Cloud Functions API configuration
+const FUNCTIONS_API_BASE =
+  import.meta.env.VITE_FUNCTIONS_BASE_URL ||
+  "https://europe-west1-macropal-zanci19.cloudfunctions.net";
 
 // Type for OpenFoodFacts search response
 interface OpenFoodFactsSearchResponse {
@@ -585,7 +583,7 @@ export async function searchOpenFoodFacts(
   pageSize = 10
 ): Promise<FoodDatabaseItem[]> {
   try {
-    const url = new URL(`${OPENFOODFACTS_API_BASE}/offSearch`);
+    const url = new URL(`${FUNCTIONS_API_BASE}/offSearch`);
     url.searchParams.set('q', query);
     url.searchParams.set('page', '1');
     url.searchParams.set('page_size', String(pageSize));

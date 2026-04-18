@@ -1,4 +1,4 @@
 @echo off
 echo Starting Ionic application...
 echo.
-ionic serve --external
+ionic serve --external --no-open

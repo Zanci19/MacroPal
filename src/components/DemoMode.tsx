@@ -15,6 +15,11 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const showVideoRef = useRef(showVideo);
+  const isDemoActiveRef = useRef(isDemoActive);
+
+  showVideoRef.current = showVideo;
+  isDemoActiveRef.current = isDemoActive;
 
   const clearDemoData = useCallback(() => {
     // Use the global clearDemoData if available
@@ -47,8 +52,8 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
     console.log("Demo mode: Cleared user data");
   }, []);
 
-  const resetInactivityTimer = useCallback(() => {
-    if (!isDemoMode || !isDemoActive) return;
+  const resetInactivityTimer = useCallback((active = isDemoActiveRef.current) => {
+    if (!isDemoMode || !active) return;
 
     // Clear existing timer
     if (inactivityTimerRef.current) {
@@ -60,17 +65,21 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
       // Reset demo mode - clear data and show video again
       console.log("Demo mode: Inactivity timeout - resetting to video");
       clearDemoData();
+      isDemoActiveRef.current = false;
+      showVideoRef.current = true;
       setIsDemoActive(false);
       setShowVideo(true);
     }, INACTIVITY_TIMEOUT_MS);
-  }, [isDemoMode, isDemoActive, clearDemoData]);
+  }, [isDemoMode, clearDemoData]);
 
   const handleClick = useCallback(() => {
     if (!isDemoMode) return;
 
-    if (showVideo) {
+    if (showVideoRef.current) {
       // Transition from video to demo app
       console.log("Demo mode: Transitioning from video to app");
+      showVideoRef.current = false;
+      isDemoActiveRef.current = true;
       setShowVideo(false);
       setIsDemoActive(true);
       lastActivityRef.current = Date.now();
@@ -78,21 +87,21 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
       // Initialize demo data on first transition
       initializeDemoData();
       
-      resetInactivityTimer();
+      resetInactivityTimer(true);
     } else {
       // User is active in the demo
       lastActivityRef.current = Date.now();
       resetInactivityTimer();
     }
-  }, [isDemoMode, showVideo, resetInactivityTimer]);
+  }, [isDemoMode, resetInactivityTimer]);
 
   const handleKeyDown = useCallback(() => {
-    if (!isDemoMode || showVideo) return;
+    if (!isDemoMode || showVideoRef.current) return;
     
     // User is active in the demo via keyboard
     lastActivityRef.current = Date.now();
     resetInactivityTimer();
-  }, [isDemoMode, showVideo, resetInactivityTimer]);
+  }, [isDemoMode, resetInactivityTimer]);
 
   useEffect(() => {
     if (!isDemoMode) return;

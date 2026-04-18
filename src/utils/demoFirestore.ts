@@ -121,11 +121,18 @@ class DemoFirestore {
 
     doc.listeners.add(callback);
     
-    // Immediately call callback with current data
-    setTimeout(() => callback(doc.data), 0);
+    // Immediately call callback with current data (unsubscribe-safe)
+    let active = true;
+    const timer = setTimeout(() => {
+      if (active) {
+        callback(doc.data);
+      }
+    }, 0);
 
     // Return unsubscribe function
     return () => {
+      active = false;
+      clearTimeout(timer);
       doc.listeners.delete(callback);
     };
   }
