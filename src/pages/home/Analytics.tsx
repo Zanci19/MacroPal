@@ -44,7 +44,6 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
   BarChart,
   Bar,
   PieChart,
@@ -103,21 +102,45 @@ const addDays = (d: Date, n: number) => {
 const ChartContainer: React.FC<{
   height: number;
   enabled?: boolean;
-  children: React.ReactNode;
-}> = ({ height, enabled = true, children }) => (
-  <div style={{ width: "100%", height }}>
-    {enabled ? (
-      <ResponsiveContainer
-        width="100%"
-        height="100%"
-        minHeight={height}
-        minWidth={0}
-      >
-        {children}
-      </ResponsiveContainer>
-    ) : null}
-  </div>
-);
+  children: React.ReactElement;
+}> = ({ height, enabled = true, children }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    if (!enabled) {
+      setWidth(0);
+      return;
+    }
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateWidth = () => {
+      const nextWidth = Math.floor(el.clientWidth);
+      setWidth(nextWidth > 0 ? nextWidth : 0);
+    };
+
+    updateWidth();
+
+    if (typeof ResizeObserver !== "undefined") {
+      const observer = new ResizeObserver(updateWidth);
+      observer.observe(el);
+      return () => observer.disconnect();
+    }
+
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, [enabled, height]);
+
+  return (
+    <div ref={containerRef} style={{ width: "100%", minWidth: 0, height, minHeight: height }}>
+      {enabled && width > 0
+        ? React.cloneElement(children, { width, height } as Record<string, number>)
+        : null}
+    </div>
+  );
+};
 
 /* Sum per-day macros (c/p/f) from all meals */
 function sumDay(doc: DayDiaryDoc) {

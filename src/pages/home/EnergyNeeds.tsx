@@ -1,21 +1,20 @@
 import React, { useEffect, useState } from "react";
 import {
-  IonBackButton,
   IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonInput,
   IonItem,
   IonLabel,
-  IonPage,
-  IonTitle,
   IonToast,
-  IonToolbar,
 } from "@ionic/react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useHistory } from "react-router";
 import { auth, db, trackEvent } from "../../firebase";
+import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 type MacroTargets = {
   proteinG: number;
@@ -135,7 +134,7 @@ const EnergyNeeds: React.FC = () => {
       });
 
       showToast("Energy needs updated.", "success");
-      history.push("/app/settings");
+      history.push(SETTINGS_ROUTES.root);
     } catch (error: unknown) {
       const err = error as Error;
       console.error("Failed to save energy needs:", err);
@@ -150,90 +149,90 @@ const EnergyNeeds: React.FC = () => {
   };
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
-          </IonButtons>
-          <IonTitle>Change energy needs</IonTitle>
-        </IonToolbar>
-      </IonHeader>
+    <SettingsSubpageLayout
+      title="Energy needs"
+      subtitle="Set your calorie and macro targets for better day-to-day guidance."
+      backHref={SETTINGS_ROUTES.root}
+    >
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Daily targets</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Recommended calories</IonLabel>
+            <IonInput
+              type="number"
+              inputMode="numeric"
+              value={caloriesTarget ?? ""}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] EnergyNeeds: Calories input changed', { value: e.detail.value });
+                setCaloriesTarget(toNumOrNull(e.detail.value));
+              }}
+            />
+          </IonItem>
 
-      <IonContent className="ion-padding">
-        <IonItem lines="full">
-          <IonLabel position="stacked">Recommended calories</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={caloriesTarget ?? ""}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] EnergyNeeds: Calories input changed', { value: e.detail.value });
-              setCaloriesTarget(toNumOrNull(e.detail.value));
-            }}
-          />
-        </IonItem>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Carbohydrates (g)</IonLabel>
+            <IonInput
+              type="number"
+              inputMode="numeric"
+              value={carbsTarget ?? ""}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] EnergyNeeds: Carbs input changed', { value: e.detail.value });
+                setCarbsTarget(toNumOrNull(e.detail.value));
+              }}
+            />
+          </IonItem>
 
-        <IonItem lines="full">
-          <IonLabel position="stacked">Carbohydrates (g)</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={carbsTarget ?? ""}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] EnergyNeeds: Carbs input changed', { value: e.detail.value });
-              setCarbsTarget(toNumOrNull(e.detail.value));
-            }}
-          />
-        </IonItem>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Protein (g)</IonLabel>
+            <IonInput
+              type="number"
+              inputMode="numeric"
+              value={proteinTarget ?? ""}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] EnergyNeeds: Protein input changed', { value: e.detail.value });
+                setProteinTarget(toNumOrNull(e.detail.value));
+              }}
+            />
+          </IonItem>
 
-        <IonItem lines="full">
-          <IonLabel position="stacked">Protein (g)</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={proteinTarget ?? ""}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] EnergyNeeds: Protein input changed', { value: e.detail.value });
-              setProteinTarget(toNumOrNull(e.detail.value));
-            }}
-          />
-        </IonItem>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Fat (g)</IonLabel>
+            <IonInput
+              type="number"
+              inputMode="numeric"
+              value={fatTarget ?? ""}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] EnergyNeeds: Fat input changed', { value: e.detail.value });
+                setFatTarget(toNumOrNull(e.detail.value));
+              }}
+            />
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonItem lines="full">
-          <IonLabel position="stacked">Fat (g)</IonLabel>
-          <IonInput
-            type="number"
-            inputMode="numeric"
-            value={fatTarget ?? ""}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] EnergyNeeds: Fat input changed', { value: e.detail.value });
-              setFatTarget(toNumOrNull(e.detail.value));
-            }}
-          />
-        </IonItem>
+      <IonButton
+        expand="block"
+        className="settings-subpage-primary-action"
+        onClick={() => {
+          console.log('[USER ACTION] EnergyNeeds: Save energy needs button clicked');
+          handleSave();
+        }}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save energy needs"}
+      </IonButton>
 
-        <IonButton
-          expand="block"
-          className="ion-margin-top"
-          onClick={() => {
-            console.log('[USER ACTION] EnergyNeeds: Save energy needs button clicked');
-            handleSave();
-          }}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save energy needs"}
-        </IonButton>
-
-        <IonToast
-          isOpen={toast.show}
-          onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
-          message={toast.message}
-          color={toast.color}
-          duration={2500}
-        />
-      </IonContent>
-    </IonPage>
+      <IonToast
+        isOpen={toast.show}
+        onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
+        message={toast.message}
+        color={toast.color}
+        duration={2500}
+      />
+    </SettingsSubpageLayout>
   );
 };
 

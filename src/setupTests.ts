@@ -54,6 +54,15 @@ if (typeof window !== "undefined") {
         onchange: null,
       } as MediaQueryList;
     };
+
+  // Stencil checks document.adoptedStyleSheets in jsdom; provide a safe default.
+  if (!("adoptedStyleSheets" in document)) {
+    Object.defineProperty(document, "adoptedStyleSheets", {
+      value: [],
+      writable: true,
+      configurable: true,
+    });
+  }
 }
 
 // --- Firebase mocks -------------------------------------------------------

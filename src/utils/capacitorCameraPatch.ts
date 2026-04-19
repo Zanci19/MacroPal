@@ -10,6 +10,8 @@
  * property sets until the component is connected and initialized.
  */
 
+import { cleanupStalePwaCameraModal } from './cameraCleanup';
+
 // Type for Stencil component with internal properties
 interface StencilElement extends HTMLElement {
   $instanceValues$?: Record<string, unknown>;
@@ -78,6 +80,29 @@ const patchCameraModal = () => {
       enumerable: true,
       configurable: true,
     });
+
+    const dismissDescriptor = Object.getOwnPropertyDescriptor(originalPrototype, 'dismiss');
+    const originalDismiss = dismissDescriptor?.value as
+      | ((...args: unknown[]) => unknown)
+      | undefined;
+
+    if (typeof originalDismiss === 'function') {
+      const canRedefineDismiss =
+        dismissDescriptor?.writable === true || dismissDescriptor?.configurable === true;
+
+      if (canRedefineDismiss) {
+        Object.defineProperty(originalPrototype, 'dismiss', {
+          ...dismissDescriptor,
+          value: function dismissWithCleanup(this: StencilElement, ...args: unknown[]) {
+            const dismissResult = originalDismiss.apply(this, args);
+            cleanupStalePwaCameraModal();
+            return dismissResult;
+          },
+        });
+      } else {
+        console.warn('[Camera Patch] Could not patch dismiss; property is read-only.');
+      }
+    }
     
     console.log('[Capacitor Camera Patch] Successfully patched pwa-camera-modal.facingMode property');
     return true;

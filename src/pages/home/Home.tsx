@@ -852,7 +852,9 @@ const Home: React.FC = () => {
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
   const showAchievements = profile?.showAchievements ?? true;
-  const summarySwiperRef = useRef<SwiperClass | null>(null);
+  const summarySwiperTopRef = useRef<SwiperClass | null>(null);
+  const summarySwiperLeftRef = useRef<SwiperClass | null>(null);
+  const summarySwiperRightRef = useRef<SwiperClass | null>(null);
 
   // Lazily load Swiper when the Home page mounts (avoids including the 67KB chunk in the initial bundle)
   const [swiperParts, setSwiperParts] = useState<{
@@ -1811,7 +1813,7 @@ const Home: React.FC = () => {
     }
   }, [activeDateKey, uid]);
 
-  const handleSummarySlideChange = useCallback(
+  const handleRightSummarySlideChange = useCallback(
     (swiper: SwiperClass) => {
       if (!showWellnessTip) return;
       if (quoteDateKey === todayKey) {
@@ -1819,7 +1821,7 @@ const Home: React.FC = () => {
         return;
       }
       if (quoteHasLoadedRef.current) return;
-      const quoteSlideIndex = showAchievements ? 4 : 3;
+      const quoteSlideIndex = showAchievements ? 1 : 0;
       if (swiper.activeIndex !== quoteSlideIndex) return;
       void fetchInspirationalQuote();
     },
@@ -2030,11 +2032,18 @@ const Home: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!summarySwiperRef.current) return;
+    const swiperInstances = [
+      summarySwiperTopRef.current,
+      summarySwiperLeftRef.current,
+      summarySwiperRightRef.current,
+    ].filter((swiper): swiper is SwiperClass => swiper !== null);
+    if (!swiperInstances.length) return;
     // Debounce Swiper updates to avoid excessive re-renders
     const timeoutId = setTimeout(() => {
-      summarySwiperRef.current?.updateAutoHeight(300);
-      summarySwiperRef.current?.update();
+      swiperInstances.forEach((swiper) => {
+        swiper.updateAutoHeight(300);
+        swiper.update();
+      });
     }, 100);
     return () => clearTimeout(timeoutId);
   }, [
@@ -2330,10 +2339,8 @@ const Home: React.FC = () => {
             observeParents
             observeSlideChildren
             onSwiper={(swiper) => {
-              summarySwiperRef.current = swiper;
-              handleSummarySlideChange(swiper);
+              summarySwiperTopRef.current = swiper;
             }}
-            onSlideChange={handleSummarySlideChange}
           >
             <SwiperSlideComp>
               <div className="fs-summary__slide">
@@ -2611,83 +2618,141 @@ const Home: React.FC = () => {
                 </IonCardContent>
               </div>
             </SwiperSlideComp>
-
-            <SwiperSlideComp>
-              <div className="fs-summary__slide">
-                <IonCardHeader className="fs-summary__hdr">
-                  <IonCardTitle>Water Intake</IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <WaterIntake dateKey={activeDateKey} />
-                </IonCardContent>
-              </div>
-            </SwiperSlideComp>
-
-            {showAchievements && (
-              <SwiperSlideComp>
-                <div className="fs-summary__slide">
-                  <IonCardHeader className="fs-summary__hdr">
-                    <IonCardTitle>Achievements</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {streakMilestones.map((target) => (
-                        <IonChip
-                          key={target}
-                          color={streak >= target ? "success" : "medium"}
-                        >
-                          {target}-day streak
-                        </IonChip>
-                      ))}
-                    </div>
-                    {nextStreakTarget ? (
-                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                        {nextStreakTarget - streak} more day
-                        {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
-                        {nextStreakTarget}-day badge.
-                      </IonText>
-                    ) : (
-                      <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                        You’ve unlocked all streak badges 🎉
-                      </IonText>
-                    )}
-                  </IonCardContent>
-                </div>
-              </SwiperSlideComp>
-            )}
-
-            {showWellnessTip && (
-              <SwiperSlideComp>
-                <div className="fs-summary__slide">
-                  <IonCardHeader className="fs-tip-card__hdr">
-                    <div className="fs-tip-card__title">
-                      <IonIcon icon={bulbOutline} aria-hidden="true" />
-                      <IonCardTitle>Inspirational quote</IonCardTitle>
-                    </div>
-                  </IonCardHeader>
-                  <IonCardContent className="fs-tip-card__content">
-                    {quote ? (
-                      <>
-                        <p className="fs-tip-card__text">"{quote.quote}"</p>
-                        <IonText color="medium">— {quote.author}</IonText>
-                      </>
-                    ) : (
-                      <div style={{ textAlign: "center", padding: "20px 0" }}>
-                        <IonSpinner name="dots" />
-                        <IonText color="medium" style={{ display: "block", marginTop: 12 }}>
-                          Loading quote...
-                        </IonText>
-                      </div>
-                    )}
-                  </IonCardContent>
-                </div>
-              </SwiperSlideComp>
-            )}
           </SwiperComp>
           ) : (
             <div className="ion-padding ion-text-center"><IonSpinner name="dots" /></div>
           )}
         </IonCard>
+
+        {SwiperComp && SwiperSlideComp && Boolean(PaginationMod) && (
+          <div className="fs-summary-grid">
+            <IonCard className="fs-summary fs-summary--split">
+              <SwiperComp
+                modules={[PaginationMod as never]}
+                pagination={{ clickable: true }}
+                slidesPerView={1}
+                autoHeight
+                className="fs-summary__swiper"
+                observer
+                observeParents
+                observeSlideChildren
+                onSwiper={(swiper) => {
+                  summarySwiperLeftRef.current = swiper;
+                }}
+              >
+                <SwiperSlideComp>
+                  <div className="fs-summary__slide">
+                    <IonCardHeader className="fs-summary__hdr">
+                      <IonCardTitle>Weigh-in</IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <p style={{ marginTop: 0 }}>
+                        Track your weight over time to see progress in Analytics.
+                      </p>
+                      <IonButton expand="block" onClick={openWeighInModal}>
+                        Log weigh-in
+                      </IonButton>
+                    </IonCardContent>
+                  </div>
+                </SwiperSlideComp>
+
+                <SwiperSlideComp>
+                  <div className="fs-summary__slide">
+                    <IonCardHeader className="fs-summary__hdr">
+                      <IonCardTitle>Water Intake</IonCardTitle>
+                    </IonCardHeader>
+                    <IonCardContent>
+                      <WaterIntake dateKey={activeDateKey} />
+                    </IonCardContent>
+                  </div>
+                </SwiperSlideComp>
+              </SwiperComp>
+            </IonCard>
+
+            {showAchievements || showWellnessTip ? (
+              <IonCard className="fs-summary fs-summary--split">
+                <SwiperComp
+                  modules={[PaginationMod as never]}
+                  pagination={{ clickable: true }}
+                  slidesPerView={1}
+                  autoHeight
+                  className="fs-summary__swiper"
+                  observer
+                  observeParents
+                  observeSlideChildren
+                  onSwiper={(swiper) => {
+                    summarySwiperRightRef.current = swiper;
+                    handleRightSummarySlideChange(swiper);
+                  }}
+                  onSlideChange={handleRightSummarySlideChange}
+                >
+                  {showAchievements && (
+                    <SwiperSlideComp>
+                      <div className="fs-summary__slide">
+                        <IonCardHeader className="fs-summary__hdr">
+                          <IonCardTitle>Achievements</IonCardTitle>
+                        </IonCardHeader>
+                        <IonCardContent>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {streakMilestones.map((target) => (
+                              <IonChip
+                                key={target}
+                                color={streak >= target ? "success" : "medium"}
+                              >
+                                {target}-day streak
+                              </IonChip>
+                            ))}
+                          </div>
+                          {nextStreakTarget ? (
+                            <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                              {nextStreakTarget - streak} more day
+                              {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
+                              {nextStreakTarget}-day badge.
+                            </IonText>
+                          ) : (
+                            <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
+                              You’ve unlocked all streak badges 🎉
+                            </IonText>
+                          )}
+                        </IonCardContent>
+                      </div>
+                    </SwiperSlideComp>
+                  )}
+
+                  {showWellnessTip && (
+                    <SwiperSlideComp>
+                      <div className="fs-summary__slide">
+                        <IonCardHeader className="fs-tip-card__hdr">
+                          <div className="fs-tip-card__title">
+                            <IonIcon icon={bulbOutline} aria-hidden="true" />
+                            <IonCardTitle>Inspirational quote</IonCardTitle>
+                          </div>
+                        </IonCardHeader>
+                        <IonCardContent className="fs-tip-card__content">
+                          {quote ? (
+                            <>
+                              <p className="fs-tip-card__text">"{quote.quote}"</p>
+                              <IonText color="medium">— {quote.author}</IonText>
+                            </>
+                          ) : (
+                            <div style={{ textAlign: "center", padding: "20px 0" }}>
+                              <IonSpinner name="dots" />
+                              <IonText color="medium" style={{ display: "block", marginTop: 12 }}>
+                                Loading quote...
+                              </IonText>
+                            </div>
+                          )}
+                        </IonCardContent>
+                      </div>
+                    </SwiperSlideComp>
+                  )}
+                </SwiperComp>
+              </IonCard>
+            ) : (
+              <div />
+            )}
+          </div>
+        )}
 
         {loading && (
           <div className="ion-text-center" style={{ padding: 24 }}>

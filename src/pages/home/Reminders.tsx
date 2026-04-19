@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import {
-  IonBackButton,
   IonButton,
-  IonButtons,
-  IonContent,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonDatetime,
-  IonHeader,
   IonItem,
   IonLabel,
-  IonPage,
   IonToggle,
-  IonTitle,
   IonToast,
-  IonToolbar,
 } from "@ionic/react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useHistory } from "react-router";
 import { auth, db, trackEvent } from "../../firebase";
+import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 type ReminderBlock = {
   enabled: boolean;
@@ -239,7 +238,7 @@ const Reminders: React.FC = () => {
       }
 
       setToast({ show: true, message: "Reminders updated.", color: "success" });
-      history.push("/app/settings");
+      history.push(SETTINGS_ROUTES.root);
     } catch (error: unknown) {
       const err = error as Error;
       console.error("Failed to save reminders:", err);
@@ -254,106 +253,121 @@ const Reminders: React.FC = () => {
   };
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
-          </IonButtons>
-          <IonTitle>Reminders</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="ion-padding">
-        <IonItem lines="full">
-          <IonLabel>Meal reminder</IonLabel>
-          <IonToggle
-            slot="end"
-            checked={mealEnabled}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Meal reminder toggle changed', { enabled: e.detail.checked });
-              setMealEnabled(e.detail.checked);
-            }}
-          />
-        </IonItem>
-        <IonItem lines="full">
-          <IonLabel position="stacked">Meal time</IonLabel>
-          <IonDatetime
-            presentation="time"
-            value={mealTime}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Meal time changed', { value: e.detail.value });
-              setMealTime(normalizeTime(e.detail.value));
-            }}
-          />
-        </IonItem>
+    <SettingsSubpageLayout
+      title="Reminders"
+      subtitle="Set daily prompts for meals, weigh-ins, and workouts."
+      backHref={SETTINGS_ROUTES.root}
+    >
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Meal reminder</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonLabel>Enabled</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={mealEnabled}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Meal reminder toggle changed', { enabled: e.detail.checked });
+                setMealEnabled(e.detail.checked);
+              }}
+            />
+          </IonItem>
+          <IonItem lines="none">
+            <IonLabel position="stacked">Time</IonLabel>
+            <IonDatetime
+              presentation="time"
+              value={mealTime}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Meal time changed', { value: e.detail.value });
+                setMealTime(normalizeTime(e.detail.value));
+              }}
+            />
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonItem lines="full">
-          <IonLabel>Weigh-in reminder</IonLabel>
-          <IonToggle
-            slot="end"
-            checked={weighInEnabled}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Weigh-in reminder toggle changed', { enabled: e.detail.checked });
-              setWeighInEnabled(e.detail.checked);
-            }}
-          />
-        </IonItem>
-        <IonItem lines="full">
-          <IonLabel position="stacked">Weigh-in time</IonLabel>
-          <IonDatetime
-            presentation="time"
-            value={weighInTime}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Weigh-in time changed', { value: e.detail.value });
-              setWeighInTime(normalizeTime(e.detail.value));
-            }}
-          />
-        </IonItem>
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Weigh-in reminder</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonLabel>Enabled</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={weighInEnabled}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Weigh-in reminder toggle changed', { enabled: e.detail.checked });
+                setWeighInEnabled(e.detail.checked);
+              }}
+            />
+          </IonItem>
+          <IonItem lines="none">
+            <IonLabel position="stacked">Time</IonLabel>
+            <IonDatetime
+              presentation="time"
+              value={weighInTime}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Weigh-in time changed', { value: e.detail.value });
+                setWeighInTime(normalizeTime(e.detail.value));
+              }}
+            />
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonItem lines="full">
-          <IonLabel>Workout reminder</IonLabel>
-          <IonToggle
-            slot="end"
-            checked={workoutEnabled}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Workout reminder toggle changed', { enabled: e.detail.checked });
-              setWorkoutEnabled(e.detail.checked);
-            }}
-          />
-        </IonItem>
-        <IonItem lines="full">
-          <IonLabel position="stacked">Workout time</IonLabel>
-          <IonDatetime
-            presentation="time"
-            value={workoutTime}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Reminders: Workout time changed', { value: e.detail.value });
-              setWorkoutTime(normalizeTime(e.detail.value));
-            }}
-          />
-        </IonItem>
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Workout reminder</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonLabel>Enabled</IonLabel>
+            <IonToggle
+              slot="end"
+              checked={workoutEnabled}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Workout reminder toggle changed', { enabled: e.detail.checked });
+                setWorkoutEnabled(e.detail.checked);
+              }}
+            />
+          </IonItem>
+          <IonItem lines="none">
+            <IonLabel position="stacked">Time</IonLabel>
+            <IonDatetime
+              presentation="time"
+              value={workoutTime}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Reminders: Workout time changed', { value: e.detail.value });
+                setWorkoutTime(normalizeTime(e.detail.value));
+              }}
+            />
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonButton
-          expand="block"
-          className="ion-margin-top"
-          onClick={() => {
-            console.log('[USER ACTION] Reminders: Save reminders button clicked');
-            handleSave();
-          }}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save reminders"}
-        </IonButton>
+      <IonButton
+        expand="block"
+        className="settings-subpage-primary-action"
+        onClick={() => {
+          console.log('[USER ACTION] Reminders: Save reminders button clicked');
+          handleSave();
+        }}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save reminders"}
+      </IonButton>
 
-        <IonToast
-          isOpen={toast.show}
-          onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
-          message={toast.message}
-          color={toast.color}
-          duration={2500}
-        />
-      </IonContent>
-    </IonPage>
+      <IonToast
+        isOpen={toast.show}
+        onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
+        message={toast.message}
+        color={toast.color}
+        duration={2500}
+      />
+    </SettingsSubpageLayout>
   );
 };
 

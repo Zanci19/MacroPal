@@ -62,9 +62,11 @@ import { calendarOutline, starOutline, trashOutline, cameraOutline, barcodeOutli
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import {
   recognizeFood,
+  preloadFoodRecognitionModels,
   matchFoodToDatabase,
   type FoodDatabaseItem,
 } from "../utils/foodRecognition";
+import { cleanupStalePwaCameraModal } from "../utils/cameraCleanup";
 import {
   clampDateKeyToToday,
   formatDateKey,
@@ -509,6 +511,7 @@ const AddFood: React.FC = () => {
   const RECENT_QUERY_LIMIT = 10;
 
   const [showMealPicker, setShowMealPicker] = useState(false);
+  const [quickAddEnterActive, setQuickAddEnterActive] = useState(false);
   const [tab, setTab] = useState<"search" | "favorites">("search");
 
   const [query, setQuery] = useState("");
@@ -660,22 +663,50 @@ const AddFood: React.FC = () => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
 
+  useEffect(() => {
+    void preloadFoodRecognitionModels().catch((error: unknown) => {
+      console.warn("[AI Photo] TensorFlow model preload failed:", error);
+    });
+  }, []);
+
   // When navigating from the "+" nav button (quickAdd=1), automatically show
   // the meal picker so the user explicitly picks a meal.
   const quickAddPickerShownRef = useRef(false);
+  const quickAddEnterTimeoutRef = useRef<number | null>(null);
   const locationSearchRef = useRef(location.search);
   locationSearchRef.current = location.search;
 
   useIonViewDidEnter(() => {
     const params = new URLSearchParams(locationSearchRef.current);
-    if (params.get("quickAdd") === "1" && !quickAddPickerShownRef.current) {
-      quickAddPickerShownRef.current = true;
-      setShowMealPicker(true);
+    if (params.get("quickAdd") === "1") {
+      if (quickAddEnterTimeoutRef.current !== null) {
+        window.clearTimeout(quickAddEnterTimeoutRef.current);
+        quickAddEnterTimeoutRef.current = null;
+      }
+      setQuickAddEnterActive(false);
+      requestAnimationFrame(() => {
+        setQuickAddEnterActive(true);
+        quickAddEnterTimeoutRef.current = window.setTimeout(() => {
+          setQuickAddEnterActive(false);
+          quickAddEnterTimeoutRef.current = null;
+        }, 320);
+      });
+
+      if (!quickAddPickerShownRef.current) {
+        quickAddPickerShownRef.current = true;
+        setShowMealPicker(true);
+      }
     }
   });
 
   useIonViewDidLeave(() => {
     quickAddPickerShownRef.current = false;
+    if (quickAddEnterTimeoutRef.current !== null) {
+      window.clearTimeout(quickAddEnterTimeoutRef.current);
+      quickAddEnterTimeoutRef.current = null;
+    }
+    setQuickAddEnterActive(false);
+    cleanupStalePwaCameraModal();
   });
 
   useEffect(() => {
@@ -1684,6 +1715,7 @@ const AddFood: React.FC = () => {
     try {
       console.log('[AI Photo] Starting photo capture...');
       trackEvent("ai_photo_camera_open", { meal, date: dateKey });
+      cleanupStalePwaCameraModal();
       
       // Check if PWA elements are available
       if (typeof window !== 'undefined' && !customElements.get('pwa-camera-modal')) {
@@ -1715,6 +1747,7 @@ const AddFood: React.FC = () => {
 
         console.warn('[AI Photo] PWA camera modal failed; retrying with browser file input fallback', err);
         trackEvent('ai_photo_camera_fallback_web_input', { meal, date: dateKey, error: errorMessage });
+        cleanupStalePwaCameraModal();
 
         photo = await Camera.getPhoto({
           quality: 90,
@@ -1744,6 +1777,8 @@ const AddFood: React.FC = () => {
         color: "danger",
       });
       trackEvent("ai_photo_camera_error", { meal, date: dateKey, error: String(err) });
+    } finally {
+      cleanupStalePwaCameraModal();
     }
   };
 
@@ -2911,7 +2946,11 @@ const AddFood: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding add-food-page" fullscreen ref={contentRef}>
+      <IonContent
+        className={`ion-padding add-food-page${quickAddEnterActive ? " add-food-page--quick-add-enter" : ""}`}
+        fullscreen
+        ref={contentRef}
+      >
         {shouldShowMealSelection && (
           <IonItem lines="none" className="mp-mb-md">
             <IonLabel>For which meal?</IonLabel>

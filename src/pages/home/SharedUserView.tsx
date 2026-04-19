@@ -35,6 +35,7 @@ import {
 import { useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db, trackEvent } from "../../firebase";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import type {
   MealKey,
   Macros,
@@ -177,7 +178,7 @@ const SharedUserView: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/sharing" icon={chevronBackOutline} text="" />
+            <IonBackButton defaultHref={SETTINGS_ROUTES.sharing} icon={chevronBackOutline} text="" />
           </IonButtons>
           <IonTitle>{displayName}'s Diary</IonTitle>
         </IonToolbar>

@@ -1,16 +1,13 @@
 import React, { useState } from "react";
 import {
-  IonBackButton,
   IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonIcon,
   IonItem,
   IonLabel,
-  IonPage,
-  IonTitle,
-  IonToolbar,
   IonToast,
   IonAlert,
   IonText,
@@ -21,6 +18,8 @@ import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebase";
 import { shareOrDownload } from "../../utils/exportUtils";
 import { EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "firebase/auth";
+import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 const DataPrivacy: React.FC = () => {
   const history = useHistory();
@@ -33,8 +32,6 @@ const DataPrivacy: React.FC = () => {
   
   const [showDeleteStep1, setShowDeleteStep1] = useState(false);
   const [showDeleteStep2, setShowDeleteStep2] = useState(false);
-  const [password, setPassword] = useState("");
-  const [usernameConfirm, setUsernameConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   const exportFullData = async () => {
@@ -107,12 +104,10 @@ const DataPrivacy: React.FC = () => {
 
   const handleDeleteStep1 = () => {
     console.log('[USER ACTION] DataPrivacy: Delete account button clicked (step 1)');
-    setPassword("");
-    setUsernameConfirm("");
     setShowDeleteStep1(true);
   };
 
-  const handleDeleteStep2 = async () => {
+  const handleDeleteStep2 = async (password: string) => {
     const user = auth.currentUser;
     if (!user || !user.email) {
       setToast({ open: true, message: "No user logged in.", color: "danger" });
@@ -136,7 +131,7 @@ const DataPrivacy: React.FC = () => {
     }
   };
 
-  const handleDeleteFinal = async () => {
+  const handleDeleteFinal = async (usernameConfirm: string) => {
     const user = auth.currentUser;
     if (!user) return;
 
@@ -154,12 +149,12 @@ const DataPrivacy: React.FC = () => {
     try {
       await deleteUser(user);
       setToast({ open: true, message: "Account deleted.", color: "success" });
+      setShowDeleteStep2(false);
       setTimeout(() => {
         history.replace("/login");
       }, 1500);
     } catch (error: unknown) {
       const e = error as { message?: string };
-      setDeleting(false);
       setToast({
         open: true,
         message:
@@ -167,175 +162,179 @@ const DataPrivacy: React.FC = () => {
           "Deletion failed. You may need to log out and back in, then try again.",
         color: "danger",
       });
+    } finally {
+      setDeleting(false);
     }
   };
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
-          </IonButtons>
-          <IonTitle>Data & Privacy</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="ion-padding">
-        <IonItem lines="full">
-          <IonIcon slot="start" icon={analyticsOutline} />
-          <IonLabel>
-            <h2>Export your analytics</h2>
-            <p>Export your analytics summary in PDF, JSON, or CSV.</p>
-          </IonLabel>
-        </IonItem>
-        <IonButton
-          expand="block"
-          className="ion-margin-bottom"
-          onClick={() => {
-            console.log('[USER ACTION] DataPrivacy: Open Analytics exports button clicked');
-            history.push("/app/analytics");
-          }}
-        >
-          Open Analytics exports
-        </IonButton>
+    <SettingsSubpageLayout
+      title="Data & privacy"
+      subtitle="Export your information, review privacy controls, and manage account deletion."
+      backHref={SETTINGS_ROUTES.root}
+    >
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Exports</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonIcon slot="start" icon={analyticsOutline} />
+            <IonLabel>
+              <h2>Analytics exports</h2>
+              <p>Open analytics to export summaries as PDF, JSON, or CSV.</p>
+            </IonLabel>
+          </IonItem>
+          <IonButton
+            expand="block"
+            className="ion-margin-bottom"
+            onClick={() => {
+              console.log('[USER ACTION] DataPrivacy: Open Analytics exports button clicked');
+              history.push("/app/analytics");
+            }}
+          >
+            Open Analytics exports
+          </IonButton>
 
-        <IonItem lines="full">
-          <IonIcon slot="start" icon={warningOutline} color="danger" />
-          <IonLabel>
-            <h2>Account deletion</h2>
-            <p>Permanently delete your account and all stored data.</p>
-            <IonText color="danger" style={{ display: "block", marginTop: 8, fontWeight: 600 }}>
-              ⚠️ This CANNOT be undone
-            </IonText>
-          </IonLabel>
-        </IonItem>
-        <IonButton
-          expand="block"
-          color="danger"
-          className="ion-margin-bottom"
-          onClick={() => {
-            console.log('[USER ACTION] DataPrivacy: Delete my account button clicked');
-            handleDeleteStep1();
-          }}
-        >
-          <IonIcon slot="start" icon={trashOutline} />
-          Delete my account
-        </IonButton>
+          <IonItem lines="full">
+            <IonIcon slot="start" icon={analyticsOutline} />
+            <IonLabel>
+              <h2>Full account export</h2>
+              <p>Download foods, plans, workouts, weigh-ins, and profile data as JSON.</p>
+            </IonLabel>
+          </IonItem>
+          <IonButton
+            expand="block"
+            onClick={() => {
+              console.log('[USER ACTION] DataPrivacy: Export full data button clicked (bottom)');
+              exportFullData();
+            }}
+            disabled={exporting}
+          >
+            {exporting ? "Exporting..." : "Export full data"}
+          </IonButton>
+        </IonCardContent>
+      </IonCard>
 
-        <IonItem lines="full">
-          <IonIcon slot="start" icon={analyticsOutline} />
-          <IonLabel>
-            <h2>Export all your data</h2>
-            <p>Download a JSON backup of your foods, plans, workouts, and weigh-ins.</p>
-          </IonLabel>
-        </IonItem>
-        <IonButton
-          expand="block"
-          className="ion-margin-bottom"
-          onClick={() => {
-            console.log('[USER ACTION] DataPrivacy: Export full data button clicked (bottom)');
-            exportFullData();
-          }}
-          disabled={exporting}
-        >
-          {exporting ? "Exporting..." : "Export full data"}
-        </IonButton>
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Privacy</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="none">
+            <IonIcon slot="start" icon={shieldCheckmarkOutline} />
+            <IonLabel>
+              <h2>Data visibility</h2>
+              <p>Your MacroPal data remains tied to your account and is private by default.</p>
+            </IonLabel>
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonItem lines="none">
-          <IonIcon slot="start" icon={shieldCheckmarkOutline} />
-          <IonLabel>
-            <h2>Privacy</h2>
-            <p>
-              Your data stays tied to your MacroPal account and is only visible to
-              you.
-            </p>
-          </IonLabel>
-        </IonItem>
-        
-        <IonAlert
-          isOpen={showDeleteStep1}
-          header="Confirm your password"
-          message="To delete your account, first enter your password."
-          inputs={[
-            {
-              name: "password",
-              type: "password",
-              placeholder: "Your password",
-            },
-          ]}
-          buttons={[
-            {
-              text: "Cancel",
-              role: "cancel",
-              handler: () => {
-                setShowDeleteStep1(false);
-                setPassword("");
-              },
-            },
-            {
-              text: "Next",
-              handler: (data: { password?: string }) => {
-                setPassword(data?.password || "");
-                handleDeleteStep2();
-                return false; // Prevent auto-dismiss
-              },
-            },
-          ]}
-          onDidDismiss={() => {
-            if (!showDeleteStep2) {
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Danger zone</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="full">
+            <IonIcon slot="start" icon={warningOutline} color="danger" />
+            <IonLabel>
+              <h2>Delete account</h2>
+              <p>Permanently remove your account and stored data.</p>
+              <IonText color="danger" style={{ display: "block", marginTop: 8, fontWeight: 600 }}>
+                This cannot be undone.
+              </IonText>
+            </IonLabel>
+          </IonItem>
+          <IonButton
+            expand="block"
+            color="danger"
+            onClick={() => {
+              console.log('[USER ACTION] DataPrivacy: Delete my account button clicked');
+              handleDeleteStep1();
+            }}
+          >
+            <IonIcon slot="start" icon={trashOutline} />
+            Delete my account
+          </IonButton>
+        </IonCardContent>
+      </IonCard>
+
+      <IonAlert
+        isOpen={showDeleteStep1}
+        header="Confirm your password"
+        message="To delete your account, first enter your password."
+        inputs={[
+          {
+            name: "password",
+            type: "password",
+            placeholder: "Your password",
+          },
+        ]}
+        buttons={[
+          {
+            text: "Cancel",
+            role: "cancel",
+            handler: () => {
               setShowDeleteStep1(false);
-              setPassword("");
-            }
-          }}
-        />
+            },
+          },
+          {
+            text: "Next",
+            handler: (data: { password?: string }) => {
+              void handleDeleteStep2(data?.password || "");
+              return false;
+            },
+          },
+        ]}
+        onDidDismiss={() => {
+          if (!showDeleteStep2) {
+            setShowDeleteStep1(false);
+          }
+        }}
+      />
 
-        <IonAlert
-          isOpen={showDeleteStep2}
-          header="Type your username to confirm"
-          message={`To permanently delete your MacroPal account, type: "${auth.currentUser?.displayName || auth.currentUser?.email || "DELETE"}"`}
-          inputs={[
-            {
-              name: "username",
-              type: "text",
-              placeholder: auth.currentUser?.displayName || auth.currentUser?.email || "DELETE",
+      <IonAlert
+        isOpen={showDeleteStep2}
+        header="Type your username to confirm"
+        message={`To permanently delete your MacroPal account, type: "${auth.currentUser?.displayName || auth.currentUser?.email || "DELETE"}"`}
+        inputs={[
+          {
+            name: "username",
+            type: "text",
+            placeholder: auth.currentUser?.displayName || auth.currentUser?.email || "DELETE",
+          },
+        ]}
+        buttons={[
+          {
+            text: "Cancel",
+            role: "cancel",
+            handler: () => {
+              setShowDeleteStep2(false);
             },
-          ]}
-          buttons={[
-            {
-              text: "Cancel",
-              role: "cancel",
-              handler: () => {
-                setShowDeleteStep2(false);
-                setPassword("");
-                setUsernameConfirm("");
-              },
+          },
+          {
+            text: deleting ? "Deleting..." : "Delete Forever",
+            role: "destructive",
+            handler: (data: { username?: string }) => {
+              void handleDeleteFinal(data?.username || "");
+              return false;
             },
-            {
-              text: deleting ? "Deleting..." : "Delete Forever",
-              role: "destructive",
-              handler: (data: { username?: string }) => {
-                setUsernameConfirm(data?.username || "");
-                handleDeleteFinal();
-                return false; // Prevent auto-dismiss until deletion completes
-              },
-            },
-          ]}
-          onDidDismiss={() => {
-            setShowDeleteStep2(false);
-            setPassword("");
-            setUsernameConfirm("");
-          }}
-        />
+          },
+        ]}
+        onDidDismiss={() => {
+          setShowDeleteStep2(false);
+        }}
+      />
 
-        <IonToast
-          isOpen={toast.open}
-          onDidDismiss={() => setToast((prev) => ({ ...prev, open: false }))}
-          message={toast.message}
-          color={toast.color}
-          duration={2500}
-        />
-      </IonContent>
-    </IonPage>
+      <IonToast
+        isOpen={toast.open}
+        onDidDismiss={() => setToast((prev) => ({ ...prev, open: false }))}
+        message={toast.message}
+        color={toast.color}
+        duration={2500}
+      />
+    </SettingsSubpageLayout>
   );
 };
 

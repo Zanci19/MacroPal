@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -11,10 +11,13 @@ import {
   IonText,
   IonSpinner,
   IonIcon,
+  useIonViewDidEnter,
+  useIonViewDidLeave,
 } from "@ionic/react";
 import { useHistory, useLocation } from "react-router";
 import { cameraReverseOutline } from "ionicons/icons";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import type { IScannerControls } from "@zxing/browser";
 import type { Result, ResultPoint } from "@zxing/library";
 import { DecodeHintType, BarcodeFormat } from "@zxing/library";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
@@ -41,9 +44,12 @@ function useDateFromQuery(location: ReturnType<typeof useLocation>) {
 }
 
 const ScanBarcode: React.FC = () => {
+  const previewRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  const highlightAnimationFrameRef = useRef<number | null>(null);
   const decodeInProgressRef = useRef(false);
   const hasScannedRef = useRef(false);
 
@@ -72,13 +78,22 @@ const ScanBarcode: React.FC = () => {
     trackEvent("barcode_scan_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
+    scannerControlsRef.current?.stop();
+    scannerControlsRef.current = null;
+    if (highlightAnimationFrameRef.current) {
+      window.cancelAnimationFrame(highlightAnimationFrameRef.current);
+      highlightAnimationFrameRef.current = null;
+    }
     const stream = videoRef.current?.srcObject as MediaStream | null;
     stream?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
     const reader = readerRef.current;
     if (reader && "stopContinuousDecode" in reader) {
       (reader as { stopContinuousDecode: () => void }).stopContinuousDecode();
+    }
+    if (reader && "reset" in reader && typeof reader.reset === "function") {
+      reader.reset();
     }
     readerRef.current = null;
     decodeInProgressRef.current = false;
@@ -90,7 +105,7 @@ const ScanBarcode: React.FC = () => {
       highlightTimeoutRef.current = null;
     }
     trackEvent("barcode_scan_camera_stopped");
-  };
+  }, []);
 
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -159,6 +174,26 @@ const ScanBarcode: React.FC = () => {
       top: clampedTop,
       width: Math.min(rect.width - clampedLeft, width),
       height: Math.min(rect.height - clampedTop, height),
+    };
+  };
+
+  const getCaptureStartBox = () => {
+    const preview = previewRef.current;
+    if (!preview) {
+      return null;
+    }
+
+    const width = preview.clientWidth;
+    const height = preview.clientHeight;
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+
+    return {
+      left: 0,
+      top: 0,
+      width,
+      height,
     };
   };
 
@@ -235,7 +270,7 @@ const ScanBarcode: React.FC = () => {
       }
       setActiveDeviceId(devId);
 
-      await reader.decodeFromVideoDevice(
+      const controls = await reader.decodeFromVideoDevice(
         devId,
         videoRef.current!,
         async (result) => {
@@ -247,22 +282,35 @@ const ScanBarcode: React.FC = () => {
             decodeInProgressRef.current = true;
             const video = videoRef.current;
             if (video) {
-              setHighlightBox(getHighlightBox(result, video));
+              const targetBox = getHighlightBox(result, video);
+              const startBox = getCaptureStartBox();
+              if (targetBox && startBox) {
+                setHighlightBox(startBox);
+                setHighlightActive(true);
+                if (highlightAnimationFrameRef.current) {
+                  window.cancelAnimationFrame(highlightAnimationFrameRef.current);
+                  highlightAnimationFrameRef.current = null;
+                }
+                highlightAnimationFrameRef.current = window.requestAnimationFrame(() => {
+                  highlightAnimationFrameRef.current = window.requestAnimationFrame(() => {
+                    setHighlightBox(targetBox);
+                    highlightAnimationFrameRef.current = null;
+                  });
+                });
+              } else {
+                setHighlightBox(targetBox);
+              }
             }
             if (highlightTimeoutRef.current) {
               window.clearTimeout(highlightTimeoutRef.current);
             }
 
-            setHighlightActive(false);
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => setHighlightActive(true));
-            });
             await new Promise<void>((resolve) => {
               highlightTimeoutRef.current = window.setTimeout(() => {
                 setHighlightActive(false);
                 highlightTimeoutRef.current = null;
                 resolve();
-              }, 750);
+              }, 680);
             });
 
             const rawText = result?.getText() || "";
@@ -305,10 +353,12 @@ const ScanBarcode: React.FC = () => {
             const msg = err?.message ?? "Failed to decode barcode";
             setError(msg);
             trackEvent("barcode_scan_error", { message: msg });
+            stop();
             decodeInProgressRef.current = false;
           }
         }
       );
+      scannerControlsRef.current = controls;
     } catch (error: unknown) {
       const e = error as Error;
       console.error(e);
@@ -317,19 +367,38 @@ const ScanBarcode: React.FC = () => {
       trackEvent("barcode_scan_error", {
         message: msg,
       });
+      stop();
     } finally {
       setStarting(false);
     }
   };
 
+  useIonViewDidEnter(() => {
+    void start();
+  });
+
+  useIonViewDidLeave(() => {
+    stop();
+    trackEvent("barcode_scan_screen_unmount");
+  });
+
   useEffect(() => {
-    start();
-    return () => {
-      stop();
-      trackEvent("barcode_scan_screen_unmount");
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stop();
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const handlePageHide = () => {
+      stop();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+      stop();
+    };
+  }, [stop]);
 
   const rotateCamera = () => {
     console.log('[USER ACTION] ScanBarcode: Rotate camera button clicked', { currentDevice: activeDeviceId, totalDevices: devices.length });
@@ -365,6 +434,7 @@ const ScanBarcode: React.FC = () => {
         <div style={{ display: "grid", gap: 12 }}>
           {/* Video container */}
           <div
+            ref={previewRef}
             style={{
               position: "relative",
               width: "100%",
@@ -421,7 +491,8 @@ const ScanBarcode: React.FC = () => {
                   width: highlightBox.width,
                   height: highlightBox.height,
                   opacity: highlightActive ? 1 : 0,
-                  transition: "opacity 350ms ease-out",
+                  transition:
+                    "left 560ms cubic-bezier(0.16, 1, 0.3, 1), top 560ms cubic-bezier(0.16, 1, 0.3, 1), width 560ms cubic-bezier(0.16, 1, 0.3, 1), height 560ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms ease-out",
                   pointerEvents: "none",
                   zIndex: 2,
                 }}

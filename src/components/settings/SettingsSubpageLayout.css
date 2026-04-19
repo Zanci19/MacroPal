@@ -1,0 +1,31 @@
+.settings-subpage-content {
+  --background: var(--mp-bg);
+}
+
+.settings-subpage-shell {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0 20px;
+}
+
+.settings-subpage-intro {
+  padding: 12px 14px;
+  border: 1px solid var(--mp-border);
+  border-radius: 14px;
+  background: var(--mp-surface-muted);
+}
+
+.settings-subpage-intro p {
+  margin: 0;
+  color: var(--mp-text-muted);
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.settings-subpage-shell ion-card {
+  margin: 0;
+}
+
+.settings-subpage-primary-action {
+  margin-top: 4px;
+}

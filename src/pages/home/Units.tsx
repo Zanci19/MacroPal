@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import {
-  IonBackButton,
   IonButton,
-  IonButtons,
-  IonContent,
-  IonHeader,
+  IonCard,
+  IonCardContent,
+  IonCardHeader,
+  IonCardTitle,
   IonItem,
   IonLabel,
-  IonPage,
   IonSegment,
   IonSegmentButton,
-  IonTitle,
   IonToast,
-  IonToolbar,
 } from "@ionic/react";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useHistory } from "react-router";
 import { auth, db, trackEvent } from "../../firebase";
 import { DEFAULT_UNIT_SYSTEM, getUnitSystem, UnitSystem } from "../../utils/units";
+import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 type ProfileData = {
   units?: UnitSystem;
@@ -75,7 +74,7 @@ const Units: React.FC = () => {
       });
       trackEvent("units_saved", { uid: current.uid, units });
       setToast({ show: true, message: "Units updated.", color: "success" });
-      history.push("/app/settings");
+      history.push(SETTINGS_ROUTES.root);
     } catch (error: unknown) {
       const err = error as Error;
       console.error("Failed to save units:", err);
@@ -90,55 +89,55 @@ const Units: React.FC = () => {
   };
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
-          </IonButtons>
-          <IonTitle>Units & measurements</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-      <IonContent className="ion-padding">
-        <IonItem lines="full">
-          <IonLabel position="stacked">Unit system</IonLabel>
-          <IonSegment
-            value={units}
-            onIonChange={(e) => {
-              console.log('[USER ACTION] Units: Unit system changed', { value: e.detail.value });
-              setUnits(getUnitSystem(e.detail.value as UnitSystem));
-            }}
-          >
-            <IonSegmentButton value="metric">
-              <IonLabel>Metric (kg, cm)</IonLabel>
-            </IonSegmentButton>
-            <IonSegmentButton value="imperial">
-              <IonLabel>Imperial (lb, in)</IonLabel>
-            </IonSegmentButton>
-          </IonSegment>
-        </IonItem>
+    <SettingsSubpageLayout
+      title="Units & measurements"
+      subtitle="Choose how weight and height are displayed throughout the app."
+      backHref={SETTINGS_ROUTES.root}
+    >
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Unit system</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <IonItem lines="none">
+            <IonSegment
+              value={units}
+              onIonChange={(e) => {
+                console.log('[USER ACTION] Units: Unit system changed', { value: e.detail.value });
+                setUnits(getUnitSystem(e.detail.value as UnitSystem));
+              }}
+            >
+              <IonSegmentButton value="metric">
+                <IonLabel>Metric (kg, cm)</IonLabel>
+              </IonSegmentButton>
+              <IonSegmentButton value="imperial">
+                <IonLabel>Imperial (lb, in)</IonLabel>
+              </IonSegmentButton>
+            </IonSegment>
+          </IonItem>
+        </IonCardContent>
+      </IonCard>
 
-        <IonButton
-          expand="block"
-          className="ion-margin-top"
-          onClick={() => {
-            console.log('[USER ACTION] Units: Save units button clicked');
-            handleSave();
-          }}
-          disabled={saving}
-        >
-          {saving ? "Saving..." : "Save units"}
-        </IonButton>
+      <IonButton
+        expand="block"
+        className="settings-subpage-primary-action"
+        onClick={() => {
+          console.log('[USER ACTION] Units: Save units button clicked');
+          handleSave();
+        }}
+        disabled={saving}
+      >
+        {saving ? "Saving..." : "Save units"}
+      </IonButton>
 
-        <IonToast
-          isOpen={toast.show}
-          onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
-          message={toast.message}
-          color={toast.color}
-          duration={2500}
-        />
-      </IonContent>
-    </IonPage>
+      <IonToast
+        isOpen={toast.show}
+        onDidDismiss={() => setToast((prev) => ({ ...prev, show: false }))}
+        message={toast.message}
+        color={toast.color}
+        duration={2500}
+      />
+    </SettingsSubpageLayout>
   );
 };
 

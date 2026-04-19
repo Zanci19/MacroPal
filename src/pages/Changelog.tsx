@@ -13,6 +13,7 @@ import {
   IonToolbar,
 } from "@ionic/react";
 import changelog from "../data/changelog.json";
+import { SETTINGS_ROUTES } from "../utils/settingsRoutes";
 
 type ChangelogEntry = {
   title?: string;
@@ -28,7 +29,7 @@ const Changelog: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
+            <IonBackButton defaultHref={SETTINGS_ROUTES.root} />
           </IonButtons>
           <IonTitle>Changelog</IonTitle>
         </IonToolbar>

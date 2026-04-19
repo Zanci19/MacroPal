@@ -40,6 +40,7 @@ import { isValidFirestorePathSegment } from "../../utils/clinician";
 import { sanitizeInput } from "../../utils/validation";
 import { handleError } from "../../utils/handleError";
 import type { AlertDoc, CarePlanDoc, ClinicianInviteDoc, MessageItemDoc } from "../../types";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 const ClinicianConnect: React.FC = () => {
   const remoteConfig = useRemoteConfig();
@@ -256,7 +257,7 @@ const ClinicianConnect: React.FC = () => {
     }
   };
 
-  if (!clinicianEnabled) return <Redirect to="/app/settings" />;
+  if (!clinicianEnabled) return <Redirect to={SETTINGS_ROUTES.root} />;
   if (loading) {
     return (
       <IonPage>
@@ -266,14 +267,14 @@ const ClinicianConnect: React.FC = () => {
       </IonPage>
     );
   }
-  if (role === "clinician" || role === "admin") return <Redirect to="/app/clinician-dashboard" />;
+  if (role === "clinician" || role === "admin") return <Redirect to={SETTINGS_ROUTES.clinicianDashboard} />;
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
+            <IonBackButton defaultHref={SETTINGS_ROUTES.root} />
           </IonButtons>
           <IonTitle>Clinician collaboration</IonTitle>
         </IonToolbar>

@@ -34,9 +34,9 @@ const messages = [
   "Your goals, our tools."
 ];
 
-const TYPE_SPEED_MS = 55;
-const BACKSPACE_SPEED_MS = 35;
-const HOLD_DURATION_MS = 6000;
+const TYPE_SPEED_MS = 60;
+const BACKSPACE_SPEED_MS = 20;
+const HOLD_DURATION_MS = 5000;
 const MAX_MESSAGE_FONT_PX = 32;
 const MIN_MESSAGE_FONT_PX = 14;
 

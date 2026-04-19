@@ -34,6 +34,11 @@ import {
   getLazyLoadPreference,
   getStoredThemeMode,
 } from "./utils/preferences";
+import {
+  LEGACY_SETTINGS_ROUTE_REDIRECTS,
+  SETTINGS_ROUTES,
+  isSettingsPath,
+} from "./utils/settingsRoutes";
 
 const importLogin = () => import("./pages/authentication/Login");
 const importRegister = () => import("./pages/authentication/Register");
@@ -50,6 +55,7 @@ const importOffline = () => import("./pages/Offline");
 const importHome = () => import("./pages/home/Home");
 const importAnalytics = () => import("./pages/home/Analytics");
 const importSettings = () => import("./pages/home/Settings");
+const importFeedback = () => import("./pages/home/Feedback");
 const importEnergyNeeds = () => import("./pages/home/EnergyNeeds");
 const importUnits = () => import("./pages/home/Units");
 const importReminders = () => import("./pages/home/Reminders");
@@ -79,6 +85,7 @@ const Offline = lazy(importOffline);
 const Home = lazy(importHome);
 const Analytics = lazy(importAnalytics);
 const Settings = lazy(importSettings);
+const Feedback = lazy(importFeedback);
 const EnergyNeeds = lazy(importEnergyNeeds);
 const Units = lazy(importUnits);
 const Reminders = lazy(importReminders);
@@ -109,6 +116,7 @@ const LAZY_ROUTE_IMPORTS = [
   importHome,
   importAnalytics,
   importSettings,
+  importFeedback,
   importEnergyNeeds,
   importUnits,
   importReminders,
@@ -211,31 +219,87 @@ const ScanBarcodeRoute: React.FC<RouteComponentProps> = (props) => {
 setupIonicReact();
 
 const TAB_ORDER = ["analytics", "home", "workout", "settings"];
-const SETTINGS_PATH_PREFIXES = [
-  "/app/settings",
-  "/app/changelog",
-  "/app/energy-needs",
-  "/app/units",
-  "/app/reminders",
-  "/app/data-privacy",
-  "/app/clinician-connect",
-  "/app/clinician-dashboard",
-];
 const DEFAULT_ANIMATION_DURATION_MS = 425;
 const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
-const DEFAULT_TAB_INDEX = TAB_ORDER.indexOf("home");
-const SAFE_DEFAULT_TAB_INDEX = DEFAULT_TAB_INDEX >= 0 ? DEFAULT_TAB_INDEX : 0;
-const QUICK_ADD_URL = "/add-food?autoMeal=1&quickAdd=1";
+const QUICK_ADD_URL = "/add-food?quickAdd=1";
+const QUICK_ADD_ROUTE_ANIMATION: AnimationBuilder = (_baseEl, opts) => {
+  const enteringEl = opts.enteringEl;
+  const leavingEl = opts.leavingEl;
+  const isBack = opts.direction === "back";
+
+  if (!isBack) {
+    const rootAnimation = createAnimation().duration(0);
+    if (enteringEl) {
+      rootAnimation.addAnimation(
+        createAnimation()
+          .addElement(enteringEl)
+          .beforeRemoveClass("ion-page-invisible")
+      );
+    }
+    return rootAnimation;
+  }
+
+  const rootAnimation = createAnimation()
+    .duration(ANIMATION_DURATION_MS)
+    .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+
+  if (enteringEl) {
+    rootAnimation.addAnimation(
+      createAnimation()
+        .addElement(enteringEl)
+        .beforeStyles({
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          "z-index": "20",
+        })
+        .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+        .beforeRemoveClass("ion-page-invisible")
+        .fromTo(
+          "transform",
+          isBack ? "translate3d(0, -10%, 0)" : "translate3d(0, 100%, 0)",
+          "translate3d(0, 0, 0)"
+        )
+    );
+  }
+
+  if (leavingEl) {
+    rootAnimation.addAnimation(
+      createAnimation()
+        .addElement(leavingEl)
+        .beforeStyles({
+          position: "absolute",
+          top: "0",
+          left: "0",
+          right: "0",
+          bottom: "0",
+          "z-index": "9",
+        })
+        .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+        .fromTo(
+          "transform",
+          "translate3d(0, 0, 0)",
+          isBack ? "translate3d(0, 100%, 0)" : "translate3d(0, -10%, 0)"
+        )
+    );
+  }
+
+  return rootAnimation;
+};
 
 const resolveTabFromPath = (path: string) => {
   if (path.startsWith("/app/analytics")) return "analytics";
   if (path.startsWith("/app/home")) return "home";
   if (path.startsWith("/app/workout")) return "workout";
-  if (SETTINGS_PATH_PREFIXES.some((prefix) => path.startsWith(prefix))) return "settings";
+  if (isSettingsPath(path)) return "settings";
 
   return "home";
 };
+
+const isSettingsStackPath = (path: string) => isSettingsPath(path);
 
 // Detect reduced motion preference safely
 const getPrefersReducedMotion = () => {
@@ -260,7 +324,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   const history = useHistory();
 
   // Refs for tracking tab navigation state across renders
-  const previousTabIndexRef = useRef<number>(SAFE_DEFAULT_TAB_INDEX);
   const lastDirectionRef = useRef<"forward" | "back" | null>(null);
   // Mutable ref updated synchronously each render so the animation builder can read
   // the current pathname without being recreated on every navigation.
@@ -328,7 +391,6 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         : "forward";
 
     // Update refs for animation
-    previousTabIndexRef.current = currentTabIndex;
     lastDirectionRef.current = direction;
 
     trackEvent("tab_navigation", {
@@ -344,7 +406,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       url: QUICK_ADD_URL,
     });
     trackEvent("tab_quick_add_food");
-    router.push(QUICK_ADD_URL, "forward", "push");
+    router.push(QUICK_ADD_URL, "forward", "push", undefined, QUICK_ADD_ROUTE_ANIMATION);
   }, [router]);
 
   // Optimized sliding animation for Android - hardware accelerated, no opacity changes
@@ -363,7 +425,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
               .beforeRemoveClass("ion-page-invisible")
           );
         }
-        
+        lastDirectionRef.current = null;
         return rootAnimation;
       }
 
@@ -371,20 +433,74 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       // animation builder doesn't need location in its deps and won't be recreated
       // on every navigation — only when animationsEnabled changes.
       const activePath = locationPathnameRef.current || "";
-      const currentTabIndex = getTabIndex(resolveTabFromPath(activePath));
-      const previousTabIndex = previousTabIndexRef.current;
-
-      const hasValidIndices = currentTabIndex !== -1 && previousTabIndex !== -1;
       const clickDirection = lastDirectionRef.current;
+      const isSettingsTransition =
+        isSettingsStackPath(activePath) &&
+        clickDirection === null &&
+        (activePath !== "/app/settings" || opts.direction === "back");
+
+      if (isSettingsTransition) {
+        const isBack = opts.direction === "back";
+        const enteringEl = opts.enteringEl;
+        const leavingEl = opts.leavingEl;
+        const rootAnimation = createAnimation()
+          .duration(ANIMATION_DURATION_MS)
+          .easing("cubic-bezier(0.32, 0.72, 0, 1)");
+
+        if (enteringEl) {
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(enteringEl)
+              .beforeStyles({
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                bottom: "0",
+                "z-index": "20",
+              })
+              .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+              .beforeRemoveClass("ion-page-invisible")
+              .fromTo(
+                "transform",
+                isBack ? "translate3d(0, -100%, 0)" : "translate3d(0, 100%, 0)",
+                "translate3d(0, 0, 0)"
+              )
+          );
+        }
+
+        if (leavingEl) {
+          rootAnimation.addAnimation(
+            createAnimation()
+              .addElement(leavingEl)
+              .beforeStyles({
+                position: "absolute",
+                top: "0",
+                left: "0",
+                right: "0",
+                bottom: "0",
+                "z-index": "9",
+              })
+              .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
+              .fromTo(
+                "transform",
+                "translate3d(0, 0, 0)",
+                isBack ? "translate3d(0, 35%, 0)" : "translate3d(0, -35%, 0)"
+              )
+          );
+        }
+
+        lastDirectionRef.current = null;
+        return rootAnimation;
+      }
+
       const fallbackForward = opts.direction !== "back";
       const isForward =
         clickDirection === "forward"
           ? true
           : clickDirection === "back"
             ? false
-            : hasValidIndices
-              ? currentTabIndex > previousTabIndex
-              : fallbackForward;
+            : fallbackForward;
       lastDirectionRef.current = null;
 
       const enteringEl = opts.enteringEl;
@@ -409,7 +525,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
               left: "0",
               right: "0",
               bottom: "0",
-              zIndex: "10",
+              "z-index": "20",
             })
             .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
             .beforeRemoveClass("ion-page-invisible")
@@ -420,7 +536,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             )
         );
 
-      // Leaving page slides out 35% for iPhone-style parallax effect (overlapped by entering page)
+      // Keep a 35% parallax exit while ensuring the leaving page stays under the entering page.
       if (leavingEl) {
         rootAnimation.addAnimation(
           createAnimation()
@@ -431,13 +547,13 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
               left: "0",
               right: "0",
               bottom: "0",
-              zIndex: "9",
+              "z-index": "10",
             })
             .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
             .fromTo(
               "transform",
               "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 35}%, 0, 0)` // 35% slide for parallax effect
+              `translate3d(${-directionFactor * 35}%, 0, 0)`
             )
         );
       }
@@ -497,21 +613,31 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   }, [history, router]);
 
   return (
-    <IonTabs>
+      <IonTabs>
       <IonRouterOutlet id="tabs" animation={tabAnimation}>
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
         <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />
-        <Route exact path="/app/settings" render={(props) => <LazyRoute component={Settings} {...props} />} />
-        <Route exact path="/app/changelog" render={(props) => <LazyRoute component={Changelog} {...props} />} />
-        <Route exact path="/app/energy-needs" render={(props) => <LazyRoute component={EnergyNeeds} {...props} />} />
-        <Route exact path="/app/units" render={(props) => <LazyRoute component={Units} {...props} />} />
-        <Route exact path="/app/reminders" render={(props) => <LazyRoute component={Reminders} {...props} />} />
-        <Route exact path="/app/data-privacy" render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
-        <Route exact path="/app/sharing" render={(props) => <LazyRoute component={Sharing} {...props} />} />
-        <Route exact path="/app/shared-user/:uid" render={(props) => <LazyRoute component={SharedUserView} {...props} />} />
-        <Route exact path="/app/clinician-connect" render={(props) => <LazyRoute component={ClinicianConnect} {...props} />} />
-        <Route exact path="/app/clinician-dashboard" render={(props) => <LazyRoute component={ClinicianDashboard} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.root} render={(props) => <LazyRoute component={Settings} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.profile} render={(props) => <LazyRoute component={SetupProfile} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.changelog} render={(props) => <LazyRoute component={Changelog} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.feedback} render={(props) => <LazyRoute component={Feedback} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.energyNeeds} render={(props) => <LazyRoute component={EnergyNeeds} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.units} render={(props) => <LazyRoute component={Units} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.reminders} render={(props) => <LazyRoute component={Reminders} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.dataPrivacy} render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.sharing} render={(props) => <LazyRoute component={Sharing} {...props} />} />
+        <Route exact path="/app/settings/shared-user/:uid" render={(props) => <LazyRoute component={SharedUserView} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.clinicianConnect} render={(props) => <LazyRoute component={ClinicianConnect} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.clinicianDashboard} render={(props) => <LazyRoute component={ClinicianDashboard} {...props} />} />
+        {LEGACY_SETTINGS_ROUTE_REDIRECTS.map(([path, target]) => (
+          <Route key={path} exact path={path} render={() => <Redirect to={target} />} />
+        ))}
+        <Route
+          exact
+          path="/app/shared-user/:uid"
+          render={({ match }) => <Redirect to={SETTINGS_ROUTES.sharedUser(match.params.uid)} />}
+        />
         <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 
@@ -547,9 +673,9 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <IonTabButton
           tab="quick-add"
           className="mp-tab-btn mp-tab-btn--add"
-          href={QUICK_ADD_URL}
           onClick={(event) => {
             event.preventDefault();
+            event.stopPropagation();
             handleQuickAddFood();
           }}
           aria-label="Quick add food"

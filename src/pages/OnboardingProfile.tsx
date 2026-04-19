@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonIcon,
   IonInput,
   IonItem,
@@ -10,9 +9,7 @@ import {
   IonPage,
   IonSelect,
   IonSelectOption,
-  IonTitle,
   IonToast,
-  IonToolbar,
 } from "@ionic/react";
 import { chevronDownOutline, chevronUpOutline } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../firebase";
@@ -120,6 +117,16 @@ const DEFAULTS = {
 
 const clampNumber = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
+
+const STEP_SUMMARY: Record<string, string> = {
+  gender: "Tell us who you are",
+  age: "We use this for calorie estimates",
+  weight: "Used to personalize macro targets",
+  height: "Improves your daily calorie baseline",
+  goal: "Choose your desired outcome",
+  activity: "Set your average weekly activity",
+  photo: "Optional profile photo",
+};
 
 const OnboardingProfile: React.FC = () => {
   const [step, setStep] = useState(0);
@@ -240,6 +247,11 @@ const OnboardingProfile: React.FC = () => {
   const heightMax = unitSystem === "imperial" ? 90 : 230;
 
   const isLastStep = step === steps.length - 1;
+  const currentStep = steps[step] ?? steps[0];
+  const stepNumber = step + 1;
+  const progressValue = Math.round((stepNumber / steps.length) * 100);
+  const currentStepSummary =
+    STEP_SUMMARY[currentStep] ?? "Let’s set up your profile.";
 
   const canProceed = useMemo(() => {
     const current = steps[step];
@@ -436,327 +448,334 @@ const OnboardingProfile: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Let’s get to know you</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
       <IonContent className="onboarding-profile-page" fullscreen>
-        <div className="onboarding-card">
-          <div
-            key={step}
-            className={`onboarding-step-card onboarding-${direction}`}
-          >
-            {steps[step] === "gender" && (
-              <div className="onboarding-step">
-              <p className="onboarding-intro">
-                We’ll need to ask you some questions before you can proceed.
-              </p>
-              <h1 className="onboarding-title">What’s your gender?</h1>
-              <div className="onboarding-choice-row">
-                <IonButton
-                  fill={gender === "male" ? "solid" : "outline"}
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'male' });
-                    setGender("male");
-                  }}
-                >
-                  Male
-                </IonButton>
-                <IonButton
-                  fill={gender === "female" ? "solid" : "outline"}
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'female' });
-                    setGender("female");
-                  }}
-                >
-                  Female
-                </IonButton>
-              </div>
-              </div>
-            )}
+        <div className="onboarding-shell">
+          <header className="onboarding-shell-header">
+            <p className="onboarding-shell-kicker">Profile setup</p>
+            <p className="onboarding-shell-step">
+              Step {stepNumber} of {steps.length}
+            </p>
+          </header>
+          <div className="onboarding-progress" aria-hidden="true">
+            <span style={{ width: `${progressValue}%` }} />
+          </div>
+          <p className="onboarding-shell-summary">{currentStepSummary}</p>
 
-            {steps[step] === "age" && (
-              <div className="onboarding-step">
-              <h1 className="onboarding-title">How old are you?</h1>
-              <div className="onboarding-number-wrapper">
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(age, 1, 1, 120, DEFAULTS.age);
-                    console.log('[USER ACTION] OnboardingProfile: Age increased', { from: age, to: newValue });
-                    setAge(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronUpOutline} />
-                </IonButton>
-                <IonInput
-                  className="onboarding-number-input"
-                  type="number"
-                  inputMode="numeric"
-                  value={age ?? ""}
-                  onIonChange={(e) => {
-                    console.log('[USER ACTION] OnboardingProfile: Age input changed', { value: e.detail.value });
-                    setAge(toNumOrNull(e.detail.value));
-                  }}
-                />
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(age, -1, 1, 120, DEFAULTS.age);
-                    console.log('[USER ACTION] OnboardingProfile: Age decreased', { from: age, to: newValue });
-                    setAge(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronDownOutline} />
-                </IonButton>
-              </div>
-              <p className="onboarding-helper">
-                We need this to calculate your daily calorie needs.
-              </p>
-              </div>
-            )}
-
-            {steps[step] === "weight" && (
-              <div className="onboarding-step">
-              <h1 className="onboarding-title">What’s your weight?</h1>
-              <div className="onboarding-number-wrapper">
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(weight, 1, weightMin, weightMax, weightDefaults);
-                    console.log('[USER ACTION] OnboardingProfile: Weight increased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
-                    setWeight(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronUpOutline} />
-                </IonButton>
-                <IonInput
-                  className="onboarding-number-input"
-                  type="number"
-                  inputMode="decimal"
-                  value={weight ?? ""}
-                  onIonChange={(e) => {
-                    console.log('[USER ACTION] OnboardingProfile: Weight input changed', { value: e.detail.value, unit: weightLabel(unitSystem) });
-                    setWeight(toNumOrNull(e.detail.value));
-                  }}
-                />
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(weight, -1, weightMin, weightMax, weightDefaults);
-                    console.log('[USER ACTION] OnboardingProfile: Weight decreased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
-                    setWeight(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronDownOutline} />
-                </IonButton>
-              </div>
-              <p className="onboarding-helper">
-                In {weightLabel(unitSystem)}.
-              </p>
-              </div>
-            )}
-
-            {steps[step] === "height" && (
-              <div className="onboarding-step">
-              <h1 className="onboarding-title">How tall are you?</h1>
-              <div className="onboarding-number-wrapper">
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(height, 1, heightMin, heightMax, heightDefaults);
-                    console.log('[USER ACTION] OnboardingProfile: Height increased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
-                    setHeight(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronUpOutline} />
-                </IonButton>
-                <IonInput
-                  className="onboarding-number-input"
-                  type="number"
-                  inputMode="numeric"
-                  value={height ?? ""}
-                  onIonChange={(e) => {
-                    console.log('[USER ACTION] OnboardingProfile: Height input changed', { value: e.detail.value, unit: heightLabel(unitSystem) });
-                    setHeight(toNumOrNull(e.detail.value));
-                  }}
-                />
-                <IonButton
-                  fill="clear"
-                  className="onboarding-step-button"
-                  onClick={() => {
-                    const newValue = adjustNumber(height, -1, heightMin, heightMax, heightDefaults);
-                    console.log('[USER ACTION] OnboardingProfile: Height decreased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
-                    setHeight(newValue);
-                  }}
-                >
-                  <IonIcon icon={chevronDownOutline} />
-                </IonButton>
-              </div>
-              <p className="onboarding-helper">
-                In {heightLabel(unitSystem)}.
-              </p>
-              </div>
-            )}
-
-            {steps[step] === "goal" && (
-              <div className="onboarding-step">
-              <h1 className="onboarding-title">What is your goal?</h1>
-              <div className="onboarding-choice-row">
-                <IonButton
-                  fill={goal === "lose" ? "solid" : "outline"}
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'lose' });
-                    setGoal("lose");
-                  }}
-                >
-                  Lose
-                </IonButton>
-                <IonButton
-                  fill={goal === "maintain" ? "solid" : "outline"}
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'maintain' });
-                    setGoal("maintain");
-                  }}
-                >
-                  Maintain
-                </IonButton>
-                <IonButton
-                  fill={goal === "gain" ? "solid" : "outline"}
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'gain' });
-                    setGoal("gain");
-                  }}
-                >
-                  Gain
-                </IonButton>
-              </div>
-              </div>
-            )}
-
-            {steps[step] === "activity" && (
-              <div className="onboarding-step">
-              <h1 className="onboarding-title">What’s your activity level?</h1>
-              <IonItem lines="full" className="onboarding-select">
-                <IonLabel position="stacked">Activity level</IonLabel>
-                <IonSelect
-                  value={activity}
-                  onIonChange={(e) => {
-                    console.log('[USER ACTION] OnboardingProfile: Activity level changed', { value: e.detail.value });
-                    setActivity(e.detail.value as Activity);
-                  }}
-                >
-                  <IonSelectOption value="sedentary">
-                    Sedentary (little/no exercise)
-                  </IonSelectOption>
-                  <IonSelectOption value="light">
-                    Lightly active (1–3 days/week)
-                  </IonSelectOption>
-                  <IonSelectOption value="moderate">
-                    Moderately active (3–5 days/week)
-                  </IonSelectOption>
-                  <IonSelectOption value="very">
-                    Very active (6–7 days/week)
-                  </IonSelectOption>
-                  <IonSelectOption value="extra">
-                    Extra active (very hard exercise/job)
-                  </IonSelectOption>
-                </IonSelect>
-              </IonItem>
-              </div>
-            )}
-
-            {steps[step] === "photo" && (
-              <div className="onboarding-step">
-                <h1 className="onboarding-title">
-                  Would you like to add a profile picture?
-                </h1>
-                <p className="onboarding-helper">
-                  Optional. You can always change it later in Settings.
+          <div className="onboarding-card">
+            <div
+              key={step}
+              className={`onboarding-step-card onboarding-${direction}`}
+            >
+              {steps[step] === "gender" && (
+                <div className="onboarding-step">
+                <p className="onboarding-intro">
+                  We’ll need to ask you some questions before you can proceed.
                 </p>
-                <div className="onboarding-photo-wrapper">
-                  {displayedPhotoUrl ? (
-                    <>
-                      <div className="onboarding-photo-preview">
-                        <img src={displayedPhotoUrl} alt="Profile preview" />
-                      </div>
-                      <p className="onboarding-photo-message">
-                        There! You look beautiful!
-                      </p>
-                    </>
-                  ) : (
-                    <p className="onboarding-helper">No photo selected yet.</p>
-                  )}
-                </div>
-                <IonButton
-                  className="onboarding-photo-button"
-                  onClick={() => {
-                    console.log('[USER ACTION] OnboardingProfile: Add/Replace photo button clicked', { hasPhoto: !!displayedPhotoUrl });
-                    photoInputRef.current?.click();
-                  }}
-                >
-                  {displayedPhotoUrl ? "Replace photo" : "Add photo"}
-                </IonButton>
-                {displayedPhotoUrl && (
+                <h1 className="onboarding-title">What’s your gender?</h1>
+                <div className="onboarding-choice-row">
                   <IonButton
-                    fill="clear"
-                    className="onboarding-photo-remove"
+                    fill={gender === "male" ? "solid" : "outline"}
                     onClick={() => {
-                      console.log('[USER ACTION] OnboardingProfile: Remove photo button clicked');
-                      if (photoPreviewUrl?.startsWith("blob:")) {
-                        URL.revokeObjectURL(photoPreviewUrl);
-                      }
-                      setPhotoPreviewUrl(null);
-                      setProfilePhotoFile(null);
-                      setProfilePhotoUrl(null);
+                      console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'male' });
+                      setGender("male");
                     }}
                   >
-                    Remove photo
+                    Male
                   </IonButton>
-                )}
-                <input
-                  ref={photoInputRef}
-                  className="onboarding-photo-input"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    console.log('[USER ACTION] OnboardingProfile: Photo file input changed', { hasFile: !!event.target.files?.[0] });
-                    handlePhotoChange(event.target.files?.[0] ?? null);
-                  }}
-                />
-              </div>
-            )}
-          </div>
+                  <IonButton
+                    fill={gender === "female" ? "solid" : "outline"}
+                    onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Gender selected', { gender: 'female' });
+                      setGender("female");
+                    }}
+                  >
+                    Female
+                  </IonButton>
+                </div>
+                </div>
+              )}
 
-          <div className="onboarding-actions">
-            <IonButton
-              fill="clear"
-              className="onboarding-back"
-              onClick={() => {
-                console.log('[USER ACTION] OnboardingProfile: Back navigation button clicked');
-                handleBack();
-              }}
-              disabled={step === 0}
-            >
-              Back
-            </IonButton>
-            <IonButton
-              className="onboarding-next"
-              onClick={() => {
-                console.log('[USER ACTION] OnboardingProfile: Next/Finish button clicked (bottom)', { isLastStep, loading });
-                handleNext();
-              }}
-              disabled={loading}
-            >
-              {isLastStep ? (loading ? "Saving…" : "Finish") : "Next"}
-            </IonButton>
+              {steps[step] === "age" && (
+                <div className="onboarding-step">
+                <h1 className="onboarding-title">How old are you?</h1>
+                <div className="onboarding-number-wrapper">
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(age, 1, 1, 120, DEFAULTS.age);
+                      console.log('[USER ACTION] OnboardingProfile: Age increased', { from: age, to: newValue });
+                      setAge(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronUpOutline} />
+                  </IonButton>
+                  <IonInput
+                    className="onboarding-number-input"
+                    type="number"
+                    inputMode="numeric"
+                    value={age ?? ""}
+                    onIonChange={(e) => {
+                      console.log('[USER ACTION] OnboardingProfile: Age input changed', { value: e.detail.value });
+                      setAge(toNumOrNull(e.detail.value));
+                    }}
+                  />
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(age, -1, 1, 120, DEFAULTS.age);
+                      console.log('[USER ACTION] OnboardingProfile: Age decreased', { from: age, to: newValue });
+                      setAge(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronDownOutline} />
+                  </IonButton>
+                </div>
+                <p className="onboarding-helper">
+                  We need this to calculate your daily calorie needs.
+                </p>
+                </div>
+              )}
+
+              {steps[step] === "weight" && (
+                <div className="onboarding-step">
+                <h1 className="onboarding-title">What’s your weight?</h1>
+                <div className="onboarding-number-wrapper">
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(weight, 1, weightMin, weightMax, weightDefaults);
+                      console.log('[USER ACTION] OnboardingProfile: Weight increased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
+                      setWeight(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronUpOutline} />
+                  </IonButton>
+                  <IonInput
+                    className="onboarding-number-input"
+                    type="number"
+                    inputMode="decimal"
+                    value={weight ?? ""}
+                    onIonChange={(e) => {
+                      console.log('[USER ACTION] OnboardingProfile: Weight input changed', { value: e.detail.value, unit: weightLabel(unitSystem) });
+                      setWeight(toNumOrNull(e.detail.value));
+                    }}
+                  />
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(weight, -1, weightMin, weightMax, weightDefaults);
+                      console.log('[USER ACTION] OnboardingProfile: Weight decreased', { from: weight, to: newValue, unit: weightLabel(unitSystem) });
+                      setWeight(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronDownOutline} />
+                  </IonButton>
+                </div>
+                <p className="onboarding-helper">
+                  In {weightLabel(unitSystem)}.
+                </p>
+                </div>
+              )}
+
+              {steps[step] === "height" && (
+                <div className="onboarding-step">
+                <h1 className="onboarding-title">How tall are you?</h1>
+                <div className="onboarding-number-wrapper">
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(height, 1, heightMin, heightMax, heightDefaults);
+                      console.log('[USER ACTION] OnboardingProfile: Height increased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
+                      setHeight(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronUpOutline} />
+                  </IonButton>
+                  <IonInput
+                    className="onboarding-number-input"
+                    type="number"
+                    inputMode="numeric"
+                    value={height ?? ""}
+                    onIonChange={(e) => {
+                      console.log('[USER ACTION] OnboardingProfile: Height input changed', { value: e.detail.value, unit: heightLabel(unitSystem) });
+                      setHeight(toNumOrNull(e.detail.value));
+                    }}
+                  />
+                  <IonButton
+                    fill="clear"
+                    className="onboarding-step-button"
+                    onClick={() => {
+                      const newValue = adjustNumber(height, -1, heightMin, heightMax, heightDefaults);
+                      console.log('[USER ACTION] OnboardingProfile: Height decreased', { from: height, to: newValue, unit: heightLabel(unitSystem) });
+                      setHeight(newValue);
+                    }}
+                  >
+                    <IonIcon icon={chevronDownOutline} />
+                  </IonButton>
+                </div>
+                <p className="onboarding-helper">
+                  In {heightLabel(unitSystem)}.
+                </p>
+                </div>
+              )}
+
+              {steps[step] === "goal" && (
+                <div className="onboarding-step">
+                <h1 className="onboarding-title">What is your goal?</h1>
+                <div className="onboarding-choice-row">
+                  <IonButton
+                    fill={goal === "lose" ? "solid" : "outline"}
+                    onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'lose' });
+                      setGoal("lose");
+                    }}
+                  >
+                    Lose
+                  </IonButton>
+                  <IonButton
+                    fill={goal === "maintain" ? "solid" : "outline"}
+                    onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'maintain' });
+                      setGoal("maintain");
+                    }}
+                  >
+                    Maintain
+                  </IonButton>
+                  <IonButton
+                    fill={goal === "gain" ? "solid" : "outline"}
+                    onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Goal selected', { goal: 'gain' });
+                      setGoal("gain");
+                    }}
+                  >
+                    Gain
+                  </IonButton>
+                </div>
+                </div>
+              )}
+
+              {steps[step] === "activity" && (
+                <div className="onboarding-step">
+                <h1 className="onboarding-title">What’s your activity level?</h1>
+                <IonItem lines="full" className="onboarding-select">
+                  <IonLabel position="stacked">Activity level</IonLabel>
+                  <IonSelect
+                    value={activity}
+                    onIonChange={(e) => {
+                      console.log('[USER ACTION] OnboardingProfile: Activity level changed', { value: e.detail.value });
+                      setActivity(e.detail.value as Activity);
+                    }}
+                  >
+                    <IonSelectOption value="sedentary">
+                      Sedentary (little/no exercise)
+                    </IonSelectOption>
+                    <IonSelectOption value="light">
+                      Lightly active (1–3 days/week)
+                    </IonSelectOption>
+                    <IonSelectOption value="moderate">
+                      Moderately active (3–5 days/week)
+                    </IonSelectOption>
+                    <IonSelectOption value="very">
+                      Very active (6–7 days/week)
+                    </IonSelectOption>
+                    <IonSelectOption value="extra">
+                      Extra active (very hard exercise/job)
+                    </IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+                </div>
+              )}
+
+              {steps[step] === "photo" && (
+                <div className="onboarding-step">
+                  <h1 className="onboarding-title">
+                    Would you like to add a profile picture?
+                  </h1>
+                  <p className="onboarding-helper">
+                    Optional. You can always change it later in Settings.
+                  </p>
+                  <div className="onboarding-photo-wrapper">
+                    {displayedPhotoUrl ? (
+                      <>
+                        <div className="onboarding-photo-preview">
+                          <img src={displayedPhotoUrl} alt="Profile preview" />
+                        </div>
+                        <p className="onboarding-photo-message">
+                          There! You look beautiful!
+                        </p>
+                      </>
+                    ) : (
+                      <p className="onboarding-helper">No photo selected yet.</p>
+                    )}
+                  </div>
+                  <IonButton
+                    className="onboarding-photo-button"
+                    onClick={() => {
+                      console.log('[USER ACTION] OnboardingProfile: Add/Replace photo button clicked', { hasPhoto: !!displayedPhotoUrl });
+                      photoInputRef.current?.click();
+                    }}
+                  >
+                    {displayedPhotoUrl ? "Replace photo" : "Add photo"}
+                  </IonButton>
+                  {displayedPhotoUrl && (
+                    <IonButton
+                      fill="clear"
+                      className="onboarding-photo-remove"
+                      onClick={() => {
+                        console.log('[USER ACTION] OnboardingProfile: Remove photo button clicked');
+                        if (photoPreviewUrl?.startsWith("blob:")) {
+                          URL.revokeObjectURL(photoPreviewUrl);
+                        }
+                        setPhotoPreviewUrl(null);
+                        setProfilePhotoFile(null);
+                        setProfilePhotoUrl(null);
+                      }}
+                    >
+                      Remove photo
+                    </IonButton>
+                  )}
+                  <input
+                    ref={photoInputRef}
+                    className="onboarding-photo-input"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => {
+                      console.log('[USER ACTION] OnboardingProfile: Photo file input changed', { hasFile: !!event.target.files?.[0] });
+                      handlePhotoChange(event.target.files?.[0] ?? null);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="onboarding-actions">
+              <IonButton
+                fill="clear"
+                className="onboarding-back-button"
+                onClick={() => {
+                  console.log('[USER ACTION] OnboardingProfile: Back navigation button clicked');
+                  handleBack();
+                }}
+                disabled={step === 0}
+              >
+                Back
+              </IonButton>
+              <IonButton
+                className="onboarding-next"
+                onClick={() => {
+                  console.log('[USER ACTION] OnboardingProfile: Next/Finish button clicked (bottom)', { isLastStep, loading });
+                  handleNext();
+                }}
+                disabled={loading}
+              >
+                {isLastStep ? (loading ? "Saving…" : "Finish") : "Next"}
+              </IonButton>
+            </div>
           </div>
         </div>
 

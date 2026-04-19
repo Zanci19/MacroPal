@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="MacroPal monogram logo">
+  <defs>
+    <linearGradient id="mp-monogram-gradient" x1="44" y1="40" x2="212" y2="216" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f80ff" />
+      <stop offset="1" stop-color="#26d0ce" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="128" cy="128" r="96" fill="url(#mp-monogram-gradient)" />
+  <circle cx="128" cy="128" r="76" fill="#f8fbff" fill-opacity="0.96" />
+  <circle cx="128" cy="128" r="86" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="4" />
+
+  <path
+    d="M70 172V84l24 34 24-34v88"
+    fill="none"
+    stroke="#0f3a8a"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M138 172V84h30c22 0 36 13 36 34s-14 34-36 34h-30"
+    fill="none"
+    stroke="#0f3a8a"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <ellipse cx="128" cy="186" rx="56" ry="8" fill="#2f80ff" fill-opacity="0.14" />
+</svg>

@@ -1,3 +1,24 @@
+.add-food-page--quick-add-enter {
+  animation: add-food-quick-add-enter 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes add-food-quick-add-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .add-food-page--quick-add-enter {
+    animation-duration: 150ms;
+  }
+}
+
 /* ---- FatSecret-style search bar ---- */
 
 .fs-search-bar {

@@ -18,11 +18,18 @@ import '@tensorflow/tfjs-backend-cpu';
 let tfInitialized = false;
 let mobileNetModelPromise: Promise<mobilenet.MobileNet> | null = null;
 let cocoSsdModelPromise: Promise<cocoSsd.ObjectDetection> | null = null;
+let modelPreloadPromise: Promise<void> | null = null;
+const MOBILENET_TOP_K = 8;
 const debugLog = (...args: unknown[]) => {
   if (import.meta.env.DEV) {
     console.log(...args);
   }
 };
+
+function normalizePredictionName(className: string): string {
+  const [primaryLabel] = className.split(',');
+  return (primaryLabel ?? className).trim().replace(/\s+/g, ' ');
+}
 
 export type FoodNutriments = Record<string, number | undefined>;
 
@@ -41,31 +48,33 @@ export interface FoodDatabaseMatch extends FoodDatabaseItem {
 
 async function initializeTensorFlow() {
   if (tfInitialized) return;
-  
-  try {
-    // Try to set WebGL backend first (faster)
-    await tf.setBackend('webgl');
-    await tf.ready();
-    debugLog('[FoodRecognition] TensorFlow.js initialized with WebGL backend');
-    tfInitialized = true;
-  } catch (error) {
-    console.warn('[FoodRecognition] WebGL backend failed, falling back to CPU:', error);
+
+  const backends: Array<'webgl' | 'cpu'> = ['webgl', 'cpu'];
+  for (const backend of backends) {
+    if (!tf.findBackend(backend)) {
+      continue;
+    }
+
     try {
-      // Fall back to CPU backend
-      await tf.setBackend('cpu');
+      await tf.setBackend(backend);
       await tf.ready();
-      debugLog('[FoodRecognition] TensorFlow.js initialized with CPU backend');
+      debugLog(`[FoodRecognition] TensorFlow.js initialized with ${backend.toUpperCase()} backend`);
       tfInitialized = true;
-    } catch (cpuError) {
-      console.error('[FoodRecognition] Failed to initialize any TensorFlow backend:', cpuError);
-      throw new Error('Failed to initialize TensorFlow.js backend');
+      return;
+    } catch (error) {
+      console.warn(`[FoodRecognition] ${backend.toUpperCase()} backend failed, trying fallback:`, error);
     }
   }
+
+  throw new Error('Failed to initialize TensorFlow.js backend');
 }
 
 async function getMobileNetModel() {
   if (!mobileNetModelPromise) {
-    mobileNetModelPromise = mobilenet.load().catch((error) => {
+    mobileNetModelPromise = mobilenet.load({
+      version: 2,
+      alpha: 1.0,
+    }).catch((error) => {
       mobileNetModelPromise = null;
       throw error;
     });
@@ -81,6 +90,20 @@ async function getCocoSsdModel() {
     });
   }
   return cocoSsdModelPromise;
+}
+
+export async function preloadFoodRecognitionModels(): Promise<void> {
+  if (!modelPreloadPromise) {
+    modelPreloadPromise = (async () => {
+      await initializeTensorFlow();
+      await Promise.all([getMobileNetModel(), getCocoSsdModel()]);
+    })().catch((error) => {
+      modelPreloadPromise = null;
+      throw error;
+    });
+  }
+
+  await modelPreloadPromise;
 }
 
 // Food keywords that commonly appear in image classifications - Enhanced list
@@ -168,19 +191,20 @@ export interface RecognitionResult {
 function preprocessImage(imageElement: HTMLImageElement): tf.Tensor3D {
   // Use tf.tidy to automatically clean up intermediate tensors
   return tf.tidy(() => {
-    // Convert image to tensor
-    let tensor = tf.browser.fromPixels(imageElement);
-    
-    // Normalize to [0, 1]
-    tensor = tf.div(tensor, 255.0);
-    
-    // Adjust contrast (1.2x)
+    // Convert image to tensor as float32 in [0,255].
+    // MobileNet normalizes internally, so do not pre-normalize to [0,1].
+    let tensor = tf.browser.fromPixels(imageElement).toFloat();
+
+    // Mild contrast improvement around the mean.
     const mean = tf.mean(tensor);
-    tensor = tf.add(tf.mul(tf.sub(tensor, mean), 1.2), mean);
-    
-    // Clip values to [0, 1]
-    tensor = tf.clipByValue(tensor, 0, 1);
-    
+    tensor = tf.add(tf.mul(tf.sub(tensor, mean), 1.08), mean);
+
+    // Slight brightness lift for darker captures.
+    tensor = tf.add(tensor, tf.scalar(6));
+
+    // Keep expected pixel range.
+    tensor = tf.clipByValue(tensor, 0, 255);
+
     return tensor as tf.Tensor3D;
   });
 }
@@ -281,7 +305,7 @@ export async function recognizeFoodWithMobileNet(
     // Try with original image first (most reliable)
     try {
       debugLog('[FoodRecognition] Running predictions on original image...');
-      originalPredictions = await model.classify(imageElement);
+      originalPredictions = await model.classify(imageElement, MOBILENET_TOP_K);
       debugLog('[FoodRecognition] Original predictions:', originalPredictions);
     } catch (err) {
       console.warn('[FoodRecognition] Original image prediction failed:', err);
@@ -293,7 +317,7 @@ export async function recognizeFoodWithMobileNet(
       const processedTensor = preprocessImage(imageElement);
       
       debugLog('[FoodRecognition] Running predictions with preprocessing...');
-      predictions = await model.classify(processedTensor);
+      predictions = await model.classify(processedTensor, MOBILENET_TOP_K);
       debugLog('[FoodRecognition] Preprocessed predictions:', predictions);
       
       // Clean up tensor
@@ -314,7 +338,7 @@ export async function recognizeFoodWithMobileNet(
     const predictionMap = new Map<string, typeof allPredictions[0]>();
     
     for (const pred of allPredictions) {
-      const key = pred.className.toLowerCase();
+      const key = normalizePredictionName(pred.className).toLowerCase();
       const existing = predictionMap.get(key);
       // Keep prediction with higher probability
       if (!existing || pred.probability > existing.probability) {
@@ -329,12 +353,15 @@ export async function recognizeFoodWithMobileNet(
     const foodPredictions: FoodPrediction[] = uniquePredictions
       .filter(pred => {
         const className = pred.className.toLowerCase();
-        const isFoodRelated = FOOD_KEYWORDS.some(keyword => className.includes(keyword));
+        const normalizedClassName = normalizePredictionName(pred.className).toLowerCase();
+        const isFoodRelated = FOOD_KEYWORDS.some(keyword =>
+          className.includes(keyword) || normalizedClassName.includes(keyword)
+        );
         // Lowered threshold from 0.1 to 0.05 for better results
         return isFoodRelated && pred.probability > 0.05;
       })
       .map(pred => ({
-        name: pred.className,
+        name: normalizePredictionName(pred.className),
         confidence: pred.probability,
         source: 'mobilenet' as const
       }))
@@ -357,7 +384,7 @@ export async function recognizeFoodWithMobileNet(
       debugLog('[FoodRecognition] No food keywords matched, returning top general predictions');
       return {
         predictions: uniquePredictions.slice(0, 5).map(pred => ({
-          name: pred.className,
+          name: normalizePredictionName(pred.className),
           confidence: pred.probability,
           source: 'mobilenet' as const
         })),

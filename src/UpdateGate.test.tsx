@@ -3,6 +3,38 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import { getDoc } from 'firebase/firestore';
 import UpdateGate from './UpdateGate';
 
+// Mock Ionic components to avoid Stencil overlay side effects in jsdom.
+vi.mock("@ionic/react", async () => {
+  const React = await import("react");
+  return {
+    IonButton: ({ children, ...props }: { children?: React.ReactNode }) =>
+      React.createElement("button", props, children),
+    IonToast: ({
+      isOpen,
+      buttons,
+      ...props
+    }: {
+      isOpen?: boolean;
+      buttons?: Array<{ text?: string; handler?: () => void }>;
+      onDidDismiss?: () => void;
+      [key: string]: unknown;
+    }) => {
+      const safeProps = { ...props };
+      delete safeProps.onDidDismiss;
+
+      return React.createElement("div", {
+        ...safeProps,
+        "is-open": isOpen ? "" : undefined,
+        ref: (el: HTMLElement | null) => {
+          if (el) {
+            (el as IonToastElement).buttons = buttons;
+          }
+        },
+      });
+    },
+  };
+});
+
 // Mock firebase
 vi.mock('./firebase', () => ({
   db: {},

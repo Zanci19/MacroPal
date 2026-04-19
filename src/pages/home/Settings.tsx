@@ -34,6 +34,7 @@ import {
   informationCircleOutline,
   keyOutline,
   newspaperOutline,
+  chatbubbleEllipsesOutline,
   chevronDownOutline,
   peopleOutline,
   medicalOutline,
@@ -70,6 +71,7 @@ import {
 import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../utils/image";
 import { isFeatureEnabled, useRemoteConfig } from "../../UpdateGate";
 import { useClinicianAccess } from "../../hooks/useClinicianAccess";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
 type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
@@ -859,7 +861,7 @@ const Settings: React.FC = () => {
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to setup profile page`);
-                    history.push("/setup-profile");
+                    history.push(SETTINGS_ROUTES.profile);
                   }}
                 >
                   <IonLabel>Profile, goals & targets</IonLabel>
@@ -869,47 +871,59 @@ const Settings: React.FC = () => {
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to energy needs page`);
-                    history.push("/app/energy-needs");
+                    history.push(SETTINGS_ROUTES.energyNeeds);
                   }}
                 >
-                  <IonLabel>Change energy needs</IonLabel>
+                  <IonLabel>
+                    <h2>Change energy needs</h2>
+                    <p>Set your calories and macro targets</p>
+                  </IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to units page`);
-                    history.push("/app/units");
+                    history.push(SETTINGS_ROUTES.units);
                   }}
                 >
-                  <IonLabel>Units & measurements</IonLabel>
+                  <IonLabel>
+                    <h2>Units & measurements</h2>
+                    <p>Choose metric or imperial units</p>
+                  </IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to reminders page`);
-                    history.push("/app/reminders");
+                    history.push(SETTINGS_ROUTES.reminders);
                   }}
                 >
-                  <IonLabel>Reminders</IonLabel>
+                  <IonLabel>
+                    <h2>Reminders</h2>
+                    <p>Set meal, weigh-in, and workout reminders</p>
+                  </IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to data privacy page`);
-                    history.push("/app/data-privacy");
+                    history.push(SETTINGS_ROUTES.dataPrivacy);
                   }}
                 >
-                  <IonLabel>Data & privacy</IonLabel>
+                  <IonLabel>
+                    <h2>Data & privacy</h2>
+                    <p>Manage exports and account privacy controls</p>
+                  </IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to sharing page`);
-                    history.push("/app/sharing");
+                    history.push(SETTINGS_ROUTES.sharing);
                   }}
                 >
                   <IonIcon slot="start" icon={peopleOutline} />
@@ -925,8 +939,8 @@ const Settings: React.FC = () => {
                     onClick={() => {
                       history.push(
                         role === "clinician" || role === "admin"
-                          ? "/app/clinician-dashboard"
-                          : "/app/clinician-connect"
+                          ? SETTINGS_ROUTES.clinicianDashboard
+                          : SETTINGS_ROUTES.clinicianConnect
                       );
                     }}
                   >
@@ -1559,11 +1573,23 @@ const Settings: React.FC = () => {
                   button
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to changelog page`);
-                    history.push("/app/changelog");
+                    history.push(SETTINGS_ROUTES.changelog);
                   }}
                 >
                   <IonIcon slot="start" icon={newspaperOutline} />
                   <IonLabel>Changelog</IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="full"
+                  button
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Navigate to feedback page`);
+                    trackEvent("settings_feedback_open", { uid: auth.currentUser?.uid });
+                    history.push(SETTINGS_ROUTES.feedback);
+                  }}
+                >
+                  <IonIcon slot="start" icon={chatbubbleEllipsesOutline} />
+                  <IonLabel>Send feedback</IonLabel>
                 </IonItem>
                 <IonItem
                   lines="full"

@@ -53,6 +53,7 @@ import type {
   ClinicianAssignment,
   MessageItemDoc,
 } from "../../types";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 type DashboardUser = ClinicianAssignment & {
   adherence7d: number;
@@ -384,7 +385,7 @@ const ClinicianDashboard: React.FC = () => {
     }
   };
 
-  if (!clinicianEnabled) return <Redirect to="/app/settings" />;
+  if (!clinicianEnabled) return <Redirect to={SETTINGS_ROUTES.root} />;
   if (loading) {
     return (
       <IonPage>
@@ -394,14 +395,14 @@ const ClinicianDashboard: React.FC = () => {
       </IonPage>
     );
   }
-  if (role !== "clinician" && role !== "admin") return <Redirect to="/app/clinician-connect" />;
+  if (role !== "clinician" && role !== "admin") return <Redirect to={SETTINGS_ROUTES.clinicianConnect} />;
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" />
+            <IonBackButton defaultHref={SETTINGS_ROUTES.root} />
           </IonButtons>
           <IonTitle>Clinician dashboard</IonTitle>
         </IonToolbar>

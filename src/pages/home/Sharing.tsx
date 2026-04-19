@@ -1,10 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -18,8 +13,6 @@ import {
   IonToast,
   IonSpinner,
   IonText,
-  IonButtons,
-  IonBackButton,
   IonAlert,
   IonChip,
 } from "@ionic/react";
@@ -31,13 +24,14 @@ import {
   trashOutline,
   peopleOutline,
   timeOutline,
-  chevronBackOutline,
   shieldCheckmarkOutline,
   linkOutline,
 } from "ionicons/icons";
 import { useHistory } from "react-router-dom";
 import { auth, trackEvent } from "../../firebase";
 import { useSharing } from "../../hooks/useSharing";
+import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import "./Sharing.css";
 
 const Sharing: React.FC = () => {
@@ -183,17 +177,12 @@ const Sharing: React.FC = () => {
   if (!user) return null;
 
   return (
-    <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonButtons slot="start">
-            <IonBackButton defaultHref="/app/settings" icon={chevronBackOutline} text="" />
-          </IonButtons>
-          <IonTitle>Sharing</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
-      <IonContent className="ion-padding sharing-page">
+    <SettingsSubpageLayout
+      title="Sharing"
+      subtitle="Pair with someone to share intake data or monitor another user's diary."
+      backHref={SETTINGS_ROUTES.root}
+      className="sharing-page"
+    >
         {loading ? (
           <div className="sharing-loading">
             <IonSpinner />
@@ -367,12 +356,12 @@ const Sharing: React.FC = () => {
                     </IonText>
                     <IonList>
                       {sharedUsers.map((s) => (
-                        <IonItem
-                          key={s.uid}
-                          lines="full"
-                          button
-                          onClick={() => history.push(`/app/shared-user/${s.uid}`)}
-                        >
+                          <IonItem
+                            key={s.uid}
+                            lines="full"
+                            button
+                            onClick={() => history.push(SETTINGS_ROUTES.sharedUser(s.uid))}
+                          >
                           <IonIcon icon={eyeOutline} slot="start" color="primary" />
                           <IonLabel>
                             <h3>{s.displayName}</h3>
@@ -450,8 +439,7 @@ const Sharing: React.FC = () => {
           duration={2500}
           onDidDismiss={() => setToast((t) => ({ ...t, show: false }))}
         />
-      </IonContent>
-    </IonPage>
+    </SettingsSubpageLayout>
   );
 };
 

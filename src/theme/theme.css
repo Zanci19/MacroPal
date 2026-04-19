@@ -227,23 +227,44 @@ ion-button[fill="outline"] {
 
 ion-input,
 ion-select,
-ion-textarea {
+ion-textarea,
+ion-searchbar {
   --padding-start: 14px;
   --padding-end: 14px;
   --padding-top: 12px;
   --padding-bottom: 12px;
   --background: var(--mp-surface-muted);
   --border-radius: 14px;
-  --highlight-color-focused: var(--ion-color-primary);
-  border: 1.5px solid var(--mp-border);
+  --border-color: transparent;
+  --border-width: 0;
+  --highlight-height: 0;
+  --highlight-color-focused: transparent;
+  --highlight-color-valid: transparent;
+  --highlight-color-invalid: transparent;
+  border: none !important;
+  outline: none;
   box-shadow: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease;
+}
+
+ion-input::part(native),
+ion-textarea::part(native),
+ion-searchbar::part(input) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 ion-input:focus-within,
 ion-select:focus-within,
-ion-textarea:focus-within {
-  border-color: var(--ion-color-primary);
+ion-textarea:focus-within,
+ion-searchbar:focus-within {
+  border-color: transparent !important;
+  box-shadow: none;
+}
+
+ion-item.item-has-focus {
+  --highlight-height: 0;
 }
 
 ion-item {

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
+  IonBackButton,
+  IonButtons,
   IonPage,
   IonContent,
   IonHeader,
@@ -15,7 +17,7 @@ import {
 } from "@ionic/react";
 import { auth, db, trackEvent } from "../firebase";
 import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
-import { useHistory } from "react-router";
+import { useHistory, useLocation } from "react-router";
 import "./SetupProfile.css";
 import {
   DEFAULT_UNIT_SYSTEM,
@@ -28,6 +30,7 @@ import {
   UnitSystem,
   weightLabel,
 } from "../utils/units";
+import { SETTINGS_ROUTES } from "../utils/settingsRoutes";
 
 const toNumOrNull = (v: string | number | null | undefined) => {
   if (v === null || v === undefined || v === "") return null;
@@ -124,6 +127,8 @@ const SetupProfile: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const history = useHistory();
+  const location = useLocation();
+  const inSettingsFlow = location.pathname.startsWith(SETTINGS_ROUTES.root);
 
   const showToast = (
     message: string,
@@ -275,7 +280,7 @@ const SetupProfile: React.FC = () => {
       });
 
       showToast("Profile updated.", "success");
-      history.push("/app/settings");
+      history.push(SETTINGS_ROUTES.root);
     } catch (error: unknown) {
       const err = error as Error;
       console.error(err);
@@ -293,7 +298,12 @@ const SetupProfile: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Setup Profile</IonTitle>
+          {inSettingsFlow && (
+            <IonButtons slot="start">
+              <IonBackButton defaultHref={SETTINGS_ROUTES.root} />
+            </IonButtons>
+          )}
+          <IonTitle>{inSettingsFlow ? "Profile, goals & targets" : "Setup Profile"}</IonTitle>
         </IonToolbar>
       </IonHeader>
 

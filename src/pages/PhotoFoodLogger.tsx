@@ -45,12 +45,14 @@ import { auth, db, trackEvent } from "../firebase";
 import { doc, setDoc, arrayUnion } from "firebase/firestore";
 import {
   recognizeFood,
+  preloadFoodRecognitionModels,
   type FoodPrediction,
   type FoodDatabaseItem,
   type FoodNutriments,
   matchFoodToDatabase,
   matchFoodWithOpenFoodFacts,
 } from "../utils/foodRecognition";
+import { cleanupStalePwaCameraModal } from "../utils/cameraCleanup";
 import basicFoods from "../data/basicFoods.json";
 import { clampDateKeyToToday, isDateKey, todayDateKey } from "../utils/date";
 import "./PhotoFoodLogger.css";
@@ -146,17 +148,23 @@ const PhotoFoodLogger: React.FC = () => {
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
+      cleanupStalePwaCameraModal();
     };
   }, []);
 
   // Track screen view
   useIonViewDidEnter(() => {
     trackEvent("photo_food_logger_view", { meal, date: dateKey });
+    cleanupStalePwaCameraModal();
+    void preloadFoodRecognitionModels().catch((error: unknown) => {
+      console.warn("[PhotoFoodLogger] TensorFlow model preload failed:", error);
+    });
   });
 
   const takePhoto = async () => {
     try {
       trackEvent("photo_food_logger_camera_open");
+      cleanupStalePwaCameraModal();
       
       const photo = await Camera.getPhoto({
         quality: 90,
@@ -184,6 +192,8 @@ const PhotoFoodLogger: React.FC = () => {
       
       setError("Failed to take photo. Please try again.");
       trackEvent("photo_food_logger_camera_error", { error: String(err) });
+    } finally {
+      cleanupStalePwaCameraModal();
     }
   };
 
