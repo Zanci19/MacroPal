@@ -139,5 +139,22 @@ service cloud.firestore {
       allow read: if signedIn() && isAdmin(request.auth.uid);
       allow create: if signedIn() && (isClinician(request.auth.uid) || isAdmin(request.auth.uid));
     }
+
+    match /feedback/{feedbackId} {
+      // Logged-in users can submit their own feedback doc
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.category in ["bug", "feature", "ux", "other"]
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 2000;
+    
+      // User can read their own feedback; admins can read all
+      allow read: if request.auth != null
+        && (resource.data.uid == request.auth.uid || isAdmin(request.auth.uid));
+    
+      // Admin-only moderation
+      allow update, delete: if request.auth != null && isAdmin(request.auth.uid);
+    }
   }
 }

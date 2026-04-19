@@ -122,13 +122,13 @@
 }
 
 /* Swiper pagination styling for nutrition info */
-.swiper-pagination {
+.add-food-page .swiper-pagination {
   position: relative !important;
   margin-top: 12px;
   bottom: 0 !important;
 }
 
-.swiper-pagination-bullet {
+.add-food-page .swiper-pagination-bullet {
   background: var(--mp-text-muted) !important;
   opacity: 0.4 !important;
   width: 8px !important;
@@ -136,7 +136,7 @@
   transition: all 0.2s ease !important;
 }
 
-.swiper-pagination-bullet-active {
+.add-food-page .swiper-pagination-bullet-active {
   background: var(--mp-primary) !important;
   opacity: 1 !important;
   width: 20px !important;

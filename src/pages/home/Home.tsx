@@ -15,7 +15,6 @@ import {
   IonItem,
   IonLabel,
   IonSpinner,
-  IonChip,
   IonToast,
   IonBadge,
   IonDatetime,
@@ -37,7 +36,6 @@ import {
   restaurantOutline,
   cafeOutline,
   fastFoodOutline,
-  flameOutline,
   bulbOutline,
   chevronBackOutline,
   chevronForwardOutline,
@@ -46,7 +44,6 @@ import {
   chevronDownOutline,
   rocketOutline,
 } from "ionicons/icons";
-import type { Swiper as SwiperClass } from "swiper";
 import type { SwiperProps, SwiperSlideProps } from "swiper/react";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
@@ -186,6 +183,107 @@ const storeDemoAnnouncementNum = (value: number) => {
   }
 };
 
+type MacroBarKey = "fat" | "carbs" | "protein";
+type DayMacroTotals = {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  sugar: number;
+  fiber: number;
+  saturatedFat: number;
+};
+type MacroBarSegment = {
+  ratio: number;
+  className: string;
+};
+
+const MACRO_LEGEND_ITEMS: ReadonlyArray<{
+  label: string;
+  dotClassName: string;
+}> = [
+  {
+    label: "Saturated fat (in fat)",
+    dotClassName: "fs-macro-legend__dot--warning-shade",
+  },
+  {
+    label: "Sugar (in carbohydrates)",
+    dotClassName: "fs-macro-legend__dot--warning",
+  },
+  {
+    label: "Fiber (in carbohydrates)",
+    dotClassName: "fs-macro-legend__dot--success",
+  },
+  {
+    label: "Remaining carbs/fat/protein",
+    dotClassName: "fs-macro-legend__dot--primary",
+  },
+];
+
+const buildMacroBarSegments = (
+  macroKey: MacroBarKey,
+  dayTotals: DayMacroTotals
+): MacroBarSegment[] => {
+  if (macroKey === "fat") {
+    const totalFat = Math.max(0, dayTotals.fat);
+    const saturatedFat = Math.min(totalFat, Math.max(0, dayTotals.saturatedFat));
+    const remainingFat = Math.max(0, totalFat - saturatedFat);
+    if (totalFat <= 0) {
+      return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
+    }
+    const segments: MacroBarSegment[] = [];
+    if (remainingFat > 0) {
+      segments.push({
+        ratio: remainingFat / totalFat,
+        className: "fs-macro-row__segment--primary",
+      });
+    }
+    if (saturatedFat > 0) {
+      segments.push({
+        ratio: saturatedFat / totalFat,
+        className: "fs-macro-row__segment--warning-shade",
+      });
+    }
+    return segments.length
+      ? segments
+      : [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
+  }
+
+  if (macroKey === "carbs") {
+    const totalCarbs = Math.max(0, dayTotals.carbs);
+    const sugar = Math.min(totalCarbs, Math.max(0, dayTotals.sugar));
+    const fiber = Math.min(totalCarbs - sugar, Math.max(0, dayTotals.fiber));
+    const remainingCarbs = Math.max(0, totalCarbs - sugar - fiber);
+    if (totalCarbs <= 0) {
+      return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
+    }
+    const segments: MacroBarSegment[] = [];
+    if (remainingCarbs > 0) {
+      segments.push({
+        ratio: remainingCarbs / totalCarbs,
+        className: "fs-macro-row__segment--primary",
+      });
+    }
+    if (sugar > 0) {
+      segments.push({
+        ratio: sugar / totalCarbs,
+        className: "fs-macro-row__segment--warning",
+      });
+    }
+    if (fiber > 0) {
+      segments.push({
+        ratio: fiber / totalCarbs,
+        className: "fs-macro-row__segment--success",
+      });
+    }
+    return segments.length
+      ? segments
+      : [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
+  }
+
+  return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
+};
+
 const ProgressRing: React.FC<{
   size?: number;
   stroke?: number;
@@ -195,7 +293,10 @@ const ProgressRing: React.FC<{
   const C = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress || 0));
   return (
-    <div style={{ width: size, height: size, position: "relative" }}>
+    <div
+      className="ring-wrap"
+      style={{ "--ring-size": `${size}px` } as React.CSSProperties}
+    >
       <svg width={size} height={size}>
         <circle
           cx={size / 2}
@@ -852,11 +953,6 @@ const Home: React.FC = () => {
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
   const showAchievements = profile?.showAchievements ?? true;
-  const summarySwiperTopRef = useRef<SwiperClass | null>(null);
-  const summarySwiperLeftRef = useRef<SwiperClass | null>(null);
-  const summarySwiperRightRef = useRef<SwiperClass | null>(null);
-
-  // Lazily load Swiper when the Home page mounts (avoids including the 67KB chunk in the initial bundle)
   const [swiperParts, setSwiperParts] = useState<{
     Swiper: React.ComponentType<SwiperProps>;
     SwiperSlide: React.ComponentType<SwiperSlideProps>;
@@ -864,14 +960,19 @@ const Home: React.FC = () => {
   } | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     void Promise.all([
       import("swiper/react"),
       import("swiper/modules"),
       import("swiper/css"),
       import("swiper/css/pagination"),
     ]).then(([{ Swiper, SwiperSlide }, { Pagination }]) => {
+      if (cancelled) return;
       setSwiperParts({ Swiper, SwiperSlide, Pagination });
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -1813,20 +1914,19 @@ const Home: React.FC = () => {
     }
   }, [activeDateKey, uid]);
 
-  const handleRightSummarySlideChange = useCallback(
-    (swiper: SwiperClass) => {
-      if (!showWellnessTip) return;
-      if (quoteDateKey === todayKey) {
-        quoteHasLoadedRef.current = true;
-        return;
-      }
-      if (quoteHasLoadedRef.current) return;
-      const quoteSlideIndex = showAchievements ? 1 : 0;
-      if (swiper.activeIndex !== quoteSlideIndex) return;
-      void fetchInspirationalQuote();
-    },
-    [fetchInspirationalQuote, quoteDateKey, showAchievements, showWellnessTip, todayKey]
-  );
+  useEffect(() => {
+    if (!showWellnessTip) return;
+    if (quoteDateKey === todayKey) {
+      quoteHasLoadedRef.current = true;
+      return;
+    }
+    if (quoteHasLoadedRef.current) return;
+    void fetchInspirationalQuote();
+  }, [fetchInspirationalQuote, quoteDateKey, showWellnessTip, todayKey]);
+
+  const SwiperComp = swiperParts?.Swiper;
+  const SwiperSlideComp = swiperParts?.SwiperSlide;
+  const PaginationMod = swiperParts?.Pagination;
 
   const copyDaySummary = async () => {
     if (!profile || caloriesNeeded == null || !macroTargets) return;
@@ -1952,9 +2052,6 @@ const Home: React.FC = () => {
     }
   };
 
-  const streakMilestones = [3, 7, 14, 30];
-  const nextStreakTarget = streakMilestones.find((target) => streak < target) ?? null;
-
   const nutritionTotals = useMemo(() => {
     const aggregated: Record<string, number> = {};
     Object.values(dayData).forEach((items) => {
@@ -2030,31 +2127,6 @@ const Home: React.FC = () => {
     if (value < 10) return value.toFixed(1);
     return value.toFixed(0);
   };
-
-  useEffect(() => {
-    const swiperInstances = [
-      summarySwiperTopRef.current,
-      summarySwiperLeftRef.current,
-      summarySwiperRightRef.current,
-    ].filter((swiper): swiper is SwiperClass => swiper !== null);
-    if (!swiperInstances.length) return;
-    // Debounce Swiper updates to avoid excessive re-renders
-    const timeoutId = setTimeout(() => {
-      swiperInstances.forEach((swiper) => {
-        swiper.updateAutoHeight(300);
-        swiper.update();
-      });
-    }, 100);
-    return () => clearTimeout(timeoutId);
-  }, [
-    profile,
-    caloriesNeeded,
-    macroTargets,
-    totals.day,
-    nutritionEntries,
-    streak,
-    showWellnessTip,
-  ]);
 
   const fetchAnnouncement = useCallback(
     async (force = false) => {
@@ -2249,13 +2321,8 @@ const Home: React.FC = () => {
     }
   }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading, showTutorialWithDelay]);
 
-  // Unwrap lazily-loaded Swiper components for use in JSX
-  const SwiperComp = swiperParts?.Swiper;
-  const SwiperSlideComp = swiperParts?.SwiperSlide;
-  const PaginationMod = swiperParts?.Pagination;
-
   return (
-    <IonPage>
+    <IonPage className="home-page">
       <IonHeader>
         <IonToolbar>
           <IonTitle>Food Diary</IonTitle>
@@ -2327,457 +2394,203 @@ const Home: React.FC = () => {
           </IonButton>
         </div>
 
-        <IonCard className="fs-summary">
+        <IonCard className="fs-summary home-overview-card home-top-swiper-card">
           {SwiperComp && SwiperSlideComp && PaginationMod ? (
-          <SwiperComp
-            modules={[PaginationMod as never]}
-            pagination={{ clickable: true }}
-            slidesPerView={1}
-            autoHeight
-            className="fs-summary__swiper"
-            observer
-            observeParents
-            observeSlideChildren
-            onSwiper={(swiper) => {
-              summarySwiperTopRef.current = swiper;
-            }}
-          >
-            <SwiperSlideComp>
-              <div className="fs-summary__slide">
-                {!profile || caloriesNeeded == null ? (
-                  <div className="ion-text-center" style={{ padding: 24 }}>
-                    <IonSpinner name="dots" />
-                  </div>
-                ) : (
-                  <div className="fs-cal-summary">
-                    <div className="fs-cal-remaining">
-                      {streak > 1 && (
-                        <div className="fs-cal-streak">
-                          <IonChip color="success">
-                            <IonIcon icon={flameOutline} />
-                            <span style={{ marginLeft: 4 }}>{streak}-day streak</span>
-                          </IonChip>
-                        </div>
-                      )}
-                      <div className="fs-cal-remaining__label">{summaryDifferenceLabel}</div>
-                      <div className="fs-cal-remaining__value" style={{ color: ringColor }}>
-                        {summaryDifferenceValue}
+            <SwiperComp
+              modules={[PaginationMod as never]}
+              pagination={{ clickable: true }}
+              slidesPerView={1}
+              autoHeight
+              className="home-top-swiper fs-summary__swiper"
+              observer
+              observeParents
+              observeSlideChildren
+            >
+              <SwiperSlideComp>
+                <div className="fs-summary__slide">
+                  <IonCardHeader className="home-panel__header">
+                    <IonCardTitle>Daily overview</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent className="home-panel__content home-overview-card__content">
+                    {!profile || caloriesNeeded == null ? (
+                      <div className="ion-text-center fs-loading-block">
+                        <IonSpinner name="dots" />
                       </div>
-                    </div>
-                    <div className="fs-cal-table">
-                      <div className="fs-cal-table__cell">
-                        <div className="fs-cal-table__val">{kcalGoal}</div>
-                        <div className="fs-cal-table__lbl">Goal</div>
-                      </div>
-                      <div className="fs-cal-table__op">−</div>
-                      <div className="fs-cal-table__cell">
-                        <div className="fs-cal-table__val">{kcalConsumed}</div>
-                        <div className="fs-cal-table__lbl">Food</div>
-                      </div>
-                      <div className="fs-cal-table__op">+</div>
-                      <div className="fs-cal-table__cell">
-                        <div className="fs-cal-table__val">{workoutCalories}</div>
-                        <div className="fs-cal-table__lbl">Exercise</div>
-                      </div>
-                      <div className="fs-cal-table__op">=</div>
-                      <div className="fs-cal-table__cell">
-                        <div className="fs-cal-table__val" style={{ color: ringColor }}>{summaryDifferenceValue}</div>
-                        <div className="fs-cal-table__lbl">Remaining</div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {profile && caloriesNeeded != null && macroTargets && (
-                  <div
-                    className="fs-macro-bars"
-                    style={{ display: "grid", gap: 8, padding: "8px 16px 12px" }}
-                  >
-                    {[
-                      {
-                        k: "fat",
-                        g: totals.day.fat,
-                        tg: macroTargets.fatG,
-                        l: "Fat",
-                      },
-                      {
-                        k: "carbs",
-                        g: totals.day.carbs,
-                        tg: macroTargets.carbsG,
-                        l: "Carbohydrates",
-                      },
-                      {
-                        k: "protein",
-                        g: totals.day.protein,
-                        tg: macroTargets.proteinG,
-                        l: "Protein",
-                      },
-                    ].map(({ k, g, tg, l }) => {
-                      const pct = tg ? Math.min(1, g / tg) : 0;
-                      const baseBarStyle = {
-                        height: 8,
-                        background: "rgba(148, 163, 184, 0.35)",
-                        borderRadius: 9999,
-                        overflow: "hidden",
-                      } as const;
-
-                      const fillStyle = {
-                        width: `${pct * 100}%`,
-                        height: "100%",
-                        transition: "width 0.2s ease-out",
-                      } as const;
-
-                      const macroBars =
-                        k === "fat"
-                          ? (() => {
-                            const total = Math.max(0, totals.day.fat);
-                            const sat = Math.min(
-                              total,
-                              Math.max(0, totals.day.saturatedFat)
-                            );
-                            const rest = Math.max(0, total - sat);
-                            const satPct = total > 0 ? sat / total : 0;
-                            const restPct = total > 0 ? rest / total : 0;
-                            return (
-                              <div style={{ display: "flex", height: "100%" }}>
-                                {rest > 0 && (
-                                  <div
-                                    style={{
-                                      width: `${restPct * 100}%`,
-                                      background: "var(--ion-color-primary)",
-                                    }}
-                                  />
-                                )}
-                                  {sat > 0 && (
-                                    <div
-                                      style={{
-                                        width: `${satPct * 100}%`,
-                                        background: "var(--ion-color-warning-shade)",
-                                      }}
-                                    />
-                                  )}
+                    ) : (
+                      <>
+                        <div className="fs-cal-summary">
+                          <div className="fs-cal-remaining">
+                            <div className="fs-cal-remaining__label">{summaryDifferenceLabel}</div>
+                            <div
+                              className="fs-cal-remaining__value fs-accent-value"
+                              style={{ "--fs-accent-color": ringColor } as React.CSSProperties}
+                            >
+                              {summaryDifferenceValue}
+                            </div>
+                            {showAchievements && (
+                              <p className="home-overview-note">You're on a {streak} day streak!</p>
+                            )}
+                          </div>
+                          <div className="fs-cal-table">
+                            <div className="fs-cal-table__cell">
+                              <div className="fs-cal-table__val">{kcalGoal}</div>
+                              <div className="fs-cal-table__lbl">Goal</div>
+                            </div>
+                            <div className="fs-cal-table__op">−</div>
+                            <div className="fs-cal-table__cell">
+                              <div className="fs-cal-table__val">{kcalConsumed}</div>
+                              <div className="fs-cal-table__lbl">Food</div>
+                            </div>
+                            <div className="fs-cal-table__op">+</div>
+                            <div className="fs-cal-table__cell">
+                              <div className="fs-cal-table__val">{workoutCalories}</div>
+                              <div className="fs-cal-table__lbl">Exercise</div>
+                            </div>
+                            <div className="fs-cal-table__op">=</div>
+                            <div className="fs-cal-table__cell">
+                              <div
+                                className="fs-cal-table__val fs-accent-value"
+                                style={{ "--fs-accent-color": ringColor } as React.CSSProperties}
+                              >
+                                {summaryDifferenceValue}
                               </div>
-                            );
-                          })()
-                          : k === "carbs"
-                            ? (() => {
-                              const total = Math.max(0, totals.day.carbs);
-                              const sugar = Math.min(
-                                total,
-                                Math.max(0, totals.day.sugar)
-                              );
-                              const fiber = Math.min(
-                                total - sugar,
-                                Math.max(0, totals.day.fiber)
-                              );
-                              const rest = Math.max(0, total - sugar - fiber);
-                              const sugarPct = total > 0 ? sugar / total : 0;
-                              const fiberPct = total > 0 ? fiber / total : 0;
-                              const restPct = total > 0 ? rest / total : 0;
+                              <div className="fs-cal-table__lbl">Remaining</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {macroTargets && (
+                          <div className="fs-macro-bars fs-macro-bars--summary">
+                            {([
+                              {
+                                k: "fat",
+                                g: totals.day.fat,
+                                tg: macroTargets.fatG,
+                                l: "Fat",
+                              },
+                              {
+                                k: "carbs",
+                                g: totals.day.carbs,
+                                tg: macroTargets.carbsG,
+                                l: "Carbohydrates",
+                              },
+                              {
+                                k: "protein",
+                                g: totals.day.protein,
+                                tg: macroTargets.proteinG,
+                                l: "Protein",
+                              },
+                            ] as const).map(({ k, g, tg, l }) => {
+                              const pct = tg ? Math.min(1, g / tg) : 0;
+                              const segments = buildMacroBarSegments(k, totals.day);
+
                               return (
-                                <div style={{ display: "flex", height: "100%" }}>
-                                  {rest > 0 && (
+                                <div key={k} className="fs-macro-row">
+                                  <div className="fs-macro-row__header">
+                                    <span>{l}</span>
+                                    <span>
+                                      {g.toFixed(0)} / {tg} g
+                                    </span>
+                                  </div>
+                                  <div className="fs-macro-row__track">
                                     <div
-                                      style={{
-                                        width: `${restPct * 100}%`,
-                                        background: "var(--ion-color-primary)",
-                                      }}
-                                    />
-                                  )}
-                                  {sugar > 0 && (
-                                    <div
-                                      style={{
-                                        width: `${sugarPct * 100}%`,
-                                        background: "var(--ion-color-warning)",
-                                      }}
-                                    />
-                                  )}
-                                  {fiber > 0 && (
-                                    <div
-                                      style={{
-                                        width: `${fiberPct * 100}%`,
-                                        background: "var(--ion-color-success)",
-                                      }}
-                                    />
-                                  )}
+                                      className="fs-macro-row__fill"
+                                      style={{ width: `${pct * 100}%` }}
+                                    >
+                                      <div className="fs-macro-row__segments">
+                                        {segments.map((segment, index) => (
+                                          <div
+                                            key={`${k}-${index}`}
+                                            className={segment.className}
+                                            style={{ width: `${segment.ratio * 100}%` }}
+                                          />
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
                               );
-                            })()
-                            : (
-                              <div
-                                style={{
-                                  ...fillStyle,
-                                  background: "var(--ion-color-primary)",
-                                }}
-                              />
-                            );
+                            })}
+                            <div className="fs-macro-legend">
+                              {MACRO_LEGEND_ITEMS.map(({ label, dotClassName }) => (
+                                <span key={label} className="fs-macro-legend__item">
+                                  <span
+                                    aria-hidden="true"
+                                    className={`fs-macro-legend__dot ${dotClassName}`}
+                                  />
+                                  <span>{label}</span>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                      return (
-                        <div key={k} style={{ display: "grid", gap: 4 }}>
-                          <div
-                            style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              fontSize: 12,
-                            }}
-                          >
-                            <span>{l}</span>
-                            <span>
-                              {g.toFixed(0)} / {tg} g
-                            </span>
-                          </div>
-                          <div style={baseBarStyle}>
-                            <div style={fillStyle}>{macroBars}</div>
-                          </div>
+                        <div className="home-overview-actions">
+                          <IonButton fill="outline" onClick={() => void copyDaySummary()}>
+                            Copy summary
+                          </IonButton>
+                          <IonButton onClick={openWeighInModal}>Log weigh-in</IonButton>
                         </div>
-                      );
-                    })}
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "6px 12px",
-                        alignItems: "center",
-                        fontSize: 11,
-                        color: "var(--mp-text-muted)",
-                      }}
-                    >
-                      {[
-                        { label: "Saturated fat (in fat)", color: "#facc15" },
-                        { label: "Sugar (in carbohydrates)", color: "#facc15" },
-                        { label: "Fiber (in carbohydrates)", color: "#22c55e" },
-                        { label: "Remaining carbs/fat/protein", color: "#3b82f6" },
-                      ].map(({ label, color }) => (
-                        <span
-                          key={label}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-                        >
-                          <span
-                            aria-hidden="true"
-                            style={{
-                              width: 8,
-                              height: 8,
-                              borderRadius: 9999,
-                              background: color,
-                              display: "inline-block",
-                            }}
-                          />
-                          <span>{label}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SwiperSlideComp>
+                      </>
+                    )}
+                  </IonCardContent>
+                </div>
+              </SwiperSlideComp>
 
-            <SwiperSlideComp>
-              <div className="fs-summary__slide">
-                <IonCardHeader className="fs-summary__hdr">
-                  <IonCardTitle>Nutrition breakdown</IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent className="fs-summary__nutrition">
-                  {nutritionEntries.length ? (
-                    <div className="fs-summary__nutrition-grid">
-                      {nutritionEntries.map(({ key, value }) => {
-                        const unit = nutritionLabels[key]?.unit;
-                        return (
-                          <div key={key} className="fs-summary__nutrition-item">
-                            <span className="fs-summary__nutrition-label">
-                              {formatNutritionLabel(key)}
-                            </span>
-                            <span className="fs-summary__nutrition-value">
-                              {formatNutritionValue(value)}
-                              {unit ? ` ${unit}` : ""}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <IonText color="medium">
-                      No nutrition data logged yet.
-                    </IonText>
-                  )}
-                </IonCardContent>
-              </div>
-            </SwiperSlideComp>
-
-            <SwiperSlideComp>
-              <div className="fs-summary__slide">
-                <IonCardHeader className="fs-summary__hdr">
-                  <IonCardTitle>Weigh-in</IonCardTitle>
-                </IonCardHeader>
-                <IonCardContent>
-                  <p style={{ marginTop: 0 }}>
-                    Track your weight over time to see progress in Analytics.
-                  </p>
-                  <IonButton expand="block" onClick={openWeighInModal}>
-                    Log weigh-in
-                  </IonButton>
-                </IonCardContent>
-              </div>
-            </SwiperSlideComp>
-          </SwiperComp>
+              <SwiperSlideComp>
+                <div className="fs-summary__slide">
+                  <IonCardHeader className="home-panel__header">
+                    <IonCardTitle>Nutrition breakdown</IonCardTitle>
+                  </IonCardHeader>
+                  <IonCardContent className="home-panel__content home-panel__content--compact">
+                    {nutritionEntries.length ? (
+                      <div className="fs-summary__nutrition-grid">
+                        {nutritionEntries.map(({ key, value }) => {
+                          const unit = nutritionLabels[key]?.unit;
+                          return (
+                            <div key={key} className="fs-summary__nutrition-item">
+                              <span className="fs-summary__nutrition-label">
+                                {formatNutritionLabel(key)}
+                              </span>
+                              <span className="fs-summary__nutrition-value">
+                                {formatNutritionValue(value)}
+                                {unit ? ` ${unit}` : ""}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <IonText color="medium">No nutrition data logged yet.</IonText>
+                    )}
+                  </IonCardContent>
+                </div>
+              </SwiperSlideComp>
+            </SwiperComp>
           ) : (
-            <div className="ion-padding ion-text-center"><IonSpinner name="dots" /></div>
+            <div className="ion-text-center fs-loading-block">
+              <IonSpinner name="dots" />
+            </div>
           )}
         </IonCard>
 
-        {SwiperComp && SwiperSlideComp && Boolean(PaginationMod) && (
-          <div className="fs-summary-grid">
-            <IonCard className="fs-summary fs-summary--split">
-              <SwiperComp
-                modules={[PaginationMod as never]}
-                pagination={{ clickable: true }}
-                slidesPerView={1}
-                autoHeight
-                className="fs-summary__swiper"
-                observer
-                observeParents
-                observeSlideChildren
-                onSwiper={(swiper) => {
-                  summarySwiperLeftRef.current = swiper;
-                }}
-              >
-                <SwiperSlideComp>
-                  <div className="fs-summary__slide">
-                    <IonCardHeader className="fs-summary__hdr">
-                      <IonCardTitle>Weigh-in</IonCardTitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <p style={{ marginTop: 0 }}>
-                        Track your weight over time to see progress in Analytics.
-                      </p>
-                      <IonButton expand="block" onClick={openWeighInModal}>
-                        Log weigh-in
-                      </IonButton>
-                    </IonCardContent>
-                  </div>
-                </SwiperSlideComp>
-
-                <SwiperSlideComp>
-                  <div className="fs-summary__slide">
-                    <IonCardHeader className="fs-summary__hdr">
-                      <IonCardTitle>Water Intake</IonCardTitle>
-                    </IonCardHeader>
-                    <IonCardContent>
-                      <WaterIntake dateKey={activeDateKey} />
-                    </IonCardContent>
-                  </div>
-                </SwiperSlideComp>
-              </SwiperComp>
-            </IonCard>
-
-            {showAchievements || showWellnessTip ? (
-              <IonCard className="fs-summary fs-summary--split">
-                <SwiperComp
-                  modules={[PaginationMod as never]}
-                  pagination={{ clickable: true }}
-                  slidesPerView={1}
-                  autoHeight
-                  className="fs-summary__swiper"
-                  observer
-                  observeParents
-                  observeSlideChildren
-                  onSwiper={(swiper) => {
-                    summarySwiperRightRef.current = swiper;
-                    handleRightSummarySlideChange(swiper);
-                  }}
-                  onSlideChange={handleRightSummarySlideChange}
-                >
-                  {showAchievements && (
-                    <SwiperSlideComp>
-                      <div className="fs-summary__slide">
-                        <IonCardHeader className="fs-summary__hdr">
-                          <IonCardTitle>Achievements</IonCardTitle>
-                        </IonCardHeader>
-                        <IonCardContent>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                            {streakMilestones.map((target) => (
-                              <IonChip
-                                key={target}
-                                color={streak >= target ? "success" : "medium"}
-                              >
-                                {target}-day streak
-                              </IonChip>
-                            ))}
-                          </div>
-                          {nextStreakTarget ? (
-                            <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                              {nextStreakTarget - streak} more day
-                              {nextStreakTarget - streak === 1 ? "" : "s"} to unlock the{" "}
-                              {nextStreakTarget}-day badge.
-                            </IonText>
-                          ) : (
-                            <IonText color="medium" style={{ display: "block", marginTop: 8 }}>
-                              You’ve unlocked all streak badges 🎉
-                            </IonText>
-                          )}
-                        </IonCardContent>
-                      </div>
-                    </SwiperSlideComp>
-                  )}
-
-                  {showWellnessTip && (
-                    <SwiperSlideComp>
-                      <div className="fs-summary__slide">
-                        <IonCardHeader className="fs-tip-card__hdr">
-                          <div className="fs-tip-card__title">
-                            <IonIcon icon={bulbOutline} aria-hidden="true" />
-                            <IonCardTitle>Inspirational quote</IonCardTitle>
-                          </div>
-                        </IonCardHeader>
-                        <IonCardContent className="fs-tip-card__content">
-                          {quote ? (
-                            <>
-                              <p className="fs-tip-card__text">"{quote.quote}"</p>
-                              <IonText color="medium">— {quote.author}</IonText>
-                            </>
-                          ) : (
-                            <div style={{ textAlign: "center", padding: "20px 0" }}>
-                              <IonSpinner name="dots" />
-                              <IonText color="medium" style={{ display: "block", marginTop: 12 }}>
-                                Loading quote...
-                              </IonText>
-                            </div>
-                          )}
-                        </IonCardContent>
-                      </div>
-                    </SwiperSlideComp>
-                  )}
-                </SwiperComp>
-              </IonCard>
-            ) : (
-              <div />
-            )}
-          </div>
-        )}
-
         {loading && (
-          <div className="ion-text-center" style={{ padding: 24 }}>
+          <div className="ion-text-center fs-loading-block">
             <IonSpinner name="dots" />
           </div>
         )}
 
         {!loading && !anyItems && !hasEverLoggedFood && (
-          <div
-            style={{
-              marginTop: 24,
-              padding: 24,
-              textAlign: "center",
-              opacity: 0.9,
-            }}
-          >
-            <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700 }}>
+          <div className="fs-empty-state">
+            <h2 className="fs-empty-state__title">
               No foods logged yet
             </h2>
-            <p style={{ marginTop: 8, fontSize: "0.95rem" }}>
+            <p className="fs-empty-state__description">
               Tap any meal below to start adding foods and see your stats
               update.
             </p>
             <IonButton
-              style={{ marginTop: 12 }}
+              className="fs-empty-state__action"
               onClick={() => {
                 console.log(`[USER ACTION] Home: Clicked add your first food (empty state)`, {
                   date: activeDateKey,
@@ -2863,7 +2676,49 @@ const Home: React.FC = () => {
             );
           })}
 
+        {!loading && (
+          <div className="home-secondary-panels">
+            <IonCard className="home-panel">
+              <IonCardHeader className="home-panel__header">
+                <IonCardTitle>Hydration</IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent className="home-panel__content home-panel__content--water">
+                <WaterIntake dateKey={activeDateKey} />
+              </IonCardContent>
+            </IonCard>
+
+            {showWellnessTip && (
+              <IonCard className="home-panel">
+                <IonCardHeader className="home-panel__header">
+                  <div className="home-panel__title-row">
+                    <IonIcon icon={bulbOutline} aria-hidden="true" />
+                    <IonCardTitle>Daily quote</IonCardTitle>
+                  </div>
+                </IonCardHeader>
+                <IonCardContent className="home-panel__content home-panel__content--compact">
+                  {quote ? (
+                    <>
+                      <p className="home-quote">"{quote.quote}"</p>
+                      <IonText color="medium" className="home-quote__author">
+                        — {quote.author}
+                      </IonText>
+                    </>
+                  ) : (
+                    <div className="fs-quote-loading">
+                      <IonSpinner name="dots" />
+                      <IonText color="medium" className="fs-note-text fs-note-text--spaced">
+                        Loading quote...
+                      </IonText>
+                    </div>
+                  )}
+                </IonCardContent>
+              </IonCard>
+            )}
+          </div>
+        )}
+
         <IonActionSheet
+          className="home-action-sheet"
           isOpen={foodMenuEntry !== null}
           onDidDismiss={() => {
             setFoodMenuEntry(null);
@@ -2920,6 +2775,7 @@ const Home: React.FC = () => {
         />
 
         <IonActionSheet
+          className="home-action-sheet"
           isOpen={copyMenuMeal !== null}
           onDidDismiss={() => {
             setCopyMenuMeal(null);
@@ -2975,6 +2831,7 @@ const Home: React.FC = () => {
         />
 
         <IonActionSheet
+          className="home-action-sheet"
           isOpen={templateMenuMeal !== null}
           onDidDismiss={() => {
             setTemplateMenuMeal(null);
@@ -3010,6 +2867,7 @@ const Home: React.FC = () => {
         />
 
         <IonActionSheet
+          className="home-action-sheet"
           isOpen={dayMenuOpen}
           onDidDismiss={() => {
             setDayMenuOpen(false);
@@ -3177,7 +3035,7 @@ const Home: React.FC = () => {
             max={`${todayKey}T23:59:59`}
             onIonChange={(e) => handleDateChange(e.detail.value?.toString())}
           />
-          <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+          <div className="fs-date-picker-actions">
             <IonButton
               expand="block"
               fill="outline"

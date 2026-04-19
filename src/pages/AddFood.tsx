@@ -557,6 +557,7 @@ const AddFood: React.FC = () => {
   const [photoRemoved, setPhotoRemoved] = useState(false);
 
   // AI Photo Recognition state
+  const [isAiPhotoPreparing, setAiPhotoPreparing] = useState(false);
   const [isAiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
@@ -602,6 +603,7 @@ const AddFood: React.FC = () => {
   const contentRef = useRef<HTMLIonContentElement | null>(null);
   const resultsListRef = useRef<HTMLIonListElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const aiModelPreloadRef = useRef<Promise<void> | null>(null);
   const prevResultsLengthRef = useRef<number>(0);
   const prevResultsKeyRef = useRef<string | null>(null);
   const forceResultsScrollRef = useRef<boolean>(false);
@@ -663,10 +665,16 @@ const AddFood: React.FC = () => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
   }, [meal, dateKey]);
 
-  useEffect(() => {
-    void preloadFoodRecognitionModels().catch((error: unknown) => {
-      console.warn("[AI Photo] TensorFlow model preload failed:", error);
-    });
+  const ensureAiModelsReady = useCallback(async () => {
+    if (!aiModelPreloadRef.current) {
+      aiModelPreloadRef.current = preloadFoodRecognitionModels().catch(
+        (error: unknown) => {
+          aiModelPreloadRef.current = null;
+          throw error;
+        }
+      );
+    }
+    await aiModelPreloadRef.current;
   }, []);
 
   // When navigating from the "+" nav button (quickAdd=1), automatically show
@@ -1712,9 +1720,11 @@ const AddFood: React.FC = () => {
   };
 
   const takeAiPhoto = async () => {
+    setAiPhotoPreparing(true);
     try {
       console.log('[AI Photo] Starting photo capture...');
       trackEvent("ai_photo_camera_open", { meal, date: dateKey });
+      const modelPreloadPromise = ensureAiModelsReady();
       cleanupStalePwaCameraModal();
       
       // Check if PWA elements are available
@@ -1759,6 +1769,24 @@ const AddFood: React.FC = () => {
       }
 
       if (photo?.dataUrl) {
+        try {
+          await modelPreloadPromise;
+        } catch (error) {
+          console.error("[AI Photo] TensorFlow model initialization failed:", error);
+          setToast({
+            show: true,
+            message:
+              "AI setup is taking too long or failed. Please try again in a moment.",
+            color: "danger",
+          });
+          trackEvent("ai_photo_model_preload_error", {
+            meal,
+            date: dateKey,
+            error: String(error),
+          });
+          return;
+        }
+        setAiPhotoPreparing(false);
         await analyzeAiPhoto(photo.dataUrl);
       }
     } catch (err) {
@@ -1778,6 +1806,7 @@ const AddFood: React.FC = () => {
       });
       trackEvent("ai_photo_camera_error", { meal, date: dateKey, error: String(err) });
     } finally {
+      setAiPhotoPreparing(false);
       cleanupStalePwaCameraModal();
     }
   };
@@ -3092,10 +3121,10 @@ const AddFood: React.FC = () => {
                   console.log(`[USER ACTION] AddFood: AI Photo button clicked`);
                   await takeAiPhoto();
                 }}
-                disabled={isAiPhotoAnalyzing}
+                disabled={isAiPhotoAnalyzing || isAiPhotoPreparing}
                 aria-label="AI photo recognition"
               >
-                {isAiPhotoAnalyzing
+                {isAiPhotoAnalyzing || isAiPhotoPreparing
                   ? <IonSpinner name="crescent" style={{ width: 20, height: 20 }} />
                   : <IonIcon slot="icon-only" icon={cameraOutline} />}
               </IonButton>
