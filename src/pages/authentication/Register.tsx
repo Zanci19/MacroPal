@@ -13,7 +13,6 @@ import {
   IonLabel,
   IonToast,
   IonSpinner,
-  isPlatform,
 } from "@ionic/react";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -243,28 +242,14 @@ const Register: React.FC<RegisterProps> = ({
       }
 
       const provider = new GoogleAuthProvider();
-      const isMobileWeb = isPlatform("mobileweb");
-      const useRedirect = isMobileWeb;
       const popupFallbackCodes = new Set([
         "auth/operation-not-supported-in-this-environment",
         "auth/popup-blocked",
         "auth/cancelled-popup-request",
       ]);
       trackEvent("register_google_start", {
-        method: useRedirect ? "redirect" : "popup",
+        method: "popup_with_redirect_fallback",
       });
-
-      if (useRedirect) {
-        if (isMobileWeb && window.location.hostname === "localhost") {
-          showToast(
-            "Google sign-up doesn't work on localhost from a phone. Use your computer's LAN IP or the production URL.",
-            "warning"
-          );
-          return;
-        }
-        await signInWithRedirect(auth, provider);
-        return;
-      }
 
       try {
         const result = await signInWithPopup(auth, provider);
@@ -306,6 +291,12 @@ const Register: React.FC<RegisterProps> = ({
       }
       if (code === "auth/network-request-failed") {
         showToast("Network error. Check your connection and try again.");
+        return;
+      }
+      if (code === "auth/unauthorized-domain") {
+        showToast(
+          "Google sign-up isn't enabled for this URL yet. Add this domain in Firebase Authentication > Authorized domains."
+        );
         return;
       }
       if (code === "social_login_missing_tokens") {
@@ -356,7 +347,7 @@ const Register: React.FC<RegisterProps> = ({
               <IonInput
                 placeholder="Your name"
                 value={name}
-                onIonChange={(e) => {
+                onIonInput={(e) => {
                   console.log(`[USER ACTION] Register: Name input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -372,7 +363,7 @@ const Register: React.FC<RegisterProps> = ({
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onIonChange={(e) => {
+                onIonInput={(e) => {
                   console.log(`[USER ACTION] Register: Email input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -390,7 +381,7 @@ const Register: React.FC<RegisterProps> = ({
                 type="password"
                 placeholder="At least 8 characters, include a number"
                 value={pw}
-                onIonChange={(e) => {
+                onIonInput={(e) => {
                   console.log(`[USER ACTION] Register: Password input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,
@@ -407,7 +398,7 @@ const Register: React.FC<RegisterProps> = ({
                 type="password"
                 placeholder="Repeat your password"
                 value={pw2}
-                onIonChange={(e) => {
+                onIonInput={(e) => {
                   console.log(`[USER ACTION] Register: Confirm password input changed`, {
                     hasValue: !!e?.detail?.value,
                     length: e?.detail?.value?.length ?? 0,

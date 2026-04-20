@@ -13,7 +13,6 @@ import {
   IonText,
   IonToast,
   IonSpinner,
-  isPlatform,
 } from "@ionic/react";
 import { Capacitor } from "@capacitor/core";
 import {
@@ -459,28 +458,14 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       }
 
       const provider = new GoogleAuthProvider();
-      const isMobileWeb = isPlatform("mobileweb");
-      const useRedirect = isMobileWeb;
       const popupFallbackCodes = new Set([
         "auth/operation-not-supported-in-this-environment",
         "auth/popup-blocked",
         "auth/cancelled-popup-request",
       ]);
       trackEvent("login_google_start", {
-        method: useRedirect ? "redirect" : "popup",
+        method: "popup_with_redirect_fallback",
       });
-
-      if (useRedirect) {
-        if (isMobileWeb && window.location.hostname === "localhost") {
-          showToast(
-            "Google sign-in doesn't work on localhost from a phone. Use your computer's LAN IP or the production URL.",
-            "warning"
-          );
-          return;
-        }
-        await signInWithRedirect(auth, provider);
-        return;
-      }
 
       try {
         const result = await signInWithPopup(auth, provider);
@@ -528,6 +513,12 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       }
       if (code === "auth/network-request-failed") {
         showToast("Network error. Check your connection and try again.");
+        return;
+      }
+      if (code === "auth/unauthorized-domain") {
+        showToast(
+          "Google sign-in isn't enabled for this URL yet. Add this domain in Firebase Authentication > Authorized domains."
+        );
         return;
       }
       if (code === "social_login_missing_tokens") {

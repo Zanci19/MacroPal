@@ -79,6 +79,7 @@ const Start: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (authModalOpen) return;
     if (!activeMessage) return;
 
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -103,7 +104,7 @@ const Start: React.FC = () => {
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [activeMessage, displayMessage, isDeleting]);
+  }, [activeMessage, authModalOpen, displayMessage, isDeleting]);
 
   useEffect(() => {
     const rafId = window.requestAnimationFrame(fitMessageToLine);
