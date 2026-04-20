@@ -55,6 +55,9 @@ const importOffline = () => import("./pages/Offline");
 const importHome = () => import("./pages/home/Home");
 const importAnalytics = () => import("./pages/home/Analytics");
 const importSettings = () => import("./pages/home/Settings");
+const importHomeFeedPreferences = () => import("./pages/home/HomeFeedPreferences");
+const importAppearanceSettings = () => import("./pages/home/AppearanceSettings");
+const importDeleteAccount = () => import("./pages/home/DeleteAccount");
 const importFeedback = () => import("./pages/home/Feedback");
 const importEnergyNeeds = () => import("./pages/home/EnergyNeeds");
 const importUnits = () => import("./pages/home/Units");
@@ -85,6 +88,9 @@ const Offline = lazy(importOffline);
 const Home = lazy(importHome);
 const Analytics = lazy(importAnalytics);
 const Settings = lazy(importSettings);
+const HomeFeedPreferences = lazy(importHomeFeedPreferences);
+const AppearanceSettings = lazy(importAppearanceSettings);
+const DeleteAccount = lazy(importDeleteAccount);
 const Feedback = lazy(importFeedback);
 const EnergyNeeds = lazy(importEnergyNeeds);
 const Units = lazy(importUnits);
@@ -116,6 +122,9 @@ const LAZY_ROUTE_IMPORTS = [
   importHome,
   importAnalytics,
   importSettings,
+  importHomeFeedPreferences,
+  importAppearanceSettings,
+  importDeleteAccount,
   importFeedback,
   importEnergyNeeds,
   importUnits,
@@ -223,6 +232,7 @@ const DEFAULT_ANIMATION_DURATION_MS = 425;
 const ANDROID_ANIMATION_DURATION_MS = 250;
 const REDUCED_ANIMATION_DURATION_MS = 150;
 const QUICK_ADD_URL = "/add-food?quickAdd=1";
+const QUICK_ADD_TAB_URL = "/app/quick-add";
 const QUICK_ADD_ROUTE_ANIMATION: AnimationBuilder = (_baseEl, opts) => {
   const enteringEl = opts.enteringEl;
   const leavingEl = opts.leavingEl;
@@ -619,6 +629,9 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
         <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.root} render={(props) => <LazyRoute component={Settings} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.homeFeed} render={(props) => <LazyRoute component={HomeFeedPreferences} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.appearance} render={(props) => <LazyRoute component={AppearanceSettings} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.deleteAccount} render={(props) => <LazyRoute component={DeleteAccount} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.profile} render={(props) => <LazyRoute component={SetupProfile} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.changelog} render={(props) => <LazyRoute component={Changelog} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.feedback} render={(props) => <LazyRoute component={Feedback} {...props} />} />
@@ -638,6 +651,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
           path="/app/shared-user/:uid"
           render={({ match }) => <Redirect to={SETTINGS_ROUTES.sharedUser(match.params.uid)} />}
         />
+        <Route exact path={QUICK_ADD_TAB_URL} render={() => <Redirect to={QUICK_ADD_URL} />} />
         <Redirect exact from="/app" to="/app/home" />
       </IonRouterOutlet>
 
@@ -672,6 +686,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
         <IonTabButton
           tab="quick-add"
+          href={QUICK_ADD_TAB_URL}
           className="mp-tab-btn mp-tab-btn--add"
           onClick={(event) => {
             event.preventDefault();

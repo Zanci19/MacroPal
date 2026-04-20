@@ -21,6 +21,7 @@ import {
   refreshOutline,
   personAddOutline,
   eyeOutline,
+  eyeOffOutline,
   trashOutline,
   peopleOutline,
   timeOutline,
@@ -58,6 +59,7 @@ const Sharing: React.FC = () => {
     message: string;
     color?: string;
   }>({ show: false, message: "", color: "success" });
+  const [showUid, setShowUid] = useState(false);
   const [confirmRemoveShared, setConfirmRemoveShared] = useState<string | null>(null);
   const [confirmRemoveViewer, setConfirmRemoveViewer] = useState<string | null>(null);
 
@@ -206,7 +208,15 @@ const Sharing: React.FC = () => {
                   </p>
                 </IonText>
                 <div className="sharing-uid-box">
-                  <code>{user.uid}</code>
+                  <code>{showUid ? user.uid : `${user.uid.slice(0, 4)}••••••••${user.uid.slice(-4)}`}</code>
+                  <IonButton
+                    fill="clear"
+                    size="small"
+                    onClick={() => setShowUid((prev) => !prev)}
+                  >
+                    <IonIcon slot="start" icon={showUid ? eyeOffOutline : eyeOutline} />
+                    {showUid ? "Hide" : "Show"}
+                  </IonButton>
                 </div>
               </IonCardContent>
             </IonCard>

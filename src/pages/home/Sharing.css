@@ -41,7 +41,10 @@
   border: 1px solid var(--mp-border);
   border-radius: 8px;
   padding: 10px 14px;
-  overflow-x: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .sharing-uid-box code {
@@ -49,6 +52,12 @@
   font-size: 0.82rem;
   color: var(--mp-text-muted);
   word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}
+
+.sharing-uid-box ion-button {
+  margin: 0;
 }
 
 /* ── Pairing code display ──────────────── */

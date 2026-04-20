@@ -58,7 +58,15 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useDemoFirestore } from "../hooks/useDemoFirestore";
 
-import { calendarOutline, starOutline, trashOutline, cameraOutline, barcodeOutline, searchOutline } from "ionicons/icons";
+import {
+  calendarOutline,
+  starOutline,
+  trashOutline,
+  cameraOutline,
+  barcodeOutline,
+  searchOutline,
+  closeCircleOutline,
+} from "ionicons/icons";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import {
   recognizeFood,
@@ -76,6 +84,12 @@ import {
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
 import { computeGenericFoodBoost } from "../utils/genericFoodBoosts";
+import {
+  ADD_FOOD_RECENT_QUERY_KEY,
+  RECENT_QUERIES_CLEARED_EVENT,
+  clearAddFoodRecentQueries,
+} from "../utils/recentQueries";
+import { clearRecentFoodsHistory } from "../utils/recentFoods";
 import basicFoods from "../data/basicFoods.json";
 import "./AddFood.css";
 
@@ -243,13 +257,10 @@ type CustomMealPreset = {
   note?: string;
 };
 
-type Goal = "lose" | "maintain" | "gain";
-
 type ProfileFromFirestore = {
   age?: number | null;
   weight?: number | null;
   height?: number | null;
-  goal?: Goal;
   gender?: "male" | "female";
   activity?: "sedentary" | "light" | "moderate" | "very" | "extra";
   caloriesTarget?: number;
@@ -258,7 +269,6 @@ type ProfileFromFirestore = {
     fatG: number;
     carbsG: number;
   };
-  smartRecommendationEnabled?: boolean;
   showRecentItems?: boolean;
   showRecentSearches?: boolean;
 };
@@ -403,71 +413,9 @@ function useDateFromQuery(location: ReturnType<typeof useLocation>): string {
   return todayDateKey();
 }
 
-const PROTEIN_SUGGESTIONS: Record<Goal, string[]> = {
-  lose: [
-    "Greek yogurt (0–2% fat) with some berries",
-    "Tuna with cucumber or salad",
-    "Low-fat cottage cheese",
-    "Egg whites omelette with veggies",
-  ],
-  maintain: [
-    "Skyr or Greek yogurt with fruit",
-    "Chicken breast with rice cakes",
-    "Cottage cheese + piece of fruit",
-    "Protein shake with a banana",
-  ],
-  gain: [
-    "Chicken and rice bowl",
-    "Protein shake with oats and banana",
-    "Cottage cheese with honey and granola",
-    "Tuna sandwich on whole-grain bread",
-  ],
-};
-
-const CARB_SUGGESTIONS: Record<Goal, string[]> = {
-  lose: [
-    "Fruit (banana, apple, berries)",
-    "Oatmeal with a bit of honey",
-    "Whole-grain toast with some jam",
-    "Rice cakes with banana slices",
-  ],
-  maintain: [
-    "Oatmeal with milk and fruit",
-    "Rice or pasta with a light sauce",
-    "Whole-grain bread with toppings",
-    "Potatoes with veggies",
-  ],
-  gain: [
-    "Big bowl of oatmeal with milk and toppings",
-    "Rice / pasta with sauce and some cheese",
-    "Bagel with peanut butter and banana",
-    "Granola with yogurt and fruit",
-  ],
-};
-
-const FAT_SUGGESTIONS: Record<Goal, string[]> = {
-  lose: [
-    "Handful of nuts (almonds, walnuts)",
-    "Avocado on whole-grain toast",
-    "Olives with salad",
-  ],
-  maintain: ["Nuts & seeds mix", "Avocado + eggs on toast", "Cheese with whole-grain crackers"],
-  gain: [
-    "Peanut butter sandwich",
-    "Trail mix (nuts + dried fruit + chocolate)",
-    "Cheese and salami with bread",
-  ],
-};
-
 const MIN_RESULTS_VISIBILITY_PX = 120;
 const RESULTS_VISIBILITY_RATIO = 0.5;
 const RESULTS_SCROLL_OFFSET = 96;
-
-function pickRandom(list: string[]): string {
-  if (!list.length) return "";
-  const idx = Math.floor(Math.random() * list.length);
-  return list[idx];
-}
 
 const AddFood: React.FC = () => {
   const location = useLocation();
@@ -507,7 +455,6 @@ const AddFood: React.FC = () => {
     []
   );
 
-  const RECENT_QUERY_KEY = "mp_add_food_recent_queries";
   const RECENT_QUERY_LIMIT = 10;
 
   const [showMealPicker, setShowMealPicker] = useState(false);
@@ -576,28 +523,19 @@ const AddFood: React.FC = () => {
   const [mealPresetProtein, setMealPresetProtein] = useState("");
   const [mealPresetFat, setMealPresetFat] = useState("");
 
-  const [targets, setTargets] = useState<{
-    calories: number;
-    proteinG: number;
-    fatG: number;
-    carbsG: number;
-    goal: Goal;
-  } | null>(null);
-
-  const [dayTotals, setDayTotals] = useState<{
-    calories: number;
-    protein: number;
-    fat: number;
-    carbs: number;
-  } | null>(null);
-
-  const [showSmartRecommendation, setShowSmartRecommendation] = useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] =
     useState(true);
+  const [confirmClearRecentQueries, setConfirmClearRecentQueries] = useState(false);
+  const [confirmClearRecentItems, setConfirmClearRecentItems] = useState(false);
+  const [clearingRecentItems, setClearingRecentItems] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [lastSearchQuery, setLastSearchQuery] = useState("");
 
   const searchAbortRef = useRef<AbortController | null>(null);
-  const searchCacheRef = useRef<Map<string, OFFSearchHit[]>>(new Map());
+  const searchCacheRef = useRef<
+    Map<string, { results: OFFSearchHit[]; noMoreResults: boolean }>
+  >(new Map());
   const [recentQueries, setRecentQueries] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLIonInputElement | null>(null);
   const contentRef = useRef<HTMLIonContentElement | null>(null);
@@ -728,23 +666,9 @@ const AddFood: React.FC = () => {
         const data = snap.data() as { profile?: ProfileFromFirestore } | undefined;
         const p = data?.profile;
 
-        if (!p || !p.caloriesTarget || !p.macroTargets) {
+        if (!p) {
           return;
         }
-
-        setTargets({
-          calories: p.caloriesTarget,
-          proteinG: p.macroTargets.proteinG,
-          fatG: p.macroTargets.fatG,
-          carbsG: p.macroTargets.carbsG,
-          goal: (p.goal as Goal) || "maintain",
-        });
-
-        setShowSmartRecommendation(
-          typeof p.smartRecommendationEnabled === "boolean"
-            ? p.smartRecommendationEnabled
-            : true
-        );
 
         setShowRecentItemsEnabled(
           typeof p.showRecentItems === "boolean" ? p.showRecentItems : true
@@ -756,7 +680,8 @@ const AddFood: React.FC = () => {
 
         trackEvent("add_food_profile_targets_loaded", {
           uid: user.uid,
-          calories: p.caloriesTarget,
+          hasRecentItemsPref: typeof p.showRecentItems === "boolean",
+          hasRecentSearchesPref: typeof p.showRecentSearches === "boolean",
         });
       } catch (error: unknown) {
         const e = error as Error;
@@ -798,36 +723,17 @@ const AddFood: React.FC = () => {
             });
             autoMealPendingRef.current = false;
           }
-          setDayTotals({
-            calories: 0,
-            protein: 0,
-            fat: 0,
-            carbs: 0,
-          });
           return;
         }
 
         const data = snap.data() as DayDoc;
         const counts = createEmptyMealCounts();
-        let calories = 0;
-        let protein = 0;
-        let fat = 0;
-        let carbs = 0;
 
         MEAL_ORDER.forEach((mealKey) => {
           const arr = Array.isArray(data[mealKey]) ? data[mealKey] : [];
           counts[mealKey] = arr.length;
-          arr.forEach((item) => {
-            const t = item.total;
-            if (!t) return;
-            calories += Number(t.calories || 0);
-            carbs += Number(t.carbs || 0);
-            protein += Number(t.protein || 0);
-            fat += Number(t.fat || 0);
-          });
         });
 
-        setDayTotals({ calories, protein, fat, carbs });
         if (autoMealPendingRef.current) {
           const nextMeal = pickFirstEmptyMeal(counts);
           if (meal !== nextMeal) {
@@ -1307,7 +1213,7 @@ const AddFood: React.FC = () => {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(RECENT_QUERY_KEY);
+      const raw = localStorage.getItem(ADD_FOOD_RECENT_QUERY_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
@@ -1320,6 +1226,22 @@ const AddFood: React.FC = () => {
     } catch (e) {
       console.warn("Failed to load recent queries", e);
     }
+  }, []);
+
+  useEffect(() => {
+    const handleRecentQueriesCleared = () => {
+      setRecentQueries([]);
+    };
+    window.addEventListener(
+      RECENT_QUERIES_CLEARED_EVENT,
+      handleRecentQueriesCleared as EventListener
+    );
+    return () => {
+      window.removeEventListener(
+        RECENT_QUERIES_CLEARED_EVENT,
+        handleRecentQueriesCleared as EventListener
+      );
+    };
   }, []);
 
   const normalizeText = (text: string) =>
@@ -1360,7 +1282,7 @@ const AddFood: React.FC = () => {
         RECENT_QUERY_LIMIT
       );
       try {
-        localStorage.setItem(RECENT_QUERY_KEY, JSON.stringify(next));
+        localStorage.setItem(ADD_FOOD_RECENT_QUERY_KEY, JSON.stringify(next));
       } catch (e) {
         console.warn("Failed to persist recent queries", e);
       }
@@ -1371,9 +1293,69 @@ const AddFood: React.FC = () => {
   const clearRecentQueries = () => {
     console.log(`[USER ACTION] AddFood: Clear recent searches clicked`);
     setRecentQueries([]);
-    localStorage.removeItem(RECENT_QUERY_KEY);
+    clearAddFoodRecentQueries();
     trackEvent("recent_queries_cleared");
   };
+
+  const resetSearchResults = useCallback(() => {
+    searchAbortRef.current?.abort();
+    searchAbortRef.current = null;
+    setQuery("");
+    setResults([]);
+    setPage(1);
+    setNoMoreResults(false);
+    setHasSearched(false);
+    setLastSearchQuery("");
+    forceResultsScrollRef.current = false;
+    trackEvent("food_search_query_cleared", { meal, date: dateKey });
+  }, [dateKey, meal]);
+
+  const clearRecentItems = async () => {
+    const user = getCurrentUser();
+    if (!user) return;
+    console.log(`[USER ACTION] AddFood: Clear recent history chips clicked`);
+    setClearingRecentItems(true);
+    try {
+      await clearRecentFoodsHistory(user.uid);
+      setRecent([]);
+      setToast({
+        show: true,
+        message: "Quick history chips cleared.",
+        color: "success",
+      });
+      trackEvent("add_food_recent_items_cleared", { uid: user.uid });
+    } catch (error: unknown) {
+      const e = error as Error;
+      setToast({
+        show: true,
+        message: e?.message || "Could not clear quick history chips.",
+        color: "danger",
+      });
+      trackEvent("add_food_recent_items_clear_error", {
+        uid: user.uid,
+        error: e?.message || String(error),
+      });
+    } finally {
+      setClearingRecentItems(false);
+    }
+  };
+
+  const openBarcodeScanner = useCallback(() => {
+    console.log(`[USER ACTION] AddFood: Barcode scanner button clicked`, {
+      enabled: barcodeScannerEnabled,
+    });
+    if (!barcodeScannerEnabled) {
+      setToast({
+        show: true,
+        message: "Barcode scanner is temporarily unavailable.",
+        color: "warning",
+      });
+      trackEvent("barcode_scanner_disabled_click", { meal, date: dateKey });
+      return;
+    }
+    trackEvent("navigate_to_scan_barcode", { meal, date: dateKey });
+    history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`);
+  }, [barcodeScannerEnabled, dateKey, history, meal]);
 
   const hideKeyboard = useCallback(async () => {
     try {
@@ -1403,6 +1385,8 @@ const AddFood: React.FC = () => {
       });
       return 0;
     }
+    setHasSearched(true);
+    setLastSearchQuery(raw);
     forceResultsScrollRef.current = true;
 
     if (pageNumber === 1) {
@@ -1417,9 +1401,10 @@ const AddFood: React.FC = () => {
     const cacheKey = `${normalizedQuery}|${pageNumber}`;
     const cached = searchCacheRef.current.get(cacheKey);
     if (cached) {
-      setResults(cached);
+      setResults(cached.results);
       setPage(pageNumber);
-      return cached.length;
+      setNoMoreResults(cached.noMoreResults);
+      return cached.results.length;
     }
 
     searchAbortRef.current?.abort();
@@ -1512,7 +1497,10 @@ const AddFood: React.FC = () => {
         setResults(localResults);
         setPage(pageNumber);
         setNoMoreResults(true);
-        searchCacheRef.current.set(cacheKey, localResults);
+        searchCacheRef.current.set(cacheKey, {
+          results: localResults,
+          noMoreResults: true,
+        });
         recordRecentQuery(raw);
         if (localResults.length === 0) {
           setToast({
@@ -1597,7 +1585,10 @@ const AddFood: React.FC = () => {
       setPage(pageNumber);
       setNoMoreResults(!hasMorePages);
 
-      searchCacheRef.current.set(cacheKey, deduped);
+      searchCacheRef.current.set(cacheKey, {
+        results: deduped,
+        noMoreResults: !hasMorePages,
+      });
 
       recordRecentQuery(raw);
 
@@ -2894,71 +2885,6 @@ const AddFood: React.FC = () => {
     setShowMealPicker(false);
   }, [meal, dateKey, location.search, history]);
 
-  const recommendation = useMemo(() => {
-    if (!targets || !dayTotals) return null;
-
-    const remainingProtein = Math.max(0, targets.proteinG - dayTotals.protein);
-    const remainingCarbs = Math.max(0, targets.carbsG - dayTotals.carbs);
-    const remainingFat = Math.max(0, targets.fatG - dayTotals.fat);
-    const remainingCalories = Math.max(0, targets.calories - dayTotals.calories);
-
-    const goal: Goal = targets.goal || "maintain";
-
-    const entries = [
-      { key: "protein" as const, remaining: remainingProtein, target: targets.proteinG || 1 },
-      { key: "carbs" as const, remaining: remainingCarbs, target: targets.carbsG || 1 },
-      { key: "fat" as const, remaining: remainingFat, target: targets.fatG || 1 },
-    ];
-
-    if (
-      remainingCalories <= 80 &&
-      remainingProtein <= 5 &&
-      remainingCarbs <= 10 &&
-      remainingFat <= 5
-    ) {
-      return {
-        isClose: true,
-        message: "You’re very close to today’s targets 🎉",
-        remaining: {
-          calories: remainingCalories,
-          protein: remainingProtein,
-          carbs: remainingCarbs,
-          fat: remainingFat,
-        },
-        goal,
-      };
-    }
-
-    const sorted = entries
-      .filter((e) => e.target > 0)
-      .sort((a, b) => b.remaining / Math.max(1, b.target) - a.remaining / Math.max(1, a.target));
-
-    const focus = sorted[0];
-    if (!focus || focus.remaining < 3) {
-      return null;
-    }
-
-    let suggestionList: string[] = [];
-    if (focus.key === "protein") suggestionList = PROTEIN_SUGGESTIONS[goal];
-    else if (focus.key === "carbs") suggestionList = CARB_SUGGESTIONS[goal];
-    else suggestionList = FAT_SUGGESTIONS[goal];
-
-    const suggestion = pickRandom(suggestionList);
-
-    return {
-      isClose: false,
-      focusMacro: focus.key,
-      suggestion,
-      remaining: {
-        calories: remainingCalories,
-        protein: remainingProtein,
-        carbs: remainingCarbs,
-        fat: remainingFat,
-      },
-      goal,
-    };
-  }, [targets, dayTotals]);
-
   return (
     <IonPage>
       <IonHeader className="add-food-header">
@@ -3010,46 +2936,6 @@ const AddFood: React.FC = () => {
           </span>
         </IonChip>
 
-        {showSmartRecommendation && targets && dayTotals && recommendation && (
-          <IonCard className="mp-mb-md">
-            <IonCardHeader>
-              <IonCardTitle className="mp-text-base">Smart recommendation</IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>
-              {recommendation.isClose ? (
-                <>
-                  <p style={{ marginTop: 0, marginBottom: 6 }}>{recommendation.message}</p>
-                  <IonText color="medium" style={{ fontSize: 13 }}>
-                    Remaining today: {Math.round(recommendation.remaining.calories)} kcal · Carbohydrates{" "}
-                    {Math.round(recommendation.remaining.carbs)} g · Protein{" "}
-                    {Math.round(recommendation.remaining.protein)} g · Fat{" "}
-                    {Math.round(recommendation.remaining.fat)} g
-                  </IonText>
-                </>
-              ) : (
-                <>
-                  <p style={{ marginTop: 0, marginBottom: 6 }}>
-                    Based on your goal <strong>{recommendation.goal}</strong> and what you’ve already eaten today,
-                    you’re still missing some <strong>{recommendation.focusMacro}</strong>.
-                  </p>
-                  {recommendation.suggestion && (
-                    <p style={{ marginTop: 0, marginBottom: 6 }}>
-                      For <strong>{meal}</strong> (or a snack) you could try:{" "}
-                      <strong>{recommendation.suggestion}</strong>.
-                    </p>
-                  )}
-                  <IonText color="medium" style={{ fontSize: 13 }}>
-                    Remaining today: {Math.round(recommendation.remaining.calories)} kcal · Carbohydrates{" "}
-                    {Math.round(recommendation.remaining.carbs)} g · Protein{" "}
-                    {Math.round(recommendation.remaining.protein)} g · Fat{" "}
-                    {Math.round(recommendation.remaining.fat)} g
-                  </IonText>
-                </>
-              )}
-            </IonCardContent>
-          </IonCard>
-        )}
-
         <IonSegment
           className="add-food-mode-segment"
           value={tab}
@@ -3096,20 +2982,7 @@ const AddFood: React.FC = () => {
                 fill="clear"
                 className="fs-search-bar__action"
                 color="medium"
-                onClick={() => {
-                  console.log(`[USER ACTION] AddFood: Barcode scanner button clicked`, { enabled: barcodeScannerEnabled });
-                  if (!barcodeScannerEnabled) {
-                    setToast({
-                      show: true,
-                      message: "Barcode scanner is temporarily unavailable.",
-                      color: "warning",
-                    });
-                    trackEvent("barcode_scanner_disabled_click", { meal, date: dateKey });
-                    return;
-                  }
-                  trackEvent("navigate_to_scan_barcode", { meal, date: dateKey });
-                  history.push(`/scan-barcode?meal=${meal}&date=${dateKey}`);
-                }}
+                onClick={openBarcodeScanner}
                 aria-label="Barcode scanner"
               >
                 <IonIcon slot="icon-only" icon={barcodeOutline} />
@@ -3128,6 +3001,18 @@ const AddFood: React.FC = () => {
                   ? <IonSpinner name="crescent" style={{ width: 20, height: 20 }} />
                   : <IonIcon slot="icon-only" icon={cameraOutline} />}
               </IonButton>
+              {!!query.trim() && (
+                <IonButton
+                  fill="clear"
+                  className="fs-search-bar__action"
+                  color="medium"
+                  onClick={resetSearchResults}
+                  disabled={loading}
+                  aria-label="Clear search query"
+                >
+                  <IonIcon slot="icon-only" icon={closeCircleOutline} />
+                </IonButton>
+              )}
             </div>
 
             <IonButton
@@ -3160,7 +3045,7 @@ const AddFood: React.FC = () => {
                   <IonButton
                     size="small"
                     fill="clear"
-                    onClick={clearRecentQueries}
+                    onClick={() => setConfirmClearRecentQueries(true)}
                     className="mp-mr-sm"
                   >
                     Clear
@@ -3186,12 +3071,20 @@ const AddFood: React.FC = () => {
 
             {showRecentItemsEnabled && recent.length > 0 && showRecent && (
               <div className="add-food-favorites-section">
-                <IonText
-                  color="medium"
-                  className="add-food-section-text"
-                >
-                  From your history
-                </IonText>
+                <div className="add-food-section-header">
+                  <IonText color="medium" className="add-food-section-text">
+                    From your history
+                  </IonText>
+                  <IonButton
+                    size="small"
+                    fill="clear"
+                    disabled={clearingRecentItems}
+                    onClick={() => setConfirmClearRecentItems(true)}
+                    className="mp-mr-sm"
+                  >
+                    Clear
+                  </IonButton>
+                </div>
                 <div className="add-food-chips-container">
                   {recent.map((r) => (
                     <IonChip
@@ -3218,6 +3111,15 @@ const AddFood: React.FC = () => {
                     </IonChip>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {results.length > 0 && (
+              <div className="add-food-results-meta">
+                <IonText color="medium">
+                  {results.length} results • Page {page}
+                  {noMoreResults ? " • End of results" : ""}
+                </IonText>
               </div>
             )}
 
@@ -3259,6 +3161,44 @@ const AddFood: React.FC = () => {
 
             {noMoreResults && results.length > 0 && (
               <p className="add-food-end-of-results">You've reached the end!</p>
+            )}
+
+            {!loading && hasSearched && results.length === 0 && (
+              <IonCard className="add-food-search-helper add-food-search-helper--no-results">
+                <IonCardContent>
+                  <IonText color="medium" className="add-food-search-helper__label">
+                    No results for "{lastSearchQuery}"
+                  </IonText>
+                  <p className="add-food-search-helper__title">Try another way to add your food</p>
+                  <div className="add-food-search-helper__actions">
+                    <IonButton fill="outline" size="small" onClick={openBarcodeScanner}>
+                      Scan barcode
+                    </IonButton>
+                    <IonButton
+                      size="small"
+                      onClick={async () => {
+                        await takeAiPhoto();
+                      }}
+                      disabled={isAiPhotoAnalyzing || isAiPhotoPreparing}
+                    >
+                      Use AI photo
+                    </IonButton>
+                  </div>
+                </IonCardContent>
+              </IonCard>
+            )}
+
+            {!loading && !hasSearched && !query.trim() && (
+              <IonCard className="add-food-search-helper">
+                <IonCardContent>
+                  <IonText color="medium" className="add-food-search-helper__label">
+                    Quick tip
+                  </IonText>
+                  <p className="add-food-search-helper__title">
+                    Search by food name, scan a barcode, or use AI photo for the fastest logging.
+                  </p>
+                </IonCardContent>
+              </IonCard>
             )}
           </>
         )}
@@ -3964,6 +3904,64 @@ const AddFood: React.FC = () => {
         />
 
         <IonAlert
+          isOpen={confirmClearRecentQueries}
+          header="Clear recent searches?"
+          message={`Remove ${recentQueries.length} ${
+            recentQueries.length === 1 ? "search" : "searches"
+          } from this device?`}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                console.log(`[USER ACTION] AddFood: Clear recent searches alert cancelled`);
+                setConfirmClearRecentQueries(false);
+              },
+            },
+            {
+              text: "Clear",
+              role: "destructive",
+              handler: () => {
+                console.log(`[USER ACTION] AddFood: Clear recent searches confirmed`);
+                setConfirmClearRecentQueries(false);
+                clearRecentQueries();
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setConfirmClearRecentQueries(false);
+          }}
+        />
+
+        <IonAlert
+          isOpen={confirmClearRecentItems}
+          header="Clear quick history chips?"
+          message={`Remove ${recent.length} ${
+            recent.length === 1 ? "chip" : "chips"
+          } from Add Food search history?`}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setConfirmClearRecentItems(false);
+              },
+            },
+            {
+              text: "Clear",
+              role: "destructive",
+              handler: () => {
+                setConfirmClearRecentItems(false);
+                void clearRecentItems();
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setConfirmClearRecentItems(false);
+          }}
+        />
+
+        <IonAlert
           isOpen={!!favoriteToDelete}
           header="Delete favorite?"
           message={
@@ -4243,11 +4241,11 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                disabled={page <= 1 || loading}
+                disabled={page <= 1 || loading || !lastSearchQuery}
                 onClick={() => {
                   console.log(`[USER ACTION] AddFood: Previous page button clicked`, { currentPage: page });
-                  trackEvent("food_search_page_prev", { page, query });
-                  foodsSearch(query.trim(), page - 1);
+                  trackEvent("food_search_page_prev", { page, query: lastSearchQuery });
+                  foodsSearch(lastSearchQuery, page - 1);
                 }}
               >
                 ← Prev
@@ -4255,11 +4253,11 @@ const AddFood: React.FC = () => {
               <IonButton
                 expand="block"
                 fill="outline"
-                disabled={loading || noMoreResults}
+                disabled={loading || noMoreResults || !lastSearchQuery}
                 onClick={() => {
                   console.log(`[USER ACTION] AddFood: Next page button clicked`, { currentPage: page });
-                  trackEvent("food_search_page_next", { page, query });
-                  foodsSearch(query.trim(), page + 1);
+                  trackEvent("food_search_page_next", { page, query: lastSearchQuery });
+                  foodsSearch(lastSearchQuery, page + 1);
                 }}
               >
                 Next →

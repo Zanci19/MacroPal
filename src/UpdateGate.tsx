@@ -167,8 +167,20 @@ const UpdateGate: React.FC<UpdateGateProps> = ({ children }) => {
             currentVersion: APP_VERSION,
           });
         }
-      } catch (e) {
-        console.error("update-check error:", e);
+      } catch (error) {
+        const code =
+          typeof error === "object" && error !== null && "code" in error
+            ? String((error as { code?: unknown }).code ?? "")
+            : "";
+
+        if (code === "permission-denied") {
+          trackEvent("update_check_permission_denied", {
+            currentVersion: APP_VERSION,
+          });
+          return;
+        }
+
+        console.error("update-check error:", error);
       }
     };
 

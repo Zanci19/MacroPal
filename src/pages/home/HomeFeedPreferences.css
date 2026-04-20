@@ -1,0 +1,19 @@
+.home-feed-preferences-page ion-card {
+  margin: 0;
+}
+
+.home-feed-preferences-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--mp-text);
+}
+
+.home-feed-preferences-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  gap: 10px;
+  color: var(--mp-text-muted);
+}

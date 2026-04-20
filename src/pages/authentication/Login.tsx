@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   IonPage,
   IonHeader,
@@ -27,6 +27,16 @@ import {
   getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
+  getMultiFactorResolver,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  TotpMultiFactorGenerator,
+  RecaptchaVerifier,
+  type MultiFactorError,
+  type User,
+  type MultiFactorResolver,
+  type PhoneMultiFactorInfo,
+  type TotpMultiFactorInfo,
 } from "firebase/auth";
 import { auth, trackEvent } from "../../firebase";
 import { useHistory, type RouteComponentProps } from "react-router-dom";
@@ -39,6 +49,8 @@ type LoginProps = {
   onSwitchToRegister?: () => void;
 } & Partial<RouteComponentProps>;
 
+type MfaChallengeMethod = "sms" | "authenticator";
+
 const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) => {
   const history = useHistory();
 
@@ -50,6 +62,15 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_failedAttempts, setFailedAttempts] = useState(0);
   const [lockUntil, setLockUntil] = useState<number | null>(null);
+  const [mfaResolver, setMfaResolver] = useState<MultiFactorResolver | null>(null);
+  const [mfaMethod, setMfaMethod] = useState<MfaChallengeMethod | null>(null);
+  const [mfaVerificationId, setMfaVerificationId] = useState<string | null>(null);
+  const [mfaTotpEnrollmentId, setMfaTotpEnrollmentId] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaMaskedPhone, setMfaMaskedPhone] = useState<string | null>(null);
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const mfaRecaptchaContainerRef = useRef<HTMLDivElement | null>(null);
+  const mfaRecaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   const [toast, setToast] = React.useState<{
     show: boolean;
@@ -66,7 +87,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     color: "success",
   });
 
-  const showToast = (
+  const showToast = React.useCallback((
     message: string,
     color: "success" | "danger" | "warning" = "danger",
     buttons?: {
@@ -74,7 +95,213 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       role?: "cancel" | "destructive";
       handler?: () => void;
     }[]
-  ) => setToast({ show: true, message, color, buttons });
+  ) => setToast({ show: true, message, color, buttons }), []);
+
+  const clearMfaRecaptcha = React.useCallback(() => {
+    if (!mfaRecaptchaVerifierRef.current) return;
+    try {
+      mfaRecaptchaVerifierRef.current.clear();
+    } catch (error) {
+      console.warn("Failed to clear login MFA reCAPTCHA verifier:", error);
+    } finally {
+      mfaRecaptchaVerifierRef.current = null;
+    }
+  }, []);
+
+  const resetMfaChallenge = React.useCallback(() => {
+    setMfaResolver(null);
+    setMfaMethod(null);
+    setMfaVerificationId(null);
+    setMfaTotpEnrollmentId(null);
+    setMfaCode("");
+    setMfaMaskedPhone(null);
+  }, []);
+
+  const ensureMfaRecaptcha = React.useCallback(async () => {
+    const container = mfaRecaptchaContainerRef.current;
+    if (!container) {
+      throw new Error("Security challenge is not ready. Please reload and try again.");
+    }
+
+    if (mfaRecaptchaVerifierRef.current) {
+      return mfaRecaptchaVerifierRef.current;
+    }
+
+    const verifier = new RecaptchaVerifier(auth, container, {
+      size: "invisible",
+    });
+    await verifier.render();
+    mfaRecaptchaVerifierRef.current = verifier;
+    return verifier;
+  }, []);
+
+  const finalizeLogin = async (signedInUser: User) => {
+    setFailedAttempts(0);
+    setLockUntil(null);
+
+    trackEvent("login_credentials_valid", {
+      uid: signedInUser.uid,
+      email_verified: signedInUser.emailVerified,
+    });
+
+    if (!signedInUser.emailVerified) {
+      const userForEmail = signedInUser;
+      const resend = async () => {
+        try {
+          await sendEmailVerification(userForEmail);
+          trackEvent("verification_email_resent_from_login", {
+            uid: userForEmail.uid,
+          });
+          showToast(
+            "Verification email sent. Please check your inbox.",
+            "success"
+          );
+        } catch (e) {
+          trackEvent("verification_email_resend_error_from_login", {
+            uid: userForEmail.uid,
+          });
+          showToast("Could not send verification email. Try again later.");
+          console.error(e);
+        }
+      };
+
+      await signOut(auth);
+      trackEvent("login_blocked_unverified_email", {
+        uid: userForEmail.uid,
+      });
+      showToast("Please verify your email to continue.", "warning", [
+        { text: "Resend email", handler: resend },
+      ]);
+      return;
+    }
+
+    trackEvent("login_success", { uid: signedInUser.uid });
+    showToast("Welcome back!", "success");
+    history.replace("/auth-loading");
+  };
+
+  const beginMfaSignInChallenge = React.useCallback(async (
+    error: MultiFactorError,
+    method: "password" | "google"
+  ) => {
+    try {
+      const resolver = getMultiFactorResolver(auth, error);
+      const phoneHints = resolver.hints.filter(
+        (hint) => hint.factorId === PhoneMultiFactorGenerator.FACTOR_ID
+      ) as PhoneMultiFactorInfo[];
+      const totpHints = resolver.hints.filter(
+        (hint) => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID
+      ) as TotpMultiFactorInfo[];
+
+      if (phoneHints.length > 0) {
+        const selectedHint = phoneHints[0];
+        const verifier = await ensureMfaRecaptcha();
+        const provider = new PhoneAuthProvider(auth);
+        const verificationId = await provider.verifyPhoneNumber(
+          {
+            multiFactorHint: selectedHint,
+            session: resolver.session,
+          },
+          verifier
+        );
+
+        setMfaResolver(resolver);
+        setMfaMethod("sms");
+        setMfaVerificationId(verificationId);
+        setMfaTotpEnrollmentId(null);
+        setMfaMaskedPhone(selectedHint.phoneNumber ?? null);
+        setMfaCode("");
+        trackEvent("login_mfa_challenge_sent", {
+          method,
+          factor_count: resolver.hints.length,
+          factor_type: "sms",
+        });
+        showToast(
+          `Enter the verification code sent${selectedHint.phoneNumber ? ` to ${selectedHint.phoneNumber}` : ""}.`,
+          "success"
+        );
+        return;
+      }
+
+      if (totpHints.length > 0) {
+        const selectedHint = totpHints[0];
+        setMfaResolver(resolver);
+        setMfaMethod("authenticator");
+        setMfaVerificationId(null);
+        setMfaTotpEnrollmentId(selectedHint.uid);
+        setMfaMaskedPhone(null);
+        setMfaCode("");
+        trackEvent("login_mfa_challenge_sent", {
+          method,
+          factor_count: resolver.hints.length,
+          factor_type: "authenticator",
+        });
+        showToast("Enter the code from your Authenticator app.", "success");
+        return;
+      }
+
+      throw new Error("This account requires a second factor that this app does not support yet.");
+    } catch (challengeError) {
+      const err =
+        challengeError instanceof Error
+          ? challengeError
+          : new Error(String(challengeError ?? "Unknown MFA challenge error"));
+      trackEvent("login_mfa_challenge_error", {
+        method,
+        error: err.message,
+      });
+      showToast(handleError("login_mfa_challenge", err));
+      resetMfaChallenge();
+      clearMfaRecaptcha();
+    }
+  }, [clearMfaRecaptcha, ensureMfaRecaptcha, resetMfaChallenge, showToast]);
+
+  const handleCompleteMfaSignIn = async () => {
+    if (!mfaResolver || !mfaMethod) return;
+    const code = mfaCode.trim();
+    const codePattern = mfaMethod === "authenticator" ? /^\d{6,8}$/ : /^\d{6}$/;
+    if (!codePattern.test(code)) {
+      showToast(
+        mfaMethod === "authenticator"
+          ? "Enter a valid code from your Authenticator app."
+          : "Enter the 6-digit verification code.",
+        "warning"
+      );
+      return;
+    }
+
+    setMfaBusy(true);
+    try {
+      const assertion =
+        mfaMethod === "authenticator"
+          ? (() => {
+              if (!mfaTotpEnrollmentId) {
+                throw new Error("Authenticator verification is missing. Start the challenge again.");
+              }
+              return TotpMultiFactorGenerator.assertionForSignIn(mfaTotpEnrollmentId, code);
+            })()
+          : (() => {
+              if (!mfaVerificationId) {
+                throw new Error("SMS verification is missing. Start the challenge again.");
+              }
+              const credential = PhoneAuthProvider.credential(mfaVerificationId, code);
+              return PhoneMultiFactorGenerator.assertion(credential);
+            })();
+      const cred = await mfaResolver.resolveSignIn(assertion);
+      resetMfaChallenge();
+      await finalizeLogin(cred.user);
+      trackEvent("login_mfa_success", { uid: cred.user.uid, factor_type: mfaMethod });
+    } catch (error: unknown) {
+      const err = error as Error;
+      trackEvent("login_mfa_error", {
+        error: err?.message || "unknown",
+        factor_type: mfaMethod,
+      });
+      showToast(handleError("login_mfa_verify", err));
+    } finally {
+      setMfaBusy(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -95,6 +322,10 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
           // No pending redirect result; safe to ignore on some environments.
           return;
         }
+        if (err?.code === "auth/multi-factor-auth-required") {
+          await beginMfaSignInChallenge(err as MultiFactorError, "google");
+          return;
+        }
         trackEvent("login_google_error", { code: err?.code || "unknown" });
         showToast(handleError("login", err));
       } finally {
@@ -109,7 +340,13 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     return () => {
       active = false;
     };
-  }, [history]);
+  }, [beginMfaSignInChallenge, history, showToast]);
+
+  useEffect(() => {
+    return () => {
+      clearMfaRecaptcha();
+    };
+  }, [clearMfaRecaptcha]);
 
   const handleLogin = async () => {
     console.log(`[USER ACTION] Login: Clicked login button`, {
@@ -119,6 +356,10 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     });
     
     if (busy) return;
+    if (mfaResolver) {
+      showToast("Complete the 2FA verification step below.", "warning");
+      return;
+    }
 
     const trimmedEmail = email.trim();
     const trimmedPw = pw.trim();
@@ -150,51 +391,15 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     setBusy(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPw);
+      await finalizeLogin(cred.user);
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
 
-      setFailedAttempts(0);
-      setLockUntil(null);
-
-      trackEvent("login_credentials_valid", {
-        uid: cred.user.uid,
-        email_verified: cred.user.emailVerified,
-      });
-
-      if (!cred.user.emailVerified) {
-        const userForEmail = cred.user;
-        const resend = async () => {
-          try {
-            await sendEmailVerification(userForEmail);
-            trackEvent("verification_email_resent_from_login", {
-              uid: userForEmail.uid,
-            });
-            showToast(
-              "Verification email sent. Please check your inbox.",
-              "success"
-            );
-          } catch (e) {
-            trackEvent("verification_email_resend_error_from_login", {
-              uid: userForEmail.uid,
-            });
-            showToast("Could not send verification email. Try again later.");
-            console.error(e);
-          }
-        };
-
-        await signOut(auth);
-        trackEvent("login_blocked_unverified_email", {
-          uid: userForEmail.uid,
-        });
-        showToast("Please verify your email to continue.", "warning", [
-          { text: "Resend email", handler: resend },
-        ]);
+      if (err?.code === "auth/multi-factor-auth-required") {
+        await beginMfaSignInChallenge(err as MultiFactorError, "password");
         return;
       }
 
-      trackEvent("login_success", { uid: cred.user.uid });
-      showToast("Welcome back!", "success");
-      history.replace("/auth-loading");
-    } catch (error: unknown) {
-      const err = error as Error & { code?: string };
       let message = "";
 
       if (
@@ -300,6 +505,12 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       const err = error as Error & { code?: string };
       const code = err?.code || "unknown";
       const message = typeof err?.message === "string" ? err.message : "";
+
+      if (code === "auth/multi-factor-auth-required") {
+        await beginMfaSignInChallenge(err as MultiFactorError, "google");
+        return;
+      }
+
       trackEvent("login_google_error", { code });
       if (code === "auth/invalid-credential") {
         showToast(
@@ -423,10 +634,64 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
               expand="block"
               className="login-button"
               onClick={handleLogin}
-              disabled={busy}
+              disabled={busy || mfaBusy}
             >
-              {busy ? <IonSpinner name="dots" /> : "Log In"}
+              {busy ? <IonSpinner name="dots" /> : mfaResolver ? "Enter 2FA code below" : "Log In"}
             </IonButton>
+
+            {mfaResolver && (
+              <div className="login-mfa-block">
+                <IonText color="medium">
+                  <p className="login-mfa-hint">
+                    {mfaMethod === "authenticator"
+                      ? "Enter the code from your Authenticator app."
+                      : `Enter the 6-digit code sent${mfaMaskedPhone ? ` to ${mfaMaskedPhone}` : " to your phone"}.`}
+                  </p>
+                </IonText>
+                <IonItem lines="none" className="login-item">
+                  <IonLabel position="stacked">Verification code</IonLabel>
+                  <IonInput
+                    type="tel"
+                    inputmode="numeric"
+                    maxlength={mfaMethod === "authenticator" ? 8 : 6}
+                    value={mfaCode}
+                    placeholder={mfaMethod === "authenticator" ? "Authenticator code" : "6-digit code"}
+                    onIonInput={(event) => {
+                      const next = (event.detail.value ?? "")
+                        .replace(/[^\d]/g, "")
+                        .slice(0, mfaMethod === "authenticator" ? 8 : 6);
+                      setMfaCode(next);
+                    }}
+                  />
+                </IonItem>
+                <div className="login-mfa-actions">
+                  <IonButton
+                    expand="block"
+                    className="login-button"
+                    onClick={() => {
+                      void handleCompleteMfaSignIn();
+                    }}
+                    disabled={
+                      mfaBusy ||
+                      (mfaMethod === "authenticator"
+                        ? mfaCode.trim().length < 6
+                        : mfaCode.trim().length !== 6)
+                    }
+                  >
+                    {mfaBusy ? <IonSpinner name="dots" /> : "Verify & continue"}
+                  </IonButton>
+                  <IonButton
+                    expand="block"
+                    fill="clear"
+                    color="medium"
+                    onClick={resetMfaChallenge}
+                    disabled={mfaBusy}
+                  >
+                    Cancel 2FA
+                  </IonButton>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="login-divider">
@@ -438,7 +703,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
             fill="outline"
             className="login-google-button"
             onClick={handleGoogleLogin}
-            disabled={busy}
+            disabled={busy || mfaBusy || !!mfaResolver}
           >
             <IonIcon icon={logoGoogle} slot="start" />
             Sign in with Google
@@ -466,6 +731,8 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
             </IonButton>
           </div>
         </div>
+
+        <div ref={mfaRecaptchaContainerRef} className="login-mfa-recaptcha" aria-hidden="true" />
 
         <IonToast
           isOpen={toast.show}

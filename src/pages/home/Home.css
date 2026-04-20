@@ -152,6 +152,20 @@ body:not(.dark) .fs-datepicker,
   padding: 0;
 }
 
+.home-date-shortcut {
+  display: flex;
+  justify-content: center;
+  margin-top: -8px;
+  margin-bottom: 10px;
+}
+
+.home-date-shortcut ion-button {
+  --padding-start: 10px;
+  --padding-end: 10px;
+  text-transform: none;
+  font-weight: 600;
+}
+
 .fs-datebar ion-button[fill="clear"] {
   --padding-start: 4px;
   --padding-end: 4px;
@@ -1233,4 +1247,92 @@ body.dark .fs-macro__val {
 
 .home-action-sheet .action-sheet-wrapper {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--softkey-inset, 0px));
+}
+
+/* ---- Visual polish pass ---- */
+
+.home-content {
+  background:
+    radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--ion-color-primary) 8%, transparent), transparent 46%),
+    radial-gradient(circle at 88% -12%, color-mix(in srgb, var(--ion-color-secondary) 8%, transparent), transparent 40%),
+    var(--mp-bg);
+}
+
+.fs-greeting__text {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--mp-surface-muted) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mp-border) 88%, transparent);
+}
+
+.fs-datebar {
+  margin-bottom: 14px;
+}
+
+.home-overview-card,
+.home-panel,
+.fs-meal,
+.fs-empty-state {
+  box-shadow: var(--mp-shadow-soft);
+}
+
+.home-overview-card,
+.home-panel,
+.fs-meal {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-overview-card:hover,
+  .home-panel:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--mp-shadow-strong);
+    border-color: color-mix(in srgb, var(--ion-color-primary) 24%, var(--mp-border));
+  }
+}
+
+.fs-summary__nutrition-item {
+  padding: 10px 12px;
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--mp-surface-muted) 74%, var(--mp-surface));
+}
+
+.fs-summary__nutrition-label {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.home-overview-actions ion-button {
+  --border-radius: 12px;
+}
+
+.home-overview-actions ion-button:not([fill]) {
+  --box-shadow: 0 8px 16px color-mix(in srgb, var(--ion-color-primary) 22%, transparent);
+}
+
+.home-secondary-panels {
+  margin-top: 12px;
+  gap: 12px;
+}
+
+.home-quote {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.home-quote__author {
+  margin-top: 8px;
+  font-size: 0.84rem;
+}
+
+.fs-empty-state {
+  border-radius: var(--mp-r-card);
+  border: 1px dashed color-mix(in srgb, var(--ion-color-primary) 32%, var(--mp-border));
+  background: color-mix(in srgb, var(--mp-surface) 94%, var(--ion-color-primary) 6%);
+}
+
+.fs-empty-state__action {
+  --border-radius: 12px;
 }

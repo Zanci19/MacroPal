@@ -166,3 +166,26 @@ body .login-page.login-page--embedded {
   font-size: 0.9rem;
   color: var(--mp-primary);
 }
+
+.login-mfa-block {
+  margin-top: 8px;
+}
+
+.login-mfa-hint {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+}
+
+.login-mfa-actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.login-mfa-recaptcha {
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}

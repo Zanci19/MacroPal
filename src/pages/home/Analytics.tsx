@@ -18,18 +18,12 @@ import {
   IonLabel,
   IonSpinner,
   IonButton,
-  IonIcon,
-  IonActionSheet,
   IonRefresher,
   IonRefresherContent,
   type RefresherEventDetail,
   useIonViewDidEnter,
   useIonViewDidLeave,
 } from "@ionic/react";
-import { shareOrDownload } from "../../utils/exportUtils";
-import {
-  downloadOutline,
-} from "ionicons/icons";
 
 import { db, trackEvent } from "../../firebase";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
@@ -197,7 +191,6 @@ const Analytics: React.FC = () => {
   // Track how many days have been fetched so we don't re-fetch smaller ranges
   const fetchedCountRef = useRef(0);
   const [weightEntries, setWeightEntries] = useState<WeighInEntry[]>([]);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isViewActive, setIsViewActive] = useState(true);
   const unitSystem = getUnitSystem(profile?.units);
   const chartsEnabled = isViewActive;
@@ -609,99 +602,6 @@ const Analytics: React.FC = () => {
     history.push(`/app/home?date=${date}`);
   };
 
-  // export
-  const buildPdf = (content: string) => {
-    const escaped = content
-      .replace(/\\/g, "\\\\")
-      .replace(/\(/g, "\\(")
-      .replace(/\)/g, "\\)");
-    const lines = escaped.split("\n");
-    const textBlock = lines
-      .map((line, idx) => `${idx === 0 ? "" : "T* "}(${line}) Tj`)
-      .join("\n");
-
-    const objects: string[] = [];
-    objects.push("1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj");
-    objects.push("2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj");
-    objects.push(
-      "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj"
-    );
-    objects.push(
-      `4 0 obj << /Length ${textBlock.length + 63} >> stream\nBT\n/F1 12 Tf\n72 760 Td\n14 TL\n${textBlock}\nET\nendstream\nendobj`
-    );
-    objects.push(
-      "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj"
-    );
-
-    let offset = 0;
-    const xref = ["0000000000 65535 f "];
-    const body = objects
-      .map((obj) => {
-        const entry = `${offset}`.padStart(10, "0") + " 00000 n ";
-        xref.push(entry);
-        const chunk = `${obj}\n`;
-        offset += chunk.length;
-        return chunk;
-      })
-      .join("");
-
-    const xrefOffset = offset;
-    const xrefTable = `xref\n0 ${xref.length}\n${xref.join("\n")}\n`;
-    const trailer = `trailer << /Size ${xref.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-    return `%PDF-1.4\n${body}${xrefTable}${trailer}`;
-  };
-
-  const exportPDF = async () => {
-    const header = `MacroPal Summary (${tf})`;
-    const rows = dayTable.map(
-      (r) =>
-        `${r.date} | ${r.calories} kcal | C ${r.carbs} g | P ${r.protein} g | F ${r.fat} g`
-    );
-    const footer = `Totals: ${totals.calories} kcal | C ${totals.carbs.toFixed(
-      1
-    )} g | P ${totals.protein.toFixed(1)} g | F ${totals.fat.toFixed(1)} g`;
-    const content = [header, "", ...rows, "", footer].join("\n");
-    const pdfText = buildPdf(content);
-    const blob = new Blob([pdfText], { type: "application/pdf" });
-    const fileName = `macropal_${tf}_summary.pdf`;
-    const file = new File([blob], fileName, { type: "application/pdf" });
-    await shareOrDownload(file, fileName);
-  };
-
-  const exportJSON = async () => {
-    const payload = { timeframe: tf, days: dayTable, totals, avg };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    });
-    const fileName = `macropal_${tf}_summary.json`;
-    const file = new File([blob], fileName, { type: "application/json" });
-    await shareOrDownload(file, fileName);
-  };
-
-  const exportCSV = async () => {
-    const header = ["Date", "Calories", "Carbs (g)", "Protein (g)", "Fat (g)"];
-    const rows = dayTable.map((row) => [
-      row.date,
-      row.calories,
-      row.carbs,
-      row.protein,
-      row.fat,
-    ]);
-    rows.push(["Totals", totals.calories, totals.carbs, totals.protein, totals.fat]);
-    rows.push(["Average", avg.calories, avg.carbs, avg.protein, avg.fat]);
-
-    const escapeCell = (value: string | number) =>
-      `"${String(value).replace(/"/g, '""')}"`;
-
-    const csv = [header, ...rows]
-      .map((row) => row.map(escapeCell).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const fileName = `macropal_${tf}_summary.csv`;
-    const file = new File([blob], fileName, { type: "text/csv" });
-    await shareOrDownload(file, fileName);
-  };
-
   const palette = [
     "#3b82f6",
     "#22c55e",
@@ -756,16 +656,6 @@ const Analytics: React.FC = () => {
                       <IonLabel>60 days</IonLabel>
                     </IonSegmentButton>
                   </IonSegment>
-                  <IonButton
-                    fill="outline"
-                    disabled={!hasFoodData}
-                    onClick={() => {
-                      console.log(`[USER ACTION] Analytics: Export button clicked`);
-                      setExportMenuOpen(true);
-                    }}
-                  >
-                    <IonIcon icon={downloadOutline} slot="icon-only" />
-                  </IonButton>
                 </div>
 
                 {/* ── At-a-glance summary strip ── */}
@@ -1569,41 +1459,6 @@ const Analytics: React.FC = () => {
           </>
         )}
       </IonContent>
-      <IonActionSheet
-        isOpen={exportMenuOpen}
-        onDidDismiss={() => {
-          console.log(`[USER ACTION] Analytics: Export action sheet dismissed`);
-          setExportMenuOpen(false);
-        }}
-        header="Export summary"
-        buttons={[
-          {
-            text: "PDF",
-            handler: () => {
-              console.log(`[USER ACTION] Analytics: Export as PDF selected`);
-              void exportPDF();
-            },
-          },
-          {
-            text: "JSON",
-            handler: () => {
-              console.log(`[USER ACTION] Analytics: Export as JSON selected`);
-              void exportJSON();
-            },
-          },
-          {
-            text: "CSV",
-            handler: () => {
-              console.log(`[USER ACTION] Analytics: Export as CSV selected`);
-              void exportCSV();
-            },
-          },
-          {
-            text: "Cancel",
-            role: "cancel",
-          },
-        ]}
-      />
     </IonPage>
   );
 };

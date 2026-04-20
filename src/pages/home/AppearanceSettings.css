@@ -1,0 +1,9 @@
+.appearance-settings-page ion-card {
+  margin: 0;
+}
+
+.appearance-settings-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--mp-text);
+}

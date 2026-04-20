@@ -1,6 +1,9 @@
 export const SETTINGS_ROUTES = {
   root: "/app/settings",
   profile: "/app/settings/profile",
+  homeFeed: "/app/settings/home-feed",
+  appearance: "/app/settings/appearance",
+  deleteAccount: "/app/settings/delete-account",
   changelog: "/app/settings/changelog",
   feedback: "/app/settings/feedback",
   energyNeeds: "/app/settings/energy-needs",
@@ -14,6 +17,9 @@ export const SETTINGS_ROUTES = {
 } as const;
 
 export const LEGACY_SETTINGS_ROUTE_REDIRECTS = [
+  ["/app/home-feed", SETTINGS_ROUTES.homeFeed],
+  ["/app/appearance", SETTINGS_ROUTES.appearance],
+  ["/app/delete-account", SETTINGS_ROUTES.deleteAccount],
   ["/app/changelog", SETTINGS_ROUTES.changelog],
   ["/app/feedback", SETTINGS_ROUTES.feedback],
   ["/app/energy-needs", SETTINGS_ROUTES.energyNeeds],

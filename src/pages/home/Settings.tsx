@@ -14,9 +14,11 @@ import {
   IonAlert,
   IonToast,
   IonText,
-  IonToggle,
+  IonInput,
   IonSelect,
   IonSelectOption,
+  IonModal,
+  IonSpinner,
   IonCard,
   IonCardHeader,
   IonCardTitle,
@@ -24,6 +26,7 @@ import {
   IonAvatar,
   IonActionSheet,
 } from "@ionic/react";
+import type { IonInputCustomEvent, InputInputEventDetail } from "@ionic/core/components";
 import {
   personCircleOutline,
   logOutOutline,
@@ -33,21 +36,28 @@ import {
   colorPaletteOutline,
   informationCircleOutline,
   keyOutline,
+  shieldCheckmarkOutline,
   newspaperOutline,
   chatbubbleEllipsesOutline,
-  chevronDownOutline,
   peopleOutline,
   medicalOutline,
+  searchOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
   sendEmailVerification,
   signOut,
-  deleteUser,
   sendPasswordResetEmail,
+  multiFactor,
+  PhoneAuthProvider,
+  PhoneMultiFactorGenerator,
+  TotpMultiFactorGenerator,
+  TotpSecret,
+  RecaptchaVerifier,
+  type PhoneMultiFactorInfo,
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
-import { doc, getDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import "./Settings.css";
 import {
@@ -72,16 +82,30 @@ import { normalizePhotoUrl, resizeImageFile, sanitizeFileName } from "../../util
 import { isFeatureEnabled, useRemoteConfig } from "../../UpdateGate";
 import { useClinicianAccess } from "../../hooks/useClinicianAccess";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
+import { clearAddFoodRecentQueries } from "../../utils/recentQueries";
+import { clearRecentFoodsHistory } from "../../utils/recentFoods";
+import mfaPhoneCountriesData from "../../data/mfaPhoneCountries.json";
 
-type SmartDietStyle = "none" | "vegetarian" | "vegan" | "pescatarian";
-type SmartMacroFocus = "balanced" | "high-protein" | "low-carb";
+type MfaMethod = "sms" | "authenticator";
+type MfaSetupStep =
+  | "intro"
+  | "method"
+  | "phone"
+  | "authenticator"
+  | "preparing"
+  | "sending"
+  | "verify"
+  | "verifying"
+  | "success";
+
+interface MfaPhoneCountry {
+  iso2: string;
+  country: string;
+  dialCode: string;
+  nationalPrefix?: string;
+}
 
 interface UserProfile {
-  smartRecommendationEnabled?: boolean;
-  smartRecommendationProfile?: {
-    dietStyle?: string;
-    macroFocus?: string;
-  };
   showWellnessTip?: boolean;
   showAchievements?: boolean;
   showRecentItems?: boolean;
@@ -98,6 +122,40 @@ interface UserData {
   profile?: UserProfile;
 }
 
+const MFA_PHONE_COUNTRIES = ((mfaPhoneCountriesData as MfaPhoneCountry[]) ?? []).filter((entry) => {
+  return (
+    typeof entry.iso2 === "string" &&
+    typeof entry.country === "string" &&
+    typeof entry.dialCode === "string" &&
+    /^\+\d{1,4}$/.test(entry.dialCode)
+  );
+});
+
+const DEFAULT_MFA_PHONE_COUNTRY_ISO2 = "US";
+
+const getDefaultMfaCountryIso2 = (): string => {
+  if (!MFA_PHONE_COUNTRIES.length) return DEFAULT_MFA_PHONE_COUNTRY_ISO2;
+
+  const regions = new Set<string>();
+  if (typeof navigator !== "undefined") {
+    const locales = [...(navigator.languages ?? []), navigator.language].filter(Boolean);
+    for (const locale of locales) {
+      const region = locale?.split(/[-_]/)[1]?.toUpperCase();
+      if (region) {
+        regions.add(region);
+      }
+    }
+  }
+
+  for (const region of regions) {
+    const match = MFA_PHONE_COUNTRIES.find((entry) => entry.iso2 === region);
+    if (match) return match.iso2;
+  }
+
+  const defaultMatch = MFA_PHONE_COUNTRIES.find((entry) => entry.iso2 === DEFAULT_MFA_PHONE_COUNTRY_ISO2);
+  return defaultMatch?.iso2 ?? MFA_PHONE_COUNTRIES[0].iso2;
+};
+
 const Settings: React.FC = () => {
   const history = useHistory();
   const user = auth.currentUser;
@@ -112,17 +170,12 @@ const Settings: React.FC = () => {
     color?: string;
   }>({ show: false, message: "", color: "success" });
 
-  const [confirmDelete, setConfirmDelete] = React.useState(false);
-  const [confirmDeleteName, setConfirmDeleteName] = React.useState(false);
-
-  const [smartRecommendationEnabled, setSmartRecommendationEnabled] = React.useState(true);
-  const [smartDietStyle, setSmartDietStyle] = React.useState<SmartDietStyle>("none");
-  const [smartMacroFocus, setSmartMacroFocus] = React.useState<SmartMacroFocus>("balanced");
   const [showRandomQuoteEnabled, setShowRandomQuoteEnabled] = React.useState(true);
   const [showAchievementsEnabled, setShowAchievementsEnabled] = React.useState(true);
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = React.useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] = React.useState(true);
   const [confirmClearRecent, setConfirmClearRecent] = React.useState(false);
+  const [confirmClearRecentSearches, setConfirmClearRecentSearches] = React.useState(false);
   const [clearingRecent, setClearingRecent] = React.useState(false);
   const [showPhotoActions, setShowPhotoActions] = React.useState(false);
   const [profilePhotoUrl, setProfilePhotoUrl] = React.useState<string | null>(null);
@@ -150,62 +203,459 @@ const Settings: React.FC = () => {
   const [showAbout, setShowAbout] = React.useState(false);
   const galleryInputRef = React.useRef<HTMLInputElement | null>(null);
   const cameraInputRef = React.useRef<HTMLInputElement | null>(null);
+  const mfaRecaptchaContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const mfaRecaptchaVerifierRef = React.useRef<RecaptchaVerifier | null>(null);
 
-  const handleThemeChange = async (newTheme: ThemeMode) => {
-    console.log(`[USER ACTION] Settings: Theme changed`, { newTheme });
-    setThemeMode(newTheme);
-    applyTheme(newTheme);
+  const [mfaEnabled, setMfaEnabled] = React.useState(false);
+  const [mfaEnabledMethods, setMfaEnabledMethods] = React.useState<MfaMethod[]>([]);
+  const [mfaPhoneHint, setMfaPhoneHint] = React.useState<string | null>(null);
+  const [mfaSelectedCountryIso2, setMfaSelectedCountryIso2] = React.useState<string>(() => {
+    return getDefaultMfaCountryIso2();
+  });
+  const [mfaPhoneNumber, setMfaPhoneNumber] = React.useState("");
+  const [mfaEnrollmentCode, setMfaEnrollmentCode] = React.useState("");
+  const [mfaPendingMethod, setMfaPendingMethod] = React.useState<MfaMethod | null>(null);
+  const [mfaPendingVerificationId, setMfaPendingVerificationId] = React.useState<string | null>(null);
+  const [mfaPendingPhone, setMfaPendingPhone] = React.useState<string | null>(null);
+  const [mfaPendingTotpSecret, setMfaPendingTotpSecret] = React.useState<TotpSecret | null>(null);
+  const [mfaSendingCode, setMfaSendingCode] = React.useState(false);
+  const [mfaVerifyingCode, setMfaVerifyingCode] = React.useState(false);
+  const [mfaStatusLoading, setMfaStatusLoading] = React.useState(true);
+  const [showMfaSetupModal, setShowMfaSetupModal] = React.useState(false);
+  const [mfaSetupStep, setMfaSetupStep] = React.useState<MfaSetupStep>("intro");
 
+  const selectedMfaCountry = React.useMemo(() => {
+    return (
+      MFA_PHONE_COUNTRIES.find((entry) => entry.iso2 === mfaSelectedCountryIso2) ??
+      MFA_PHONE_COUNTRIES[0] ??
+      null
+    );
+  }, [mfaSelectedCountryIso2]);
+
+  const clearMfaRecaptcha = React.useCallback(() => {
+    if (!mfaRecaptchaVerifierRef.current) return;
+    try {
+      mfaRecaptchaVerifierRef.current.clear();
+    } catch (error) {
+      console.warn("Failed to clear MFA reCAPTCHA verifier:", error);
+    } finally {
+      mfaRecaptchaVerifierRef.current = null;
+    }
+  }, []);
+
+  const getNormalizedPhone = React.useCallback((value: string, country: MfaPhoneCountry | null): string | null => {
+    const compact = value.trim().replace(/[^\d+]/g, "");
+    if (!compact) return null;
+
+    let internationalCandidate = compact;
+    if (internationalCandidate.startsWith("00")) {
+      internationalCandidate = `+${internationalCandidate.slice(2)}`;
+    }
+
+    if (internationalCandidate.startsWith("+")) {
+      let internationalDigits = internationalCandidate.slice(1).replace(/[^\d]/g, "");
+      if (country?.nationalPrefix) {
+        const countryCodeDigits = country.dialCode.replace(/\D/g, "");
+        const prefixedCountryCode = `${countryCodeDigits}${country.nationalPrefix}`;
+        if (internationalDigits.startsWith(prefixedCountryCode)) {
+          internationalDigits = `${countryCodeDigits}${internationalDigits.slice(prefixedCountryCode.length)}`;
+        }
+      }
+      if (!/^\d{8,15}$/.test(internationalDigits)) return null;
+      return `+${internationalDigits}`;
+    }
+
+    if (!country) return null;
+
+    const countryCodeDigits = country.dialCode.replace(/\D/g, "");
+    const rawDigits = value.replace(/\D/g, "");
+    if (!rawDigits || !countryCodeDigits) return null;
+
+    let localDigits = rawDigits;
+    if (country.nationalPrefix && localDigits.startsWith(country.nationalPrefix)) {
+      localDigits = localDigits.slice(country.nationalPrefix.length);
+    }
+    if (!localDigits) return null;
+
+    const assembledDigits =
+      rawDigits.startsWith(countryCodeDigits) && rawDigits.length >= countryCodeDigits.length + 6
+        ? rawDigits
+        : `${countryCodeDigits}${localDigits}`;
+
+    if (!/^\d{8,15}$/.test(assembledDigits)) return null;
+    return `+${assembledDigits}`;
+  }, []);
+
+  const ensureMfaRecaptcha = React.useCallback(async () => {
+    const container = mfaRecaptchaContainerRef.current;
+    if (!container) {
+      throw new Error("Security challenge is not ready. Please reopen Settings.");
+    }
+
+    if (mfaRecaptchaVerifierRef.current) {
+      return mfaRecaptchaVerifierRef.current;
+    }
+
+    const verifier = new RecaptchaVerifier(auth, container, {
+      size: "invisible",
+    });
+
+    await verifier.render();
+    mfaRecaptchaVerifierRef.current = verifier;
+    return verifier;
+  }, []);
+
+  const refreshMfaStatus = React.useCallback(async () => {
+    const current = auth.currentUser;
+    if (!current) {
+      setMfaEnabled(false);
+      setMfaEnabledMethods([]);
+      setMfaPhoneHint(null);
+      setMfaStatusLoading(false);
+      return;
+    }
+
+    setMfaStatusLoading(true);
+    try {
+      await current.reload();
+      const factors = multiFactor(current).enrolledFactors;
+      const phoneFactors = factors.filter(
+        (factor) => factor.factorId === PhoneMultiFactorGenerator.FACTOR_ID
+      ) as PhoneMultiFactorInfo[];
+      const totpFactors = factors.filter(
+        (factor) => factor.factorId === TotpMultiFactorGenerator.FACTOR_ID
+      );
+
+      const methods: MfaMethod[] = [];
+      if (phoneFactors.length > 0) methods.push("sms");
+      if (totpFactors.length > 0) methods.push("authenticator");
+
+      setMfaEnabled(methods.length > 0);
+      setMfaEnabledMethods(methods);
+      setMfaPhoneHint(phoneFactors[0]?.phoneNumber ?? null);
+    } catch (error) {
+      console.error("Failed to refresh MFA status:", error);
+      setMfaEnabled(false);
+      setMfaEnabledMethods([]);
+      setMfaPhoneHint(null);
+    } finally {
+      setMfaStatusLoading(false);
+    }
+  }, []);
+
+  const handleStartSmsMfaEnrollment = async () => {
     const current = auth.currentUser;
     if (!current) return;
 
-    try {
-      const ref = doc(db, "users", current.uid);
-      await updateDoc(ref, {
-        "profile.themeMode": newTheme,
-      });
-
-      trackEvent("settings_theme_change", {
-        uid: current.uid,
-        theme: newTheme,
-      });
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error("Failed to save theme preference:", err);
+    const normalizedPhone = getNormalizedPhone(mfaPhoneNumber, selectedMfaCountry);
+    if (!normalizedPhone) {
+      setMfaSetupStep("phone");
       setToast({
         show: true,
-        message: err?.message || "Could not save theme preference.",
-        color: "danger",
+        message: "Enter a valid phone number (local format with selected country code or full +international).",
+        color: "warning",
       });
+      return;
+    }
+
+    setMfaSetupStep("sending");
+    setMfaSendingCode(true);
+    try {
+      const verifier = await ensureMfaRecaptcha();
+      const mfaSession = await multiFactor(current).getSession();
+      const provider = new PhoneAuthProvider(auth);
+      const verificationId = await provider.verifyPhoneNumber(
+        {
+          phoneNumber: normalizedPhone,
+          session: mfaSession,
+        },
+        verifier
+      );
+
+      setMfaPendingMethod("sms");
+      setMfaPendingVerificationId(verificationId);
+      setMfaPendingPhone(normalizedPhone);
+      setMfaPendingTotpSecret(null);
+      setMfaEnrollmentCode("");
+      setMfaSetupStep("verify");
+      setToast({
+        show: true,
+        message: "Verification code sent. Enter it to enable 2FA.",
+        color: "success",
+      });
+      trackEvent("settings_mfa_enrollment_code_sent", { uid: current.uid });
+    } catch (error) {
+      const err = error as Error;
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String((error as { code?: unknown }).code ?? "")
+          : "";
+
+      if (code === "auth/requires-recent-login") {
+        setToast({
+          show: true,
+          message: "Please sign in again, then return here to enable 2FA.",
+          color: "warning",
+        });
+        trackEvent("settings_mfa_enrollment_requires_recent_login", { uid: current.uid });
+      } else {
+        console.error("Failed to send MFA enrollment code:", err);
+        setToast({
+          show: true,
+          message: err?.message || "Could not send verification code.",
+          color: "danger",
+        });
+      }
+      trackEvent("settings_mfa_enrollment_code_error", {
+        uid: current.uid,
+        error: code || err?.message || "unknown",
+      });
+      setMfaSetupStep("phone");
+      clearMfaRecaptcha();
+    } finally {
+      setMfaSendingCode(false);
     }
   };
 
-  const saveSmartRecommendationProfile = async (
-    updates: Partial<{ dietStyle: SmartDietStyle; macroFocus: SmartMacroFocus }>
-  ) => {
+  const handleStartAuthenticatorEnrollment = async () => {
     const current = auth.currentUser;
     if (!current) return;
 
-    const nextProfile = {
-      dietStyle: updates.dietStyle ?? smartDietStyle,
-      macroFocus: updates.macroFocus ?? smartMacroFocus,
-    };
-
+    setMfaSetupStep("preparing");
+    setMfaSendingCode(true);
     try {
-      const ref = doc(db, "users", current.uid);
-      await updateDoc(ref, {
-        "profile.smartRecommendationProfile": nextProfile,
-      });
-      trackEvent("settings_smart_recommendation_profile_update", {
-        uid: current.uid,
-        ...nextProfile,
-      });
-    } catch (error: unknown) {
-      const err = error as Error;
-      console.error("Failed to save smart recommendation profile:", err);
+      const mfaSession = await multiFactor(current).getSession();
+      const totpSecret = await TotpMultiFactorGenerator.generateSecret(mfaSession);
+
+      setMfaPendingMethod("authenticator");
+      setMfaPendingVerificationId(null);
+      setMfaPendingPhone(null);
+      setMfaPendingTotpSecret(totpSecret);
+      setMfaEnrollmentCode("");
+      setMfaSetupStep("verify");
       setToast({
         show: true,
-        message: err?.message || "Could not update smart recommendations.",
+        message: "Authenticator setup key generated. Add it in your app, then enter the code.",
+        color: "success",
+      });
+      trackEvent("settings_mfa_authenticator_secret_generated", { uid: current.uid });
+    } catch (error) {
+      const err = error as Error;
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String((error as { code?: unknown }).code ?? "")
+          : "";
+
+      if (code === "auth/requires-recent-login") {
+        setToast({
+          show: true,
+          message: "Please sign in again, then return here to enable Authenticator 2FA.",
+          color: "warning",
+        });
+      } else {
+        console.error("Failed to create Authenticator MFA setup:", err);
+        setToast({
+          show: true,
+          message: err?.message || "Could not start Authenticator setup.",
+          color: "danger",
+        });
+      }
+
+      trackEvent("settings_mfa_authenticator_setup_error", {
+        uid: current.uid,
+        error: code || err?.message || "unknown",
+      });
+      setMfaPendingMethod(null);
+      setMfaPendingTotpSecret(null);
+      setMfaSetupStep("authenticator");
+    } finally {
+      setMfaSendingCode(false);
+    }
+  };
+
+  const handleConfirmMfaEnrollment = async () => {
+    const current = auth.currentUser;
+    if (!current || !mfaPendingMethod) return;
+
+    const code = mfaEnrollmentCode.trim();
+    const requiredCodeLength =
+      mfaPendingMethod === "authenticator"
+        ? Math.max(6, Math.min(8, mfaPendingTotpSecret?.codeLength ?? 6))
+        : 6;
+    if (!new RegExp(`^\\d{${requiredCodeLength}}$`).test(code)) {
+      setMfaSetupStep("verify");
+      setToast({
+        show: true,
+        message: `Enter the ${requiredCodeLength}-digit verification code.`,
+        color: "warning",
+      });
+      return;
+    }
+
+    setMfaSetupStep("verifying");
+    setMfaVerifyingCode(true);
+    try {
+      if (mfaPendingMethod === "sms") {
+        if (!mfaPendingVerificationId) {
+          throw new Error("Phone verification is missing. Please request a new SMS code.");
+        }
+        const credential = PhoneAuthProvider.credential(mfaPendingVerificationId, code);
+        const assertion = PhoneMultiFactorGenerator.assertion(credential);
+        await multiFactor(current).enroll(assertion, "SMS");
+      } else {
+        if (!mfaPendingTotpSecret) {
+          throw new Error("Authenticator setup key expired. Generate a new setup key.");
+        }
+        const assertion = TotpMultiFactorGenerator.assertionForEnrollment(mfaPendingTotpSecret, code);
+        await multiFactor(current).enroll(assertion, "Authenticator");
+      }
+
+      const ref = doc(db, "users", current.uid);
+      await updateDoc(ref, {
+        "profile.twoFactorEnabled": true,
+        "profile.twoFactorPhone": mfaPendingMethod === "sms" ? mfaPendingPhone : null,
+        "profile.twoFactorMethod": mfaPendingMethod,
+      });
+
+      const enabledMethod = mfaPendingMethod;
+      setMfaPendingVerificationId(null);
+      setMfaPendingPhone(null);
+      setMfaPendingTotpSecret(null);
+      setMfaEnrollmentCode("");
+      setMfaPhoneNumber("");
+      await refreshMfaStatus();
+      setMfaSetupStep("success");
+      setToast({
+        show: true,
+        message:
+          enabledMethod === "sms"
+            ? "Two-factor authentication enabled with SMS."
+            : "Two-factor authentication enabled with Authenticator.",
+        color: "success",
+      });
+      trackEvent("settings_mfa_enabled", { uid: current.uid, method: enabledMethod });
+    } catch (error) {
+      const err = error as Error;
+      console.error("Failed to confirm MFA enrollment:", err);
+      setToast({
+        show: true,
+        message: err?.message || "Could not enable two-factor authentication.",
+        color: "danger",
+      });
+      trackEvent("settings_mfa_enable_error", {
+        uid: current.uid,
+        error: err?.message || "unknown",
+      });
+      setMfaSetupStep("verify");
+    } finally {
+      setMfaVerifyingCode(false);
+    }
+  };
+
+  const handleCancelMfaEnrollment = () => {
+    const pendingMethod = mfaPendingMethod;
+    setMfaPendingVerificationId(null);
+    setMfaPendingPhone(null);
+    setMfaPendingTotpSecret(null);
+    setMfaPendingMethod(null);
+    setMfaEnrollmentCode("");
+    setMfaSetupStep(pendingMethod === "sms" ? "phone" : "method");
+  };
+
+  const handleDisableMfa = async () => {
+    const current = auth.currentUser;
+    if (!current) return;
+
+    setMfaVerifyingCode(true);
+    try {
+      await current.reload();
+      const factors = multiFactor(current).enrolledFactors;
+
+      if (!factors.length) {
+        setToast({
+          show: true,
+          message: "Two-factor authentication is already disabled.",
+          color: "warning",
+        });
+        await refreshMfaStatus();
+        return;
+      }
+
+      for (const factor of factors) {
+        await multiFactor(current).unenroll(factor.uid);
+      }
+
+      const ref = doc(db, "users", current.uid);
+      await updateDoc(ref, {
+        "profile.twoFactorEnabled": false,
+        "profile.twoFactorPhone": null,
+        "profile.twoFactorMethod": null,
+      });
+
+      setMfaPendingVerificationId(null);
+      setMfaPendingPhone(null);
+      setMfaPendingTotpSecret(null);
+      setMfaPendingMethod(null);
+      setMfaEnrollmentCode("");
+      await refreshMfaStatus();
+      setToast({
+        show: true,
+        message: "Two-factor authentication disabled.",
+        color: "success",
+      });
+      trackEvent("settings_mfa_disabled", { uid: current.uid });
+    } catch (error) {
+      const err = error as Error;
+      console.error("Failed to disable MFA:", err);
+      setToast({
+        show: true,
+        message:
+          err?.message ||
+          "Could not disable two-factor authentication. You may need to log in again.",
+        color: "danger",
+      });
+      trackEvent("settings_mfa_disable_error", {
+        uid: current.uid,
+        error: err?.message || "unknown",
+      });
+    } finally {
+      setMfaVerifyingCode(false);
+    }
+  };
+
+  const openMfaSetupFlow = () => {
+    if (mfaEnabled) return;
+    setMfaSetupStep("intro");
+    setShowMfaSetupModal(true);
+    trackEvent("settings_mfa_setup_opened", { uid: auth.currentUser?.uid });
+  };
+
+  const closeMfaSetupFlow = () => {
+    if (mfaSendingCode || mfaVerifyingCode) return;
+    setShowMfaSetupModal(false);
+    setMfaPendingVerificationId(null);
+    setMfaPendingPhone(null);
+    setMfaPendingTotpSecret(null);
+    setMfaPendingMethod(null);
+    setMfaEnrollmentCode("");
+    setMfaPhoneNumber("");
+    setMfaSetupStep("intro");
+  };
+
+  const handleCopyMfaSecret = async () => {
+    if (!mfaAuthenticatorSecret) return;
+    try {
+      await navigator.clipboard.writeText(mfaAuthenticatorSecret);
+      setToast({
+        show: true,
+        message: "Setup key copied.",
+        color: "success",
+      });
+    } catch (error) {
+      const err = error as Error;
+      setToast({
+        show: true,
+        message: err?.message || "Could not copy setup key.",
         color: "danger",
       });
     }
@@ -259,44 +709,16 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    console.log(`[USER ACTION] Settings: Delete account confirmed and executing`);
-    if (!auth.currentUser) return;
-    try {
-      await deleteUser(auth.currentUser);
-      setToast({ show: true, message: "Account deleted.", color: "success" });
-      history.replace("/start");
-    } catch (error: unknown) {
-      const e = error as Error;
-      setToast({
-        show: true,
-        message:
-          e?.message ||
-          "Deletion failed. You may need to log out and back in, then try again (recent login required).",
-        color: "danger",
-      });
-    }
-  };
-
   const handleClearRecentFoods = async () => {
     console.log(`[USER ACTION] Settings: Clear recent foods confirmed and executing`);
     if (!auth.currentUser) return;
     try {
       setClearingRecent(true);
-      const recentRef = collection(
-        db,
-        "users",
-        auth.currentUser.uid,
-        "recentFoods"
-      );
-      const snap = await getDocs(recentRef);
-
-      const deletions = snap.docs.map((d) => deleteDoc(d.ref));
-      await Promise.all(deletions);
+      await clearRecentFoodsHistory(auth.currentUser.uid);
 
       setToast({
         show: true,
-        message: "Recent foods history cleared.",
+        message: "Quick history chips cleared.",
         color: "success",
       });
     } catch (error: unknown) {
@@ -308,6 +730,26 @@ const Settings: React.FC = () => {
       });
     } finally {
       setClearingRecent(false);
+    }
+  };
+
+  const handleClearRecentSearches = () => {
+    console.log(`[USER ACTION] Settings: Clear recent searches confirmed and executing`);
+    try {
+      clearAddFoodRecentQueries();
+      trackEvent("settings_recent_queries_cleared", { uid: auth.currentUser?.uid });
+      setToast({
+        show: true,
+        message: "Recent searches cleared on this device.",
+        color: "success",
+      });
+    } catch (error: unknown) {
+      const e = error as Error;
+      setToast({
+        show: true,
+        message: e?.message || "Could not clear recent searches.",
+        color: "danger",
+      });
     }
   };
 
@@ -543,48 +985,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const handleClearCachedPreferences = () => {
-    console.log(`[USER ACTION] Settings: Clear cached preferences clicked`);
-    if (typeof window === "undefined") return;
-    const keys = [
-      "mp_theme",
-      "mp_tab_animations",
-      "mp_debug_overlay",
-      "mp_lazy_load",
-      "mp_chart_animations",
-      "mp_auto_expand_meals",
-      "mp_meal_counts",
-    ];
-    keys.forEach((key) => window.localStorage.removeItem(key));
-
-    const theme = getStoredThemeMode();
-    applyTheme(theme);
-    const animations = getAnimationPreference();
-    const chartAnimations = getChartAnimationPreference();
-    const debugOverlay = getDebugOverlayPreference();
-    const lazyLoad = getLazyLoadPreference();
-    const autoExpand = getAutoExpandMealsPreference();
-    const mealCounts = getMealCountPreference();
-    applyAnimationPreference(animations);
-    applyChartAnimationPreference(chartAnimations);
-    applyDebugOverlayPreference(debugOverlay);
-    applyLazyLoadPreference(lazyLoad);
-    applyAutoExpandMealsPreference(autoExpand);
-    applyMealCountPreference(mealCounts);
-
-    setTabAnimationsEnabled(animations);
-    setChartAnimationsEnabled(chartAnimations);
-    setDebugOverlayEnabled(debugOverlay);
-    setLazyLoadEnabled(lazyLoad);
-    setAutoExpandMealsEnabled(autoExpand);
-    setShowMealCountsEnabled(mealCounts);
-    setToast({
-      show: true,
-      message: "Cached preferences cleared.",
-      color: "success",
-    });
-  };
-
   const handleRemovePhoto = async () => {
     console.log(`[USER ACTION] Settings: Remove profile photo clicked`);
     if (!auth.currentUser) return;
@@ -606,6 +1006,16 @@ const Settings: React.FC = () => {
   };
 
   React.useEffect(() => {
+    void refreshMfaStatus();
+  }, [refreshMfaStatus]);
+
+  React.useEffect(() => {
+    return () => {
+      clearMfaRecaptcha();
+    };
+  }, [clearMfaRecaptcha]);
+
+  React.useEffect(() => {
     const load = async () => {
       const current = auth.currentUser;
       if (!current) return;
@@ -615,27 +1025,6 @@ const Settings: React.FC = () => {
         const snap = await getDoc(ref);
         const data = snap.data() as UserData | undefined;
         const profile = data?.profile;
-
-        const enabled =
-          profile && typeof profile.smartRecommendationEnabled === "boolean"
-            ? profile.smartRecommendationEnabled
-            : true;
-
-        setSmartRecommendationEnabled(
-          typeof profile?.smartRecommendationEnabled === "boolean"
-            ? profile.smartRecommendationEnabled
-            : true
-        );
-
-        const smartProfile = profile?.smartRecommendationProfile;
-        if (smartProfile) {
-          if (typeof smartProfile.dietStyle === "string") {
-            setSmartDietStyle(smartProfile.dietStyle as SmartDietStyle);
-          }
-          if (typeof smartProfile.macroFocus === "string") {
-            setSmartMacroFocus(smartProfile.macroFocus as SmartMacroFocus);
-          }
-        }
 
         setShowRandomQuoteEnabled(
           typeof profile?.showWellnessTip === "boolean"
@@ -741,9 +1130,8 @@ const Settings: React.FC = () => {
           setShowMealCountsEnabled(localPref);
         }
 
-        setSmartRecommendationEnabled(enabled);
       } catch (e) {
-        console.error("Failed to load smartRecommendationEnabled:", e);
+        console.error("Failed to load settings profile:", e);
       }
     };
 
@@ -775,7 +1163,321 @@ const Settings: React.FC = () => {
   }
 
   const verified = !!user.emailVerified;
-  const usernameToType = user.displayName || user.email || "DELETE";
+  const mfaSetupCanDismiss = !mfaSendingCode && !mfaVerifyingCode;
+  const mfaLocalExample = selectedMfaCountry?.nationalPrefix
+    ? `${selectedMfaCountry.nationalPrefix}51794459`
+    : "51794459";
+  const mfaInternationalExample = selectedMfaCountry
+    ? `${selectedMfaCountry.dialCode}${mfaLocalExample.replace(/^0+/, "")}`
+    : "+15551234567";
+  const mfaNormalizedPhone = getNormalizedPhone(mfaPhoneNumber, selectedMfaCountry);
+  const mfaAuthenticatorIssuer = "MacroPal";
+  const mfaAuthenticatorAccount = user.email || user.displayName || "MacroPal User";
+  const mfaAuthenticatorSecret = mfaPendingTotpSecret?.secretKey ?? "";
+  const mfaVerifyCodeLength =
+    mfaPendingMethod === "authenticator"
+      ? Math.max(6, Math.min(8, mfaPendingTotpSecret?.codeLength ?? 6))
+      : 6;
+  const mfaStatusSummary = (() => {
+    if (mfaStatusLoading) return "Checking status...";
+    if (!mfaEnabledMethods.length) return "Not enabled";
+    if (mfaEnabledMethods.length > 1) return "Enabled (SMS + Authenticator app)";
+    if (mfaEnabledMethods[0] === "sms") {
+      return `Enabled with SMS${mfaPhoneHint ? ` for ${mfaPhoneHint}` : ""}`;
+    }
+    return "Enabled with Authenticator app";
+  })();
+  const enabledHomeFeedItems = [
+    showRandomQuoteEnabled,
+    showAchievementsEnabled,
+    showRecentItemsEnabled,
+    showRecentSearchesEnabled,
+  ].filter(Boolean).length;
+  const appearanceSummary = [
+    `Theme: ${themeMode}`,
+    tabAnimationsEnabled ? "Tab animations on" : "Tab animations off",
+    chartAnimationsEnabled ? "Charts on" : "Charts off",
+    showMealCountsEnabled ? "Meal counts on" : "Meal counts off",
+    autoExpandMealsEnabled ? "Auto-expand on" : "Auto-expand off",
+    debugOverlayEnabled ? "Debug overlay on" : "Debug overlay off",
+    lazyLoadEnabled ? "Lazy load on" : "Lazy load off",
+  ].join(" · ");
+
+  const renderMfaSetupScreen = () => {
+    if (mfaSetupStep === "intro") {
+      return (
+        <div className="settings-mfa-setup-block">
+          <h2>You will now set up 2FA</h2>
+          <p>Choose SMS or an Authenticator app for one-time sign-in codes.</p>
+          <IonButton expand="block" onClick={() => setMfaSetupStep("method")}>
+            Continue
+          </IonButton>
+          <IonButton expand="block" fill="clear" color="medium" onClick={closeMfaSetupFlow}>
+            Not now
+          </IonButton>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "method") {
+      return (
+        <div className="settings-mfa-setup-block">
+          <h2>Choose your verification method</h2>
+          <p>You can use SMS text messages or an Authenticator app.</p>
+          <div className="settings-mfa-setup-actions">
+            <IonButton
+              expand="block"
+              onClick={() => {
+                setMfaPendingMethod("sms");
+                setMfaSetupStep("phone");
+              }}
+            >
+              SMS text message
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="outline"
+              onClick={() => {
+                setMfaPendingMethod("authenticator");
+                setMfaSetupStep("authenticator");
+              }}
+            >
+              Authenticator app
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="clear"
+              color="medium"
+              onClick={() => setMfaSetupStep("intro")}
+            >
+              Back
+            </IonButton>
+          </div>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "phone") {
+      return (
+        <div className="settings-mfa-setup-block">
+          <h2>Enter your phone number</h2>
+          <p>
+            Select your country code and enter your number in local or international format.
+            Example: {mfaLocalExample} or {mfaInternationalExample}
+          </p>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Country code</IonLabel>
+            <IonSelect
+              value={selectedMfaCountry?.iso2}
+              interface="popover"
+              onIonChange={(event) => {
+                const nextIso2 = String(event.detail.value ?? "");
+                if (nextIso2) {
+                  setMfaSelectedCountryIso2(nextIso2);
+                }
+              }}
+            >
+              {MFA_PHONE_COUNTRIES.map((entry) => (
+                <IonSelectOption key={entry.iso2} value={entry.iso2}>
+                  {`${entry.country} (${entry.dialCode})`}
+                </IonSelectOption>
+              ))}
+            </IonSelect>
+          </IonItem>
+          <IonItem lines="full">
+            <IonLabel position="stacked">Phone number</IonLabel>
+            <IonInput
+              type="tel"
+              inputmode="tel"
+              value={mfaPhoneNumber}
+              placeholder={mfaLocalExample}
+              onIonInput={(event: IonInputCustomEvent<InputInputEventDetail>) =>
+                setMfaPhoneNumber(event.detail.value ?? "")
+              }
+            />
+          </IonItem>
+          {mfaNormalizedPhone && (
+            <IonNote className="settings-mfa-phone-preview">Will be sent as {mfaNormalizedPhone}</IonNote>
+          )}
+          <div className="settings-mfa-setup-actions">
+            <IonButton
+              expand="block"
+              onClick={() => {
+                void handleStartSmsMfaEnrollment();
+              }}
+              disabled={!mfaNormalizedPhone}
+            >
+              Send code
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="clear"
+              color="medium"
+              onClick={() => setMfaSetupStep("method")}
+            >
+              Back
+            </IonButton>
+          </div>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "authenticator") {
+      return (
+        <div className="settings-mfa-setup-block">
+          <h2>Set up your Authenticator app</h2>
+          <p>
+            Use Google Authenticator, Microsoft Authenticator, 1Password, or any TOTP app.
+          </p>
+          <IonItem lines="full">
+            <IonLabel>
+              <h3>Issuer</h3>
+              <p>{mfaAuthenticatorIssuer}</p>
+            </IonLabel>
+          </IonItem>
+          <IonItem lines="full">
+            <IonLabel>
+              <h3>Account</h3>
+              <p>{mfaAuthenticatorAccount}</p>
+            </IonLabel>
+          </IonItem>
+          <div className="settings-mfa-setup-actions">
+            <IonButton
+              expand="block"
+              onClick={() => {
+                void handleStartAuthenticatorEnrollment();
+              }}
+            >
+              Generate setup key
+            </IonButton>
+            <IonButton
+              expand="block"
+              fill="clear"
+              color="medium"
+              onClick={() => {
+                setMfaPendingMethod(null);
+                setMfaPendingTotpSecret(null);
+                setMfaSetupStep("method");
+              }}
+            >
+              Back
+            </IonButton>
+          </div>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "preparing") {
+      return (
+        <div className="settings-mfa-setup-block settings-mfa-setup-loading">
+          <IonSpinner name="crescent" />
+          <h2>Preparing Authenticator setup...</h2>
+          <p>Generating your secure setup key.</p>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "sending") {
+      return (
+        <div className="settings-mfa-setup-block settings-mfa-setup-loading">
+          <IonSpinner name="crescent" />
+          <h2>Sending verification code...</h2>
+          <p>Hold on while we contact Firebase.</p>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "verifying") {
+      return (
+        <div className="settings-mfa-setup-block settings-mfa-setup-loading">
+          <IonSpinner name="crescent" />
+          <h2>Verifying code...</h2>
+          <p>This only takes a second.</p>
+        </div>
+      );
+    }
+
+    if (mfaSetupStep === "success") {
+      return (
+        <div className="settings-mfa-setup-block">
+          <h2>2FA is enabled</h2>
+          <p>
+            {mfaPendingMethod === "authenticator"
+              ? "You are now protected with Authenticator verification on sign-in."
+              : "You are now protected with SMS verification on sign-in."}
+          </p>
+          <IonButton expand="block" onClick={closeMfaSetupFlow}>
+            Done
+          </IonButton>
+        </div>
+      );
+    }
+
+    return (
+      <div className="settings-mfa-setup-block">
+        <h2>{mfaPendingMethod === "authenticator" ? "Enter Authenticator code" : "Enter verification code"}</h2>
+        {mfaPendingMethod === "authenticator" ? (
+          <>
+            <p>
+              Add this setup key to your Authenticator app, then enter the {mfaVerifyCodeLength}-digit code.
+            </p>
+            {mfaAuthenticatorSecret && (
+              <div className="settings-mfa-secret-block">
+                <IonNote className="settings-mfa-secret-key">{mfaAuthenticatorSecret}</IonNote>
+                <IonButton
+                  size="small"
+                  fill="outline"
+                  onClick={() => {
+                    void handleCopyMfaSecret();
+                  }}
+                >
+                  Copy setup key
+                </IonButton>
+              </div>
+            )}
+          </>
+        ) : (
+          <p>
+            {mfaPendingPhone
+              ? `We sent a 6-digit code to ${mfaPendingPhone}.`
+              : "We sent a 6-digit code to your phone."}
+          </p>
+        )}
+        <IonItem lines="full">
+          <IonInput
+            type="tel"
+            inputmode="numeric"
+            maxlength={mfaVerifyCodeLength}
+            value={mfaEnrollmentCode}
+            placeholder={`${mfaVerifyCodeLength}-digit code`}
+            onIonInput={(event: IonInputCustomEvent<InputInputEventDetail>) => {
+              const next = (event.detail.value ?? "").replace(/[^\d]/g, "").slice(0, mfaVerifyCodeLength);
+              setMfaEnrollmentCode(next);
+            }}
+          />
+        </IonItem>
+        <div className="settings-mfa-setup-actions">
+          <IonButton
+            expand="block"
+              onClick={() => {
+                void handleConfirmMfaEnrollment();
+              }}
+              disabled={mfaEnrollmentCode.trim().length !== mfaVerifyCodeLength}
+            >
+              Verify and enable
+            </IonButton>
+          <IonButton
+            expand="block"
+              fill="clear"
+              color="medium"
+              onClick={handleCancelMfaEnrollment}
+            >
+              {mfaPendingMethod === "authenticator" ? "Use another method" : "Use another number"}
+            </IonButton>
+          </div>
+        </div>
+    );
+  };
 
   return (
     <IonPage>
@@ -844,7 +1546,35 @@ const Settings: React.FC = () => {
                     Send reset email
                   </IonButton>
                 </IonItem>
+                <IonItem lines="full">
+                  <IonIcon slot="start" icon={shieldCheckmarkOutline} />
+                  <IonLabel>
+                    <h2>Two-factor authentication (2FA)</h2>
+                    <p>{mfaStatusSummary}</p>
+                  </IonLabel>
+                  {mfaEnabled ? (
+                    <IonButton
+                      fill="outline"
+                      color="danger"
+                      onClick={() => {
+                        void handleDisableMfa();
+                      }}
+                      disabled={mfaVerifyingCode}
+                    >
+                      Disable
+                    </IonButton>
+                  ) : (
+                    <IonButton
+                      fill="outline"
+                      onClick={openMfaSetupFlow}
+                      disabled={mfaStatusLoading}
+                    >
+                      Set up
+                    </IonButton>
+                  )}
+                </IonItem>
               </IonList>
+              <div ref={mfaRecaptchaContainerRef} className="settings-mfa-recaptcha" aria-hidden="true" />
             </IonCardContent>
           </IonCard>
 
@@ -968,247 +1698,23 @@ const Settings: React.FC = () => {
           <IonCard>
             <IonCardHeader>
               <IonCardTitle className="settings-card-title">
-                Smart recommendations
-              </IonCardTitle>
-            </IonCardHeader>
-            <IonCardContent>
-              <IonList>
-                <IonItem lines="full">
-                  <IonLabel>Show smart recommendation</IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={smartRecommendationEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Smart recommendation toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setSmartRecommendationEnabled(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      const ref = doc(db, "users", current.uid);
-
-                      try {
-                        await updateDoc(ref, {
-                          "profile.smartRecommendationEnabled": checked,
-                        });
-
-                        trackEvent("settings_smart_recommendation_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save smartRecommendationEnabled:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update smart recommendation setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>Recommendation diet style</IonLabel>
-                  <IonSelect
-                    value={smartDietStyle}
-                    disabled={!smartRecommendationEnabled}
-                    onIonChange={(e) => {
-                      console.log(`[USER ACTION] Settings: Diet style changed`, { value: e.detail.value });
-                      const value = (e.detail.value || "none") as SmartDietStyle;
-                      setSmartDietStyle(value);
-                      void saveSmartRecommendationProfile({ dietStyle: value });
-                    }}
-                  >
-                    <IonSelectOption value="none">No preference</IonSelectOption>
-                    <IonSelectOption value="vegetarian">Vegetarian</IonSelectOption>
-                    <IonSelectOption value="vegan">Vegan</IonSelectOption>
-                    <IonSelectOption value="pescatarian">Pescatarian</IonSelectOption>
-                  </IonSelect>
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>Recommendation macro focus</IonLabel>
-                  <IonSelect
-                    value={smartMacroFocus}
-                    disabled={!smartRecommendationEnabled}
-                    onIonChange={(e) => {
-                      console.log(`[USER ACTION] Settings: Macro focus changed`, { value: e.detail.value });
-                      const value = (e.detail.value || "balanced") as SmartMacroFocus;
-                      setSmartMacroFocus(value);
-                      void saveSmartRecommendationProfile({ macroFocus: value });
-                    }}
-                  >
-                    <IonSelectOption value="balanced">Balanced</IonSelectOption>
-                    <IonSelectOption value="high-protein">High protein</IonSelectOption>
-                    <IonSelectOption value="low-carb">Low carb</IonSelectOption>
-                  </IonSelect>
-                </IonItem>
-              </IonList>
-            </IonCardContent>
-          </IonCard>
-
-          <IonCard>
-            <IonCardHeader>
-              <IonCardTitle className="settings-card-title">
                 Home feed
               </IonCardTitle>
             </IonCardHeader>
             <IonCardContent>
               <IonList>
-                <IonItem lines="full">
-                  <IonLabel>Show random quote</IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={showRandomQuoteEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Random quote toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setShowRandomQuoteEnabled(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      const ref = doc(db, "users", current.uid);
-
-                      try {
-                        await updateDoc(ref, {
-                          "profile.showWellnessTip": checked,
-                        });
-
-                        trackEvent("settings_show_random_quote_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save showRandomQuote:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update random quote setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>Show achievements</IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={showAchievementsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Achievements toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setShowAchievementsEnabled(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      const ref = doc(db, "users", current.uid);
-
-                      try {
-                        await updateDoc(ref, {
-                          "profile.showAchievements": checked,
-                        });
-
-                        trackEvent("settings_show_achievements_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save showAchievements:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update achievements setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>Show recently added foods</IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={showRecentItemsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Recent items toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setShowRecentItemsEnabled(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      const ref = doc(db, "users", current.uid);
-
-                      try {
-                        await updateDoc(ref, {
-                          "profile.showRecentItems": checked,
-                        });
-
-                        trackEvent("settings_show_recent_items_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save showRecentItems:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update recent items setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>Show recently searched items</IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={showRecentSearchesEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Recent searches toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setShowRecentSearchesEnabled(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      const ref = doc(db, "users", current.uid);
-
-                      try {
-                        await updateDoc(ref, {
-                          "profile.showRecentSearches": checked,
-                        });
-
-                        trackEvent("settings_show_recent_searches_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save showRecentSearches:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update recent searches setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
+                <IonItem
+                  lines="none"
+                  button
+                  onClick={() => {
+                    console.log("[USER ACTION] Settings: Navigate to home feed customization page");
+                    history.push(SETTINGS_ROUTES.homeFeed);
+                  }}
+                >
+                  <IonLabel>
+                    <h2>Customize Home & Add Food</h2>
+                    <p>{enabledHomeFeedItems}/4 sections enabled</p>
+                  </IonLabel>
                 </IonItem>
               </IonList>
             </IonCardContent>
@@ -1222,193 +1728,19 @@ const Settings: React.FC = () => {
             </IonCardHeader>
             <IonCardContent>
               <IonList>
-                <IonItem lines="full">
+                <IonItem
+                  lines="none"
+                  button
+                  onClick={() => {
+                    console.log("[USER ACTION] Settings: Navigate to appearance settings page");
+                    history.push(SETTINGS_ROUTES.appearance);
+                  }}
+                >
                   <IonIcon slot="start" icon={colorPaletteOutline} />
                   <IonLabel>
-                    <h2>App theme</h2>
-                    <p>Choose your preferred appearance</p>
+                    <h2>Appearance & performance</h2>
+                    <p>{appearanceSummary}</p>
                   </IonLabel>
-                  <IonSelect
-                    slot="end"
-                    interface="popover"
-                    value={themeMode}
-                    onIonChange={(e) => {
-                      console.log(`[USER ACTION] Settings: Theme select changed`, { value: e.detail.value });
-                      handleThemeChange(e.detail.value as ThemeMode);
-                    }}
-                  >
-                    <IonSelectOption value="system">System Default</IonSelectOption>
-                    <IonSelectOption value="light">Light</IonSelectOption>
-                    <IonSelectOption value="dark">Dark</IonSelectOption>
-                  </IonSelect>
-                </IonItem>
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={colorPaletteOutline} />
-                  <IonLabel>
-                    <h2>Tab sliding animations</h2>
-                    <p>Enable smooth animations when switching between tabs</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={tabAnimationsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Tab animations toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setTabAnimationsEnabled(checked);
-                      applyAnimationPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.tabAnimationsEnabled": checked,
-                        });
-
-                        trackEvent("settings_tab_animations_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save tab animations preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update animation setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={colorPaletteOutline} />
-                  <IonLabel>
-                    <h2>Animate charts</h2>
-                    <p>Enable animations for analytics charts.</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={chartAnimationsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Chart animations toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setChartAnimationsEnabled(checked);
-                      applyChartAnimationPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.chartAnimationsEnabled": checked,
-                        });
-
-                        trackEvent("settings_chart_animations_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save chart animations preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update chart animation setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={colorPaletteOutline} />
-                  <IonLabel>
-                    <h2>Show meal food counts</h2>
-                    <p>Display the number of foods next to meal names.</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={showMealCountsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Meal counts toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setShowMealCountsEnabled(checked);
-                      applyMealCountPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.showMealCounts": checked,
-                        });
-
-                        trackEvent("settings_show_meal_counts_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save meal counts preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update meal counts setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonIcon slot="start" icon={chevronDownOutline} />
-                  <IonLabel>
-                    <h2>Auto-expand meals with food</h2>
-                    <p>Open meals that already include entries.</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={autoExpandMealsEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Auto-expand meals toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setAutoExpandMealsEnabled(checked);
-                      applyAutoExpandMealsPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.autoExpandMeals": checked,
-                        });
-
-                        trackEvent("settings_auto_expand_meals_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save auto expand preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update auto expand setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
                 </IonItem>
               </IonList>
             </IonCardContent>
@@ -1430,12 +1762,29 @@ const Settings: React.FC = () => {
                   }}
                 >
                   <IonIcon slot="start" icon={trashOutline} />
-                  <IonLabel>Clear recent foods history</IonLabel>
+                  <IonLabel>
+                    <h2>Clear quick history chips</h2>
+                    <p>Removes Add Food search history chips synced in your account.</p>
+                  </IonLabel>
                   {clearingRecent && (
                     <IonNote slot="end" color="medium">
                       Clearing…
                     </IonNote>
                   )}
+                </IonItem>
+                <IonItem
+                  lines="none"
+                  button
+                  onClick={() => {
+                    console.log(`[USER ACTION] Settings: Clear recent searches clicked`);
+                    setConfirmClearRecentSearches(true);
+                  }}
+                >
+                  <IonIcon slot="start" icon={searchOutline} />
+                  <IonLabel>
+                    <h2>Clear recent searches</h2>
+                    <p>Clears Add Food search history on this device only.</p>
+                  </IonLabel>
                 </IonItem>
               </IonList>
             </IonCardContent>
@@ -1455,97 +1804,6 @@ const Settings: React.FC = () => {
                     <h2>Copy diagnostics</h2>
                     <p>Copy device and app info for support.</p>
                   </IonLabel>
-                </IonItem>
-                <IonItem lines="full" button onClick={() => {
-                  console.log(`[USER ACTION] Settings: Clear cached preferences clicked`);
-                  handleClearCachedPreferences();
-                }}>
-                  <IonLabel>
-                    <h2>Clear cached preferences</h2>
-                    <p>Reset theme, animation, and lazy-load settings.</p>
-                  </IonLabel>
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>
-                    <h2>Debug overlay</h2>
-                    <p>Show performance metrics overlay</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={debugOverlayEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Debug overlay toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setDebugOverlayEnabled(checked);
-                      applyDebugOverlayPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.debugOverlayEnabled": checked,
-                        });
-
-                        trackEvent("settings_debug_overlay_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save debug overlay preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update debug overlay setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
-                </IonItem>
-                <IonItem lines="full">
-                  <IonLabel>
-                    <h2>Lazy load routes</h2>
-                    <p>Load screens only when you visit them.</p>
-                  </IonLabel>
-                  <IonToggle
-                    slot="end"
-                    checked={lazyLoadEnabled}
-                    onIonChange={async (e) => {
-                      console.log(`[USER ACTION] Settings: Lazy load toggle changed`, { checked: e.detail.checked });
-                      const checked = e.detail.checked;
-                      setLazyLoadEnabled(checked);
-                      applyLazyLoadPreference(checked);
-
-                      const current = auth.currentUser;
-                      if (!current) return;
-
-                      try {
-                        const ref = doc(db, "users", current.uid);
-                        await updateDoc(ref, {
-                          "profile.lazyLoadEnabled": checked,
-                        });
-
-                        trackEvent("settings_lazy_load_toggle", {
-                          uid: current.uid,
-                          enabled: checked,
-                        });
-                      } catch (error: unknown) {
-                        const err = error as Error;
-                        console.error("Failed to save lazy load preference:", err);
-                        setToast({
-                          show: true,
-                          message:
-                            err?.message ||
-                            "Could not update lazy load setting.",
-                          color: "danger",
-                        });
-                      }
-                    }}
-                  />
                 </IonItem>
               </IonList>
             </IonCardContent>
@@ -1657,11 +1915,52 @@ const Settings: React.FC = () => {
                   <IonIcon slot="start" icon={logOutOutline} />
                   <IonLabel>Sign out</IonLabel>
                 </IonItem>
+                <IonItem
+                  lines="none"
+                  button
+                  onClick={() => {
+                    console.log("[USER ACTION] Settings: Navigate to delete account flow");
+                    history.push(SETTINGS_ROUTES.deleteAccount);
+                  }}
+                >
+                  <IonIcon slot="start" icon={trashOutline} color="danger" />
+                  <IonLabel>
+                    <h2>Delete account</h2>
+                    <p>Permanently remove your MacroPal account and data</p>
+                  </IonLabel>
+                </IonItem>
               </IonList>
             </IonCardContent>
           </IonCard>
         </div>
       </IonContent>
+
+      <IonModal
+        isOpen={showMfaSetupModal}
+        canDismiss={mfaSetupCanDismiss}
+        onDidDismiss={closeMfaSetupFlow}
+        className="settings-mfa-modal"
+      >
+        <IonPage>
+          <IonHeader>
+            <IonToolbar>
+              <IonTitle>2FA setup</IonTitle>
+              <IonButton
+                slot="end"
+                fill="clear"
+                color="medium"
+                onClick={closeMfaSetupFlow}
+                disabled={!mfaSetupCanDismiss}
+              >
+                Close
+              </IonButton>
+            </IonToolbar>
+          </IonHeader>
+          <IonContent className="ion-padding settings-mfa-setup-content">
+            {renderMfaSetupScreen()}
+          </IonContent>
+        </IonPage>
+      </IonModal>
 
       <input
         ref={galleryInputRef}
@@ -1730,38 +2029,9 @@ const Settings: React.FC = () => {
 
       {/* Alerts + Toasts unchanged */}
       <IonAlert
-        isOpen={confirmDelete}
-        header="Delete account?"
-        message="This is permanent and cannot be undone."
-        buttons={[
-          {
-            text: "Cancel",
-            role: "cancel",
-            handler: () => {
-              console.log(`[USER ACTION] Settings: Delete account alert cancelled`);
-              setConfirmDelete(false);
-            },
-          },
-          {
-            text: "Continue",
-            role: "destructive",
-            handler: () => {
-              console.log(`[USER ACTION] Settings: Delete account alert - Continue clicked`);
-              setConfirmDelete(false);
-              setConfirmDeleteName(true);
-            },
-          },
-        ]}
-        onDidDismiss={() => {
-          console.log(`[USER ACTION] Settings: Delete account alert dismissed`);
-          setConfirmDelete(false);
-        }}
-      />
-
-      <IonAlert
         isOpen={confirmClearRecent}
         header="Clear recent foods?"
-        message="This will remove your recent foods history. Favorites and diary entries will stay."
+        message="This clears quick history chips in Add Food search. Diary entries, favorites, and the Recently eaten list stay."
         buttons={[
           {
             text: "Cancel",
@@ -1788,47 +2058,31 @@ const Settings: React.FC = () => {
       />
 
       <IonAlert
-        isOpen={confirmDeleteName}
-        header="Type your name to confirm"
-        message={`To permanently delete your MacroPal account, please type: "${usernameToType}"`}
-        inputs={[
-          {
-            name: "typedName",
-            placeholder: usernameToType,
-          },
-        ]}
+        isOpen={confirmClearRecentSearches}
+        header="Clear recent searches?"
+        message="This removes your Add Food search history on this device."
         buttons={[
           {
             text: "Cancel",
             role: "cancel",
             handler: () => {
-              console.log(`[USER ACTION] Settings: Delete account name confirmation cancelled`);
-              setConfirmDeleteName(false);
+              console.log(`[USER ACTION] Settings: Clear recent searches alert cancelled`);
+              setConfirmClearRecentSearches(false);
             },
           },
           {
-            text: "Delete",
+            text: "Clear",
             role: "destructive",
-            handler: (data: { typedName?: string }) => {
-              console.log(`[USER ACTION] Settings: Delete account name confirmation - Delete clicked`, { matchesUsername: (data?.typedName || "").trim() === usernameToType });
-              const typed = (data?.typedName || "").trim();
-              if (typed !== usernameToType) {
-                setToast({
-                  show: true,
-                  message:
-                    "Name does not match. Please type it exactly as shown.",
-                  color: "danger",
-                });
-                return false;
-              }
-              setConfirmDeleteName(false);
-              void handleDeleteAccount();
+            handler: () => {
+              console.log(`[USER ACTION] Settings: Clear recent searches alert - Clear confirmed`);
+              setConfirmClearRecentSearches(false);
+              handleClearRecentSearches();
             },
           },
         ]}
         onDidDismiss={() => {
-          console.log(`[USER ACTION] Settings: Delete account name confirmation dismissed`);
-          setConfirmDeleteName(false);
+          console.log(`[USER ACTION] Settings: Clear recent searches alert dismissed`);
+          setConfirmClearRecentSearches(false);
         }}
       />
 

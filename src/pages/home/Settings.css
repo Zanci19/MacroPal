@@ -59,3 +59,139 @@
   display: none;
 }
 
+.settings-mfa-modal::part(content) {
+  border-radius: 18px 18px 0 0;
+}
+
+.settings-mfa-setup-content {
+  --background: var(--mp-bg);
+}
+
+.settings-mfa-setup-block {
+  display: grid;
+  gap: 12px;
+  max-width: 460px;
+  margin: 0 auto;
+  padding-top: 8px;
+}
+
+.settings-mfa-setup-block h2 {
+  margin: 0;
+  color: var(--mp-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.settings-mfa-setup-block p {
+  margin: 0;
+  color: var(--mp-text-muted);
+}
+
+.settings-mfa-setup-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-mfa-phone-preview {
+  display: block;
+  margin-top: -2px;
+  font-size: 0.86rem;
+}
+
+.settings-mfa-secret-block {
+  display: grid;
+  gap: 8px;
+  margin-top: -2px;
+}
+
+.settings-mfa-secret-key {
+  display: block;
+  padding: 10px 12px;
+  border: 1px dashed var(--mp-border);
+  border-radius: 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  word-break: break-all;
+}
+
+.settings-mfa-setup-loading {
+  min-height: 40vh;
+  align-content: center;
+  text-align: center;
+}
+
+.settings-mfa-setup-loading ion-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 4px;
+}
+
+.settings-mfa-recaptcha {
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ---- Visual polish pass ---- */
+
+.settings-page {
+  background:
+    radial-gradient(circle at 10% -18%, color-mix(in srgb, var(--ion-color-primary) 9%, transparent), transparent 42%),
+    radial-gradient(circle at 92% -12%, color-mix(in srgb, var(--ion-color-secondary) 8%, transparent), transparent 38%),
+    var(--mp-bg);
+}
+
+.settings-sections {
+  gap: 14px;
+}
+
+.settings-page ion-card {
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card);
+  box-shadow: var(--mp-shadow-soft);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .settings-page ion-card:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--ion-color-primary) 24%, var(--mp-border));
+    box-shadow: var(--mp-shadow-strong);
+  }
+}
+
+.settings-page ion-card-header {
+  padding-bottom: 10px;
+}
+
+.settings-card-title {
+  font-size: 1rem;
+  letter-spacing: 0.015em;
+}
+
+.settings-page ion-item {
+  --background: color-mix(in srgb, var(--mp-surface) 95%, var(--mp-surface-muted));
+  --border-color: transparent;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.settings-page ion-item:last-child {
+  margin-bottom: 0;
+}
+
+.settings-mfa-modal::part(content) {
+  border-top: 1px solid var(--mp-border);
+}
+
+.settings-mfa-setup-block {
+  padding: 10px 2px 2px;
+}
+
+.settings-mfa-secret-key {
+  background: color-mix(in srgb, var(--mp-surface-muted) 76%, var(--mp-surface));
+}
+

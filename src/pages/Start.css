@@ -1,11 +1,19 @@
 .start-content {
-  --background: #070a13;
+  --background: transparent;
   background: linear-gradient(145deg, #060914 0%, #0d1330 42%, #070a13 100%);
   position: relative;
   overflow: hidden;
   isolation: isolate;
   padding: 0;
   color: #f7f8fb;
+}
+
+.start-content::part(background) {
+  background: linear-gradient(145deg, #060914 0%, #0d1330 42%, #070a13 100%) !important;
+}
+
+.start-content::part(scroll) {
+  background: transparent;
 }
 
 .start-content::before,

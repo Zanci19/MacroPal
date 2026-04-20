@@ -2,11 +2,11 @@ export const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
 export const getStoredThemeMode = (): ThemeMode => {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return "dark";
   const stored = window.localStorage.getItem("mp_theme");
   return THEME_MODES.includes(stored as ThemeMode)
     ? (stored as ThemeMode)
-    : "system";
+    : "dark";
 };
 
 export const applyTheme = (mode: ThemeMode) => {

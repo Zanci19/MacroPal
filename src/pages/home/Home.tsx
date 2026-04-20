@@ -608,9 +608,14 @@ const Home: React.FC = () => {
     item: DiaryEntry;
   } | null>(null);
 
-  const [toast, setToast] = useState<{ open: boolean; message: string }>({
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    allowUndo?: boolean;
+  }>({
     open: false,
     message: "",
+    allowUndo: false,
   });
 
   const [copyMenuMeal, setCopyMenuMeal] = useState<MealKey | null>(null);
@@ -622,6 +627,8 @@ const Home: React.FC = () => {
   const [templatePromptOpen, setTemplatePromptOpen] = useState(false);
   const [templateTargetMeal, setTemplateTargetMeal] = useState<MealKey | null>(null);
   const [templateName, setTemplateName] = useState("");
+  const [clearMealTarget, setClearMealTarget] = useState<MealKey | null>(null);
+  const [clearDayConfirmOpen, setClearDayConfirmOpen] = useState(false);
   const [foodMenuEntry, setFoodMenuEntry] = useState<{
     meal: MealKey;
     index: number;
@@ -1159,7 +1166,7 @@ const Home: React.FC = () => {
     nextMealArr.splice(index, 1);
     setDayData({ ...dayData, [meal]: nextMealArr });
     setLastDeleted({ meal, index, item });
-    setToast({ open: true, message: `Removed ${item.name}.` });
+    setToast({ open: true, message: `Removed ${item.name}.`, allowUndo: true });
 
     try {
       if (isDemoMode) {
@@ -1286,15 +1293,15 @@ const Home: React.FC = () => {
 
   const clearMeal = async (meal: MealKey) => {
     if (!uid) return;
-    if (!window.confirm(`Remove all foods from ${meal}?`)) return;
 
     const dayKey = activeDateKey;
+    const previousMeal = [...(dayData[meal] || [])];
 
     trackEvent("meal_clear_confirmed", {
       uid,
       date: dayKey,
       meal,
-      count: (dayData[meal] || []).length,
+      count: previousMeal.length,
     });
 
     const emptyMeal: DiaryEntry[] = [];
@@ -1304,16 +1311,25 @@ const Home: React.FC = () => {
     }));
 
     try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", dayKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
-        tx.set(ref, { ...data, [meal]: emptyMeal }, { merge: true });
-      });
+      if (isDemoMode) {
+        const path = `users/${uid}/foods/${dayKey}`;
+        await setDocData(path, { [meal]: emptyMeal }, { merge: true });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "users", uid, "foods", dayKey);
+          const snap = await tx.get(ref);
+          const data = snap.data() || {};
+          tx.set(ref, { ...data, [meal]: emptyMeal }, { merge: true });
+        });
+      }
       setToast({ open: true, message: `Removed all foods from ${meal}.` });
 
       trackEvent("meal_cleared_success", { uid, date: dayKey, meal });
     } catch {
+      setDayData((prev) => ({
+        ...prev,
+        [meal]: previousMeal,
+      }));
       setToast({ open: true, message: "Could not clear this meal." });
 
       trackEvent("meal_cleared_error", { uid, date: dayKey, meal });
@@ -1334,16 +1350,14 @@ const Home: React.FC = () => {
     });
 
     try {
-      await runTransaction(db, async (tx) => {
-        const yRef = doc(db, "users", uid, "foods", yesterdayKey);
-        const tRef = doc(db, "users", uid, "foods", todayKeyValue);
-
-        const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
-        const yData = ySnap.data() || {};
-        const tData = tSnap.data() || {};
-
-        const yArr: DiaryEntry[] = yData[meal] || [];
-        const curArr: DiaryEntry[] = tData[meal] || [];
+      let copiedEntries: DiaryEntry[] = [];
+      if (isDemoMode) {
+        const yesterdayPath = `users/${uid}/foods/${yesterdayKey}`;
+        const todayPath = `users/${uid}/foods/${todayKeyValue}`;
+        const yData = ((await getDocData(yesterdayPath)) || {}) as Partial<DayDiaryDoc>;
+        const tData = ((await getDocData(todayPath)) || {}) as Partial<DayDiaryDoc>;
+        const yArr: DiaryEntry[] = [...(yData[meal] || [])];
+        const curArr: DiaryEntry[] = [...(tData[meal] || [])];
 
         if (!yArr.length) {
           throw new Error("No entries to copy from yesterday.");
@@ -1352,15 +1366,43 @@ const Home: React.FC = () => {
           throw new Error("This meal already has entries today.");
         }
 
-        tx.set(
-          tRef,
-          {
-            ...tData,
-            [meal]: yArr,
-          },
-          { merge: true }
-        );
-      });
+        copiedEntries = yArr;
+        await setDocData(todayPath, { [meal]: yArr }, { merge: true });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const yRef = doc(db, "users", uid, "foods", yesterdayKey);
+          const tRef = doc(db, "users", uid, "foods", todayKeyValue);
+
+          const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
+          const yData = ySnap.data() || {};
+          const tData = tSnap.data() || {};
+
+          const yArr: DiaryEntry[] = yData[meal] || [];
+          const curArr: DiaryEntry[] = tData[meal] || [];
+
+          if (!yArr.length) {
+            throw new Error("No entries to copy from yesterday.");
+          }
+          if (curArr.length) {
+            throw new Error("This meal already has entries today.");
+          }
+
+          copiedEntries = yArr;
+          tx.set(
+            tRef,
+            {
+              ...tData,
+              [meal]: yArr,
+            },
+            { merge: true }
+          );
+        });
+      }
+
+      setDayData((prev) => ({
+        ...prev,
+        [meal]: copiedEntries,
+      }));
 
       setToast({
         open: true,
@@ -1396,6 +1438,7 @@ const Home: React.FC = () => {
     if (!uid) return;
     
     const dayKey = activeDateKey;
+    const previousMealEntries = [...(dayData[meal] || [])];
     const newEntry: DiaryEntry = {
       fdcId: Date.now() + Math.floor(Math.random() * 1000000),
       name: foodName,
@@ -1414,14 +1457,22 @@ const Home: React.FC = () => {
     }));
 
     try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", dayKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
+      if (isDemoMode) {
+        const path = `users/${uid}/foods/${dayKey}`;
+        const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const current: DiaryEntry[] = [...(data[meal] || [])];
         const updated = [...current, newEntry];
-        tx.set(ref, { [meal]: updated }, { merge: true });
-      });
+        await setDocData(path, { [meal]: updated }, { merge: true });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "users", uid, "foods", dayKey);
+          const snap = await tx.get(ref);
+          const data = snap.data() || {};
+          const current: DiaryEntry[] = [...(data[meal] || [])];
+          const updated = [...current, newEntry];
+          tx.set(ref, { [meal]: updated }, { merge: true });
+        });
+      }
 
       setToast({ open: true, message: `Added ${foodName} to ${meal}` });
       trackEvent("quick_add_food_success", {
@@ -1431,6 +1482,10 @@ const Home: React.FC = () => {
         food: foodName,
       });
     } catch (error) {
+      setDayData((prev) => ({
+        ...prev,
+        [meal]: previousMealEntries,
+      }));
       setToast({ open: true, message: "Failed to add food" });
       trackEvent("quick_add_food_error", {
         uid,
@@ -1564,9 +1619,9 @@ const Home: React.FC = () => {
 
   const clearDay = async () => {
     if (!uid) return;
-    if (!window.confirm("Remove all foods from this day?")) return;
 
     const dayKey = activeDateKey;
+    const previousDay = dayData;
 
     const empty: DayDiaryDoc = {
       breakfast: [],
@@ -1583,26 +1638,32 @@ const Home: React.FC = () => {
     setDayData(empty);
 
     try {
-      await runTransaction(db, async (tx) => {
-        const ref = doc(db, "users", uid, "foods", dayKey);
-        const snap = await tx.get(ref);
-        const data = snap.data() || {};
-        tx.set(
-          ref,
-          {
-            ...data,
-            breakfast: [],
-            lunch: [],
-            dinner: [],
-            snacks: [],
-          },
-          { merge: true }
-        );
-      });
+      if (isDemoMode) {
+        const path = `users/${uid}/foods/${dayKey}`;
+        await setDocData(path, empty, { merge: true });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const ref = doc(db, "users", uid, "foods", dayKey);
+          const snap = await tx.get(ref);
+          const data = snap.data() || {};
+          tx.set(
+            ref,
+            {
+              ...data,
+              breakfast: [],
+              lunch: [],
+              dinner: [],
+              snacks: [],
+            },
+            { merge: true }
+          );
+        });
+      }
       setToast({ open: true, message: "Cleared all meals for this day." });
 
       trackEvent("day_clear_success", { uid, date: dayKey });
     } catch {
+      setDayData(previousDay);
       setToast({ open: true, message: "Could not clear this day." });
 
       trackEvent("day_clear_error", { uid, date: dayKey });
@@ -1622,13 +1683,12 @@ const Home: React.FC = () => {
     });
 
     try {
-      await runTransaction(db, async (tx) => {
-        const yRef = doc(db, "users", uid, "foods", yesterdayKey);
-        const tRef = doc(db, "users", uid, "foods", todayKeyValue);
-
-        const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
-        const yData = ySnap.data() || {};
-        const tData = tSnap.data() || {};
+      let copiedDay: DayDiaryDoc | null = null;
+      if (isDemoMode) {
+        const yesterdayPath = `users/${uid}/foods/${yesterdayKey}`;
+        const todayPath = `users/${uid}/foods/${todayKeyValue}`;
+        const yData = ((await getDocData(yesterdayPath)) || {}) as Partial<DayDiaryDoc>;
+        const tData = ((await getDocData(todayPath)) || {}) as Partial<DayDiaryDoc>;
 
         const yDay: DayDiaryDoc = {
           breakfast: yData.breakfast || [],
@@ -1664,10 +1724,10 @@ const Home: React.FC = () => {
           throw new Error("This day already has entries.");
         }
 
-        tx.set(
-          tRef,
+        copiedDay = yDay;
+        await setDocData(
+          todayPath,
           {
-            ...tData,
             breakfast: yDay.breakfast,
             lunch: yDay.lunch,
             dinner: yDay.dinner,
@@ -1675,7 +1735,67 @@ const Home: React.FC = () => {
           },
           { merge: true }
         );
-      });
+      } else {
+        await runTransaction(db, async (tx) => {
+          const yRef = doc(db, "users", uid, "foods", yesterdayKey);
+          const tRef = doc(db, "users", uid, "foods", todayKeyValue);
+
+          const [ySnap, tSnap] = await Promise.all([tx.get(yRef), tx.get(tRef)]);
+          const yData = ySnap.data() || {};
+          const tData = tSnap.data() || {};
+
+          const yDay: DayDiaryDoc = {
+            breakfast: yData.breakfast || [],
+            lunch: yData.lunch || [],
+            dinner: yData.dinner || [],
+            snacks: yData.snacks || [],
+          };
+
+          const tDay: DayDiaryDoc = {
+            breakfast: tData.breakfast || [],
+            lunch: tData.lunch || [],
+            dinner: tData.dinner || [],
+            snacks: tData.snacks || [],
+          };
+
+          const yHasAny =
+            yDay.breakfast.length ||
+            yDay.lunch.length ||
+            yDay.dinner.length ||
+            yDay.snacks.length;
+
+          if (!yHasAny) {
+            throw new Error("No entries to copy from yesterday.");
+          }
+
+          const tHasAny =
+            tDay.breakfast.length ||
+            tDay.lunch.length ||
+            tDay.dinner.length ||
+            tDay.snacks.length;
+
+          if (tHasAny) {
+            throw new Error("This day already has entries.");
+          }
+
+          copiedDay = yDay;
+          tx.set(
+            tRef,
+            {
+              ...tData,
+              breakfast: yDay.breakfast,
+              lunch: yDay.lunch,
+              dinner: yDay.dinner,
+              snacks: yDay.snacks,
+            },
+            { merge: true }
+          );
+        });
+      }
+
+      if (copiedDay) {
+        setDayData(copiedDay);
+      }
 
       setToast({
         open: true,
@@ -2321,6 +2441,17 @@ const Home: React.FC = () => {
     }
   }, [uid, hasViewedTutorial, showAnnouncementPopup, isViewActive, profileLoading, showTutorialWithDelay]);
 
+  const activeFoodMenuItems = foodMenuEntry ? dayData[foodMenuEntry.meal] || [] : [];
+  const canMoveFoodUp = !!foodMenuEntry && foodMenuEntry.index > 0;
+  const canMoveFoodDown =
+    !!foodMenuEntry && foodMenuEntry.index < activeFoodMenuItems.length - 1;
+  const clearMealCount = clearMealTarget ? (dayData[clearMealTarget] || []).length : 0;
+  const totalFoodsForDay =
+    dayData.breakfast.length +
+    dayData.lunch.length +
+    dayData.dinner.length +
+    dayData.snacks.length;
+
   return (
     <IonPage className="home-page">
       <IonHeader>
@@ -2393,6 +2524,24 @@ const Home: React.FC = () => {
             <IonIcon icon={chevronForwardOutline} />
           </IonButton>
         </div>
+        {!isToday && (
+          <div className="home-date-shortcut">
+            <IonButton
+              fill="clear"
+              size="small"
+              onClick={() => {
+                trackEvent("day_navigate_today_shortcut", {
+                  uid,
+                  from: activeDateKey,
+                  to: todayKey,
+                });
+                setActiveDateKey(todayKey);
+              }}
+            >
+              Jump back to today
+            </IonButton>
+          </div>
+        )}
 
         <IonCard className="fs-summary home-overview-card home-top-swiper-card">
           {SwiperComp && SwiperSlideComp && PaginationMod ? (
@@ -2732,27 +2881,17 @@ const Home: React.FC = () => {
           buttons={[
             {
               text: "Move up",
-              cssClass:
-                foodMenuEntry &&
-                  (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
-                  ? ""
-                  : "action-sheet-disabled",
+              cssClass: canMoveFoodUp ? "" : "action-sheet-disabled",
               handler: () => {
-                if (!foodMenuEntry) return false;
-                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                if (!foodMenuEntry || !canMoveFoodUp) return false;
                 moveFood(foodMenuEntry.meal, foodMenuEntry.index, -1);
               },
             },
             {
               text: "Move down",
-              cssClass:
-                foodMenuEntry &&
-                  (dayData[foodMenuEntry.meal]?.length ?? 0) > 1
-                  ? ""
-                  : "action-sheet-disabled",
+              cssClass: canMoveFoodDown ? "" : "action-sheet-disabled",
               handler: () => {
-                if (!foodMenuEntry) return false;
-                if ((dayData[foodMenuEntry.meal]?.length ?? 0) <= 1) return false;
+                if (!foodMenuEntry || !canMoveFoodDown) return false;
                 moveFood(foodMenuEntry.meal, foodMenuEntry.index, 1);
               },
             },
@@ -2818,7 +2957,7 @@ const Home: React.FC = () => {
               role: "destructive",
               handler: () => {
                 if (copyMenuMeal) {
-                  clearMeal(copyMenuMeal);
+                  setClearMealTarget(copyMenuMeal);
                 }
               },
             },
@@ -2884,16 +3023,14 @@ const Home: React.FC = () => {
             {
               text: "Copy summary to clipboard",
               handler: () => {
-                if (copyMenuMeal) {
-                  copyDaySummary();
-                }
+                void copyDaySummary();
               },
             },
             {
               text: "Clear all meals for this day",
               role: "destructive",
               handler: () => {
-                clearDay();
+                setClearDayConfirmOpen(true);
               },
             },
             {
@@ -2901,6 +3038,67 @@ const Home: React.FC = () => {
               role: "cancel",
             },
           ]}
+        />
+
+        <IonAlert
+          isOpen={clearMealTarget !== null}
+          header={clearMealTarget ? `Clear ${pretty(clearMealTarget)}?` : "Clear meal?"}
+          message={
+            clearMealTarget
+              ? `This will remove ${clearMealCount} ${
+                  clearMealCount === 1 ? "food" : "foods"
+                } from ${pretty(clearMealTarget)}.`
+              : undefined
+          }
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setClearMealTarget(null);
+              },
+            },
+            {
+              text: "Clear meal",
+              role: "destructive",
+              handler: () => {
+                if (!clearMealTarget) return;
+                void clearMeal(clearMealTarget);
+                setClearMealTarget(null);
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setClearMealTarget(null);
+          }}
+        />
+
+        <IonAlert
+          isOpen={clearDayConfirmOpen}
+          header="Clear this day?"
+          message={`This will remove ${totalFoodsForDay} ${
+            totalFoodsForDay === 1 ? "food" : "foods"
+          } from ${activeDateLabel}.`}
+          buttons={[
+            {
+              text: "Cancel",
+              role: "cancel",
+              handler: () => {
+                setClearDayConfirmOpen(false);
+              },
+            },
+            {
+              text: "Clear day",
+              role: "destructive",
+              handler: () => {
+                void clearDay();
+                setClearDayConfirmOpen(false);
+              },
+            },
+          ]}
+          onDidDismiss={() => {
+            setClearDayConfirmOpen(false);
+          }}
         />
 
         <IonAlert
@@ -2946,15 +3144,19 @@ const Home: React.FC = () => {
           isOpen={toast.open}
           message={toast.message}
           duration={2500}
-          buttons={[
-            {
-              text: "Undo",
-              role: "cancel",
-              side: "end",
-              handler: () => undoDelete(),
-            },
-          ]}
-          onDidDismiss={() => setToast({ open: false, message: "" })}
+          buttons={
+            toast.allowUndo && lastDeleted
+              ? [
+                  {
+                    text: "Undo",
+                    role: "cancel",
+                    side: "end",
+                    handler: () => undoDelete(),
+                  },
+                ]
+              : []
+          }
+          onDidDismiss={() => setToast({ open: false, message: "", allowUndo: false })}
         />
         <IonToast
           isOpen={weighInToast.open}

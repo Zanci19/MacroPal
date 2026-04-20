@@ -34,6 +34,11 @@ service cloud.firestore {
       return isSelf(userUid) || (signedIn() && isAssigned(request.auth.uid, userUid));
     }
 
+    match /meta/{docId} {
+      allow read: if true;
+      allow write: if signedIn() && isAdmin(request.auth.uid);
+    }
+
     match /users/{uid} {
       allow read: if canReadUser(uid);
       allow create: if isSelf(uid);

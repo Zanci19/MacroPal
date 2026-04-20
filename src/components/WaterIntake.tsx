@@ -28,6 +28,12 @@ export interface WaterIntakeData {
 }
 
 const GLASS_SIZE_ML = 250; // Standard glass size
+const getFirestoreErrorCode = (error: unknown): string => {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return "";
+  }
+  return String((error as { code?: unknown }).code ?? "");
+};
 
 export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
   const [waterData, setWaterData] = useState<WaterIntakeData>({
@@ -35,16 +41,16 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
     goal: 8, // Default 8 glasses per day
   });
   const [loading, setLoading] = useState(true);
+  const userId = auth.currentUser?.uid ?? null;
 
   // Load water intake data with real-time listener
   useEffect(() => {
-    const user = auth.currentUser;
-    if (!user) {
+    if (!userId) {
       setLoading(false);
       return;
     }
 
-    const waterDocRef = doc(db, `users/${user.uid}/water/${dateKey}`);
+    const waterDocRef = doc(db, `users/${userId}/water/${dateKey}`);
     const unsub = onSnapshot(
       waterDocRef,
       (snap) => {
@@ -60,13 +66,16 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
         setLoading(false);
       },
       (error) => {
-        console.error("Error loading water data:", error);
+        const code = getFirestoreErrorCode(error);
+        if (code !== "permission-denied" && code !== "unauthenticated") {
+          console.error("Error loading water data:", error);
+        }
         setLoading(false);
       }
     );
 
     return unsub;
-  }, [dateKey]);
+  }, [dateKey, userId]);
 
   const updateWaterIntake = async (newGlasses: number) => {
     const user = auth.currentUser;
@@ -82,7 +91,10 @@ export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
       await setDoc(waterDocRef, updatedData, { merge: true });
       setWaterData(updatedData);
     } catch (error) {
-      console.error("Error updating water intake:", error);
+      const code = getFirestoreErrorCode(error);
+      if (code !== "permission-denied" && code !== "unauthenticated") {
+        console.error("Error updating water intake:", error);
+      }
     }
   };
 

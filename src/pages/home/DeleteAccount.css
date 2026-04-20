@@ -1,0 +1,19 @@
+.delete-account-page ion-card {
+  margin: 0;
+}
+
+.delete-account-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--mp-text);
+}
+
+.delete-account-flow {
+  display: grid;
+  gap: 12px;
+}
+
+.delete-account-flow p {
+  margin: 0;
+  color: var(--mp-text-muted);
+}
