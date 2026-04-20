@@ -4,20 +4,26 @@
 }
 
 .onboarding-profile-page::part(background) {
-  background:
+  background-color: var(--mp-bg);
+  background-image:
     radial-gradient(
       circle at 16% 14%,
-      rgba(var(--ion-color-primary-rgb), 0.22) 0%,
-      rgba(var(--ion-color-primary-rgb), 0.04) 38%,
-      transparent 58%
+      rgba(var(--ion-color-primary-rgb), 0.26) 0%,
+      rgba(var(--ion-color-primary-rgb), 0.07) 40%,
+      transparent 62%
     ),
     radial-gradient(
       circle at 84% 12%,
-      rgba(var(--ion-color-primary-rgb), 0.16) 0%,
-      rgba(var(--ion-color-primary-rgb), 0.02) 42%,
-      transparent 62%
+      rgba(var(--ion-color-primary-rgb), 0.2) 0%,
+      rgba(var(--ion-color-primary-rgb), 0.04) 44%,
+      transparent 66%
     ),
     linear-gradient(180deg, var(--mp-bg) 0%, var(--mp-surface-muted) 100%);
+  background-size: 165% 165%, 150% 150%, 100% 100%;
+  background-position: 8% 10%, 94% 14%, 0 0;
+  animation:
+    onboarding-bg-enter 520ms ease-out both,
+    onboarding-bg-drift 18s ease-in-out infinite alternate;
 }
 
 .onboarding-profile-page::part(scroll) {
@@ -316,6 +322,37 @@
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@keyframes onboarding-bg-enter {
+  from {
+    opacity: 0;
+    background-position: 24% 26%, 76% 28%, 0 0;
+    filter: saturate(0.9);
+  }
+  to {
+    opacity: 1;
+    background-position: 8% 10%, 94% 14%, 0 0;
+    filter: saturate(1);
+  }
+}
+
+@keyframes onboarding-bg-drift {
+  0% {
+    background-position: 10% 12%, 90% 14%, 0 0;
+  }
+  50% {
+    background-position: 30% 32%, 68% 34%, 0 0;
+  }
+  100% {
+    background-position: 6% 58%, 88% 46%, 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-profile-page::part(background) {
+    animation: onboarding-bg-enter 320ms ease-out both;
   }
 }
 

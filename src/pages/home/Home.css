@@ -1052,7 +1052,7 @@ body.dark .fs-macro__val {
 
 .fs-meal__more {
   margin: 8px 12px;
-  --color: var(--mp-text-muted);
+  --color: #ffffff;
   text-transform: none;
 }
 

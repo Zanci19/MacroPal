@@ -405,12 +405,32 @@ ion-popover::part(content) {
   color: var(--mp-text);
 }
 
+body.dark ion-popover ion-select-popover,
+body.dark ion-popover ion-select-popover ion-item,
+body.dark ion-popover ion-select-popover .select-interface-option,
+body.dark ion-popover ion-select-popover ion-label {
+  --color: #ffffff;
+  color: #ffffff !important;
+}
+
 ion-action-sheet {
   --background: var(--mp-surface);
   --color: var(--mp-text);
   --button-color: var(--mp-text);
   --button-background: transparent;
   --border-color: var(--mp-border);
+}
+
+body.dark ion-action-sheet {
+  --color: #ffffff;
+  --button-color: #ffffff;
+}
+
+body.dark ion-action-sheet .action-sheet-title,
+body.dark ion-action-sheet .action-sheet-button,
+body.dark ion-action-sheet .action-sheet-option,
+body.dark ion-action-sheet .action-sheet-button-inner {
+  color: #ffffff !important;
 }
 
 ion-chip {
@@ -465,8 +485,13 @@ body.dark ion-alert .alert-message {
   color: var(--mp-text) !important;
 }
 
+body.dark ion-alert .alert-radio-label,
+body.dark ion-alert .alert-checkbox-label {
+  color: #ffffff !important;
+}
+
 body.dark ion-alert .alert-button {
-  color: var(--mp-primary) !important;
+  color: #ffffff !important;
 }
 
 /* Improved scrollbar for all themes */
