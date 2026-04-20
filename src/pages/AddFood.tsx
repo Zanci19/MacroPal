@@ -297,6 +297,14 @@ function safeNum(n: unknown, dp = 2): number {
   return Number(v.toFixed(dp));
 }
 
+function compareIsoDateDesc(a?: string, b?: string): number {
+  return (b ?? "").localeCompare(a ?? "");
+}
+
+function sortByCreatedAtDesc<T extends { createdAt?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => compareIsoDateDesc(a.createdAt, b.createdAt));
+}
+
 function parseServingSize(
   servingSize?: string
 ): { grams?: number; ml?: number; label: string } {
@@ -482,6 +490,7 @@ const AddFood: React.FC = () => {
 
   const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesSearchQuery, setFavoritesSearchQuery] = useState("");
   const [favoriteToDelete, setFavoriteToDelete] = useState<FavoriteFood | null>(
     null
   );
@@ -598,6 +607,37 @@ const AddFood: React.FC = () => {
     if (!loading && results.length === 0) return true;
     return false;
   }, [query, loading, results.length]);
+
+  const normalizedFavoritesSearchQuery = useMemo(
+    () => favoritesSearchQuery.trim().toLowerCase(),
+    [favoritesSearchQuery]
+  );
+
+  const filteredFavorites = useMemo(() => {
+    if (!normalizedFavoritesSearchQuery) return favorites;
+    return favorites.filter((fav) => {
+      const name = fav.name.toLowerCase();
+      const brand = (fav.brand ?? "").toLowerCase();
+      const note = (fav.selection?.note ?? "").toLowerCase();
+      return (
+        name.includes(normalizedFavoritesSearchQuery) ||
+        brand.includes(normalizedFavoritesSearchQuery) ||
+        note.includes(normalizedFavoritesSearchQuery)
+      );
+    });
+  }, [favorites, normalizedFavoritesSearchQuery]);
+
+  const filteredMealPresets = useMemo(() => {
+    if (!normalizedFavoritesSearchQuery) return mealPresets;
+    return mealPresets.filter((preset) => {
+      const name = preset.name.toLowerCase();
+      const note = (preset.note ?? "").toLowerCase();
+      return (
+        name.includes(normalizedFavoritesSearchQuery) ||
+        note.includes(normalizedFavoritesSearchQuery)
+      );
+    });
+  }, [mealPresets, normalizedFavoritesSearchQuery]);
 
   useEffect(() => {
     trackEvent("add_food_screen_view", { meal, date: dateKey });
@@ -1025,10 +1065,12 @@ const AddFood: React.FC = () => {
       unsub = onSnapshot(
         ref,
         (snap) => {
-          const list: FavoriteFood[] = snap.docs.map((d) => {
-            const data = d.data() as Omit<FavoriteFood, "id">;
-            return { id: d.id, ...data };
-          });
+          const list: FavoriteFood[] = sortByCreatedAtDesc(
+            snap.docs.map((d) => {
+              const data = d.data() as Omit<FavoriteFood, "id">;
+              return { id: d.id, ...data };
+            })
+          );
           setFavorites(list);
           setFavoritesLoading(false);
           trackEvent("favorites_loaded", {
@@ -1178,10 +1220,12 @@ const AddFood: React.FC = () => {
       unsub = onSnapshot(
         ref,
         (snap) => {
-          const list: CustomMealPreset[] = snap.docs.map((d) => {
-            const data = d.data() as Omit<CustomMealPreset, "id">;
-            return { id: d.id, ...data };
-          });
+          const list: CustomMealPreset[] = sortByCreatedAtDesc(
+            snap.docs.map((d) => {
+              const data = d.data() as Omit<CustomMealPreset, "id">;
+              return { id: d.id, ...data };
+            })
+          );
           setMealPresets(list);
           setMealPresetsLoading(false);
           trackEvent("meal_presets_loaded", {
@@ -1711,15 +1755,28 @@ const AddFood: React.FC = () => {
   };
 
   const takeAiPhoto = async () => {
+    const capacitorOnWindow =
+      typeof window !== "undefined"
+        ? (window as { Capacitor?: { getPlatform?: () => string } }).Capacitor
+        : undefined;
     setAiPhotoPreparing(true);
     try {
       console.log('[AI Photo] Starting photo capture...');
       trackEvent("ai_photo_camera_open", { meal, date: dateKey });
       const modelPreloadPromise = ensureAiModelsReady();
-      cleanupStalePwaCameraModal();
+      const isWebPlatform =
+        typeof capacitorOnWindow?.getPlatform === "function" &&
+        capacitorOnWindow.getPlatform() === "web";
+      if (!isWebPlatform) {
+        cleanupStalePwaCameraModal();
+      }
       
       // Check if PWA elements are available
-      if (typeof window !== 'undefined' && !customElements.get('pwa-camera-modal')) {
+      if (
+        !isWebPlatform &&
+        typeof window !== 'undefined' &&
+        !customElements.get('pwa-camera-modal')
+      ) {
         console.error('[AI Photo] PWA camera modal not registered');
         setToast({
           show: true,
@@ -1731,32 +1788,48 @@ const AddFood: React.FC = () => {
       
       let photo;
 
-      try {
+      const basePhotoOptions = {
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      } as const;
+
+      if (isWebPlatform) {
+        trackEvent("ai_photo_camera_web_input", { meal, date: dateKey });
         photo = await Camera.getPhoto({
-          quality: 90,
-          allowEditing: false,
-          resultType: CameraResultType.DataUrl,
-          source: CameraSource.Camera,
-        });
-      } catch (err) {
-        const errorMessage = String(err);
-        const isPwaCameraModalError = errorMessage.includes('$instanceValues$') || errorMessage.includes('facingMode');
-
-        if (!isPwaCameraModalError) {
-          throw err;
-        }
-
-        console.warn('[AI Photo] PWA camera modal failed; retrying with browser file input fallback', err);
-        trackEvent('ai_photo_camera_fallback_web_input', { meal, date: dateKey, error: errorMessage });
-        cleanupStalePwaCameraModal();
-
-        photo = await Camera.getPhoto({
-          quality: 90,
-          allowEditing: false,
-          resultType: CameraResultType.DataUrl,
-          source: CameraSource.Camera,
+          ...basePhotoOptions,
           webUseInput: true,
         });
+      } else {
+        try {
+          photo = await Camera.getPhoto(basePhotoOptions);
+        } catch (err) {
+          const errorMessage = String(err);
+          const isPwaCameraModalError =
+            errorMessage.includes("$instanceValues$") ||
+            errorMessage.includes("facingMode");
+
+          if (!isPwaCameraModalError) {
+            throw err;
+          }
+
+          console.warn(
+            "[AI Photo] PWA camera modal failed; retrying with browser file input fallback",
+            err
+          );
+          trackEvent("ai_photo_camera_fallback_web_input", {
+            meal,
+            date: dateKey,
+            error: errorMessage,
+          });
+          cleanupStalePwaCameraModal();
+
+          photo = await Camera.getPhoto({
+            ...basePhotoOptions,
+            webUseInput: true,
+          });
+        }
       }
 
       if (photo?.dataUrl) {
@@ -1798,7 +1871,12 @@ const AddFood: React.FC = () => {
       trackEvent("ai_photo_camera_error", { meal, date: dateKey, error: String(err) });
     } finally {
       setAiPhotoPreparing(false);
-      cleanupStalePwaCameraModal();
+      if (
+        typeof capacitorOnWindow?.getPlatform === "function" &&
+        capacitorOnWindow.getPlatform() !== "web"
+      ) {
+        cleanupStalePwaCameraModal();
+      }
     }
   };
 
@@ -3205,28 +3283,53 @@ const AddFood: React.FC = () => {
 
         {tab === "favorites" && (
           <>
-            <div className="add-food-favorites-filter">
-              <IonButton
-                size="small"
-                onClick={() => {
-                  console.log(`[USER ACTION] AddFood: Create custom food button clicked`);
-                  setShowCreateCustomFood(true);
-                  trackEvent("custom_food_modal_open");
-                }}
-              >
-                Create custom food
-              </IonButton>
-              <IonButton
-                size="small"
-                fill="outline"
-                onClick={() => {
-                  console.log(`[USER ACTION] AddFood: Create custom meal button clicked`);
-                  setShowCreateMealPreset(true);
-                  trackEvent("meal_preset_modal_open");
-                }}
-              >
-                Create custom meal
-              </IonButton>
+            <div className="add-food-favorites-tools">
+              <div className="fs-search-bar add-food-favorites-search">
+                <IonIcon icon={searchOutline} className="fs-search-bar__icon" />
+                <IonInput
+                  className="fs-search-bar__input"
+                  placeholder="Search favorites and meals"
+                  value={favoritesSearchQuery}
+                  debounce={SEARCH_DEBOUNCE_MS}
+                  onIonInput={(e) => {
+                    setFavoritesSearchQuery(e.detail.value ?? "");
+                  }}
+                />
+                {!!favoritesSearchQuery.trim() && (
+                  <IonButton
+                    fill="clear"
+                    className="fs-search-bar__action"
+                    color="medium"
+                    onClick={() => setFavoritesSearchQuery("")}
+                    aria-label="Clear favorites search query"
+                  >
+                    <IonIcon slot="icon-only" icon={closeCircleOutline} />
+                  </IonButton>
+                )}
+              </div>
+              <div className="add-food-favorites-filter">
+                <IonButton
+                  size="small"
+                  onClick={() => {
+                    console.log(`[USER ACTION] AddFood: Create custom food button clicked`);
+                    setShowCreateCustomFood(true);
+                    trackEvent("custom_food_modal_open");
+                  }}
+                >
+                  Create custom food
+                </IonButton>
+                <IonButton
+                  size="small"
+                  fill="outline"
+                  onClick={() => {
+                    console.log(`[USER ACTION] AddFood: Create custom meal button clicked`);
+                    setShowCreateMealPreset(true);
+                    trackEvent("meal_preset_modal_open");
+                  }}
+                >
+                  Create custom meal
+                </IonButton>
+              </div>
             </div>
 
             {recentLoading && (
@@ -3265,13 +3368,13 @@ const AddFood: React.FC = () => {
             )}
 
             {favoritesLoading && (
-              <div className="ion-text-center" style={{ padding: 16 }}>
+              <div className="ion-text-center add-food-loading-state">
                 <IonSpinner name="dots" />
               </div>
             )}
 
             {!favoritesLoading && favorites.length === 0 && (
-              <p style={{ padding: 12, opacity: 0.7, fontSize: 14 }}>
+              <p className="add-food-empty-state">
                 No favorites yet. When adding a food, tap <strong>“Save this portion as a favorite”</strong> in the
                 details dialog to store it here.
               </p>
@@ -3279,108 +3382,110 @@ const AddFood: React.FC = () => {
 
             {!favoritesLoading && favorites.length > 0 && (
               <>
-                <IonText
-                  style={{
-                    padding: "4px 12px",
-                    display: "block",
-                    fontSize: 13,
-                    opacity: 0.8,
-                  }}
-                >
-                  Favorites
+                <IonText className="add-food-section-text">
+                  {normalizedFavoritesSearchQuery
+                    ? `Favorites (${filteredFavorites.length}/${favorites.length})`
+                    : "Favorites"}
                 </IonText>
-                <IonList style={{ marginTop: 4 }}>
-                  {favorites.map((fav) => (
-                    <IonItem key={fav.id} button onClick={() => addFavoriteToMeal(fav)}>
-                      <IonIcon slot="start" icon={starOutline} />
-                      <IonLabel>
-                        <h2>
-                          {fav.name}
-                          {fav.brand ? ` · ${fav.brand}` : ""}
-                        </h2>
-                        <p>
-                          C {fav.total.carbs.toFixed(1)}g · P {fav.total.protein.toFixed(1)}g · F {fav.total.fat.toFixed(1)}g
-                        </p>
-                        <p style={{ fontSize: 12, opacity: 0.7 }}>{fav.selection.note}</p>
-                      </IonLabel>
+                {filteredFavorites.length === 0 ? (
+                  <p className="add-food-empty-state">
+                    No favorites match "{favoritesSearchQuery.trim()}".
+                  </p>
+                ) : (
+                  <IonList className="add-food-favorites-list">
+                    {filteredFavorites.map((fav) => (
+                      <IonItem key={fav.id} button onClick={() => addFavoriteToMeal(fav)}>
+                        <IonIcon slot="start" icon={starOutline} />
+                        <IonLabel>
+                          <h2>
+                            {fav.name}
+                            {fav.brand ? ` · ${fav.brand}` : ""}
+                          </h2>
+                          <p>
+                            C {fav.total.carbs.toFixed(1)}g · P {fav.total.protein.toFixed(1)}g · F{" "}
+                            {fav.total.fat.toFixed(1)}g
+                          </p>
+                          <p style={{ fontSize: 12, opacity: 0.7 }}>{fav.selection.note}</p>
+                        </IonLabel>
 
-                      <div slot="end" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <div className="fs-result-kcal">
-                          {Math.round(fav.total.calories)}<br />
-                          <span className="fs-result-kcal__unit">kcal</span>
+                        <div slot="end" style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <div className="fs-result-kcal">
+                            {Math.round(fav.total.calories)}<br />
+                            <span className="fs-result-kcal__unit">kcal</span>
+                          </div>
+                          <IonButton
+                            fill="clear"
+                            color="danger"
+                            onClick={(e) => {
+                              console.log(`[USER ACTION] AddFood: Delete favorite button clicked`, { favoriteId: fav.id, name: fav.name });
+                              e.stopPropagation();
+                              setFavoriteToDelete(fav);
+                              trackEvent("favorite_delete_prompt_open", {
+                                favorite_id: fav.id,
+                              });
+                            }}
+                            aria-label={`Delete favorite ${fav.name}`}
+                          >
+                            <IonIcon icon={trashOutline} />
+                          </IonButton>
                         </div>
-                        <IonButton
-                          fill="clear"
-                          color="danger"
-                          onClick={(e) => {
-                            console.log(`[USER ACTION] AddFood: Delete favorite button clicked`, { favoriteId: fav.id, name: fav.name });
-                            e.stopPropagation();
-                            setFavoriteToDelete(fav);
-                            trackEvent("favorite_delete_prompt_open", {
-                              favorite_id: fav.id,
-                            });
-                          }}
-                          aria-label={`Delete favorite ${fav.name}`}
-                        >
-                          <IonIcon icon={trashOutline} />
-                        </IonButton>
-                      </div>
-                    </IonItem>
-                  ))}
-                </IonList>
+                      </IonItem>
+                    ))}
+                  </IonList>
+                )}
               </>
             )}
 
             {mealPresetsLoading && (
-              <div className="ion-text-center" style={{ padding: 12 }}>
+              <div className="ion-text-center add-food-loading-state-sm">
                 <IonSpinner name="dots" />
               </div>
             )}
 
             {!mealPresetsLoading && mealPresets.length > 0 && (
               <>
-                <IonText
-                  style={{
-                    padding: "4px 12px",
-                    display: "block",
-                    fontSize: 13,
-                    opacity: 0.8,
-                    marginTop: 8,
-                  }}
-                >
-                  Custom meals
+                <IonText className="add-food-section-text add-food-section-text--spaced">
+                  {normalizedFavoritesSearchQuery
+                    ? `Custom meals (${filteredMealPresets.length}/${mealPresets.length})`
+                    : "Custom meals"}
                 </IonText>
-                <IonList style={{ marginTop: 4 }}>
-                  {mealPresets.map((preset) => (
-                    <IonItem key={preset.id} button onClick={() => addMealPresetToMeal(preset)}>
-                      <IonLabel>
-                        <h2>{preset.name}</h2>
-                        <p>
-                          {Math.round(preset.total.calories)} kcal · Carbs {preset.total.carbs.toFixed(1)} g · Protein{" "}
-                          {preset.total.protein.toFixed(1)} g · Fat {preset.total.fat.toFixed(1)} g
-                        </p>
-                        {preset.note && <p style={{ fontSize: 12, opacity: 0.7 }}>{preset.note}</p>}
-                      </IonLabel>
+                {filteredMealPresets.length === 0 ? (
+                  <p className="add-food-empty-state">
+                    No custom meals match "{favoritesSearchQuery.trim()}".
+                  </p>
+                ) : (
+                  <IonList className="add-food-favorites-list">
+                    {filteredMealPresets.map((preset) => (
+                      <IonItem key={preset.id} button onClick={() => addMealPresetToMeal(preset)}>
+                        <IonLabel>
+                          <h2>{preset.name}</h2>
+                          <p>
+                            {Math.round(preset.total.calories)} kcal · Carbs {preset.total.carbs.toFixed(1)} g · Protein{" "}
+                            {preset.total.protein.toFixed(1)} g · Fat {preset.total.fat.toFixed(1)} g
+                          </p>
+                          {preset.note && <p style={{ fontSize: 12, opacity: 0.7 }}>{preset.note}</p>}
+                        </IonLabel>
 
-                      <IonButton
-                        slot="end"
-                        fill="clear"
-                        color="danger"
-                        onClick={(e) => {
-                          console.log(`[USER ACTION] AddFood: Delete custom meal button clicked`, { presetId: preset.id, name: preset.name });
-                          e.stopPropagation();
-                          setMealPresetToDelete(preset);
-                          trackEvent("meal_preset_delete_prompt_open", {
-                            preset_id: preset.id,
-                          });
-                        }}
-                        aria-label={`Delete custom meal ${preset.name}`}
-                      >
-                        <IonIcon icon={trashOutline} />
-                      </IonButton>
-                    </IonItem>
-                  ))}
-                </IonList>
+                        <IonButton
+                          slot="end"
+                          fill="clear"
+                          color="danger"
+                          onClick={(e) => {
+                            console.log(`[USER ACTION] AddFood: Delete custom meal button clicked`, { presetId: preset.id, name: preset.name });
+                            e.stopPropagation();
+                            setMealPresetToDelete(preset);
+                            trackEvent("meal_preset_delete_prompt_open", {
+                              preset_id: preset.id,
+                            });
+                          }}
+                          aria-label={`Delete custom meal ${preset.name}`}
+                        >
+                          <IonIcon icon={trashOutline} />
+                        </IonButton>
+                      </IonItem>
+                    ))}
+                  </IonList>
+                )}
               </>
             )}
           </>

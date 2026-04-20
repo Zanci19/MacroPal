@@ -162,16 +162,57 @@ const PhotoFoodLogger: React.FC = () => {
   });
 
   const takePhoto = async () => {
+    const capacitorOnWindow =
+      typeof window !== "undefined"
+        ? (window as { Capacitor?: { getPlatform?: () => string } }).Capacitor
+        : undefined;
+    const isWebPlatform =
+      typeof capacitorOnWindow?.getPlatform === "function" &&
+      capacitorOnWindow.getPlatform() === "web";
+
     try {
       trackEvent("photo_food_logger_camera_open");
-      cleanupStalePwaCameraModal();
-      
-      const photo = await Camera.getPhoto({
+      if (!isWebPlatform) {
+        cleanupStalePwaCameraModal();
+      }
+
+      const basePhotoOptions = {
         quality: 90,
         allowEditing: false,
         resultType: CameraResultType.DataUrl,
         source: CameraSource.Camera,
-      });
+      } as const;
+
+      let photo;
+      if (isWebPlatform) {
+        trackEvent("photo_food_logger_camera_web_input");
+        photo = await Camera.getPhoto({
+          ...basePhotoOptions,
+          webUseInput: true,
+        });
+      } else {
+        try {
+          photo = await Camera.getPhoto(basePhotoOptions);
+        } catch (err) {
+          const errorMessage = String(err);
+          const isPwaCameraModalError =
+            errorMessage.includes("$instanceValues$") ||
+            errorMessage.includes("facingMode");
+
+          if (!isPwaCameraModalError) {
+            throw err;
+          }
+
+          trackEvent("photo_food_logger_camera_fallback_web_input", {
+            error: errorMessage,
+          });
+          cleanupStalePwaCameraModal();
+          photo = await Camera.getPhoto({
+            ...basePhotoOptions,
+            webUseInput: true,
+          });
+        }
+      }
 
       if (photo.dataUrl) {
         setPhotoDataUrl(photo.dataUrl);
@@ -193,7 +234,12 @@ const PhotoFoodLogger: React.FC = () => {
       setError("Failed to take photo. Please try again.");
       trackEvent("photo_food_logger_camera_error", { error: String(err) });
     } finally {
-      cleanupStalePwaCameraModal();
+      if (
+        typeof capacitorOnWindow?.getPlatform === "function" &&
+        capacitorOnWindow.getPlatform() !== "web"
+      ) {
+        cleanupStalePwaCameraModal();
+      }
     }
   };
 

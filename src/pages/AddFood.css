@@ -208,7 +208,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.add-food-favorites-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   margin-bottom: 12px;
+}
+
+.add-food-favorites-search {
+  margin-bottom: 0;
 }
 
 .add-food-pagination {
@@ -240,6 +250,10 @@
   color: var(--mp-text-muted);
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+.add-food-section-text--spaced {
+  margin-top: 8px;
 }
 
 .add-food-favorites-list {
