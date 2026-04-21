@@ -109,7 +109,7 @@ const Start: React.FC = () => {
   useEffect(() => {
     const rafId = window.requestAnimationFrame(fitMessageToLine);
     return () => window.cancelAnimationFrame(rafId);
-  }, [displayMessage, fitMessageToLine]);
+  }, [activeMessage, fitMessageToLine]);
 
   useEffect(() => {
     const handleResize = () => {
