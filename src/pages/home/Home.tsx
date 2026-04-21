@@ -1035,7 +1035,7 @@ const Home: React.FC = () => {
     return Math.max(800, Math.round(daily));
   }, [profile]);
 
-  const totals = useMemo(() => {
+  const { totals, nutritionTotals } = useMemo(() => {
     const sum = (arr: DiaryEntry[]) =>
       arr.reduce(
         (a, it) => ({
@@ -1085,7 +1085,21 @@ const Home: React.FC = () => {
       }
     );
 
-    return { perMeal, day };
+    const aggregatedNutrition: Record<string, number> = {};
+    Object.values(dayData).forEach((items) => {
+      items.forEach((entry: DiaryEntry) => {
+        Object.entries(entry.total || {}).forEach(([key, value]) => {
+          if (key === "calories" || typeof value !== "number") return;
+          if (!Number.isFinite(value)) return;
+          aggregatedNutrition[key] = (aggregatedNutrition[key] ?? 0) + value;
+        });
+      });
+    });
+
+    return {
+      totals: { perMeal, day },
+      nutritionTotals: aggregatedNutrition,
+    };
   }, [dayData]);
 
   const kcalConsumed = Math.round(Math.max(0, totals.day.calories));
@@ -2171,20 +2185,6 @@ const Home: React.FC = () => {
       trackEvent("weigh_in_save_error", { uid, date: activeDateKey });
     }
   };
-
-  const nutritionTotals = useMemo(() => {
-    const aggregated: Record<string, number> = {};
-    Object.values(dayData).forEach((items) => {
-      items.forEach((entry: DiaryEntry) => {
-        Object.entries(entry.total || {}).forEach(([key, value]) => {
-          if (key === "calories" || typeof value !== "number") return;
-          if (!Number.isFinite(value)) return;
-          aggregated[key] = (aggregated[key] ?? 0) + value;
-        });
-      });
-    });
-    return aggregated;
-  }, [dayData]);
 
   const nutritionLabels: Record<string, { label: string; unit?: string }> = {
     carbs: { label: "Carbohydrates", unit: "g" },
