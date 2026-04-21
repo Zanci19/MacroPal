@@ -12,7 +12,7 @@ import {
 } from "@ionic/react";
 import { useHistory } from "react-router";
 import { auth } from "../firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import "./CheckLogin.css";
 
 type Phase = "checking" | "offline" | "error";
@@ -24,6 +24,24 @@ const CheckLogin: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [showSlowMessage, setShowSlowMessage] = useState(false);
   const checkCleanupRef = useRef<(() => void) | null>(null);
+
+  const resolveUserState = useCallback(
+    async (user: User | null) => {
+      if (!user) {
+        history.replace("/start");
+        return;
+      }
+
+      if (!user.emailVerified) {
+        await signOut(auth);
+        history.replace("/login");
+        return;
+      }
+
+      history.replace("/auth-loading");
+    },
+    [history]
+  );
 
   const startCheck = useCallback(() => {
     checkCleanupRef.current?.();
@@ -37,6 +55,13 @@ const CheckLogin: React.FC = () => {
 
     setPhase("checking");
     setErrorMsg("");
+
+    const knownUser = auth.currentUser;
+    if (knownUser) {
+      void resolveUserState(knownUser);
+      checkCleanupRef.current = null;
+      return;
+    }
 
     let settled = false;
     let unsub: (() => void) | null = null;
@@ -54,15 +79,20 @@ const CheckLogin: React.FC = () => {
       if (settled) return;
 
       finishCheck();
+      const fallbackUser = auth.currentUser;
+      if (fallbackUser) {
+        void resolveUserState(fallbackUser);
+        return;
+      }
+
       if (!navigator.onLine) {
         setErrorMsg("");
         setPhase("offline");
-      } else {
-        setErrorMsg(
-          "Account check timed out. Please verify your internet connection and try again."
-        );
-        setPhase("error");
+        return;
       }
+
+      // Avoid dead-ending the startup flow if auth state initialization stalls.
+      history.replace("/start");
     }, AUTH_CHECK_TIMEOUT_MS);
 
     unsub = onAuthStateChanged(
@@ -72,21 +102,7 @@ const CheckLogin: React.FC = () => {
         finishCheck();
 
         try {
-          if (!user) {
-            // No user at all → show your start screen
-            history.replace("/start");
-            return;
-          }
-
-          if (!user.emailVerified) {
-            // Force verification before continuing
-            await signOut(auth);
-            history.replace("/login");
-            return;
-          }
-
-          // Let /auth-loading decide between /setup-profile and /app/home
-          history.replace("/auth-loading");
+          await resolveUserState(user);
         } catch (error: unknown) {
           const e = error as Error;
           console.error(e);
@@ -113,7 +129,7 @@ const CheckLogin: React.FC = () => {
     checkCleanupRef.current = () => {
       finishCheck();
     };
-  }, [history]);
+  }, [history, resolveUserState]);
 
   useEffect(() => {
     startCheck();
