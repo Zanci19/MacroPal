@@ -107,9 +107,15 @@ const Start: React.FC = () => {
   }, [activeMessage, authModalOpen, displayMessage, isDeleting]);
 
   useEffect(() => {
+    const isBoundaryState =
+      displayMessage.length === 0 ||
+      displayMessage.length === activeMessage.length;
+    if (!isBoundaryState) {
+      return;
+    }
     const rafId = window.requestAnimationFrame(fitMessageToLine);
     return () => window.cancelAnimationFrame(rafId);
-  }, [activeMessage, fitMessageToLine]);
+  }, [activeMessage.length, displayMessage.length, fitMessageToLine]);
 
   useEffect(() => {
     const handleResize = () => {
