@@ -1,53 +1,19 @@
 .start-content {
-  --background: transparent;
-  background: linear-gradient(145deg, #060914 0%, #0d1330 42%, #070a13 100%);
+  --background: var(--mp-bg);
+  background: var(--mp-bg);
   position: relative;
   overflow: hidden;
   isolation: isolate;
   padding: 0;
-  color: #f7f8fb;
+  color: var(--mp-text);
 }
 
 .start-content::part(background) {
-  background: linear-gradient(145deg, #060914 0%, #0d1330 42%, #070a13 100%) !important;
+  background: var(--mp-bg) !important;
 }
 
 .start-content::part(scroll) {
-  background: transparent;
-}
-
-.start-content::before,
-.start-content::after {
-  content: "";
-  position: absolute;
-  inset: -38%;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.start-content::before {
-  background:
-    radial-gradient(circle at 14% 22%, rgba(86, 122, 255, 0.48) 0%, rgba(86, 122, 255, 0) 46%),
-    radial-gradient(circle at 84% 24%, rgba(0, 226, 255, 0.34) 0%, rgba(0, 226, 255, 0) 43%),
-    radial-gradient(circle at 72% 82%, rgba(179, 94, 255, 0.36) 0%, rgba(179, 94, 255, 0) 48%),
-    radial-gradient(circle at 28% 78%, rgba(48, 134, 255, 0.28) 0%, rgba(48, 134, 255, 0) 44%);
-  filter: blur(26px) saturate(130%);
-  animation: mpAuroraFlow 20s ease-in-out infinite alternate;
-}
-
-.start-content::after {
-  background: conic-gradient(
-    from 0deg at 50% 50%,
-    rgba(30, 144, 255, 0.08),
-    rgba(147, 51, 234, 0.2),
-    rgba(34, 211, 238, 0.12),
-    rgba(59, 130, 246, 0.08),
-    rgba(30, 144, 255, 0.08)
-  );
-  mix-blend-mode: screen;
-  opacity: 0.9;
-  filter: blur(62px);
-  animation: mpNebulaSpin 30s linear infinite;
+  background: var(--mp-bg);
 }
 
 .start-shell {
@@ -97,11 +63,11 @@
   width: 100px;
   height: 100px;
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
   display: grid;
   place-items: center;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  box-shadow: var(--mp-shadow-soft);
   animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -116,8 +82,7 @@
   letter-spacing: 0.34rem;
   font-size: clamp(1rem, 2.8vw, 1.28rem);
   font-weight: 800;
-  color: rgba(247, 248, 251, 0.96);
-  text-shadow: 0 6px 20px rgba(8, 15, 35, 0.55);
+  color: var(--mp-text-muted);
   margin: 0 0 0.15rem;
   animation: fadeInUp 0.6s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -129,7 +94,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.25;
-  color: #f7f8fb;
+  color: var(--mp-text);
   white-space: nowrap;
   overflow: hidden;
   animation: fadeInUp 0.6s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -159,18 +124,18 @@
 }
 
 .start-btn-secondary {
-  --border-color: rgba(255, 255, 255, 0.4);
-  --background: rgba(22, 25, 34, 0.5);
-  --background-hover: rgba(22, 25, 34, 0.65);
-  --color: #f7f8fb;
-  color: #f7f8fb;
+  --border-color: var(--mp-border);
+  --background: var(--mp-surface);
+  --background-hover: var(--mp-surface-muted);
+  --color: var(--mp-text);
+  color: var(--mp-text);
 }
 
 .start-caret {
   display: inline-block;
   width: 0.12em;
   margin-left: 0.08em;
-  background: rgba(247, 248, 251, 0.92);
+  background: var(--mp-text);
   height: 0.95em;
   transform: translateY(0.12em);
   animation: caretBlink 0.85s step-end infinite;
@@ -178,7 +143,7 @@
 
 .start-footnote {
   font-size: 0.85rem;
-  color: rgba(247, 248, 251, 0.6);
+  color: var(--mp-text-muted);
   text-align: center;
   padding-bottom: 0.5rem;
   animation: fadeInUp 0.6s 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -188,42 +153,11 @@
   --backdrop-opacity: 0.5;
 }
 
-.start-auth-modal::part(backdrop) {
-  backdrop-filter: blur(6px) saturate(120%);
-}
-
 .start-auth-modal::part(content) {
   border-radius: 26px 26px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  background: linear-gradient(180deg, rgba(8, 13, 30, 0.94) 0%, rgba(6, 10, 22, 0.98) 100%);
-  box-shadow: 0 -14px 40px rgba(0, 0, 0, 0.42);
-}
-
-@keyframes mpAuroraFlow {
-  0% {
-    transform: translate3d(-9%, -6%, 0) scale(1) rotate(-5deg);
-  }
-  35% {
-    transform: translate3d(6%, -2%, 0) scale(1.11) rotate(6deg);
-  }
-  70% {
-    transform: translate3d(-2%, 9%, 0) scale(1.06) rotate(-4deg);
-  }
-  100% {
-    transform: translate3d(8%, 4%, 0) scale(1.14) rotate(5deg);
-  }
-}
-
-@keyframes mpNebulaSpin {
-  0% {
-    transform: rotate(0deg) scale(1.02);
-  }
-  50% {
-    transform: rotate(180deg) scale(1.14);
-  }
-  100% {
-    transform: rotate(360deg) scale(1.02);
-  }
+  border-top: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+  box-shadow: var(--mp-shadow-strong);
 }
 
 @keyframes caretBlink {
@@ -238,12 +172,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .start-content::before,
-  .start-content::after {
-    animation: none;
-    transform: none;
-  }
-
   .start-logo-wrap,
   .start-kicker,
   .start-message,
@@ -254,9 +182,5 @@
 
   .start-caret {
     animation: none;
-  }
-
-  .start-auth-modal::part(backdrop) {
-    backdrop-filter: none;
   }
 }

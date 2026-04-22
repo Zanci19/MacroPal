@@ -1052,7 +1052,7 @@ body.dark .fs-macro__val {
 
 .fs-meal__more {
   margin: 8px 12px;
-  --color: #ffffff;
+  --color: var(--mp-text-muted);
   text-transform: none;
 }
 
@@ -1252,10 +1252,7 @@ body.dark .fs-macro__val {
 /* ---- Visual polish pass ---- */
 
 .home-content {
-  background:
-    radial-gradient(circle at 12% -10%, color-mix(in srgb, var(--ion-color-primary) 8%, transparent), transparent 46%),
-    radial-gradient(circle at 88% -12%, color-mix(in srgb, var(--ion-color-secondary) 8%, transparent), transparent 40%),
-    var(--mp-bg);
+  background: var(--mp-bg);
 }
 
 .fs-greeting__text {

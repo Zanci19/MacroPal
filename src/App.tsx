@@ -41,6 +41,7 @@ import {
 } from "./utils/settingsRoutes";
 
 const importLogin = () => import("./pages/authentication/Login");
+const importLoginVerification = () => import("./pages/authentication/LoginVerification");
 const importRegister = () => import("./pages/authentication/Register");
 const importEmailVerification = () => import("./pages/authentication/EmailVerification");
 const importAddFood = () => import("./pages/AddFood");
@@ -74,6 +75,7 @@ const importClinicianConnect = () => import("./pages/home/ClinicianConnect");
 const importClinicianDashboard = () => import("./pages/home/ClinicianDashboard");
 
 const Login = lazy(importLogin);
+const LoginVerification = lazy(importLoginVerification);
 const Register = lazy(importRegister);
 const EmailVerification = lazy(importEmailVerification);
 const AddFood = lazy(importAddFood);
@@ -108,6 +110,7 @@ const ClinicianDashboard = lazy(importClinicianDashboard);
 
 const LAZY_ROUTE_IMPORTS = [
   importLogin,
+  importLoginVerification,
   importRegister,
   importEmailVerification,
   importAddFood,
@@ -183,6 +186,8 @@ const RouteLoader: React.FC = () => (
 );
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
+const enableRenderProfiling = import.meta.env.DEV;
+
 const reportProfiler: React.ProfilerOnRenderCallback = (
   id,
   phase,
@@ -191,6 +196,7 @@ const reportProfiler: React.ProfilerOnRenderCallback = (
   startTime,
   commitTime,
 ) => {
+  if (!enableRenderProfiling) return;
   reportRenderProfile({
     id: String(id),
     phase,
@@ -202,16 +208,26 @@ const reportProfiler: React.ProfilerOnRenderCallback = (
 };
 
 // Wrapper for lazy loaded routes with individual Suspense boundaries
-const LazyRoute = ({ component: Component, profileId, ...props }: { component: React.ComponentType<RouteComponentProps>; profileId?: string } & RouteComponentProps) => (
-  <React.Profiler
-    id={profileId ?? Component.displayName ?? Component.name ?? "LazyRoute"}
-    onRender={reportProfiler}
-  >
+const LazyRoute = ({ component: Component, profileId, ...props }: { component: React.ComponentType<RouteComponentProps>; profileId?: string } & RouteComponentProps) => {
+  const content = (
     <Suspense fallback={<RouteLoader />}>
       <Component {...props} />
     </Suspense>
-  </React.Profiler>
-);
+  );
+
+  if (!enableRenderProfiling) {
+    return content;
+  }
+
+  return (
+    <React.Profiler
+      id={profileId ?? Component.displayName ?? Component.name ?? "LazyRoute"}
+      onRender={reportProfiler}
+    >
+      {content}
+    </React.Profiler>
+  );
+};
 
 const ScanBarcodeRoute: React.FC<RouteComponentProps> = (props) => {
   const remoteConfig = useRemoteConfig();
@@ -863,6 +879,9 @@ const App: React.FC = () => {
                   <Route exact path="/login" render={(props) => (
                     <LazyRoute component={Login} profileId="Login" {...props} />
                   )} />
+                  <Route exact path="/login-verify" render={(props) => (
+                    <LazyRoute component={LoginVerification} profileId="LoginVerification" {...props} />
+                  )} />
                   <Route exact path="/register" render={(props) => (
                     <LazyRoute component={Register} profileId="Register" {...props} />
                   )} />
@@ -906,11 +925,18 @@ const App: React.FC = () => {
                     <LazyRoute component={Offline} profileId="Offline" {...props} />
                   )} />
 
-                  <Route path="/app" render={(props) => (
-                    <React.Profiler id="TabsShell" onRender={reportProfiler}>
-                      <TabsShell {...props} />
-                    </React.Profiler>
-                  )} />
+                  <Route
+                    path="/app"
+                    render={(props) =>
+                      enableRenderProfiling ? (
+                        <React.Profiler id="TabsShell" onRender={reportProfiler}>
+                          <TabsShell {...props} />
+                        </React.Profiler>
+                      ) : (
+                        <TabsShell {...props} />
+                      )
+                    }
+                  />
 
                   <Route exact path="/" component={DemoRouter} />
                 </IonRouterOutlet>
