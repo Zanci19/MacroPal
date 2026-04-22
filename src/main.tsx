@@ -20,6 +20,16 @@ addIcons({
 const container = document.getElementById("root");
 const root = createRoot(container!);
 
+const renderApp = () => {
+  root.render(
+    <React.StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </React.StrictMode>
+  );
+};
+
 // Initialize PWA elements and ensure they're ready before rendering the app
 const initializePWAElements = async () => {
   try {
@@ -30,9 +40,6 @@ const initializePWAElements = async () => {
     // Apply the camera patch after PWA elements are loaded
     await import('./utils/capacitorCameraPatch');
     
-    // Wait a bit for custom elements to be fully registered
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
     return true;
   } catch (error) {
     console.error('[PWA Elements] Failed to initialize:', error);
@@ -40,23 +47,9 @@ const initializePWAElements = async () => {
   }
 };
 
-// Initialize PWA elements then render app
-initializePWAElements().then(() => {
-  root.render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </React.StrictMode>
-  );
-}).catch((error) => {
+renderApp();
+
+// Initialize PWA elements in the background so startup render is not blocked
+void initializePWAElements().catch((error) => {
   console.error('[PWA Elements] Critical error:', error);
-  // Still render the app even if PWA elements fail to load
-  root.render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </React.StrictMode>
-  );
 });

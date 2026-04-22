@@ -12,7 +12,13 @@ import {
 } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { auth, db } from "../../firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  getDocFromCache,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { applyProfilePreferences } from "../../utils/preferences";
 import "./AuthLoading.css";
 
@@ -30,7 +36,34 @@ const PROGRESS_STAGES = {
 
 const PROGRESS_INTERVAL_MS = 800;
 const TIMEOUT_MS = 10000;
+const FIRESTORE_OP_TIMEOUT_MS = 8000;
+const RECOVERY_ROUTE_DELAY_MS = 1200;
+const CACHE_READ_TIMEOUT_MS = 1500;
+const AUTH_LOADING_TIMEOUT_ERROR = "AuthLoadingTimeoutError";
 const SLOW_CONNECTION_MESSAGE = "This may take longer on slow connections";
+
+const withTimeout = async <T,>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  context: string
+): Promise<T> => {
+  let timerId: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timerId = setTimeout(() => {
+          const error = new Error(`Timed out while ${context}.`);
+          error.name = AUTH_LOADING_TIMEOUT_ERROR;
+          reject(error);
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timerId) clearTimeout(timerId);
+  }
+};
 
 const AuthLoading: React.FC = () => {
   const history = useHistory();
@@ -44,12 +77,24 @@ const AuthLoading: React.FC = () => {
     let timeoutId: NodeJS.Timeout | null = null;
     let slowMessageTimer: NodeJS.Timeout | null = null;
     let navigationTimer: NodeJS.Timeout | null = null;
+    let hasTimedOut = false;
 
     const scheduleNavigation = (path: string, delayMs: number) => {
       if (navigationTimer) clearTimeout(navigationTimer);
       navigationTimer = setTimeout(() => {
         history.replace(path);
       }, delayMs);
+    };
+
+    const stopLoadingIndicators = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
     };
 
     slowMessageTimer = setTimeout(() => {
@@ -66,17 +111,24 @@ const AuthLoading: React.FC = () => {
 
     // Set a timeout to prevent infinite loading on slow connections
     timeoutId = setTimeout(() => {
-      if (progressInterval) clearInterval(progressInterval);
+      hasTimedOut = true;
+      stopLoadingIndicators();
       setTimedOut(true);
-      setMessage("Taking longer than usual. Please check your connection…");
+      if (!navigator.onLine) {
+        setMessage("No internet connection. Sending you to offline screen…");
+        scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
+        return;
+      }
+
+      setMessage("Taking longer than usual. Opening offline mode…");
+      scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
     }, TIMEOUT_MS);
 
     const run = async () => {
       const user = auth.currentUser;
 
       if (!user) {
-        if (timeoutId) clearTimeout(timeoutId);
-        if (progressInterval) clearInterval(progressInterval);
+        stopLoadingIndicators();
         setMessage("You're not logged in. Sending you to login…");
         scheduleNavigation("/login", 1500);
         return;
@@ -87,10 +139,29 @@ const AuthLoading: React.FC = () => {
         setProgress(PROGRESS_STAGES.LOADING_PROFILE);
 
         const userRef = doc(db, "users", user.uid);
-        const snap = await getDoc(userRef);
+        let snap;
+        try {
+          snap = await withTimeout(
+            getDoc(userRef),
+            FIRESTORE_OP_TIMEOUT_MS,
+            "loading your profile"
+          );
+        } catch (error) {
+          const isTimeoutError =
+            error instanceof Error && error.name === AUTH_LOADING_TIMEOUT_ERROR;
+          if (!isTimeoutError) throw error;
 
-        if (timeoutId) clearTimeout(timeoutId);
-        if (progressInterval) clearInterval(progressInterval);
+          setMessage("Network is slow. Trying cached account data…");
+          snap = await withTimeout(
+            getDocFromCache(userRef),
+            CACHE_READ_TIMEOUT_MS,
+            "reading cached profile"
+          );
+        }
+
+        if (hasTimedOut) return;
+
+        stopLoadingIndicators();
         setProgress(PROGRESS_STAGES.PROFILE_LOADED);
 
         let targetRoute = "/onboarding-profile";
@@ -98,14 +169,20 @@ const AuthLoading: React.FC = () => {
         if (snap.exists()) {
           const data = snap.data();
           if (!data.role) {
-            await setDoc(
-              userRef,
-              {
-                role: "user",
-              },
-              { merge: true }
+            await withTimeout(
+              setDoc(
+                userRef,
+                {
+                  role: "user",
+                },
+                { merge: true }
+              ),
+              FIRESTORE_OP_TIMEOUT_MS,
+              "updating your account role"
             );
           }
+          if (hasTimedOut) return;
+
           const profile = data.profile as Record<string, unknown> | undefined;
           applyProfilePreferences(profile);
           setProgress(PROGRESS_STAGES.PREFERENCES_APPLIED);
@@ -138,29 +215,51 @@ const AuthLoading: React.FC = () => {
           setMessage("Creating your MacroPal profile…");
           setProgress(PROGRESS_STAGES.CREATING_PROFILE);
 
-          await setDoc(
-            userRef,
-            {
-              uid: user.uid,
-              email: user.email ?? null,
-              displayName: user.displayName ?? null,
-              createdAt: serverTimestamp(),
-              announcementNum: 0,
-              role: "user",
-            },
-            { merge: true }
+          await withTimeout(
+            setDoc(
+              userRef,
+              {
+                uid: user.uid,
+                email: user.email ?? null,
+                displayName: user.displayName ?? null,
+                createdAt: serverTimestamp(),
+                announcementNum: 0,
+                role: "user",
+              },
+              { merge: true }
+            ),
+            FIRESTORE_OP_TIMEOUT_MS,
+            "creating your profile"
           );
+          if (hasTimedOut) return;
 
           targetRoute = "/onboarding-terms";
           setMessage("Profile created. Please review the terms…");
         }
 
+        if (hasTimedOut) return;
         setProgress(PROGRESS_STAGES.COMPLETE);
         history.replace(targetRoute);
       } catch (e) {
-        if (timeoutId) clearTimeout(timeoutId);
-        if (progressInterval) clearInterval(progressInterval);
+        if (hasTimedOut) return;
+
+        stopLoadingIndicators();
         console.error("AuthLoading error:", e);
+
+        const isTimeoutError =
+          e instanceof Error && e.name === AUTH_LOADING_TIMEOUT_ERROR;
+        if (isTimeoutError) {
+          setTimedOut(true);
+          if (!navigator.onLine) {
+            setMessage("No internet connection. Sending you to offline screen…");
+            scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
+            return;
+          }
+
+          setMessage("Could not verify your account in time. Opening offline mode…");
+          scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
+          return;
+        }
 
         if (!navigator.onLine) {
           setMessage("No internet connection. Sending you to offline screen…");
@@ -175,8 +274,8 @@ const AuthLoading: React.FC = () => {
     run();
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (progressInterval) clearInterval(progressInterval);
+      hasTimedOut = true;
+      stopLoadingIndicators();
       if (slowMessageTimer) clearTimeout(slowMessageTimer);
       if (navigationTimer) clearTimeout(navigationTimer);
     };
