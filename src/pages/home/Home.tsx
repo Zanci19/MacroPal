@@ -915,13 +915,24 @@ const Home: React.FC = () => {
     } else {
       const templatesRef = collection(db, "users", uid, "mealTemplates");
       const templatesQuery = query(templatesRef, orderBy("createdAt", "desc"));
-      const templatesUnsub = onSnapshot(templatesQuery, (snapshot) => {
-        const next = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          data: docSnap.data() as MealTemplate,
-        }));
-        setMealTemplates(next);
-      });
+      const templatesUnsub = onSnapshot(
+        templatesQuery,
+        (snapshot) => {
+          const next = snapshot.docs.map((docSnap) => ({
+            id: docSnap.id,
+            data: docSnap.data() as MealTemplate,
+          }));
+          setMealTemplates(next);
+        },
+        (error) => {
+          const code = typeof error?.code === "string" ? error.code : "";
+          if (code === "permission-denied" || code === "unauthenticated") {
+            setMealTemplates([]);
+            return;
+          }
+          console.error("meal templates listener error:", error);
+        }
+      );
       cleanupFns.push(templatesUnsub);
     }
 
