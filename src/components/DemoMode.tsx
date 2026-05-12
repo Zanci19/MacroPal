@@ -6,7 +6,7 @@ interface DemoModeProps {
   children: React.ReactNode;
 }
 
-const INACTIVITY_TIMEOUT_MS = 60000; // 1 minute (can adjust as needed, also do your goddamn math will you? sorry lol)
+const INACTIVITY_TIMEOUT_MS = 60_000; // 1 minute
 const MOUSEMOVE_ACTIVITY_THROTTLE_MS = 500;
 const DEMO_HOME_PATH = "/app/home";
 
@@ -218,8 +218,11 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
             <source src="/assets/demo-loop.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          <div className="demo-video-overlay">
-            <p className="demo-video-text"><b>Klikni za preizkus aplikacije!</b></p>
+          <div className="demo-video-overlay" role="status" aria-live="polite">
+            <p className="demo-video-text">
+              <strong>Tap anywhere to start the demo</strong>
+            </p>
+            <p className="demo-video-subtext">Demo auto-resets after 1 minute of inactivity.</p>
           </div>
         </div>
       ) : (
