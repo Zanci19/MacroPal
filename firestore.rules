@@ -34,6 +34,16 @@ service cloud.firestore {
       return isSelf(userUid) || (signedIn() && isAssigned(request.auth.uid, userUid));
     }
 
+    function canSetHasEverLoggedFood(uid) {
+      return signedIn()
+        && isAssigned(request.auth.uid, uid)
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(["profile"])
+        && request.resource.data.profile is map
+        && resource.data.profile is map
+        && request.resource.data.profile.diff(resource.data.profile).changedKeys().hasOnly(["hasEverLoggedFood"])
+        && request.resource.data.profile.hasEverLoggedFood == true;
+    }
+
     match /meta/{docId} {
       allow read: if true;
       allow write: if signedIn() && isAdmin(request.auth.uid);
@@ -42,7 +52,8 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if canReadUser(uid);
       allow create: if isSelf(uid);
-      allow update, delete: if isSelf(uid);
+      allow update: if isSelf(uid) || canSetHasEverLoggedFood(uid);
+      allow delete: if isSelf(uid);
 
       match /foods/{dateKey} {
         allow read, write: if isSelf(uid) || (signedIn() && isAssigned(request.auth.uid, uid));
@@ -129,15 +140,6 @@ service cloud.firestore {
         resource.data.clinicianUid == request.auth.uid ||
         isAdmin(request.auth.uid)
       );
-    }
-
-    match /feedback/{feedbackId} {
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
-      allow read: if signedIn() && (
-        resource.data.uid == request.auth.uid ||
-        isAdmin(request.auth.uid)
-      );
-      allow update, delete: if signedIn() && isAdmin(request.auth.uid);
     }
 
     match /auditLogs/{logId} {

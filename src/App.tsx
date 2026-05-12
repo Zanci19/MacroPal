@@ -424,7 +424,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       to: tabName,
       direction,
     });
-    router.push(href, "forward", "push");
+    router.push(href, "root", "replace");
   };
 
   const handleQuickAddFood = useCallback(() => {

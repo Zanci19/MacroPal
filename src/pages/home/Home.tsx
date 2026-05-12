@@ -2122,7 +2122,9 @@ const Home: React.FC = () => {
           date: activeDateKey,
         });
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
+        const code = (err as { code?: string } | null)?.code;
+        if (code === "permission-denied" || code === "unauthenticated") return;
         console.error("Failed to set hasEverLoggedFood:", err);
       });
   }, [uid, anyItems, profile, activeDateKey]);
