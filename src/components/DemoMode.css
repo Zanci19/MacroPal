@@ -26,23 +26,34 @@
 
 .demo-video-overlay {
   position: absolute;
-  bottom: 40px;
+  bottom: max(24px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
-  padding: 12px 24px;
-  background-color: rgba(0, 0, 0, 0.7);
-  border-radius: 8px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg, rgba(5, 13, 28, 0.78), rgba(5, 13, 28, 0.6));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.92;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .demo-video-text {
-  color: #ffae00;
-  font-size: clamp(24px, 5.5vw, 88px);
-  line-height: 1.15;
+  color: #ffd36b;
+  font-size: clamp(20px, 3.8vw, 44px);
+  line-height: 1.2;
   margin: 0;
   text-align: center;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.demo-video-subtext {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.86);
+  text-align: center;
+  font-size: clamp(12px, 1.8vw, 16px);
 }
 
 .demo-app-container {
