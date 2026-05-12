@@ -104,8 +104,17 @@ const getTokenValue = (
   return undefined;
 };
 
-export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => {
+export type GoogleSocialLoginMode = "default" | "credential_manager";
+
+type GoogleSocialLoginOptions = {
+  mode?: GoogleSocialLoginMode;
+};
+
+export const signInWithGoogleSocialLogin = async (
+  options: GoogleSocialLoginOptions = {}
+): Promise<UserCredential> => {
   await initializeSocialLogin();
+  const mode = options.mode ?? "default";
 
   const logoutIfPossible = async (reason: string) => {
     if (typeof SocialLogin.logout !== "function") return;
@@ -118,10 +127,20 @@ export const signInWithGoogleSocialLogin = async (): Promise<UserCredential> => 
 
   const loginWithTokens = async () => {
     console.log("[googleSocialLogin] Starting login...");
+    const loginRequest =
+      mode === "credential_manager"
+        ? {
+            provider: "google" as const,
+            options: {
+              filterByAuthorizedAccounts: true,
+              autoSelectEnabled: true,
+            },
+          }
+        : {
+            provider: "google" as const,
+          };
     const response = await SocialLogin
-      .login({
-        provider: "google",
-      })
+      .login(loginRequest)
       .catch((error: unknown) => {
         throw createSocialLoginError(
           "social_login_provider_error",

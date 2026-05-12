@@ -33,8 +33,7 @@ const StatItem: React.FC<StatItemProps> = ({ icon, value, label, color = 'primar
 );
 
 /**
- * Quick stats dashboard widget
- * Shows key metrics at a glance
+ * Quick stats dashboard widget (kind of like a mini progress report) that shows the user's current calorie intake, how it compares to their goal, and some other stats like meals logged, workouts done, and current streak. Still in progress
  */
 export const QuickStats: React.FC<QuickStatsProps> = ({
   calories,

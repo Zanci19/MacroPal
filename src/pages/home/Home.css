@@ -966,7 +966,7 @@ body.dark .fs-macro__val {
 }
 
 .fs-meal__add:hover {
-  transform: scale(1.05);
+  transform: none;
 }
 
 /* Content area – stretch left */
@@ -1283,8 +1283,8 @@ body.dark .fs-macro__val {
 @media (hover: hover) and (pointer: fine) {
   .home-overview-card:hover,
   .home-panel:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--mp-shadow-strong);
+    transform: none;
+    box-shadow: var(--mp-shadow-soft);
     border-color: color-mix(in srgb, var(--ion-color-primary) 24%, var(--mp-border));
   }
 }
@@ -1306,7 +1306,7 @@ body.dark .fs-macro__val {
 }
 
 .home-overview-actions ion-button:not([fill]) {
-  --box-shadow: 0 8px 16px color-mix(in srgb, var(--ion-color-primary) 22%, transparent);
+  --box-shadow: none;
 }
 
 .home-secondary-panels {

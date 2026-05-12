@@ -50,6 +50,7 @@ const LoginVerification: React.FC = () => {
   });
   const mfaRecaptchaContainerRef = React.useRef<HTMLDivElement | null>(null);
   const mfaRecaptchaVerifierRef = React.useRef<RecaptchaVerifier | null>(null);
+  const lastAutoSubmittedCodeRef = React.useRef<string | null>(null);
 
   const showToast = React.useCallback(
     (
@@ -123,6 +124,16 @@ const LoginVerification: React.FC = () => {
     : false;
   const canRequestSmsCode = selectedMethod === "sms" && Boolean(phoneHint);
 
+  const navigateToAuthLoading = React.useCallback(() => {
+    const currentPath = window.location.pathname;
+    history.replace("/auth-loading");
+    window.setTimeout(() => {
+      if (window.location.pathname === currentPath) {
+        history.replace("/auth-loading");
+      }
+    }, 200);
+  }, [history]);
+
   React.useEffect(() => {
     if (pending?.method) {
       setSelectedMethod(pending.method);
@@ -131,6 +142,7 @@ const LoginVerification: React.FC = () => {
 
   React.useEffect(() => {
     setCode("");
+    lastAutoSubmittedCodeRef.current = null;
   }, [selectedMethod]);
 
   React.useEffect(() => {
@@ -145,7 +157,7 @@ const LoginVerification: React.FC = () => {
     };
   }, [clearMfaRecaptcha]);
 
-  const handleResendSmsCode = async () => {
+  const handleResendSmsCode = React.useCallback(async () => {
     const challenge = getPendingMfaChallenge();
     if (!challenge) {
       showToast("Verification session expired. Please log in again.", "warning");
@@ -180,6 +192,7 @@ const LoginVerification: React.FC = () => {
         createdAt: Date.now(),
       });
       setCode("");
+      lastAutoSubmittedCodeRef.current = null;
       trackEvent("login_mfa_sms_resent");
       showToast(
         `New code sent${hint.phoneNumber ? ` to ${hint.phoneNumber}` : "."}`,
@@ -192,9 +205,9 @@ const LoginVerification: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, [ensureMfaRecaptcha, history, showToast]);
 
-  const handleVerify = async () => {
+  const handleVerify = React.useCallback(async () => {
     const challenge = getPendingMfaChallenge();
     if (!challenge) {
       showToast("Verification session expired. Please log in again.", "warning");
@@ -269,7 +282,7 @@ const LoginVerification: React.FC = () => {
       }
 
       showToast("Verification successful. Welcome back!", "success");
-      history.replace("/auth-loading");
+      navigateToAuthLoading();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       trackEvent("login_mfa_error", {
@@ -280,7 +293,21 @@ const LoginVerification: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, [code, history, navigateToAuthLoading, selectedMethod, selectedMethodReady, showToast]);
+
+  React.useEffect(() => {
+    if (selectedMethod !== "sms" || !selectedMethodReady || busy) return;
+    const nextCode = code.trim();
+    if (nextCode.length !== 6) {
+      lastAutoSubmittedCodeRef.current = null;
+      return;
+    }
+    if (lastAutoSubmittedCodeRef.current === nextCode) {
+      return;
+    }
+    lastAutoSubmittedCodeRef.current = nextCode;
+    void handleVerify();
+  }, [busy, code, handleVerify, selectedMethod, selectedMethodReady]);
 
   const handleCancel = () => {
     clearPendingMfaChallenge();
@@ -336,6 +363,11 @@ const LoginVerification: React.FC = () => {
                 type="tel"
                 inputmode="numeric"
                 maxlength={selectedMethod === "authenticator" ? 8 : 6}
+                autocomplete="one-time-code"
+                name="one-time-code"
+                enterkeyhint="done"
+                autocapitalize="off"
+                autocorrect="off"
                 value={code}
                 placeholder={
                   selectedMethod === "authenticator" ? "Authenticator code" : "6-digit code"
@@ -345,6 +377,18 @@ const LoginVerification: React.FC = () => {
                     .replace(/[^\d]/g, "")
                     .slice(0, selectedMethod === "authenticator" ? 8 : 6);
                   setCode(next);
+                }}
+                onIonChange={(event) => {
+                  const next = (event.detail.value ?? "")
+                    .replace(/[^\d]/g, "")
+                    .slice(0, selectedMethod === "authenticator" ? 8 : 6);
+                  setCode(next);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleVerify();
+                  }
                 }}
               />
             </IonItem>

@@ -1,3 +1,5 @@
+// I'll probably delete this as it doesn't work very well... or i might rework it idk
+
 import React, { useState } from "react";
 import {
   IonModal,

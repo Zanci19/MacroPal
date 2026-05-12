@@ -187,7 +187,7 @@ async function runE2ETests() {
 }
 
 async function main() {
-  section(`MacroPal Bug Check — ${timestamp}`);
+  section(`MacroPal Bug Check — done at ${timestamp}`);
   log(`Log file: ${logFile}`);
   log(`Checks: ${runChecks} | Tests: ${runTests} | Unit: ${runUnit} | E2E: ${runE2E}`);
 

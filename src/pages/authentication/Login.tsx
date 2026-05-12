@@ -189,6 +189,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       }
 
       let verificationId: string | null = null;
+      let smsBootstrapError: Error | null = null;
       if (selectedPhoneHint) {
         try {
           const verifier = await ensureMfaRecaptcha();
@@ -200,15 +201,18 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
             },
             verifier
           );
-        } catch (smsError) {
+        } catch (smsError: unknown) {
+          smsBootstrapError =
+            smsError instanceof Error
+              ? smsError
+              : new Error(String(smsError ?? "Unknown SMS challenge error"));
           if (!selectedTotpHint) {
-            throw smsError;
+            throw smsBootstrapError;
           }
         }
       }
 
-      const selectedMethod =
-        verificationId || !selectedTotpHint ? "sms" : "authenticator";
+      const selectedMethod = selectedPhoneHint ? "sms" : "authenticator";
 
       setPendingMfaChallenge({
         resolver,
@@ -228,8 +232,22 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
           availableMethods.length > 1
             ? "multiple"
             : availableMethods[0],
+        sms_bootstrap_ready: Boolean(verificationId),
       });
+      if (smsBootstrapError) {
+        trackEvent("login_mfa_sms_bootstrap_error", {
+          method,
+          error: smsBootstrapError.message,
+        });
+      }
+
       showToast("Continue on the verification page to complete sign in.", "success");
+      if (selectedMethod === "sms" && !verificationId) {
+        showToast(
+          "SMS verification is available. Tap \"Resend SMS code\" on the next screen to request a fresh code.",
+          "warning"
+        );
+      }
       history.replace("/login-verify");
       return;
     } catch (challengeError) {
@@ -306,11 +324,11 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     if (busy) return;
 
     const trimmedEmail = email.trim();
-    const trimmedPw = pw.trim();
+    const enteredPw = pw;
 
     trackEvent("login_attempt", {
       email_present: !!trimmedEmail,
-      pw_present: !!trimmedPw,
+      pw_present: !!enteredPw,
     });
 
     const now = Date.now();
@@ -324,7 +342,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
       return;
     }
 
-    if (!trimmedEmail || !trimmedPw) {
+    if (!trimmedEmail || !enteredPw) {
       trackEvent("login_validation_failed", {
         reason: "missing_credentials",
       });
@@ -334,7 +352,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
 
     setBusy(true);
     try {
-      const cred = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPw);
+      const cred = await signInWithEmailAndPassword(auth, trimmedEmail, enteredPw);
       await finalizeLogin(cred.user);
     } catch (error: unknown) {
       const err = error as Error & { code?: string };
@@ -486,6 +504,54 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     }
   };
 
+  const handlePasskeyLogin = async () => {
+    console.log(`[USER ACTION] Login: Clicked passkey sign-in button`, {
+      isNativePlatform: Capacitor.isNativePlatform(),
+      busy,
+    });
+
+    if (busy) return;
+    if (!Capacitor.isNativePlatform()) {
+      showToast(
+        "Passkey sign-in is currently available only on supported Android/iOS credential-manager flows.",
+        "warning"
+      );
+      return;
+    }
+
+    setBusy(true);
+    try {
+      trackEvent("login_passkey_start", {
+        method: "credential_manager_google",
+      });
+
+      const result = await signInWithGoogleSocialLogin({
+        mode: "credential_manager",
+      });
+      trackEvent("login_passkey_success", { uid: result.user.uid });
+      showToast("Signed in with device credentials.", "success");
+      history.replace("/auth-loading");
+    } catch (error: unknown) {
+      const err = error as Error & { code?: string };
+      const code = err?.code || "unknown";
+      trackEvent("login_passkey_error", { code });
+
+      if (code === "auth/multi-factor-auth-required") {
+        await beginMfaSignInChallenge(err as MultiFactorError, "google");
+        return;
+      }
+
+      if (code === "social_login_missing_tokens" || code === "social_login_provider_error") {
+        showToast("Device credential sign-in failed. Try Google sign-in instead.");
+        return;
+      }
+
+      showToast(handleError("login_passkey", err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <IonPage>
       {!embedded && (
@@ -514,9 +580,10 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
               <IonInput
                 type="email"
                 inputmode="email"
-                autocomplete="email"
+                autocomplete="username"
                 autocapitalize="off"
                 autocorrect="off"
+                name="username"
                 placeholder="you@example.com"
                 value={email}
                 onIonInput={(e) => {
@@ -537,6 +604,7 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
                   autocomplete="current-password"
                   autocapitalize="off"
                   autocorrect="off"
+                  name="current-password"
                   placeholder="Your password"
                   value={pw}
                   onIonInput={(e) => {
@@ -589,6 +657,16 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
           >
             <IonIcon icon={logoGoogle} slot="start" />
             Sign in with Google
+          </IonButton>
+
+          <IonButton
+            expand="block"
+            fill="outline"
+            className="login-google-button"
+            onClick={handlePasskeyLogin}
+            disabled={busy}
+          >
+            Use passkey / device credential
           </IonButton>
 
           <div className="login-footer">

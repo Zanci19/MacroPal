@@ -38,7 +38,8 @@
 
 .demo-video-text {
   color: #ffae00;
-  font-size: 88px;
+  font-size: clamp(24px, 5.5vw, 88px);
+  line-height: 1.15;
   margin: 0;
   text-align: center;
   font-weight: 500;
@@ -54,6 +55,7 @@
   position: fixed;
   top: 0;
   left: 0;
+  z-index: 99998;
 }
 
 .demo-app-container--portrait {

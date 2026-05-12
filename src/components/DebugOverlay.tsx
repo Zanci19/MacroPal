@@ -1,3 +1,5 @@
+// for debugging obv
+
 import { useEffect, useRef, useState } from "react";
 import "./DebugOverlay.css";
 import { subscribeRenderProfile } from "./renderProfiler";

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MacroPal — Compatibility wrapper around the cross-platform test runner.
+# MacroPal Compatibility wrapper around the cross-platform test runner.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

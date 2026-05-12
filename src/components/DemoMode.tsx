@@ -6,14 +6,16 @@ interface DemoModeProps {
   children: React.ReactNode;
 }
 
-const INACTIVITY_TIMEOUT_MS = 60000; // 1 minute
+const INACTIVITY_TIMEOUT_MS = 60000; // 1 minute (can adjust as needed, also do your goddamn math will you? sorry lol)
+const MOUSEMOVE_ACTIVITY_THROTTLE_MS = 500;
+const DEMO_HOME_PATH = "/app/home";
 
 const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [showVideo, setShowVideo] = useState(isDemoMode);
   const [isDemoActive, setIsDemoActive] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const showVideoRef = useRef(showVideo);
   const isDemoActiveRef = useRef(isDemoActive);
@@ -21,33 +23,74 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
   showVideoRef.current = showVideo;
   isDemoActiveRef.current = isDemoActive;
 
+  const navigateToDemoHome = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.pathname === DEMO_HOME_PATH) return;
+
+    try {
+      window.history.replaceState(window.history.state, "", DEMO_HOME_PATH);
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    } catch (error) {
+      console.error("Demo mode: Failed to navigate to home route", error);
+    }
+  }, []);
+
   const clearDemoData = useCallback(() => {
-    // Use the global clearDemoData if available
-    if (typeof window.__clearDemoData === 'function') {
-      window.__clearDemoData();
+    // Use the global clearDemoData if available.
+    try {
+      if (typeof window.__clearDemoData === "function") {
+        window.__clearDemoData();
+      }
+    } catch (error) {
+      console.error("Demo mode: Failed to clear demo context data", error);
     }
-    
-    // Clear demo firestore
-    if (typeof window.__demoFirestore !== 'undefined') {
-      window.__demoFirestore.clear();
+
+    // Clear demo firestore.
+    try {
+      if (typeof window.__demoFirestore !== "undefined") {
+        window.__demoFirestore.clear();
+      }
+    } catch (error) {
+      console.error("Demo mode: Failed to clear demo firestore data", error);
     }
-    
-    // Also clear localStorage keys
-    const keysToPreserve = [
+
+    // Also clear localStorage keys.
+    const keysToPreserve = new Set([
       "mp_theme_mode",
       "mp_lazy_load",
       "mp_tab_animations",
-    ];
-    
-    const allKeys = Object.keys(localStorage);
-    allKeys.forEach((key) => {
-      if (!keysToPreserve.includes(key)) {
-        localStorage.removeItem(key);
-      }
-    });
+      "mp_debug_overlay",
+      "mp_chart_animations",
+      "mp_auto_expand_meals",
+      "mp_meal_counts",
+    ]);
 
-    // Clear any sessionStorage
-    sessionStorage.clear();
+    try {
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach((key) => {
+        if (!keysToPreserve.has(key)) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (error) {
+      console.error("Demo mode: Failed to clear localStorage keys", error);
+    }
+
+    // Clear sessionStorage.
+    try {
+      sessionStorage.clear();
+    } catch (error) {
+      console.error("Demo mode: Failed to clear sessionStorage", error);
+    }
+
+    if (videoRef.current) {
+      videoRef.current.pause();
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {
+        // Ignore browsers that block setting currentTime while media is not seekable yet.
+      }
+    }
 
     console.log("Demo mode: Cleared user data");
   }, []);
@@ -62,7 +105,7 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
 
     // Set new timer
     inactivityTimerRef.current = setTimeout(() => {
-      // Reset demo mode - clear data and show video again
+      // Reset demo mode - clear data and show video again.
       console.log("Demo mode: Inactivity timeout - resetting to video");
       clearDemoData();
       isDemoActiveRef.current = false;
@@ -72,55 +115,76 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
     }, INACTIVITY_TIMEOUT_MS);
   }, [isDemoMode, clearDemoData]);
 
-  const handleClick = useCallback(() => {
-    if (!isDemoMode) return;
+  const activateDemoApp = useCallback(() => {
+    if (!isDemoMode || !showVideoRef.current) return;
 
-    if (showVideoRef.current) {
-      // Transition from video to demo app
-      console.log("Demo mode: Transitioning from video to app");
-      showVideoRef.current = false;
-      isDemoActiveRef.current = true;
-      setShowVideo(false);
-      setIsDemoActive(true);
-      lastActivityRef.current = Date.now();
-      
-      // Initialize demo data on first transition
-      initializeDemoData();
-      
-      resetInactivityTimer(true);
-    } else {
-      // User is active in the demo
-      lastActivityRef.current = Date.now();
-      resetInactivityTimer();
-    }
-  }, [isDemoMode, resetInactivityTimer]);
+    console.log("Demo mode: Transitioning from video to app");
+    navigateToDemoHome();
 
-  const handleKeyDown = useCallback(() => {
-    if (!isDemoMode || showVideoRef.current) return;
-    
-    // User is active in the demo via keyboard
+    showVideoRef.current = false;
+    isDemoActiveRef.current = true;
+    setShowVideo(false);
+    setIsDemoActive(true);
+
     lastActivityRef.current = Date.now();
-    resetInactivityTimer();
-  }, [isDemoMode, resetInactivityTimer]);
+    initializeDemoData();
+    resetInactivityTimer(true);
+  }, [isDemoMode, navigateToDemoHome, resetInactivityTimer]);
+
+  const markDemoActivity = useCallback(
+    (eventType: "pointerdown" | "keydown" | "mousemove" | "scroll") => {
+      if (!isDemoMode) return;
+
+      if (showVideoRef.current) {
+        if (eventType === "pointerdown" || eventType === "keydown") {
+          activateDemoApp();
+        }
+        return;
+      }
+
+      if (!isDemoActiveRef.current) return;
+
+      const now = Date.now();
+      if (
+        (eventType === "mousemove" || eventType === "scroll") &&
+        now - lastActivityRef.current < MOUSEMOVE_ACTIVITY_THROTTLE_MS
+      ) {
+        return;
+      }
+
+      lastActivityRef.current = now;
+      resetInactivityTimer(true);
+    },
+    [activateDemoApp, isDemoMode, resetInactivityTimer]
+  );
 
   useEffect(() => {
     if (!isDemoMode) return;
 
-    // Add event listeners for user activity (clicks and keyboard only)
-    window.addEventListener("click", handleClick);
-    window.addEventListener("touchstart", handleClick);
-    window.addEventListener("keydown", handleKeyDown);
+    // Add event listeners for user activity.
+    const onPointerDown = () => markDemoActivity("pointerdown");
+    const onKeyDown = () => markDemoActivity("keydown");
+    const onMouseMove = () => markDemoActivity("mousemove");
+    const onScroll = () => markDemoActivity("scroll");
+
+    window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("touchstart", onPointerDown, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
-      window.removeEventListener("click", handleClick);
-      window.removeEventListener("touchstart", handleClick);
-      window.removeEventListener("keydown", handleKeyDown);
-      
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("touchstart", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("scroll", onScroll);
+
       if (inactivityTimerRef.current) {
         clearTimeout(inactivityTimerRef.current);
       }
     };
-  }, [isDemoMode, handleClick, handleKeyDown]);
+  }, [isDemoMode, markDemoActivity]);
 
   useEffect(() => {
     if (!isDemoMode || !showVideo) return;

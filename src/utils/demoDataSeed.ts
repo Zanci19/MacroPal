@@ -5,6 +5,7 @@
 
 import { demoFirestore } from "./demoFirestore";
 import type { DayDiaryDoc } from "../types";
+import { toDateKey } from "./date";
 
 const DEMO_USER_ID = "demo-user-id";
 
@@ -12,7 +13,7 @@ const DEMO_USER_ID = "demo-user-id";
 function getDateKey(daysAgo: number = 0): string {
   const date = new Date();
   date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().split("T")[0];
+  return toDateKey(date);
 }
 
 // Sample food entries for a realistic demo

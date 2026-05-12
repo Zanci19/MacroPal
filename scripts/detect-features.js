@@ -1,18 +1,16 @@
 #!/usr/bin/env node
 /**
- * MacroPal — Feature Detection Script
- * =====================================
- * Scans App.tsx for every <Route> path and then checks whether a matching
- * Cypress test exists in cypress/e2e/. Prints a coverage report so you can
- * see which routes have E2E tests and which ones are still missing coverage.
- *
- * Usage:
- *   node scripts/detect-features.js
- *
- * Output example:
- *   ✅  /login               → cypress/e2e/app.cy.ts
- *   ❌  /new-feature         → no Cypress test found
- */
+MacroPal Feature Detection Script
+=====================================
+Scans App.tsx for every <Route> path and then checks whether a matching
+Cypress test exists in cypress/e2e/. Prints a coverage report so we can
+see which routes have E2E tests and which ones are still missing coverage.
+Usage:
+  node scripts/detect-features.js
+Output example:
+  ✅  /login               → cypress/e2e/app.cy.ts
+  ❌  /new-feature         → no Cypress test found
+*/
 
 import { readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
@@ -21,7 +19,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..');
 
-// ── 1. Extract routes from App.tsx ─────────────────────────────────────────
+// 1. Extract routes from App.tsx
 
 const appTsx = readFileSync(join(REPO_ROOT, 'src', 'App.tsx'), 'utf8');
 
@@ -39,7 +37,7 @@ while ((match = routeRegex.exec(appTsx)) !== null) {
   }
 }
 
-// ── 2. Read all Cypress test files ─────────────────────────────────────────
+// 2. Read all Cypress test files in cypress/e2e/
 
 const e2eDir = join(REPO_ROOT, 'cypress', 'e2e');
 let cyFiles = [];
@@ -51,7 +49,7 @@ try {
   console.warn('⚠️  Could not read cypress/e2e directory.');
 }
 
-// ── 3. For each route, check if any Cypress file references it ─────────────
+// 3. For each route, check if any Cypress file references it
 
 const results = [];
 for (const route of [...routes].sort()) {
@@ -60,7 +58,7 @@ for (const route of [...routes].sort()) {
   results.push({ route, coveringFile: coveringFile?.name ?? null });
 }
 
-// ── 4. Print report ────────────────────────────────────────────────────────
+// 4. Print report
 
 const covered = results.filter((r) => r.coveringFile);
 const missing = results.filter((r) => !r.coveringFile);
@@ -97,5 +95,5 @@ if (missing.length > 0) {
   console.log();
 }
 
-// Exit with code 1 if any routes are uncovered (useful for CI)
+// Exit with code 1 if any routes are uncovered
 process.exit(missing.length > 0 ? 1 : 0);

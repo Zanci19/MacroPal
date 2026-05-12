@@ -35,10 +35,10 @@ const PROGRESS_STAGES = {
 };
 
 const PROGRESS_INTERVAL_MS = 800;
-const TIMEOUT_MS = 10000;
-const FIRESTORE_OP_TIMEOUT_MS = 8000;
+const TIMEOUT_MS = 25000;
+const FIRESTORE_OP_TIMEOUT_MS = 12000;
 const RECOVERY_ROUTE_DELAY_MS = 1200;
-const CACHE_READ_TIMEOUT_MS = 1500;
+const CACHE_READ_TIMEOUT_MS = 2500;
 const AUTH_LOADING_TIMEOUT_ERROR = "AuthLoadingTimeoutError";
 const SLOW_CONNECTION_MESSAGE = "This may take longer on slow connections";
 
@@ -120,8 +120,14 @@ const AuthLoading: React.FC = () => {
         return;
       }
 
-      setMessage("Taking longer than usual. Opening offline mode…");
-      scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
+      if (auth.currentUser) {
+        setMessage("Still signing you in. Opening your home screen…");
+        scheduleNavigation("/app/home", RECOVERY_ROUTE_DELAY_MS);
+        return;
+      }
+
+      setMessage("Taking longer than usual. Sending you to login…");
+      scheduleNavigation("/login", RECOVERY_ROUTE_DELAY_MS);
     }, TIMEOUT_MS);
 
     const run = async () => {
@@ -256,8 +262,14 @@ const AuthLoading: React.FC = () => {
             return;
           }
 
-          setMessage("Could not verify your account in time. Opening offline mode…");
-          scheduleNavigation("/offline", RECOVERY_ROUTE_DELAY_MS);
+          if (auth.currentUser) {
+            setMessage("Sign-in is taking longer than usual. Opening your home screen…");
+            scheduleNavigation("/app/home", RECOVERY_ROUTE_DELAY_MS);
+            return;
+          }
+
+          setMessage("Could not verify your account in time. Sending you to login…");
+          scheduleNavigation("/login", RECOVERY_ROUTE_DELAY_MS);
           return;
         }
 

@@ -286,7 +286,7 @@
   text-transform: none;
   --padding-start: 22px;
   --padding-end: 22px;
-  --box-shadow: 0 10px 24px rgba(var(--ion-color-primary-rgb), 0.22);
+  --box-shadow: none;
 }
 
 @keyframes onboarding-slide-forward {

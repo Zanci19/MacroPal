@@ -132,8 +132,8 @@ const Register: React.FC<RegisterProps> = ({
 
     const cleanName = name.trim();
     const cleanEmail = email.trim();
-    const cleanPw = (pw ?? "").trim();
-    const cleanPw2 = (pw2 ?? "").trim();
+    const cleanPw = pw ?? "";
+    const cleanPw2 = pw2 ?? "";
 
     trackEvent("register_attempt", {
       has_name: !!cleanName,
@@ -347,6 +347,8 @@ const Register: React.FC<RegisterProps> = ({
               <IonInput
                 placeholder="Your name"
                 value={name}
+                autocomplete="name"
+                name="name"
                 onIonInput={(e) => {
                   console.log(`[USER ACTION] Register: Name input changed`, {
                     hasValue: !!e?.detail?.value,
@@ -372,6 +374,7 @@ const Register: React.FC<RegisterProps> = ({
                 }}
                 inputmode="email"
                 autocomplete="email"
+                name="email"
               />
             </IonItem>
 
@@ -389,6 +392,7 @@ const Register: React.FC<RegisterProps> = ({
                   setPw(e?.detail?.value ?? "");
                 }}
                 autocomplete="new-password"
+                name="new-password"
               />
             </IonItem>
 
@@ -406,6 +410,7 @@ const Register: React.FC<RegisterProps> = ({
                   setPw2(e?.detail?.value ?? "");
                 }}
                 autocomplete="new-password"
+                name="new-password-confirm"
               />
             </IonItem>
 

@@ -164,16 +164,15 @@ ion-button {
   --box-shadow: none;
   --color: #ffffff;
   font-weight: 700;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 ion-button:hover {
-  transform: translateY(-1px);
   --box-shadow: none;
 }
 
 ion-button:active {
-  transform: translateY(0) scale(0.97);
+  --box-shadow: none;
 }
 
 @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
@@ -331,7 +330,7 @@ body.dark ion-tab-bar {
 }
 
 .mp-tab-btn--active ion-icon {
-  transform: scale(1.12);
+  transform: scale(1.04);
 }
 
 .mp-tab-btn--add {
@@ -356,18 +355,18 @@ ion-tab-button.mp-tab-btn--add::part(native) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+  box-shadow: none;
   transform: translateY(-16px);
   /* Ensure button appears above content */
   position: relative;
   z-index: 10;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .mp-tab-btn__add-circle:active,
 ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
   transform: translateY(-16px) scale(0.92);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 .mp-tab-btn__add-circle ion-icon {
