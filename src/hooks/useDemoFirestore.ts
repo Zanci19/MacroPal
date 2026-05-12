@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { doc, onSnapshot, setDoc, getDoc, DocumentReference, arrayUnion as firestoreArrayUnion } from "firebase/firestore";
+import { doc, onSnapshot, setDoc, getDoc, DocumentReference, arrayUnion as firestoreArrayUnion, FirestoreError } from "firebase/firestore";
 import { db } from "../firebase";
 import { demoFirestore } from "../utils/demoFirestore";
 
@@ -23,9 +23,20 @@ export const useDemoFirestore = () => {
       const pathParts = path.split("/");
       const docRef = doc(db, pathParts[0], pathParts[1], ...pathParts.slice(2)) as DocumentReference;
 
-      return onSnapshot(docRef, (snap) => {
-        callback(snap.data() || {});
-      });
+      return onSnapshot(
+        docRef,
+        (snap) => {
+          callback(snap.data() || {});
+        },
+        (error: FirestoreError) => {
+          if (error.code === "permission-denied" || error.code === "unauthenticated") {
+            console.warn(`[Firestore] Snapshot blocked for ${path}: ${error.code}`);
+            callback({});
+            return;
+          }
+          console.error(`[Firestore] Snapshot listener failed for ${path}:`, error);
+        }
+      );
     },
     [isDemoMode]
   );
