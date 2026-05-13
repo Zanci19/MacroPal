@@ -6,7 +6,7 @@ interface DemoModeProps {
   children: React.ReactNode;
 }
 
-const INACTIVITY_TIMEOUT_MS = 60_000; // 1 minute
+const INACTIVITY_TIMEOUT_MS = 60_000;
 const MOUSEMOVE_ACTIVITY_THROTTLE_MS = 500;
 const DEMO_HOME_PATH = "/app/home";
 
@@ -197,7 +197,7 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
     }
   }, [isDemoMode, showVideo]);
 
-  // If not in demo mode, just render children normally
+  // If not in demo mode, render children normally (did somebody say children??11!1?)
   if (!isDemoMode) {
     return <>{children}</>;
   }
@@ -216,13 +216,13 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
             autoPlay
           >
             <source src="/assets/demo-loop.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
+            Nepodprt video element v brskalniku.
           </video>
           <div className="demo-video-overlay" role="status" aria-live="polite">
             <p className="demo-video-text">
-              <strong>Tap anywhere to start the demo</strong>
+              <strong>Pritisni kjerkoli za predogled aplikacije!</strong>
             </p>
-            <p className="demo-video-subtext">Demo auto-resets after 1 minute of inactivity.</p>
+            <p className="demo-video-subtext">Aplikacija se sama ponovno zažene po 1 minuti brez aktivnosti.</p>
           </div>
         </div>
       ) : (

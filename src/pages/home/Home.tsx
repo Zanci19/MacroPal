@@ -2122,6 +2122,7 @@ const Home: React.FC = () => {
 
   useEffect(() => {
     if (!uid) return;
+    if (isDemoMode) return;
     if (!anyItems) return;
     if ((profile as { hasEverLoggedFood?: boolean })?.hasEverLoggedFood === true) return;
 
@@ -2138,7 +2139,7 @@ const Home: React.FC = () => {
         if (code === "permission-denied" || code === "unauthenticated") return;
         console.error("Failed to set hasEverLoggedFood:", err);
       });
-  }, [uid, anyItems, profile, activeDateKey]);
+  }, [uid, isDemoMode, anyItems, profile, activeDateKey]);
 
   const openWeighInModal = () => {
     console.log(`[USER ACTION] Home: Opened weigh-in modal`, {
@@ -2263,6 +2264,12 @@ const Home: React.FC = () => {
 
   const fetchAnnouncement = useCallback(
     async (force = false) => {
+      if (isDemoMode) {
+        setShowAnnouncementPopup(false);
+        setAnnouncement(null);
+        return;
+      }
+
       if (!uid || !profile) return;
       if (!force && announcementFetchedRef.current) return;
 
@@ -2822,9 +2829,18 @@ const Home: React.FC = () => {
                     name: it.name,
                   });
 
+                  const params = new URLSearchParams();
+                  params.set("meal", meal);
+                  params.set("date", activeDateKey);
+                  params.set("editMeal", meal);
+                  params.set("editIndex", String(idx));
+                  if (typeof it.addedAt === "string" && it.addedAt) {
+                    params.set("editAddedAt", it.addedAt);
+                  }
+
                   history.push({
                     pathname: "/add-food",
-                    search: `?meal=${meal}&date=${activeDateKey}`,
+                    search: `?${params.toString()}`,
                     state: {
                       editEntry: {
                         meal,

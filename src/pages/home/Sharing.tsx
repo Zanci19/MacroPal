@@ -29,15 +29,17 @@ import {
   linkOutline,
 } from "ionicons/icons";
 import { useHistory } from "react-router-dom";
-import { auth, trackEvent } from "../../firebase";
+import { trackEvent } from "../../firebase";
 import { useSharing } from "../../hooks/useSharing";
 import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
+import { getCurrentUser } from "../../utils/demoAuth";
 import "./Sharing.css";
 
 const Sharing: React.FC = () => {
   const history = useHistory();
-  const user = auth.currentUser;
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
+  const user = getCurrentUser();
   const {
     pairingCode,
     pairingExpiresAt,
@@ -176,7 +178,31 @@ const Sharing: React.FC = () => {
     return `${m}:${String(s).padStart(2, "0")}`;
   };
 
-  if (!user) return null;
+  if (isDemoMode) {
+    return (
+      <SettingsSubpageLayout
+        title="Sharing"
+        subtitle="Pair with someone to share intake data or monitor another user's diary."
+        backHref={SETTINGS_ROUTES.root}
+        className="sharing-page"
+      >
+        <IonText color="medium">Sharing is disabled in demo mode.</IonText>
+      </SettingsSubpageLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SettingsSubpageLayout
+        title="Sharing"
+        subtitle="Pair with someone to share intake data or monitor another user's diary."
+        backHref={SETTINGS_ROUTES.root}
+        className="sharing-page"
+      >
+        <IonText color="medium">You are not logged in.</IonText>
+      </SettingsSubpageLayout>
+    );
+  }
 
   return (
     <SettingsSubpageLayout

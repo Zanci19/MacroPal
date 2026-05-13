@@ -15,6 +15,7 @@ import {
 import { deleteUser } from "firebase/auth";
 import { useHistory } from "react-router-dom";
 import { auth, trackEvent } from "../../firebase";
+import { getCurrentUser } from "../../utils/demoAuth";
 import SettingsSubpageLayout from "../../components/settings/SettingsSubpageLayout";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import "./DeleteAccount.css";
@@ -23,7 +24,7 @@ type DeleteStep = "intro" | "confirm";
 
 const DeleteAccount: React.FC = () => {
   const history = useHistory();
-  const user = auth.currentUser;
+  const user = getCurrentUser();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [step, setStep] = React.useState<DeleteStep>("intro");
   const [typedName, setTypedName] = React.useState("");
@@ -64,7 +65,7 @@ const DeleteAccount: React.FC = () => {
     }
   };
 
-  if (!user) {
+  if (!user && !isDemoMode) {
     return (
       <SettingsSubpageLayout
         title="Delete account"

@@ -348,6 +348,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   const location = useLocation();
   const router = useIonRouter();
   const history = useHistory();
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
   // Refs for tracking tab navigation state across renders
   const lastDirectionRef = useRef<"forward" | "back" | null>(null);
@@ -361,6 +362,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     const stored = localStorage.getItem("mp_tab_animations");
     return stored !== "disabled"; // Default to enabled
   });
+  const effectiveAnimationsEnabled = isDemoMode || animationsEnabled;
 
   // Listen for animation preference changes
   useEffect(() => {
@@ -424,6 +426,11 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
       to: tabName,
       direction,
     });
+    if (isDemoMode) {
+      router.push(href, direction, "push");
+      return;
+    }
+
     router.push(href, "root", "replace");
   };
 
@@ -440,7 +447,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
   const tabAnimation: AnimationBuilder = useMemo(
     () => (_baseEl, opts) => {
       // If animations are disabled, return instant transition
-      if (!animationsEnabled) {
+      if (!effectiveAnimationsEnabled) {
         const rootAnimation = createAnimation()
           .duration(0);
         
@@ -586,7 +593,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
       return rootAnimation;
     },
-    [animationsEnabled] // Only recreate when animation enabled/disabled preference changes
+    [effectiveAnimationsEnabled] // Only recreate when the effective animation state changes
   );
 
   const tabClass = (tabName: string) =>
@@ -640,7 +647,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
 
   return (
       <IonTabs>
-      <IonRouterOutlet id="tabs" animation={tabAnimation}>
+      <IonRouterOutlet id="tabs" animated={effectiveAnimationsEnabled} animation={tabAnimation}>
         <Route exact path="/app/analytics" render={(props) => <LazyRoute component={Analytics} {...props} />} />
         <Route exact path="/app/home" render={(props) => <LazyRoute component={Home} {...props} />} />
         <Route exact path="/app/workout" render={(props) => <LazyRoute component={Workout} {...props} />} />

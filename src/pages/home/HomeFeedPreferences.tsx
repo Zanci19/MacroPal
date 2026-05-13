@@ -32,6 +32,7 @@ interface UserData {
 
 const HomeFeedPreferences: React.FC = () => {
   const user = auth.currentUser;
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [loading, setLoading] = React.useState(true);
   const [showRandomQuoteEnabled, setShowRandomQuoteEnabled] = React.useState(true);
   const [showAchievementsEnabled, setShowAchievementsEnabled] = React.useState(true);
@@ -166,6 +167,19 @@ const HomeFeedPreferences: React.FC = () => {
       });
     }
   };
+
+  if (isDemoMode) {
+    return (
+      <SettingsSubpageLayout
+        title="Customize home feed"
+        subtitle="Choose which helper sections appear on Home and Add Food."
+        backHref={SETTINGS_ROUTES.root}
+        className="home-feed-preferences-page"
+      >
+        <IonText color="medium">Home feed customization is disabled in demo mode.</IonText>
+      </SettingsSubpageLayout>
+    );
+  }
 
   if (!user) {
     return (

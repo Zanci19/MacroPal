@@ -286,6 +286,21 @@ ion-label p {
   color: var(--mp-text-muted) !important;
 }
 
+/* Keep stacked form labels clear from input/select surfaces */
+ion-item ion-label[position="stacked"] {
+  display: block;
+  margin-bottom: 8px;
+  white-space: normal;
+}
+
+ion-item ion-label[position="stacked"] + ion-input,
+ion-item ion-label[position="stacked"] + ion-select,
+ion-item ion-label[position="stacked"] + ion-textarea,
+ion-item ion-label[position="stacked"] + ion-datetime {
+  width: 100%;
+  margin-top: 2px;
+}
+
 /* Allow button to overlap the tab bar */
 ion-tabs {
   overflow: visible;

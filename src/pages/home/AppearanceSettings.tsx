@@ -36,6 +36,7 @@ import {
   type ThemeMode,
 } from "../../utils/preferences";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
+import { getCurrentUser } from "../../utils/demoAuth";
 import "./AppearanceSettings.css";
 
 interface UserProfile {
@@ -53,7 +54,8 @@ interface UserData {
 }
 
 const AppearanceSettings: React.FC = () => {
-  const user = auth.currentUser;
+  const user = getCurrentUser();
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [loading, setLoading] = React.useState(true);
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => getStoredThemeMode());
   const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() =>
@@ -82,6 +84,10 @@ const AppearanceSettings: React.FC = () => {
 
   React.useEffect(() => {
     const load = async () => {
+      if (isDemoMode) {
+        setLoading(false);
+        return;
+      }
       const current = auth.currentUser;
       if (!current) {
         setLoading(false);
@@ -149,13 +155,21 @@ const AppearanceSettings: React.FC = () => {
     };
 
     void load();
-  }, []);
+  }, [isDemoMode]);
 
   const updateProfilePreference = async (
     updates: Record<string, unknown>,
     eventName: string,
     eventData?: Record<string, unknown>
   ) => {
+    if (isDemoMode) {
+      trackEvent(eventName, {
+        uid: user?.uid ?? "demo-user-id",
+        ...(eventData || {}),
+      });
+      return;
+    }
+
     const current = auth.currentUser;
     if (!current) return;
 
@@ -297,7 +311,7 @@ const AppearanceSettings: React.FC = () => {
     }
   };
 
-  if (!user) {
+  if (!user && !isDemoMode) {
     return (
       <SettingsSubpageLayout
         title="Appearance & performance"

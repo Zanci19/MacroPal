@@ -84,6 +84,7 @@ import { useClinicianAccess } from "../../hooks/useClinicianAccess";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import { clearAddFoodRecentQueries } from "../../utils/recentQueries";
 import { clearRecentFoodsHistory } from "../../utils/recentFoods";
+import { getCurrentUser } from "../../utils/demoAuth";
 import mfaPhoneCountriesData from "../../data/mfaPhoneCountries.json";
 
 type MfaMethod = "sms" | "authenticator";
@@ -158,7 +159,7 @@ const getDefaultMfaCountryIso2 = (): string => {
 
 const Settings: React.FC = () => {
   const history = useHistory();
-  const user = auth.currentUser;
+  const user = getCurrentUser();
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const remoteConfig = useRemoteConfig();
   const clinicianCollabEnabled = isFeatureEnabled(remoteConfig, "clinicianCollaboration");
@@ -627,7 +628,7 @@ const Settings: React.FC = () => {
     if (mfaEnabled) return;
     setMfaSetupStep("intro");
     setShowMfaSetupModal(true);
-    trackEvent("settings_mfa_setup_opened", { uid: auth.currentUser?.uid });
+    trackEvent("settings_mfa_setup_opened", { uid: user?.uid });
   };
 
   const closeMfaSetupFlow = () => {
@@ -663,6 +664,14 @@ const Settings: React.FC = () => {
 
   const handleVerifyEmail = async () => {
     console.log(`[USER ACTION] Settings: Send verification email clicked`);
+    if (isDemoMode) {
+      setToast({
+        show: true,
+        message: "Email verification is disabled in demo mode.",
+        color: "medium",
+      });
+      return;
+    }
     if (!auth.currentUser) return;
     try {
       await sendEmailVerification(auth.currentUser);
@@ -683,6 +692,14 @@ const Settings: React.FC = () => {
 
   const handleResetPassword = async () => {
     console.log(`[USER ACTION] Settings: Send password reset email clicked`);
+    if (isDemoMode) {
+      setToast({
+        show: true,
+        message: "Password reset is disabled in demo mode.",
+        color: "medium",
+      });
+      return;
+    }
     const email = auth.currentUser?.email || "";
     if (!email) {
       setToast({
@@ -711,6 +728,14 @@ const Settings: React.FC = () => {
 
   const handleClearRecentFoods = async () => {
     console.log(`[USER ACTION] Settings: Clear recent foods confirmed and executing`);
+    if (isDemoMode) {
+      setToast({
+        show: true,
+        message: "Quick history reset is disabled in demo mode.",
+        color: "medium",
+      });
+      return;
+    }
     if (!auth.currentUser) return;
     try {
       setClearingRecent(true);
@@ -737,7 +762,7 @@ const Settings: React.FC = () => {
     console.log(`[USER ACTION] Settings: Clear recent searches confirmed and executing`);
     try {
       clearAddFoodRecentQueries();
-      trackEvent("settings_recent_queries_cleared", { uid: auth.currentUser?.uid });
+      trackEvent("settings_recent_queries_cleared", { uid: user?.uid });
       setToast({
         show: true,
         message: "Recent searches cleared on this device.",
@@ -755,6 +780,14 @@ const Settings: React.FC = () => {
 
   const handlePhotoChange = async (file?: File | null) => {
     console.log(`[USER ACTION] Settings: Photo file selected for upload`, { fileType: file?.type, fileSize: file?.size });
+    if (isDemoMode) {
+      setToast({
+        show: true,
+        message: "Profile photo updates are disabled in demo mode.",
+        color: "medium",
+      });
+      return;
+    }
     if (!file || !auth.currentUser) return;
 
     try {
@@ -987,6 +1020,14 @@ const Settings: React.FC = () => {
 
   const handleRemovePhoto = async () => {
     console.log(`[USER ACTION] Settings: Remove profile photo clicked`);
+    if (isDemoMode) {
+      setToast({
+        show: true,
+        message: "Profile photo updates are disabled in demo mode.",
+        color: "medium",
+      });
+      return;
+    }
     if (!auth.currentUser) return;
     try {
       const ref = doc(db, "users", auth.currentUser.uid);
@@ -1138,7 +1179,7 @@ const Settings: React.FC = () => {
     load();
   }, []);
 
-  if (!user) {
+  if (!user && !isDemoMode) {
     return (
       <IonPage>
         <IonHeader>
@@ -1162,7 +1203,14 @@ const Settings: React.FC = () => {
     );
   }
 
-  const verified = !!user.emailVerified;
+  const accountUser = user ?? {
+    uid: "demo-user-id",
+    email: "demo@macropal.app",
+    displayName: "Demo",
+    emailVerified: true,
+  };
+
+  const verified = !!accountUser.emailVerified;
   const mfaSetupCanDismiss = !mfaSendingCode && !mfaVerifyingCode;
   const mfaLocalExample = selectedMfaCountry?.nationalPrefix
     ? `${selectedMfaCountry.nationalPrefix}51794459`
@@ -1172,7 +1220,7 @@ const Settings: React.FC = () => {
     : "+15551234567";
   const mfaNormalizedPhone = getNormalizedPhone(mfaPhoneNumber, selectedMfaCountry);
   const mfaAuthenticatorIssuer = "MacroPal";
-  const mfaAuthenticatorAccount = user.email || user.displayName || "MacroPal User";
+  const mfaAuthenticatorAccount = accountUser.email || accountUser.displayName || "MacroPal User";
   const mfaAuthenticatorSecret = mfaPendingTotpSecret?.secretKey ?? "";
   const mfaVerifyCodeLength =
     mfaPendingMethod === "authenticator"
@@ -1500,6 +1548,14 @@ const Settings: React.FC = () => {
                     className="settings-avatar"
                     onClick={() => {
                       console.log(`[USER ACTION] Settings: Clicked profile photo avatar`);
+                      if (isDemoMode) {
+                        setToast({
+                          show: true,
+                          message: "Profile photo updates are disabled in demo mode.",
+                          color: "medium",
+                        });
+                        return;
+                      }
                       setShowPhotoActions(true);
                     }}
                     role="button"
@@ -1508,6 +1564,14 @@ const Settings: React.FC = () => {
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         console.log(`[USER ACTION] Settings: Keyboard action on profile photo avatar`, { key: event.key });
+                        if (isDemoMode) {
+                          setToast({
+                            show: true,
+                            message: "Profile photo updates are disabled in demo mode.",
+                            color: "medium",
+                          });
+                          return;
+                        }
                         setShowPhotoActions(true);
                       }
                     }}
@@ -1521,8 +1585,8 @@ const Settings: React.FC = () => {
                     </IonAvatar>
                   </div>
                   <IonLabel>
-                    <h2>{user.displayName || "Unnamed User"}</h2>
-                    <p>{user.email}</p>
+                    <h2>{accountUser.displayName || "Unnamed User"}</h2>
+                    <p>{accountUser.email}</p>
                   </IonLabel>
                   <IonNote slot="end" color={verified ? "success" : "warning"}>
                     {verified ? "Verified" : "Unverified"}
@@ -1533,7 +1597,7 @@ const Settings: React.FC = () => {
                   <IonButton
                     fill="outline"
                     onClick={handleVerifyEmail}
-                    disabled={verified}
+                    disabled={verified || isDemoMode}
                   >
                     <IonIcon slot="start" icon={mailOutline} />
                     {verified ? "Verified" : "Send link"}
@@ -1541,7 +1605,7 @@ const Settings: React.FC = () => {
                 </IonItem>
                 <IonItem lines="full">
                   <IonLabel>Password</IonLabel>
-                  <IonButton onClick={handleResetPassword}>
+                  <IonButton onClick={handleResetPassword} disabled={isDemoMode}>
                     <IonIcon slot="start" icon={keyOutline} />
                     Send reset email
                   </IonButton>
@@ -1559,7 +1623,7 @@ const Settings: React.FC = () => {
                       onClick={() => {
                         void handleDisableMfa();
                       }}
-                      disabled={mfaVerifyingCode}
+                      disabled={mfaVerifyingCode || isDemoMode}
                     >
                       Disable
                     </IonButton>
@@ -1567,7 +1631,7 @@ const Settings: React.FC = () => {
                     <IonButton
                       fill="outline"
                       onClick={openMfaSetupFlow}
-                      disabled={mfaStatusLoading}
+                      disabled={mfaStatusLoading || isDemoMode}
                     >
                       Set up
                     </IonButton>
@@ -1589,6 +1653,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to setup profile page`);
                     history.push(SETTINGS_ROUTES.profile);
@@ -1599,6 +1664,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to energy needs page`);
                     history.push(SETTINGS_ROUTES.energyNeeds);
@@ -1612,6 +1678,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to units page`);
                     history.push(SETTINGS_ROUTES.units);
@@ -1625,6 +1692,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to reminders page`);
                     history.push(SETTINGS_ROUTES.reminders);
@@ -1651,6 +1719,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Navigate to sharing page`);
                     history.push(SETTINGS_ROUTES.sharing);
@@ -1666,6 +1735,7 @@ const Settings: React.FC = () => {
                   <IonItem
                     lines="full"
                     button
+                    disabled={isDemoMode}
                     onClick={() => {
                       history.push(
                         role === "clinician" || role === "admin"
@@ -1706,6 +1776,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="none"
                   button
+                  disabled={isDemoMode}
                   onClick={() => {
                     console.log("[USER ACTION] Settings: Navigate to home feed customization page");
                     history.push(SETTINGS_ROUTES.homeFeed);
@@ -1755,7 +1826,7 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  disabled={clearingRecent}
+                  disabled={clearingRecent || isDemoMode}
                   onClick={() => {
                     console.log(`[USER ACTION] Settings: Clear recent foods clicked`);
                     setConfirmClearRecent(true);
@@ -1840,11 +1911,12 @@ const Settings: React.FC = () => {
                 <IonItem
                   lines="full"
                   button
-                  onClick={() => {
-                    console.log(`[USER ACTION] Settings: Navigate to feedback page`);
-                    trackEvent("settings_feedback_open", { uid: auth.currentUser?.uid });
-                    history.push(SETTINGS_ROUTES.feedback);
-                  }}
+                  disabled={isDemoMode}
+                    onClick={() => {
+                      console.log(`[USER ACTION] Settings: Navigate to feedback page`);
+                      trackEvent("settings_feedback_open", { uid: user?.uid });
+                      history.push(SETTINGS_ROUTES.feedback);
+                    }}
                 >
                   <IonIcon slot="start" icon={chatbubbleEllipsesOutline} />
                   <IonLabel>Send feedback</IonLabel>
@@ -1874,10 +1946,10 @@ const Settings: React.FC = () => {
                   lines="full"
                   button
                   routerLink="/recipe-calculator"
-                  onClick={() => {
-                    console.log(`[USER ACTION] Settings: Recipe Calculator clicked`);
-                    trackEvent("settings_recipe_calculator_open", { uid: auth.currentUser?.uid });
-                  }}
+                    onClick={() => {
+                      console.log(`[USER ACTION] Settings: Recipe Calculator clicked`);
+                      trackEvent("settings_recipe_calculator_open", { uid: user?.uid });
+                    }}
                 >
                   <IonIcon slot="start" icon={cafeOutline} />
                   <IonLabel>

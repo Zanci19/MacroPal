@@ -63,6 +63,7 @@ import { useProfile } from "../../hooks/useProfile";
 import { getChartAnimationPreference } from "../../utils/preferences";
 import { useHistory } from "react-router";
 import { fromMetricWeight, getUnitSystem, weightLabel } from "../../utils/units";
+import { toDateKey } from "../../utils/date";
 
 import "./Analytics.css";
 
@@ -86,7 +87,7 @@ type DayRoll = {
 };
 
 const fmtDate = (iso: string) => iso.slice(5); // MM-DD
-const dayKey = (d: Date) => d.toISOString().split("T")[0];
+const dayKey = (d: Date) => toDateKey(d);
 const addDays = (d: Date, n: number) => {
   const x = new Date(d);
   x.setDate(x.getDate() + n);

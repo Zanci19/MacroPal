@@ -428,7 +428,7 @@ const RESULTS_SCROLL_OFFSET = 96;
 const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
-  const { arrayUnionField } = useDemoFirestore();
+  const { arrayUnionField, getDocData, isDemoMode } = useDemoFirestore();
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
   const remoteConfig = useRemoteConfig();
@@ -995,6 +995,47 @@ const AddFood: React.FC = () => {
     }
   }, [ensureResultsVisible, loading, results]);
 
+  const stripEditQueryParams = useCallback((search: string) => {
+    const params = new URLSearchParams(search);
+    params.delete("editMeal");
+    params.delete("editIndex");
+    params.delete("editAddedAt");
+    const next = params.toString();
+    return next ? `?${next}` : "";
+  }, []);
+
+  const openEditEntryModal = useCallback(
+    (mealKey: MealKey, index: number, item: DiaryEntryDoc) => {
+      setEditEntry({ meal: mealKey, index, item });
+      setPhotoPreview(typeof item.photoUrl === "string" ? item.photoUrl : null);
+      setPhotoName(typeof item.photoName === "string" ? item.photoName : "");
+      setPhotoRemoved(false);
+
+      const sel = item.selection || {};
+      const mode: "serving" | "weight" =
+        sel.mode === "serving" || sel.mode === "weight" ? sel.mode : "weight";
+
+      if (mode === "serving") {
+        const q =
+          typeof sel.servingsQty === "number" && sel.servingsQty > 0
+            ? sel.servingsQty
+            : 1;
+        setUseServing(true);
+        setServingsQty(q);
+      } else {
+        const grams =
+          typeof sel.weightQty === "number" && sel.weightQty > 0
+            ? sel.weightQty
+            : 100;
+        setUseServing(false);
+        setWeightQty(grams);
+      }
+
+      setOpen(true);
+    },
+    []
+  );
+
   useEffect(() => {
     const state = (location as { state?: {
       editEntry?: {
@@ -1018,39 +1059,102 @@ const AddFood: React.FC = () => {
     if (!state || !state.editEntry) return;
 
     const { meal, index, item } = state.editEntry;
+    openEditEntryModal(meal, index, item);
 
-    setEditEntry({ meal, index, item });
-    setPhotoPreview(typeof item.photoUrl === "string" ? item.photoUrl : null);
-    setPhotoName(typeof item.photoName === "string" ? item.photoName : "");
-    setPhotoRemoved(false);
+    const cleanedSearch = stripEditQueryParams(location.search);
+    if (cleanedSearch !== location.search) {
+      history.replace({
+        pathname: "/add-food",
+        search: cleanedSearch,
+      });
+    }
+  }, [location, history, openEditEntryModal, stripEditQueryParams]);
 
-    const sel = item.selection || {};
-    const mode: "serving" | "weight" =
-      sel.mode === "serving" || sel.mode === "weight" ? sel.mode : "weight";
+  useEffect(() => {
+    const state = (location as {
+      state?: {
+        editEntry?: {
+          meal: MealKey;
+          index: number;
+          item: DiaryEntryDoc;
+        };
+      };
+    }).state;
 
-    if (mode === "serving") {
-      const q =
-        typeof sel.servingsQty === "number" && sel.servingsQty > 0
-          ? sel.servingsQty
-          : 1;
-      setUseServing(true);
-      setServingsQty(q);
-    } else {
-      const grams =
-        typeof sel.weightQty === "number" && sel.weightQty > 0
-          ? sel.weightQty
-          : 100;
-      setUseServing(false);
-      setWeightQty(grams);
+    if (state?.editEntry) return;
+
+    const params = new URLSearchParams(location.search);
+    const editMealRaw = params.get("editMeal");
+    const editIndexRaw = params.get("editIndex");
+    const editAddedAt = params.get("editAddedAt");
+
+    if (!editMealRaw || !MEAL_ORDER.includes(editMealRaw as MealKey)) return;
+
+    const editMeal = editMealRaw as MealKey;
+    const requestedIndex = Number(editIndexRaw);
+    if (!Number.isInteger(requestedIndex) || requestedIndex < 0) {
+      const cleanedSearch = stripEditQueryParams(location.search);
+      if (cleanedSearch !== location.search) {
+        history.replace({ pathname: "/add-food", search: cleanedSearch });
+      }
+      return;
     }
 
-    setOpen(true);
+    const user = getCurrentUser();
+    if (!user) return;
 
-    history.replace({
-      pathname: "/add-food",
-      search: location.search,
-    });
-  }, [location, history]);
+    let cancelled = false;
+
+    const resolveEditEntry = async () => {
+      try {
+        let dayData: DayDoc = {};
+        if (isDemoMode) {
+          dayData = ((await getDocData(`users/${user.uid}/foods/${dateKey}`)) || {}) as DayDoc;
+        } else {
+          const snap = await getDoc(doc(db, "users", user.uid, "foods", dateKey));
+          dayData = (snap.data() || {}) as DayDoc;
+        }
+
+        const mealItems = (Array.isArray(dayData[editMeal]) ? dayData[editMeal] : []) as DiaryEntryDoc[];
+        let resolvedIndex = requestedIndex;
+
+        if (editAddedAt) {
+          const indexByAddedAt = mealItems.findIndex((entry) => entry?.addedAt === editAddedAt);
+          if (indexByAddedAt >= 0) {
+            resolvedIndex = indexByAddedAt;
+          }
+        }
+
+        const resolvedItem = mealItems[resolvedIndex];
+        if (!resolvedItem || cancelled) return;
+
+        openEditEntryModal(editMeal, resolvedIndex, resolvedItem);
+      } catch (error) {
+        console.error("Failed to resolve Add Food edit entry from query params:", error);
+      } finally {
+        if (!cancelled) {
+          const cleanedSearch = stripEditQueryParams(location.search);
+          if (cleanedSearch !== location.search) {
+            history.replace({ pathname: "/add-food", search: cleanedSearch });
+          }
+        }
+      }
+    };
+
+    void resolveEditEntry();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dateKey,
+    getDocData,
+    history,
+    isDemoMode,
+    location,
+    openEditEntryModal,
+    stripEditQueryParams,
+  ]);
 
   // Defer favorites loading to avoid congestion on mobile
   useEffect(() => {

@@ -15,6 +15,7 @@ const DEFAULT_DEMO_PROFILE: Profile = {
   unitSystem: "metric" as const,
   weightUnit: "kg" as const,
   heightUnit: "cm" as const,
+  streak: 3,
 };
 
 export function useProfile() {
