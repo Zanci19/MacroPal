@@ -844,6 +844,8 @@ const Analytics: React.FC = () => {
                                       color: "var(--mp-text)",
                                       fontSize: 12,
                                     }}
+                                    itemStyle={{ color: "var(--mp-text)" }}
+                                    labelStyle={{ color: "var(--mp-text)" }}
                                   />
                                 </PieChart>
                               </ChartContainer>
@@ -1036,6 +1038,8 @@ const Analytics: React.FC = () => {
                                       color: "var(--mp-text)",
                                       fontSize: 12,
                                     }}
+                                    itemStyle={{ color: "var(--mp-text)" }}
+                                    labelStyle={{ color: "var(--mp-text)" }}
                                   />
                                 </PieChart>
                               </ChartContainer>
