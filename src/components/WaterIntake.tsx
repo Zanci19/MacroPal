@@ -12,13 +12,12 @@ import {
   removeOutline,
   checkmarkCircleOutline,
 } from "ionicons/icons";
-import { db } from "../firebase";
-import { doc, setDoc, onSnapshot } from "firebase/firestore";
-import { auth } from "../firebase";
+import { useDemoFirestore } from "../hooks/useDemoFirestore";
 import "./WaterIntake.css";
 
 interface WaterIntakeProps {
   dateKey: string;
+  userId?: string | null;
 }
 
 export interface WaterIntakeData {
@@ -35,60 +34,47 @@ const getFirestoreErrorCode = (error: unknown): string => {
   return String((error as { code?: unknown }).code ?? "");
 };
 
-export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey }) => {
+export const WaterIntake: React.FC<WaterIntakeProps> = ({ dateKey, userId }) => {
   const [waterData, setWaterData] = useState<WaterIntakeData>({
     glasses: 0,
     goal: 8, // Default 8 glasses per day
   });
   const [loading, setLoading] = useState(true);
-  const userId = auth.currentUser?.uid ?? null;
+  const { onSnapshotDoc, setDocData } = useDemoFirestore();
 
   // Load water intake data with real-time listener
   useEffect(() => {
     if (!userId) {
       setLoading(false);
+      setWaterData({ glasses: 0, goal: 8 });
       return;
     }
 
-    const waterDocRef = doc(db, `users/${userId}/water/${dateKey}`);
-    const unsub = onSnapshot(
-      waterDocRef,
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data() as WaterIntakeData;
-          setWaterData({
-            glasses: data.glasses || 0,
-            goal: data.goal || 8,
-          });
-        } else {
-          setWaterData({ glasses: 0, goal: 8 });
-        }
-        setLoading(false);
-      },
-      (error) => {
-        const code = getFirestoreErrorCode(error);
-        if (code !== "permission-denied" && code !== "unauthenticated") {
-          console.error("Error loading water data:", error);
-        }
-        setLoading(false);
-      }
-    );
+    setLoading(true);
+    const unsub = onSnapshotDoc(`users/${userId}/water/${dateKey}`, (data) => {
+      const next = data as Partial<WaterIntakeData> | undefined;
+      setWaterData({
+        glasses: typeof next?.glasses === "number" ? next.glasses : 0,
+        goal: typeof next?.goal === "number" && next.goal > 0 ? next.goal : 8,
+      });
+      setLoading(false);
+    });
 
     return unsub;
-  }, [dateKey, userId]);
+  }, [dateKey, onSnapshotDoc, userId]);
 
   const updateWaterIntake = async (newGlasses: number) => {
-    const user = auth.currentUser;
-    if (!user) return;
+    if (!userId) return;
 
     try {
-      const waterDocRef = doc(db, `users/${user.uid}/water/${dateKey}`);
       const updatedData = {
         ...waterData,
         glasses: Math.max(0, newGlasses),
       };
 
-      await setDoc(waterDocRef, updatedData, { merge: true });
+      await setDocData(`users/${userId}/water/${dateKey}`, updatedData, {
+        merge: true,
+      });
       setWaterData(updatedData);
     } catch (error) {
       const code = getFirestoreErrorCode(error);

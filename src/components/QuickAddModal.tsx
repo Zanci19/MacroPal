@@ -1,6 +1,4 @@
-// I'll probably delete this as it doesn't work very well... or i might rework it idk
-
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   IonModal,
   IonHeader,
@@ -12,9 +10,11 @@ import {
   IonList,
   IonItem,
   IonLabel,
-  IonChip,
   IonIcon,
   IonSearchbar,
+  IonSegment,
+  IonSegmentButton,
+  IonText,
 } from "@ionic/react";
 import { addOutline, closeOutline } from "ionicons/icons";
 import type { MealKey } from "../types";
@@ -23,11 +23,11 @@ import "./QuickAddModal.css";
 interface QuickAddModalProps {
   isOpen: boolean;
   onDismiss: () => void;
-  onAddFood: (meal: MealKey, foodName: string, calories: number) => void;
+  onAddFood: (meal: MealKey, food: QuickFood) => void;
   dateKey: string;
 }
 
-interface QuickFood {
+export interface QuickFood {
   name: string;
   emoji: string;
   calories: number;
@@ -58,26 +58,71 @@ const QUICK_FOODS: QuickFood[] = [
   { name: "Smoothie Bowl", emoji: "🍹", calories: 280, protein: 8, carbs: 45, fat: 8, defaultMeal: "breakfast" },
 ];
 
+type MealFilter = "all" | MealKey;
+
+const MEAL_FILTERS: Array<{ value: MealFilter; label: string }> = [
+  { value: "all", label: "Default" },
+  { value: "breakfast", label: "Breakfast" },
+  { value: "lunch", label: "Lunch" },
+  { value: "dinner", label: "Dinner" },
+  { value: "snacks", label: "Snacks" },
+];
+
+const isMealFilter = (value: unknown): value is MealFilter =>
+  value === "all" ||
+  value === "breakfast" ||
+  value === "lunch" ||
+  value === "dinner" ||
+  value === "snacks";
+
+const mealLabel = (meal: MealKey) =>
+  meal === "snacks" ? "Snacks" : meal[0].toUpperCase() + meal.slice(1);
+
 export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   isOpen,
   onDismiss,
   onAddFood,
   dateKey,
 }) => {
-  void dateKey;
   const [searchText, setSearchText] = useState("");
+  const [targetMeal, setTargetMeal] = useState<MealFilter>("all");
 
-  const filteredFoods = QUICK_FOODS.filter((food) =>
-    food.name.toLowerCase().includes(searchText.toLowerCase())
-  );
+  useEffect(() => {
+    if (!isOpen) return;
+    setSearchText("");
+    setTargetMeal("all");
+  }, [dateKey, isOpen]);
 
-  const handleAddFood = (food: QuickFood, meal: MealKey) => {
-    onAddFood(meal, food.name, food.calories);
+  const filteredFoods = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    const target = targetMeal === "all" ? null : targetMeal;
+
+    return [...QUICK_FOODS]
+      .sort((a, b) => {
+        if (!target) return 0;
+        const aScore = a.defaultMeal === target ? 0 : 1;
+        const bScore = b.defaultMeal === target ? 0 : 1;
+        return aScore - bScore || a.name.localeCompare(b.name);
+      })
+      .filter((food) => {
+        if (!query) return true;
+        return (
+          food.name.toLowerCase().includes(query) ||
+          mealLabel(food.defaultMeal).toLowerCase().includes(query)
+        );
+      });
+  }, [searchText, targetMeal]);
+
+  const resolveTargetMeal = (food: QuickFood): MealKey =>
+    targetMeal === "all" ? food.defaultMeal : targetMeal;
+
+  const handleAddFood = (food: QuickFood) => {
+    onAddFood(resolveTargetMeal(food), food);
     onDismiss();
   };
 
   return (
-    <IonModal isOpen={isOpen} onDidDismiss={onDismiss}>
+    <IonModal isOpen={isOpen} onDidDismiss={onDismiss} className="quick-add-modal">
       <IonHeader>
         <IonToolbar>
           <IonTitle>Quick Add</IonTitle>
@@ -88,57 +133,77 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
           </IonButtons>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
+      <IonContent className="quick-add-content">
         <IonSearchbar
+          className="quick-add-search"
           value={searchText}
           onIonInput={(e) => setSearchText(e.detail.value || "")}
-          placeholder="Search quick foods..."
+          placeholder="Search quick foods"
         />
-        <IonList>
-          {filteredFoods.map((food, index) => (
-            <IonItem key={index} className="quick-food-item">
-              <IonLabel>
-                <h2>
-                  <span className="food-emoji">{food.emoji}</span>
-                  {food.name}
-                </h2>
-                <p>
-                  {food.calories} kcal · P: {food.protein}g · C: {food.carbs}g · F: {food.fat}g
-                </p>
-              </IonLabel>
-              <div className="meal-chips" slot="end">
-                <IonChip
-                  color={food.defaultMeal === "breakfast" ? "primary" : "medium"}
-                  onClick={() => handleAddFood(food, "breakfast")}
-                >
-                  <IonIcon icon={addOutline} />
-                  <IonLabel>B</IonLabel>
-                </IonChip>
-                <IonChip
-                  color={food.defaultMeal === "lunch" ? "primary" : "medium"}
-                  onClick={() => handleAddFood(food, "lunch")}
-                >
-                  <IonIcon icon={addOutline} />
-                  <IonLabel>L</IonLabel>
-                </IonChip>
-                <IonChip
-                  color={food.defaultMeal === "dinner" ? "primary" : "medium"}
-                  onClick={() => handleAddFood(food, "dinner")}
-                >
-                  <IonIcon icon={addOutline} />
-                  <IonLabel>D</IonLabel>
-                </IonChip>
-                <IonChip
-                  color={food.defaultMeal === "snacks" ? "primary" : "medium"}
-                  onClick={() => handleAddFood(food, "snacks")}
-                >
-                  <IonIcon icon={addOutline} />
-                  <IonLabel>S</IonLabel>
-                </IonChip>
-              </div>
-            </IonItem>
-          ))}
+
+        <div className="quick-add-meal-target">
+          <IonSegment
+            value={targetMeal}
+            scrollable
+            onIonChange={(event) => {
+              if (isMealFilter(event.detail.value)) {
+                setTargetMeal(event.detail.value);
+              }
+            }}
+          >
+            {MEAL_FILTERS.map((filter) => (
+              <IonSegmentButton key={filter.value} value={filter.value}>
+                <IonLabel>{filter.label}</IonLabel>
+              </IonSegmentButton>
+            ))}
+          </IonSegment>
+        </div>
+
+        <IonList className="quick-food-list">
+          {filteredFoods.map((food) => {
+            const addMeal = resolveTargetMeal(food);
+
+            return (
+              <IonItem
+                key={food.name}
+                button
+                detail={false}
+                className="quick-food-item"
+                onClick={() => handleAddFood(food)}
+              >
+                <div className="quick-food-emoji" slot="start" aria-hidden="true">
+                  {food.emoji}
+                </div>
+                <IonLabel>
+                  <h2>{food.name}</h2>
+                  <p>
+                    {food.calories} kcal · P {food.protein}g · C {food.carbs}g · F {food.fat}g
+                  </p>
+                </IonLabel>
+                <div className="quick-food-action" slot="end">
+                  <span>{mealLabel(addMeal)}</span>
+                  <IonButton
+                    size="small"
+                    fill="solid"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleAddFood(food);
+                    }}
+                  >
+                    <IonIcon slot="start" icon={addOutline} />
+                    Add
+                  </IonButton>
+                </div>
+              </IonItem>
+            );
+          })}
         </IonList>
+
+        {filteredFoods.length === 0 && (
+          <div className="quick-add-empty">
+            <IonText color="medium">No quick foods match your search.</IonText>
+          </div>
+        )}
       </IonContent>
     </IonModal>
   );

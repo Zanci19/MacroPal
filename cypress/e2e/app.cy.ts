@@ -213,6 +213,7 @@ const tabRoutes = [
   { path: '/app/energy-needs', label: 'Energy Needs' },
   { path: '/app/units', label: 'Units' },
   { path: '/app/reminders', label: 'Reminders' },
+  { path: '/app/settings/planner', label: 'Meal Planner' },
   { path: '/app/data-privacy', label: 'Data Privacy' },
 ];
 

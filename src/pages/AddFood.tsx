@@ -50,10 +50,12 @@ import {
   query as fsQuery,
   orderBy,
   limit,
+  where,
   increment,
   getDoc,
   runTransaction,
   getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useDemoFirestore } from "../hooks/useDemoFirestore";
@@ -129,6 +131,9 @@ type OFFNutriments = {
   ["vitamin-b6_100g"]?: number;
   ["vitamin-b12_100g"]?: number;
   ["vitamin-b9_100g"]?: number;
+  ["vitamin-b3_100g"]?: number;
+  ["vitamin-b5_100g"]?: number;
+  ["vitamin-b7_100g"]?: number;
   ["folates_100g"]?: number;
   ["niacin_100g"]?: number;
   ["pantothenic-acid_100g"]?: number;
@@ -163,7 +168,7 @@ type OFFSearchHit = {
   image_front_url?: string | null;
   nutriscore_grade?: string | null;
   nutriments?: OFFNutriments;
-  dataSource?: "local" | "openfoodfacts" | "ai_recognition";
+  dataSource?: "local" | "openfoodfacts" | "ai_recognition" | "user_custom";
 };
 
 type OFFProduct = OFFSearchHit;
@@ -200,6 +205,13 @@ const createEmptyMealCounts = (): Record<MealKey, number> => ({
   snacks: 0,
 });
 
+const createLocalDocId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+};
+
 type FavoriteFood = {
   id: string;
   name: string;
@@ -225,6 +237,20 @@ type RecentFood = {
   code?: string | null;
   lastUsedAt: string;
   timesUsed?: number;
+};
+
+type UserCustomFood = {
+  id: string;
+  name: string;
+  brand?: string | null;
+  code?: string | null;
+  servingSize?: string | null;
+  nutriments: OFFNutriments;
+  per100g: MacroSet;
+  dataSource: "user_custom";
+  createdAt: string;
+  updatedAt?: string;
+  submissionId?: string | null;
 };
 
 type DiaryEntryDoc = {
@@ -284,6 +310,69 @@ const SEARCH_DEBOUNCE_MS = 300;
 // Validation constants for custom food creation
 const MAX_CALORIES = 10000;
 const MAX_MACRONUTRIENT_GRAMS = 1000;
+const MAX_OPTIONAL_NUTRIENT_AMOUNT = 100000;
+const BARCODE_PATTERN = /^\d{6,18}$/;
+
+type CustomNutrientInputKey =
+  | "sugar"
+  | "fiber"
+  | "saturatedFat"
+  | "salt"
+  | "sodium"
+  | "vitaminA"
+  | "vitaminC"
+  | "vitaminD"
+  | "vitaminE"
+  | "vitaminK"
+  | "vitaminB1"
+  | "vitaminB2"
+  | "vitaminB3"
+  | "vitaminB6"
+  | "vitaminB12"
+  | "folate"
+  | "calcium"
+  | "iron"
+  | "magnesium"
+  | "potassium";
+
+const CUSTOM_OPTIONAL_NUTRIENTS: Array<{
+  key: CustomNutrientInputKey;
+  label: string;
+  unit: string;
+  nutrimentKey: keyof OFFNutriments;
+}> = [
+  { key: "sugar", label: "Sugars", unit: "g", nutrimentKey: "sugars_100g" },
+  { key: "fiber", label: "Fiber", unit: "g", nutrimentKey: "fiber_100g" },
+  {
+    key: "saturatedFat",
+    label: "Sat. fat",
+    unit: "g",
+    nutrimentKey: "saturated-fat_100g",
+  },
+  { key: "salt", label: "Salt", unit: "g", nutrimentKey: "salt_100g" },
+  { key: "sodium", label: "Sodium", unit: "g", nutrimentKey: "sodium_100g" },
+  { key: "vitaminA", label: "Vitamin A", unit: "µg", nutrimentKey: "vitamin-a_100g" },
+  { key: "vitaminC", label: "Vitamin C", unit: "mg", nutrimentKey: "vitamin-c_100g" },
+  { key: "vitaminD", label: "Vitamin D", unit: "µg", nutrimentKey: "vitamin-d_100g" },
+  { key: "vitaminE", label: "Vitamin E", unit: "mg", nutrimentKey: "vitamin-e_100g" },
+  { key: "vitaminK", label: "Vitamin K", unit: "µg", nutrimentKey: "vitamin-k_100g" },
+  { key: "vitaminB1", label: "Vitamin B1", unit: "mg", nutrimentKey: "vitamin-b1_100g" },
+  { key: "vitaminB2", label: "Vitamin B2", unit: "mg", nutrimentKey: "vitamin-b2_100g" },
+  { key: "vitaminB3", label: "Vitamin B3", unit: "mg", nutrimentKey: "vitamin-b3_100g" },
+  { key: "vitaminB6", label: "Vitamin B6", unit: "mg", nutrimentKey: "vitamin-b6_100g" },
+  { key: "vitaminB12", label: "Vitamin B12", unit: "µg", nutrimentKey: "vitamin-b12_100g" },
+  { key: "folate", label: "Folate", unit: "µg", nutrimentKey: "folates_100g" },
+  { key: "calcium", label: "Calcium", unit: "mg", nutrimentKey: "calcium_100g" },
+  { key: "iron", label: "Iron", unit: "mg", nutrimentKey: "iron_100g" },
+  { key: "magnesium", label: "Magnesium", unit: "mg", nutrimentKey: "magnesium_100g" },
+  { key: "potassium", label: "Potassium", unit: "mg", nutrimentKey: "potassium_100g" },
+];
+
+const createEmptyCustomNutrients = (): Record<CustomNutrientInputKey, string> =>
+  CUSTOM_OPTIONAL_NUTRIENTS.reduce(
+    (acc, field) => ({ ...acc, [field.key]: "" }),
+    {} as Record<CustomNutrientInputKey, string>
+  );
 
 const BASIC_FOODS: OFFSearchHit[] = basicFoods as OFFSearchHit[];
 const BASIC_FOODS_BY_CODE = new Map(
@@ -406,6 +495,21 @@ function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
   return out as T;
 }
 
+function normalizeBarcodeInput(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function customFoodToSearchHit(food: UserCustomFood): OFFSearchHit {
+  return {
+    code: food.code || `custom:${food.id}`,
+    product_name: food.name,
+    brands: food.brand || undefined,
+    serving_size: food.servingSize || undefined,
+    nutriments: food.nutriments,
+    dataSource: "user_custom",
+  };
+}
+
 function useMealFromQuery(location: ReturnType<typeof useLocation>): MealKey {
   const params = new URLSearchParams(location.search);
   const m = (params.get("meal") || "breakfast").toLowerCase();
@@ -428,7 +532,15 @@ const RESULTS_SCROLL_OFFSET = 96;
 const AddFood: React.FC = () => {
   const location = useLocation();
   const history = useHistory();
-  const { arrayUnionField, getDocData, isDemoMode } = useDemoFirestore();
+  const {
+    arrayUnionField,
+    deleteDocData,
+    getCollectionDocs,
+    getDocData,
+    isDemoMode,
+    onSnapshotDoc,
+    setDocData,
+  } = useDemoFirestore();
   const [meal, setMeal] = useState<MealKey>(useMealFromQuery(location));
   const dateKey = useDateFromQuery(location);
   const remoteConfig = useRemoteConfig();
@@ -517,12 +629,20 @@ const AddFood: React.FC = () => {
   const [isAiPhotoAnalyzing, setAiPhotoAnalyzing] = useState(false);
 
   const [showCreateCustomFood, setShowCreateCustomFood] = useState(false);
+  const [customFoods, setCustomFoods] = useState<UserCustomFood[]>([]);
+  const [customFoodsLoading, setCustomFoodsLoading] = useState(false);
+  const [savingCustomFood, setSavingCustomFood] = useState(false);
   const [customName, setCustomName] = useState("");
   const [customBrand, setCustomBrand] = useState("");
+  const [customBarcode, setCustomBarcode] = useState("");
+  const [customServingSize, setCustomServingSize] = useState("");
   const [customCalories, setCustomCalories] = useState("");
   const [customCarbs, setCustomCarbs] = useState("");
   const [customProtein, setCustomProtein] = useState("");
   const [customFat, setCustomFat] = useState("");
+  const [customOptionalNutrients, setCustomOptionalNutrients] = useState<
+    Record<CustomNutrientInputKey, string>
+  >(createEmptyCustomNutrients);
 
   const [showCreateMealPreset, setShowCreateMealPreset] = useState(false);
   const [mealPresetName, setMealPresetName] = useState("");
@@ -701,9 +821,9 @@ const AddFood: React.FC = () => {
 
     (async () => {
       try {
-        const ref = doc(db, "users", user.uid);
-        const snap = await getDoc(ref);
-        const data = snap.data() as { profile?: ProfileFromFirestore } | undefined;
+        const data = (await getDocData(`users/${user.uid}`)) as
+          | { profile?: ProfileFromFirestore }
+          | undefined;
         const p = data?.profile;
 
         if (!p) {
@@ -736,74 +856,110 @@ const AddFood: React.FC = () => {
         });
       }
     })();
-  }, []);
+  }, [getDocData]);
 
   useEffect(() => {
     const user = getCurrentUser();
     if (!user) return;
 
-    const ref = doc(db, "users", user.uid, "foods", dateKey);
+    const unsub = onSnapshotDoc(`users/${user.uid}/foods/${dateKey}`, (raw) => {
+      const data = (raw || {}) as DayDoc;
+      const counts = createEmptyMealCounts();
 
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        if (!snap.exists()) {
-          const emptyCounts = createEmptyMealCounts();
-          if (autoMealPendingRef.current) {
-            const nextMeal = pickFirstEmptyMeal(emptyCounts);
-            if (meal !== nextMeal) {
-              setMeal(nextMeal);
-            }
-            const params = new URLSearchParams(location.search);
-            params.delete("autoMeal");
-            params.set("meal", nextMeal);
-            history.replace({
-              pathname: "/add-food",
-              search: params.toString() ? `?${params}` : "",
-            });
-            autoMealPendingRef.current = false;
-          }
-          return;
+      MEAL_ORDER.forEach((mealKey) => {
+        const arr = Array.isArray(data[mealKey]) ? data[mealKey] : [];
+        counts[mealKey] = arr.length;
+      });
+
+      if (autoMealPendingRef.current) {
+        const nextMeal = pickFirstEmptyMeal(counts);
+        if (meal !== nextMeal) {
+          setMeal(nextMeal);
         }
-
-        const data = snap.data() as DayDoc;
-        const counts = createEmptyMealCounts();
-
-        MEAL_ORDER.forEach((mealKey) => {
-          const arr = Array.isArray(data[mealKey]) ? data[mealKey] : [];
-          counts[mealKey] = arr.length;
+        const params = new URLSearchParams(location.search);
+        params.delete("autoMeal");
+        params.set("meal", nextMeal);
+        history.replace({
+          pathname: "/add-food",
+          search: params.toString() ? `?${params}` : "",
         });
-
-        if (autoMealPendingRef.current) {
-          const nextMeal = pickFirstEmptyMeal(counts);
-          if (meal !== nextMeal) {
-            setMeal(nextMeal);
-          }
-          const params = new URLSearchParams(location.search);
-          params.delete("autoMeal");
-          params.set("meal", nextMeal);
-          history.replace({
-            pathname: "/add-food",
-            search: params.toString() ? `?${params}` : "",
-          });
-          autoMealPendingRef.current = false;
-        }
-      },
-      (err) => {
-        const msg = handleError("add_food_day_totals", err);
-        trackEvent("add_food_day_totals_error", {
-          message: err?.message || String(err),
-        });
-        setToast({
-          show: true,
-          message: msg,
-          color: "danger",
-        });
+        autoMealPendingRef.current = false;
       }
-    );
+    });
 
     return () => unsub();
-  }, [dateKey, history, location.search, meal, pickFirstEmptyMeal]);
+  }, [dateKey, history, location.search, meal, onSnapshotDoc, pickFirstEmptyMeal]);
+
+  const findUserCustomFoodByLookupCode = useCallback(
+    async (lookupCode: string): Promise<UserCustomFood | null> => {
+      const user = getCurrentUser();
+      if (!user) return null;
+
+      if (lookupCode.startsWith("custom:")) {
+        const id = lookupCode.slice("custom:".length);
+        const loadedMatch = customFoods.find((food) => food.id === id);
+        if (loadedMatch) return loadedMatch;
+
+        if (isDemoMode) {
+          const data = (await getDocData(`users/${user.uid}/customFoods/${id}`)) as
+            | Omit<UserCustomFood, "id">
+            | undefined;
+          return data?.name ? { id, ...data } : null;
+        }
+
+        const snap = await getDoc(doc(db, "users", user.uid, "customFoods", id));
+        if (!snap.exists()) return null;
+        return { id: snap.id, ...(snap.data() as Omit<UserCustomFood, "id">) };
+      }
+
+      const barcode = normalizeBarcodeInput(lookupCode);
+      if (!barcode) return null;
+
+      const loadedMatch = customFoods.find((food) => food.code === barcode);
+      if (loadedMatch) return loadedMatch;
+
+      if (isDemoMode) {
+        const docs = await getCollectionDocs(`users/${user.uid}/customFoods`);
+        const match = docs.find((item) => {
+          const data = item.data as Partial<UserCustomFood>;
+          return data.code === barcode;
+        });
+        return match
+          ? {
+              id: match.id,
+              ...(match.data as Omit<UserCustomFood, "id">),
+            }
+          : null;
+      }
+
+      const customFoodsRef = collection(db, "users", user.uid, "customFoods");
+      const customFoodQuery = fsQuery(
+        customFoodsRef,
+        where("code", "==", barcode),
+        limit(1)
+      );
+      const snap = await getDocs(customFoodQuery);
+      const first = snap.docs[0];
+      if (!first) return null;
+      return {
+        id: first.id,
+        ...(first.data() as Omit<UserCustomFood, "id">),
+      };
+    },
+    [customFoods, getCollectionDocs, getDocData, isDemoMode]
+  );
+
+  const openUserCustomFoodDetails = useCallback((food: UserCustomFood) => {
+    const product = customFoodToSearchHit(food);
+    const ps = macrosPerServing(product.nutriments);
+    const canServing =
+      !!product.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+    setSelectedFood(product);
+    setUseServing(canServing);
+    setServingsQty(1);
+    setWeightQty(100);
+    setOpen(true);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -831,6 +987,24 @@ const AddFood: React.FC = () => {
         });
 
         try {
+          const customFood = await findUserCustomFoodByLookupCode(code);
+          if (customFood) {
+            trackEvent("barcode_lookup_user_custom_success", {
+              code,
+              meal,
+              date: dateKey,
+              custom_food_id: customFood.id,
+            });
+
+            setToast({
+              show: true,
+              message: "Your custom food was found",
+              color: "success",
+            });
+            openUserCustomFoodDetails(customFood);
+            return;
+          }
+
           // When offline, skip remote barcode lookup and fall back to local search
           if (typeof navigator !== "undefined" && !navigator.onLine) {
             const localMatch = BASIC_FOODS_BY_CODE.get(code);
@@ -845,9 +1019,10 @@ const AddFood: React.FC = () => {
               setWeightQty(100);
               setOpen(true);
             } else {
+              setCustomBarcode(code);
               setToast({
                 show: true,
-                message: "You're offline — showing local search.",
+                message: "You're offline — you can create it with this barcode.",
                 color: "warning",
               });
               setQuery(code);
@@ -892,10 +1067,11 @@ const AddFood: React.FC = () => {
                 meal,
                 date: dateKey,
               });
+              setCustomBarcode(code);
 
               setToast({
                 show: true,
-                message: "Item not found — showing search.",
+                message: "Item not found — you can create it with this barcode.",
                 color: "danger",
               });
               setQuery(code);
@@ -906,9 +1082,10 @@ const AddFood: React.FC = () => {
               code,
               status: r.status,
             });
+            setCustomBarcode(code);
             setToast({
               show: true,
-              message: "Lookup failed — showing search.",
+              message: "Lookup failed — you can create it with this barcode.",
               color: "danger",
             });
             setQuery(code);
@@ -921,9 +1098,10 @@ const AddFood: React.FC = () => {
             code,
             error: e?.message || String(e),
           });
+          setCustomBarcode(code);
           setToast({
             show: true,
-            message: "Error — showing search.",
+            message: "Error — you can create it with this barcode.",
             color: "danger",
           });
           setQuery(code);
@@ -1165,6 +1343,38 @@ const AddFood: React.FC = () => {
     // Delay loading favorites by 300ms to prioritize critical data
     const timer = setTimeout(() => {
       setFavoritesLoading(true);
+      if (isDemoMode) {
+        void getCollectionDocs(`users/${user.uid}/favorites`)
+          .then((docs) => {
+            const list: FavoriteFood[] = sortByCreatedAtDesc(
+              docs.map((item) => ({
+                id: item.id,
+                ...(item.data as Omit<FavoriteFood, "id">),
+              }))
+            );
+            setFavorites(list);
+            trackEvent("favorites_loaded", {
+              uid: user.uid,
+              count: list.length,
+              mode: "demo",
+            });
+          })
+          .catch((err: unknown) => {
+            console.error(err);
+            setToast({
+              show: true,
+              message: "Error loading favorites",
+              color: "danger",
+            });
+            trackEvent("favorites_load_error", {
+              uid: user.uid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          })
+          .finally(() => setFavoritesLoading(false));
+        return;
+      }
+
       const ref = collection(db, "users", user.uid, "favorites");
       unsub = onSnapshot(
         ref,
@@ -1202,7 +1412,72 @@ const AddFood: React.FC = () => {
       clearTimeout(timer);
       unsub?.();
     };
-  }, []);
+  }, [getCollectionDocs, isDemoMode]);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (!user) return;
+    let unsub: (() => void) | null = null;
+
+    setCustomFoodsLoading(true);
+    if (isDemoMode) {
+      void getCollectionDocs(`users/${user.uid}/customFoods`)
+        .then((docs) => {
+          const list: UserCustomFood[] = sortByCreatedAtDesc(
+            docs.map((item) => ({
+              id: item.id,
+              ...(item.data as Omit<UserCustomFood, "id">),
+            }))
+          );
+          setCustomFoods(list);
+          trackEvent("custom_foods_loaded", {
+            uid: user.uid,
+            count: list.length,
+            mode: "demo",
+          });
+        })
+        .catch((err: unknown) => {
+          console.error("Error loading custom foods:", err);
+          trackEvent("custom_foods_load_error", {
+            uid: user.uid,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        })
+        .finally(() => setCustomFoodsLoading(false));
+      return;
+    }
+
+    const ref = collection(db, "users", user.uid, "customFoods");
+    unsub = onSnapshot(
+      ref,
+      (snap) => {
+        const list: UserCustomFood[] = sortByCreatedAtDesc(
+          snap.docs.map((d) => ({
+            id: d.id,
+            ...(d.data() as Omit<UserCustomFood, "id">),
+          }))
+        );
+        setCustomFoods(list);
+        setCustomFoodsLoading(false);
+        trackEvent("custom_foods_loaded", {
+          uid: user.uid,
+          count: list.length,
+        });
+      },
+      (err) => {
+        console.error("Error loading custom foods:", err);
+        setCustomFoodsLoading(false);
+        trackEvent("custom_foods_load_error", {
+          uid: user.uid,
+          error: err?.message || String(err),
+        });
+      }
+    );
+
+    return () => {
+      unsub?.();
+    };
+  }, [getCollectionDocs, isDemoMode]);
 
   // Defer recent foods loading to avoid congestion on mobile
   useEffect(() => {
@@ -1212,6 +1487,35 @@ const AddFood: React.FC = () => {
 
     // Delay loading recent foods by 500ms
     const timer = setTimeout(() => {
+      if (isDemoMode) {
+        void getCollectionDocs(`users/${user.uid}/recentFoods`)
+          .then((docs) => {
+            const list: RecentFood[] = docs
+              .map((item) => ({
+                id: item.id,
+                ...(item.data as Omit<RecentFood, "id">),
+              }))
+              .sort((a, b) =>
+                String(b.lastUsedAt || "").localeCompare(String(a.lastUsedAt || ""))
+              )
+              .slice(0, 10);
+            setRecent(list);
+            trackEvent("recent_off_loaded", {
+              uid: user.uid,
+              count: list.length,
+              mode: "demo",
+            });
+          })
+          .catch((err: unknown) => {
+            console.error("Error loading recent foods:", err);
+            trackEvent("recent_foods_load_error", {
+              uid: user.uid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        return;
+      }
+
       const ref = collection(db, "users", user.uid, "recentFoods");
       const q = fsQuery(ref, orderBy("lastUsedAt", "desc"), limit(10));
 
@@ -1242,7 +1546,7 @@ const AddFood: React.FC = () => {
       clearTimeout(timer);
       unsub?.();
     };
-  }, []);
+  }, [getCollectionDocs, isDemoMode]);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -1258,9 +1562,7 @@ const AddFood: React.FC = () => {
 
         for (let i = 0; i < 14; i++) {
           const key = shiftDateKey(today, -i);
-          const snap = await getDoc(doc(db, "users", uid, "foods", key));
-          if (!snap.exists()) continue;
-          const data = snap.data() as DayDoc;
+          const data = (await getDocData(`users/${uid}/foods/${key}`)) as DayDoc;
           (["breakfast", "lunch", "dinner", "snacks"] as MealKey[]).forEach(
             (mealKey) => {
               const arr = data[mealKey] || [];
@@ -1309,7 +1611,7 @@ const AddFood: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [getDocData]);
 
   // Defer meal presets loading to avoid congestion on mobile
   useEffect(() => {
@@ -1320,6 +1622,38 @@ const AddFood: React.FC = () => {
     // Delay loading meal presets by 700ms
     const timer = setTimeout(() => {
       setMealPresetsLoading(true);
+      if (isDemoMode) {
+        void getCollectionDocs(`users/${user.uid}/mealPresets`)
+          .then((docs) => {
+            const list: CustomMealPreset[] = sortByCreatedAtDesc(
+              docs.map((item) => ({
+                id: item.id,
+                ...(item.data as Omit<CustomMealPreset, "id">),
+              }))
+            );
+            setMealPresets(list);
+            trackEvent("meal_presets_loaded", {
+              uid: user.uid,
+              count: list.length,
+              mode: "demo",
+            });
+          })
+          .catch((err: unknown) => {
+            console.error(err);
+            setToast({
+              show: true,
+              message: "Error loading custom meals",
+              color: "danger",
+            });
+            trackEvent("meal_presets_load_error", {
+              uid: user.uid,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          })
+          .finally(() => setMealPresetsLoading(false));
+        return;
+      }
+
       const ref = collection(db, "users", user.uid, "mealPresets");
       unsub = onSnapshot(
         ref,
@@ -1357,7 +1691,7 @@ const AddFood: React.FC = () => {
       clearTimeout(timer);
       unsub?.();
     };
-  }, []);
+  }, [getCollectionDocs, isDemoMode]);
 
   useEffect(() => {
     try {
@@ -1589,9 +1923,11 @@ const AddFood: React.FC = () => {
     const scoreFood = (food: OFFSearchHit) => {
       const nameRaw = food.product_name || "";
       const brandRaw = food.brands || "";
+      const codeRaw = food.code || "";
       const nameNorm = normalizeText(nameRaw);
       const brandNorm = normalizeText(brandRaw);
-      const combined = `${nameNorm} ${brandNorm}`.trim();
+      const codeNorm = normalizeText(codeRaw);
+      const combined = `${nameNorm} ${brandNorm} ${codeNorm}`.trim();
 
       if (!combined) return { food, score: -9999, matched: 0, required: 0 };
 
@@ -1601,6 +1937,7 @@ const AddFood: React.FC = () => {
 
       let score = 0;
 
+      if (codeNorm === normalizedQuery) score += 1600;
       if (nameNorm === normalizedQuery) score += 1400;
       else if (nameNorm.startsWith(normalizedQuery)) score += 1100;
       else if (combined.includes(normalizedQuery)) score += 800;
@@ -1618,10 +1955,14 @@ const AddFood: React.FC = () => {
       return { food, score, matched, required };
     };
 
-    const localFoods = BASIC_FOODS.map((food) => ({
-      ...food,
-      dataSource: "local" as const,
-    }));
+    const userCustomFoods = customFoods.map(customFoodToSearchHit);
+    const localFoods = [
+      ...userCustomFoods,
+      ...BASIC_FOODS.map((food) => ({
+        ...food,
+        dataSource: "local" as const,
+      })),
+    ];
 
     const localScored = localFoods.map(scoreFood);
     let localKept = localScored;
@@ -1789,6 +2130,28 @@ const AddFood: React.FC = () => {
     });
 
     setFoodDetailLoading(code);
+
+    try {
+      const customMatch = await findUserCustomFoodByLookupCode(code);
+      if (customMatch) {
+        openUserCustomFoodDetails(customMatch);
+        setFoodDetailLoading(null);
+        trackEvent("food_details_by_code_success", {
+          code,
+          hasServing: false,
+          source: "user_custom",
+          custom_food_id: customMatch.id,
+        });
+        return;
+      }
+    } catch (error: unknown) {
+      const e = error as Error;
+      console.error("Custom food lookup failed:", e);
+      trackEvent("custom_food_details_lookup_error", {
+        code,
+        error: e?.message || String(e),
+      });
+    }
 
     const localMatch = BASIC_FOODS_BY_CODE.get(code);
     if (localMatch) {
@@ -2290,11 +2653,9 @@ const AddFood: React.FC = () => {
           photoName: finalPhotoName ?? undefined,
         };
 
-        const userRef = doc(db, "users", user.uid, "foods", dateKey);
-
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(userRef);
-          const data = (snap.data() || {}) as DayDoc;
+        if (isDemoMode) {
+          const path = `users/${user.uid}/foods/${dateKey}`;
+          const data = ((await getDocData(path)) || {}) as DayDoc;
           const arr: DiaryEntryDoc[] = Array.isArray(data[mealKey])
             ? [...(data[mealKey] as DiaryEntryDoc[])]
             : [];
@@ -2306,8 +2667,27 @@ const AddFood: React.FC = () => {
           if (idx < 0) return;
 
           arr[idx] = updated;
-          tx.set(userRef, { ...data, [mealKey]: arr }, { merge: true });
-        });
+          await setDocData(path, { ...data, [mealKey]: arr }, { merge: true });
+        } else {
+          const userRef = doc(db, "users", user.uid, "foods", dateKey);
+
+          await runTransaction(db, async (tx) => {
+            const snap = await tx.get(userRef);
+            const data = (snap.data() || {}) as DayDoc;
+            const arr: DiaryEntryDoc[] = Array.isArray(data[mealKey])
+              ? [...(data[mealKey] as DiaryEntryDoc[])]
+              : [];
+
+            let idx = index;
+            if (idx < 0 || idx >= arr.length) {
+              idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+            }
+            if (idx < 0) return;
+
+            arr[idx] = updated;
+            tx.set(userRef, { ...data, [mealKey]: arr }, { merge: true });
+          });
+        }
 
         trackEvent("diary_entry_edited_in_add_food", {
           uid: user.uid,
@@ -2450,9 +2830,6 @@ const AddFood: React.FC = () => {
     } = payload;
 
     try {
-      const colRef = collection(db, "users", user.uid, "favorites");
-      const favDoc = doc(colRef);
-
       const perBaseClean = stripUndefined({
         calories: safeNum(perBase.calories, 0),
         carbs: safeNum(perBase.carbs, 2),
@@ -2487,7 +2864,21 @@ const AddFood: React.FC = () => {
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(favDoc, favData);
+      let favoriteId = "";
+      if (isDemoMode) {
+        favoriteId = createLocalDocId();
+        await setDocData(`users/${user.uid}/favorites/${favoriteId}`, favData, {
+          merge: false,
+        });
+        setFavorites((prev) =>
+          sortByCreatedAtDesc([{ id: favoriteId, ...favData }, ...prev])
+        );
+      } else {
+        const colRef = collection(db, "users", user.uid, "favorites");
+        const favDoc = doc(colRef);
+        favoriteId = favDoc.id;
+        await setDoc(favDoc, favData);
+      }
       setToast({
         show: true,
         message: "Saved to favorites",
@@ -2496,6 +2887,7 @@ const AddFood: React.FC = () => {
 
       trackEvent("favorite_saved_from_off", {
         uid: user.uid,
+        favorite_id: favoriteId,
         code: selectedFood.code,
         name: favData.name,
       });
@@ -2513,12 +2905,34 @@ const AddFood: React.FC = () => {
     }
   };
 
+  const resetCustomFoodForm = () => {
+    setCustomName("");
+    setCustomBrand("");
+    setCustomBarcode("");
+    setCustomServingSize("");
+    setCustomCalories("");
+    setCustomCarbs("");
+    setCustomProtein("");
+    setCustomFat("");
+    setCustomOptionalNutrients(createEmptyCustomNutrients());
+  };
+
+  const openCreateCustomFoodModal = (barcodeCandidate?: string | null) => {
+    const barcode = normalizeBarcodeInput(barcodeCandidate || "");
+    if (BARCODE_PATTERN.test(barcode)) {
+      setCustomBarcode(barcode);
+    }
+    setShowCreateCustomFood(true);
+    trackEvent("custom_food_modal_open", {
+      has_prefilled_barcode: BARCODE_PATTERN.test(barcode),
+    });
+  };
+
   const createCustomFood = async () => {
     console.log(`[USER ACTION] AddFood: Create custom food clicked`, { name: customName });
     const user = getCurrentUser();
     if (!user) return;
 
-    // Validate inputs
     const name = customName.trim();
     if (!name) {
       setToast({
@@ -2530,13 +2944,50 @@ const AddFood: React.FC = () => {
     }
 
     const brand = customBrand.trim() || null;
-    const caloriesVal = parseFloat(customCalories || "0");
-    const carbsVal = parseFloat(customCarbs || "0");
-    const proteinVal = parseFloat(customProtein || "0");
-    const fatVal = parseFloat(customFat || "0");
+    const barcode = normalizeBarcodeInput(customBarcode);
+    const servingSize = customServingSize.trim() || null;
+    const requiredFields = [
+      { label: "calories", value: customCalories },
+      { label: "carbohydrates", value: customCarbs },
+      { label: "protein", value: customProtein },
+      { label: "fat", value: customFat },
+    ];
+    const missingRequired = requiredFields.find(
+      (field) => !field.value.trim()
+    );
+    if (missingRequired) {
+      setToast({
+        show: true,
+        message: `Please enter ${missingRequired.label} per 100 g`,
+        color: "warning",
+      });
+      return;
+    }
 
-    // Validate numeric values
-    if (isNaN(caloriesVal) || caloriesVal < 0 || caloriesVal > MAX_CALORIES) {
+    if (customBarcode.trim() && !BARCODE_PATTERN.test(barcode)) {
+      setToast({
+        show: true,
+        message: "Please enter a valid barcode (6-18 digits)",
+        color: "warning",
+      });
+      return;
+    }
+
+    if (barcode && customFoods.some((food) => food.code === barcode)) {
+      setToast({
+        show: true,
+        message: "A custom food with this barcode already exists.",
+        color: "warning",
+      });
+      return;
+    }
+
+    const caloriesVal = parseFloat(customCalories);
+    const carbsVal = parseFloat(customCarbs);
+    const proteinVal = parseFloat(customProtein);
+    const fatVal = parseFloat(customFat);
+
+    if (Number.isNaN(caloriesVal) || caloriesVal < 0 || caloriesVal > MAX_CALORIES) {
       setToast({
         show: true,
         message: `Please enter a valid calorie value (0-${MAX_CALORIES})`,
@@ -2545,7 +2996,7 @@ const AddFood: React.FC = () => {
       return;
     }
 
-    if (isNaN(carbsVal) || carbsVal < 0 || carbsVal > MAX_MACRONUTRIENT_GRAMS) {
+    if (Number.isNaN(carbsVal) || carbsVal < 0 || carbsVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
         message: `Please enter a valid carbs value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
@@ -2554,7 +3005,7 @@ const AddFood: React.FC = () => {
       return;
     }
 
-    if (isNaN(proteinVal) || proteinVal < 0 || proteinVal > MAX_MACRONUTRIENT_GRAMS) {
+    if (Number.isNaN(proteinVal) || proteinVal < 0 || proteinVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
         message: `Please enter a valid protein value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
@@ -2563,7 +3014,7 @@ const AddFood: React.FC = () => {
       return;
     }
 
-    if (isNaN(fatVal) || fatVal < 0 || fatVal > MAX_MACRONUTRIENT_GRAMS) {
+    if (Number.isNaN(fatVal) || fatVal < 0 || fatVal > MAX_MACRONUTRIENT_GRAMS) {
       setToast({
         show: true,
         message: `Please enter a valid fat value (0-${MAX_MACRONUTRIENT_GRAMS}g)`,
@@ -2572,12 +3023,77 @@ const AddFood: React.FC = () => {
       return;
     }
 
+    const optionalNutriments: Partial<OFFNutriments> = {};
+    for (const field of CUSTOM_OPTIONAL_NUTRIENTS) {
+      const raw = customOptionalNutrients[field.key].trim();
+      if (!raw) continue;
+
+      const value = parseFloat(raw);
+      if (
+        Number.isNaN(value) ||
+        value < 0 ||
+        value > MAX_OPTIONAL_NUTRIENT_AMOUNT
+      ) {
+        setToast({
+          show: true,
+          message: `Please enter a valid ${field.label.toLowerCase()} value`,
+          color: "warning",
+        });
+        return;
+      }
+
+      optionalNutriments[field.nutrimentKey] = safeNum(value, 2);
+    }
+
     const calories = safeNum(caloriesVal, 0);
     const carbs = safeNum(carbsVal, 1);
     const protein = safeNum(proteinVal, 1);
     const fat = safeNum(fatVal, 1);
 
-    const perBase: MacroSet = { calories, carbs, protein, fat };
+    const nutriments = stripUndefined({
+      "energy-kcal_100g": calories,
+      carbohydrates_100g: carbs,
+      proteins_100g: protein,
+      fat_100g: fat,
+      ...optionalNutriments,
+    } as Record<string, unknown>) as OFFNutriments;
+
+    const parsedCustomServing = parseServingSize(servingSize || undefined);
+    const servingAmount =
+      parsedCustomServing.grams ?? parsedCustomServing.ml ?? null;
+    if (servingSize && servingAmount && servingAmount > 0) {
+      const servingFactor = servingAmount / 100;
+      const servingPairs: Array<[keyof OFFNutriments, keyof OFFNutriments, number]> = [
+        ["energy-kcal_100g", "energy-kcal_serving", 0],
+        ["carbohydrates_100g", "carbohydrates_serving", 2],
+        ["proteins_100g", "proteins_serving", 2],
+        ["fat_100g", "fat_serving", 2],
+        ["sugars_100g", "sugars_serving", 2],
+        ["fiber_100g", "fiber_serving", 2],
+        ["saturated-fat_100g", "saturated-fat_serving", 2],
+        ["salt_100g", "salt_serving", 2],
+        ["sodium_100g", "sodium_serving", 2],
+      ];
+
+      servingPairs.forEach(([per100gKey, servingKey, decimals]) => {
+        const value = nutriments[per100gKey];
+        if (value !== undefined) {
+          nutriments[servingKey] = safeNum(value * servingFactor, decimals);
+        }
+      });
+    }
+
+    const perBase = stripUndefined({
+      calories,
+      carbs,
+      protein,
+      fat,
+      sugar: nutriments["sugars_100g"],
+      fiber: nutriments["fiber_100g"],
+      saturatedFat: nutriments["saturated-fat_100g"],
+      salt: nutriments["salt_100g"],
+      sodium: nutriments["sodium_100g"],
+    } as MacroSet);
     const baseMeta = { amount: 100, unit: "g", label: "100 g" };
     const selection = {
       mode: "weight" as const,
@@ -2587,9 +3103,26 @@ const AddFood: React.FC = () => {
     };
     const total = perBase;
 
+    setSavingCustomFood(true);
+
     try {
-      const colRef = collection(db, "users", user.uid, "favorites");
-      const favDoc = doc(colRef);
+      const createdAt = new Date().toISOString();
+      const customFoodId = createLocalDocId();
+      const submissionId = createLocalDocId();
+      const favoriteId = createLocalDocId();
+
+      const customFoodData: Omit<UserCustomFood, "id"> = {
+        name,
+        brand,
+        code: barcode || null,
+        servingSize,
+        nutriments,
+        per100g: perBase,
+        dataSource: "user_custom",
+        createdAt,
+        updatedAt: createdAt,
+        submissionId,
+      };
 
       const favData: Omit<FavoriteFood, "id"> = {
         name,
@@ -2598,28 +3131,80 @@ const AddFood: React.FC = () => {
         selection,
         perBase,
         total,
-        dataSource: "custom",
-        code: null,
-        createdAt: new Date().toISOString(),
+        dataSource: "user_custom",
+        code: barcode || null,
+        createdAt,
       };
 
-      await setDoc(favDoc, favData);
+      const submissionData = {
+        uid: user.uid,
+        customFoodId,
+        favoriteId,
+        status: "pending",
+        source: "user_custom_food",
+        name,
+        brand,
+        code: barcode || null,
+        servingSize,
+        nutriments,
+        per100g: perBase,
+        createdAt,
+        updatedAt: createdAt,
+      };
+
+      if (isDemoMode) {
+        await setDocData(
+          `users/${user.uid}/customFoods/${customFoodId}`,
+          customFoodData,
+          { merge: false }
+        );
+        await setDocData(`users/${user.uid}/favorites/${favoriteId}`, favData, {
+          merge: false,
+        });
+        await setDocData(`foodSubmissions/${submissionId}`, submissionData, {
+          merge: false,
+        });
+        setCustomFoods((prev) =>
+          sortByCreatedAtDesc([
+            { id: customFoodId, ...customFoodData },
+            ...prev,
+          ])
+        );
+        setFavorites((prev) =>
+          sortByCreatedAtDesc([{ id: favoriteId, ...favData }, ...prev])
+        );
+      } else {
+        const customFoodDoc = doc(
+          db,
+          "users",
+          user.uid,
+          "customFoods",
+          customFoodId
+        );
+        const favDoc = doc(db, "users", user.uid, "favorites", favoriteId);
+        const submissionDoc = doc(db, "foodSubmissions", submissionId);
+        const batch = writeBatch(db);
+
+        batch.set(customFoodDoc, customFoodData);
+        batch.set(favDoc, favData);
+        batch.set(submissionDoc, submissionData);
+        await batch.commit();
+      }
       setToast({
         show: true,
-        message: "Custom food saved",
+        message: "Custom food saved and submitted for review",
         color: "success",
       });
       setShowCreateCustomFood(false);
-      setCustomName("");
-      setCustomBrand("");
-      setCustomCalories("");
-      setCustomCarbs("");
-      setCustomProtein("");
-      setCustomFat("");
+      resetCustomFoodForm();
 
       trackEvent("custom_food_saved", {
         uid: user.uid,
+        custom_food_id: customFoodId,
+        favorite_id: favoriteId,
+        submission_id: submissionId,
         name,
+        has_barcode: !!barcode,
         calories,
       });
     } catch (error: unknown) {
@@ -2633,6 +3218,8 @@ const AddFood: React.FC = () => {
       trackEvent("custom_food_save_error", {
         error: e?.message || String(e),
       });
+    } finally {
+      setSavingCustomFood(false);
     }
   };
 
@@ -2685,6 +3272,32 @@ const AddFood: React.FC = () => {
       payload.code && payload.code.trim().length > 0
         ? payload.code
         : `${payload.name.toLowerCase()}|${(payload.brand || "").toLowerCase()}`;
+
+    if (isDemoMode) {
+      const path = `users/${user.uid}/recentFoods/${key}`;
+      const existing = (await getDocData(path)) as Partial<RecentFood> | undefined;
+      const nextRecent: Omit<RecentFood, "id"> = {
+        name: payload.name,
+        brand: payload.brand || null,
+        code: payload.code || null,
+        lastUsedAt: new Date().toISOString(),
+        timesUsed:
+          typeof existing?.timesUsed === "number" ? existing.timesUsed + 1 : 1,
+      };
+      await setDocData(path, nextRecent, { merge: true });
+      setRecent((prev) => {
+        const filtered = prev.filter((item) => item.id !== key);
+        return [{ id: key, ...nextRecent }, ...filtered].slice(0, 10);
+      });
+
+      trackEvent("recent_food_upserted", {
+        uid: user.uid,
+        key,
+        name: payload.name,
+        mode: "demo",
+      });
+      return;
+    }
 
     const ref = doc(db, "users", user.uid, "recentFoods", key);
     await setDoc(
@@ -2782,9 +3395,6 @@ const AddFood: React.FC = () => {
     const note = mealPresetNote.trim() || undefined;
 
     try {
-      const colRef = collection(db, "users", user.uid, "mealPresets");
-      const presetDoc = doc(colRef);
-
       const data: Omit<CustomMealPreset, "id"> = {
         name,
         total,
@@ -2792,7 +3402,21 @@ const AddFood: React.FC = () => {
         createdAt: new Date().toISOString(),
       };
 
-      await setDoc(presetDoc, data);
+      let presetId = "";
+      if (isDemoMode) {
+        presetId = createLocalDocId();
+        await setDocData(`users/${user.uid}/mealPresets/${presetId}`, data, {
+          merge: false,
+        });
+        setMealPresets((prev) =>
+          sortByCreatedAtDesc([{ id: presetId, ...data }, ...prev])
+        );
+      } else {
+        const colRef = collection(db, "users", user.uid, "mealPresets");
+        const presetDoc = doc(colRef);
+        presetId = presetDoc.id;
+        await setDoc(presetDoc, data);
+      }
       setToast({
         show: true,
         message: "Meal preset saved",
@@ -2808,6 +3432,7 @@ const AddFood: React.FC = () => {
 
       trackEvent("meal_preset_saved", {
         uid: user.uid,
+        preset_id: presetId,
         name,
         calories,
       });
@@ -2871,8 +3496,15 @@ const AddFood: React.FC = () => {
     }
 
     try {
-      const ref = doc(db, "users", user.uid, "favorites", favoriteToDelete.id);
-      await deleteDoc(ref);
+      if (isDemoMode) {
+        await deleteDocData(`users/${user.uid}/favorites/${favoriteToDelete.id}`);
+        setFavorites((prev) =>
+          prev.filter((item) => item.id !== favoriteToDelete.id)
+        );
+      } else {
+        const ref = doc(db, "users", user.uid, "favorites", favoriteToDelete.id);
+        await deleteDoc(ref);
+      }
       setToast({
         show: true,
         message: "Favorite deleted",
@@ -2908,8 +3540,15 @@ const AddFood: React.FC = () => {
     }
 
     try {
-      const ref = doc(db, "users", user.uid, "mealPresets", mealPresetToDelete.id);
-      await deleteDoc(ref);
+      if (isDemoMode) {
+        await deleteDocData(`users/${user.uid}/mealPresets/${mealPresetToDelete.id}`);
+        setMealPresets((prev) =>
+          prev.filter((item) => item.id !== mealPresetToDelete.id)
+        );
+      } else {
+        const ref = doc(db, "users", user.uid, "mealPresets", mealPresetToDelete.id);
+        await deleteDoc(ref);
+      }
       setToast({
         show: true,
         message: "Custom meal deleted",
@@ -3365,6 +4004,18 @@ const AddFood: React.FC = () => {
                     >
                       Use AI photo
                     </IonButton>
+                    <IonButton
+                      fill="outline"
+                      size="small"
+                      onClick={() => {
+                        console.log(`[USER ACTION] AddFood: Create custom food from no-results clicked`, {
+                          query: lastSearchQuery,
+                        });
+                        openCreateCustomFoodModal(lastSearchQuery);
+                      }}
+                    >
+                      Create custom food
+                    </IonButton>
                   </div>
                 </IonCardContent>
               </IonCard>
@@ -3416,8 +4067,7 @@ const AddFood: React.FC = () => {
                   size="small"
                   onClick={() => {
                     console.log(`[USER ACTION] AddFood: Create custom food button clicked`);
-                    setShowCreateCustomFood(true);
-                    trackEvent("custom_food_modal_open");
+                    openCreateCustomFoodModal(customBarcode || favoritesSearchQuery);
                   }}
                 >
                   Create custom food
@@ -3435,6 +4085,12 @@ const AddFood: React.FC = () => {
                 </IonButton>
               </div>
             </div>
+
+            {customFoodsLoading && (
+              <div className="ion-text-center add-food-loading-state-sm">
+                <IonSpinner name="dots" />
+              </div>
+            )}
 
             {recentLoading && (
               <div className="ion-text-center add-food-loading-state-sm">
@@ -4243,7 +4899,30 @@ const AddFood: React.FC = () => {
               }} />
             </IonItem>
             <IonItem>
-              <IonLabel position="stacked">Calories per 100 g</IonLabel>
+              <IonLabel position="stacked">Barcode (optional)</IonLabel>
+              <IonInput
+                inputMode="numeric"
+                value={customBarcode}
+                placeholder="EAN or UPC"
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food barcode input changed`, { value: e.detail.value });
+                  setCustomBarcode(normalizeBarcodeInput(e.detail.value || ""));
+                }}
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Serving size (optional)</IonLabel>
+              <IonInput
+                value={customServingSize}
+                placeholder="Example: 1 bar (45 g)"
+                onIonChange={(e) => {
+                  console.log(`[USER ACTION] AddFood: Custom food serving size input changed`, { value: e.detail.value });
+                  setCustomServingSize(e.detail.value || "");
+                }}
+              />
+            </IonItem>
+            <IonItem>
+              <IonLabel position="stacked">Calories per 100 g *</IonLabel>
               <IonInput
                 type="number"
                 inputMode="numeric"
@@ -4255,7 +4934,7 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
             <IonItem>
-              <IonLabel position="stacked">Carbs per 100 g (g)</IonLabel>
+              <IonLabel position="stacked">Carbs per 100 g (g) *</IonLabel>
               <IonInput
                 type="number"
                 inputMode="decimal"
@@ -4267,7 +4946,7 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
             <IonItem>
-              <IonLabel position="stacked">Protein per 100 g (g)</IonLabel>
+              <IonLabel position="stacked">Protein per 100 g (g) *</IonLabel>
               <IonInput
                 type="number"
                 inputMode="decimal"
@@ -4279,7 +4958,7 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
             <IonItem>
-              <IonLabel position="stacked">Fat per 100 g (g)</IonLabel>
+              <IonLabel position="stacked">Fat per 100 g (g) *</IonLabel>
               <IonInput
                 type="number"
                 inputMode="decimal"
@@ -4291,6 +4970,44 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
 
+            <IonCard className="add-food-custom-nutrients">
+              <IonCardHeader>
+                <IonCardTitle style={{ fontSize: 16 }}>
+                  Optional nutrients per 100 g
+                </IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent>
+                <IonGrid>
+                  <IonRow>
+                    {CUSTOM_OPTIONAL_NUTRIENTS.map((field) => (
+                      <IonCol size="6" key={field.key}>
+                        <IonItem lines="none" className="add-food-custom-nutrients__item">
+                          <IonLabel position="stacked">
+                            {field.label} ({field.unit})
+                          </IonLabel>
+                          <IonInput
+                            type="number"
+                            inputMode="decimal"
+                            value={customOptionalNutrients[field.key]}
+                            onIonChange={(e) => {
+                              console.log(`[USER ACTION] AddFood: Custom optional nutrient changed`, {
+                                nutrient: field.key,
+                                value: e.detail.value,
+                              });
+                              setCustomOptionalNutrients((prev) => ({
+                                ...prev,
+                                [field.key]: e.detail.value || "",
+                              }));
+                            }}
+                          />
+                        </IonItem>
+                      </IonCol>
+                    ))}
+                  </IonRow>
+                </IonGrid>
+              </IonCardContent>
+            </IonCard>
+
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <IonButton
                 expand="block"
@@ -4300,14 +5017,22 @@ const AddFood: React.FC = () => {
                   setShowCreateCustomFood(false);
                   trackEvent("custom_food_modal_cancel");
                 }}
+                disabled={savingCustomFood}
               >
                 Cancel
               </IonButton>
               <IonButton expand="block" onClick={() => {
                 console.log(`[USER ACTION] AddFood: Save custom food clicked`, { name: customName });
                 createCustomFood();
-              }}>
-                Save custom food
+              }} disabled={savingCustomFood}>
+                {savingCustomFood ? (
+                  <>
+                    <IonSpinner name="dots" />
+                    &nbsp;Saving...
+                  </>
+                ) : (
+                  "Save custom food"
+                )}
               </IonButton>
             </div>
           </IonContent>

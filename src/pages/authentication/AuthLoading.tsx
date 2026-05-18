@@ -12,6 +12,7 @@ import {
 } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { auth, db } from "../../firebase";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import {
   doc,
   getDoc,
@@ -39,6 +40,7 @@ const TIMEOUT_MS = 25000;
 const FIRESTORE_OP_TIMEOUT_MS = 12000;
 const RECOVERY_ROUTE_DELAY_MS = 1200;
 const CACHE_READ_TIMEOUT_MS = 2500;
+const AUTH_STATE_SETTLE_TIMEOUT_MS = 6000;
 const AUTH_LOADING_TIMEOUT_ERROR = "AuthLoadingTimeoutError";
 const SLOW_CONNECTION_MESSAGE = "This may take longer on slow connections";
 
@@ -131,7 +133,37 @@ const AuthLoading: React.FC = () => {
     }, TIMEOUT_MS);
 
     const run = async () => {
-      const user = auth.currentUser;
+      const waitForSignedInUser = async (): Promise<User | null> => {
+        if (auth.currentUser) {
+          return auth.currentUser;
+        }
+
+        let unsubscribe: (() => void) | undefined;
+        try {
+          return await withTimeout(
+            new Promise<User | null>((resolve, reject) => {
+              unsubscribe = onAuthStateChanged(auth, resolve, reject);
+            }),
+            AUTH_STATE_SETTLE_TIMEOUT_MS,
+            "restoring your sign-in session"
+          );
+        } catch (error: unknown) {
+          if (
+            error instanceof Error &&
+            error.name === AUTH_LOADING_TIMEOUT_ERROR
+          ) {
+            return auth.currentUser;
+          }
+          throw error;
+        } finally {
+          if (unsubscribe) {
+            unsubscribe();
+          }
+        }
+      };
+
+      setMessage("Restoring your sign-in session…");
+      const user = await waitForSignedInUser();
 
       if (!user) {
         stopLoadingIndicators();

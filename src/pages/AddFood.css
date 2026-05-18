@@ -299,6 +299,29 @@
   font-size: 0.875rem;
 }
 
+.add-food-custom-nutrients {
+  margin: 14px 0 0;
+  border: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow-soft);
+}
+
+.add-food-custom-nutrients ion-card-content {
+  padding: 0 8px 10px;
+}
+
+.add-food-custom-nutrients__item {
+  --background: color-mix(in srgb, var(--mp-surface-muted) 72%, var(--mp-surface));
+  --border-radius: 8px;
+  --min-height: 68px;
+  border: 1px solid var(--mp-border);
+  border-radius: 8px;
+}
+
+.add-food-custom-nutrients__item ion-label {
+  font-size: 0.72rem;
+  white-space: normal;
+}
+
 .add-food-loading-state {
   padding: 16px;
 }

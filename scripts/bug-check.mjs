@@ -25,6 +25,7 @@ const unitTimeoutMs = Math.max(
   Number(process.env.UNIT_TIMEOUT_SECONDS ?? "300") * 1_000
 );
 const defaultE2ePort = Number(process.env.BUGCHECK_DEV_SERVER_PORT ?? "5173");
+const defaultE2eHost = process.env.BUGCHECK_DEV_SERVER_HOST ?? "127.0.0.1";
 const e2eSpec = process.env.BUGCHECK_E2E_SPEC ?? "cypress/e2e/app.cy.ts";
 
 function log(message) {
@@ -101,8 +102,12 @@ function runCommand(command, commandArgs, options = {}) {
   });
 }
 
-async function waitForServer(url, maxAttempts = 30) {
+async function waitForServer(url, maxAttempts = 30, shouldKeepWaiting = () => true) {
   for (let i = 1; i <= maxAttempts; i += 1) {
+    if (!shouldKeepWaiting()) {
+      return false;
+    }
+
     try {
       const response = await fetch(url);
       if (response.ok || response.status < 500) {
@@ -133,11 +138,14 @@ function getEphemeralPort() {
 
 async function runE2ETests() {
   const chosenPort = Number(process.env.BUGCHECK_DEV_SERVER_PORT ?? 0) || await getEphemeralPort();
-  const serverUrl = `http://localhost:${chosenPort}`;
-  log(`Starting dev server on port ${chosenPort}...`);
+  const serverHost = defaultE2eHost;
+  const serverUrl = `http://${serverHost}:${chosenPort}`;
+  log(`Starting dev server at ${serverUrl}...`);
 
   const devServer = spawn(toShellCommand("npx", [
     "vite",
+    "--host",
+    serverHost,
     "--port",
     String(chosenPort),
     "--strictPort",
@@ -146,6 +154,18 @@ async function runE2ETests() {
     env: process.env,
     shell: true,
     windowsHide: true,
+  });
+
+  let devServerExited = false;
+  let devServerExitCode = null;
+  let stoppingDevServer = false;
+
+  devServer.on("close", (code) => {
+    devServerExited = true;
+    devServerExitCode = code;
+    if (!stoppingDevServer) {
+      log(`⚠️ Dev server exited before E2E completed (code ${code ?? "unknown"}).`);
+    }
   });
 
   devServer.stdout.on("data", (chunk) => {
@@ -162,9 +182,13 @@ async function runE2ETests() {
 
   try {
     log("Waiting for dev server to be ready...");
-    const ready = await waitForServer(serverUrl, 30);
+    const ready = await waitForServer(serverUrl, 30, () => !devServerExited);
     if (!ready) {
-      log("❌ Dev server did not become ready in time.");
+      if (devServerExited) {
+        log(`❌ Dev server exited before it became ready (code ${devServerExitCode ?? "unknown"}).`);
+      } else {
+        log("❌ Dev server did not become ready in time.");
+      }
       return 1;
     }
 
@@ -180,6 +204,7 @@ async function runE2ETests() {
     });
     return code;
   } finally {
+    stoppingDevServer = true;
     if (!devServer.killed) {
       devServer.kill("SIGTERM");
     }

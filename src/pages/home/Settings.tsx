@@ -42,6 +42,7 @@ import {
   peopleOutline,
   medicalOutline,
   searchOutline,
+  calendarOutline,
 } from "ionicons/icons";
 import { auth, db, storage, trackEvent } from "../../firebase";
 import {
@@ -1955,6 +1956,21 @@ const Settings: React.FC = () => {
                   <IonLabel>
                     <h2>Recipe Calculator</h2>
                     <p>Calculate nutrition for your recipes</p>
+                  </IonLabel>
+                </IonItem>
+                <IonItem
+                  lines="none"
+                  button
+                  onClick={() => {
+                    console.log("[USER ACTION] Settings: Meal Planner clicked");
+                    trackEvent("settings_planner_open", { uid: user?.uid });
+                    history.push(SETTINGS_ROUTES.planner);
+                  }}
+                >
+                  <IonIcon slot="start" icon={calendarOutline} />
+                  <IonLabel>
+                    <h2>Meal Planner</h2>
+                    <p>Plan the next week and start logging from planned meals</p>
                   </IonLabel>
                 </IonItem>
               </IonList>

@@ -114,12 +114,28 @@ export const useDemoFirestore = () => {
     [isDemoMode]
   );
 
+  /**
+   * Delete a document
+   */
+  const deleteDocData = useCallback(
+    async (path: string) => {
+      if (isDemoMode) {
+        demoFirestore.deleteData(path);
+        return;
+      }
+
+      throw new Error("deleteDocData is only for demo mode. Use Firebase deleteDoc directly in normal mode.");
+    },
+    [isDemoMode]
+  );
+
   return {
     isDemoMode,
     onSnapshotDoc,
     setDocData,
     getDocData,
     getCollectionDocs,
+    deleteDocData,
     arrayUnionField,
   };
 };

@@ -56,7 +56,6 @@ import {
   query,
   runTransaction,
   updateDoc,
-  setDoc,
 } from "firebase/firestore";
 import "./Home.css";
 import {
@@ -97,7 +96,8 @@ import AnnouncementPopup, {
 } from "../../components/AnnouncementPopup";
 import TutorialOverlay from "../../components/TutorialOverlay";
 import { WaterIntake } from "../../components/WaterIntake";
-import { QuickAddModal } from "../../components/QuickAddModal";
+import { QuickAddModal, type QuickFood } from "../../components/QuickAddModal";
+import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -328,6 +328,24 @@ const ProgressRing: React.FC<{
 
 ProgressRing.displayName = 'ProgressRing';
 
+const mealItemsSignature = (items: DiaryEntry[]) =>
+  items
+    .map((item) => {
+      const total = item.total || {};
+      return [
+        item.addedAt,
+        item.name,
+        item.brand ?? "",
+        item.selection?.note ?? "",
+        item.photoUrl ?? "",
+        total.calories ?? 0,
+        total.carbs ?? 0,
+        total.protein ?? 0,
+        total.fat ?? 0,
+      ].join("|");
+    })
+    .join(";");
+
 // Memoized meal card component to prevent unnecessary re-renders
 const MealCard: React.FC<{
   meal: MealKey;
@@ -550,15 +568,13 @@ const MealCard: React.FC<{
   return (
     prevProps.meal === nextProps.meal &&
     prevProps.isCollapsed === nextProps.isCollapsed &&
+    prevProps.showMealCounts === nextProps.showMealCounts &&
     prevProps.items.length === nextProps.items.length &&
     prevProps.mealTotals.calories === nextProps.mealTotals.calories &&
     prevProps.mealTotals.carbs === nextProps.mealTotals.carbs &&
     prevProps.mealTotals.protein === nextProps.mealTotals.protein &&
     prevProps.mealTotals.fat === nextProps.mealTotals.fat &&
-    // Check if items array changed by comparing first and last items' addedAt
-    (prevProps.items.length === 0 || 
-      (prevProps.items[0]?.addedAt === nextProps.items[0]?.addedAt &&
-       prevProps.items[prevProps.items.length - 1]?.addedAt === nextProps.items[nextProps.items.length - 1]?.addedAt))
+    mealItemsSignature(prevProps.items) === mealItemsSignature(nextProps.items)
   );
 });
 
@@ -1459,20 +1475,34 @@ const Home: React.FC = () => {
     }
   };
 
-  const handleQuickAdd = async (meal: MealKey, foodName: string, calories: number) => {
+  const handleQuickAdd = async (meal: MealKey, food: QuickFood) => {
     if (!uid) return;
     
     const dayKey = activeDateKey;
     const previousMealEntries = [...(dayData[meal] || [])];
+    const total = {
+      calories: safeNum(food.calories, 0),
+      carbs: safeNum(food.carbs, 1),
+      protein: safeNum(food.protein, 1),
+      fat: safeNum(food.fat, 1),
+    };
     const newEntry: DiaryEntry = {
       fdcId: Date.now() + Math.floor(Math.random() * 1000000),
-      name: foodName,
-      total: {
-        calories,
-        carbs: 0,
-        protein: 0,
-        fat: 0,
+      name: food.name,
+      base: {
+        amount: 1,
+        unit: "serving",
+        label: "1 serving",
       },
+      selection: {
+        mode: "serving",
+        note: "1 quick-add serving",
+        servingsQty: 1,
+        weightQty: null,
+      },
+      perBase: total,
+      total,
+      dataSource: "quick-add",
       addedAt: new Date().toISOString(),
     };
 
@@ -1499,12 +1529,13 @@ const Home: React.FC = () => {
         });
       }
 
-      setToast({ open: true, message: `Added ${foodName} to ${meal}` });
+      setToast({ open: true, message: `Added ${food.name} to ${pretty(meal)}.` });
       trackEvent("quick_add_food_success", {
         uid,
         date: dayKey,
         meal,
-        food: foodName,
+        food: food.name,
+        calories: total.calories,
       });
     } catch (error) {
       setDayData((prev) => ({
@@ -1516,7 +1547,7 @@ const Home: React.FC = () => {
         uid,
         date: dayKey,
         meal,
-        food: foodName,
+        food: food.name,
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -2163,7 +2194,7 @@ const Home: React.FC = () => {
     if (!Number.isFinite(weight) || weight <= 0) {
       setWeighInToast({
         open: true,
-        message: "Please enter a valid weight in kg.",
+        message: `Please enter a valid weight in ${weightLabel(unitSystem)}.`,
         color: "warning",
       });
       return;
@@ -2176,7 +2207,7 @@ const Home: React.FC = () => {
     };
 
     try {
-      await setDoc(doc(db, "users", uid, "weighins", activeDateKey), entry, {
+      await setDocData(`users/${uid}/weighins/${activeDateKey}`, entry, {
         merge: true,
       });
       setWeighInToast({
@@ -2861,7 +2892,7 @@ const Home: React.FC = () => {
                 <IonCardTitle>Hydration</IonCardTitle>
               </IonCardHeader>
               <IonCardContent className="home-panel__content home-panel__content--water">
-                <WaterIntake dateKey={activeDateKey} />
+                <WaterIntake dateKey={activeDateKey} userId={uid} />
               </IonCardContent>
             </IonCard>
 
@@ -3053,6 +3084,16 @@ const Home: React.FC = () => {
               text: "Copy summary to clipboard",
               handler: () => {
                 void copyDaySummary();
+              },
+            },
+            {
+              text: "Open meal planner",
+              handler: () => {
+                trackEvent("day_menu_open_planner", {
+                  uid,
+                  date: activeDateKey,
+                });
+                history.push(SETTINGS_ROUTES.planner);
               },
             },
             {

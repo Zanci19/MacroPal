@@ -1,59 +1,145 @@
+.quick-add-modal {
+  --width: min(560px, calc(100vw - 24px));
+  --height: min(720px, calc(100vh - 40px));
+  --border-radius: 18px;
+}
+
+.quick-add-content {
+  --padding-top: 10px;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-bottom: 14px;
+}
+
+.quick-add-search {
+  padding-inline: 12px;
+  padding-bottom: 6px;
+}
+
+.quick-add-meal-target {
+  padding: 0 12px 10px;
+}
+
+.quick-add-meal-target ion-segment {
+  background: var(--mp-surface-muted, rgba(148, 163, 184, 0.12));
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+}
+
+.quick-add-meal-target ion-segment-button {
+  min-width: 92px;
+  min-height: 38px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.quick-food-list {
+  background: transparent;
+}
+
 .quick-food-item {
   --padding-start: 16px;
-  --padding-end: 8px;
+  --inner-padding-end: 12px;
+  --min-height: 74px;
 }
 
 .quick-food-item:active {
   --background: var(--mp-primary-soft, rgba(31, 41, 55, 0.08));
 }
 
-.food-emoji {
-  font-size: 1.5rem;
-  margin-right: 8px;
-}
-
-.meal-chips {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.meal-chips ion-chip {
-  cursor: pointer;
-  margin: 0;
-  height: 28px;
-  font-size: 0.75rem;
-  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease;
-}
-
-.meal-chips ion-chip:hover {
-  opacity: 0.85;
-  transform: scale(1.06);
-}
-
-.meal-chips ion-chip:active {
-  transform: scale(0.94);
-  opacity: 1;
+.quick-food-emoji {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--mp-surface-muted, rgba(148, 163, 184, 0.12));
+  font-size: 1.35rem;
 }
 
 .quick-food-item ion-label h2 {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
+  margin: 0 0 4px;
+  color: var(--mp-text);
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .quick-food-item ion-label p {
+  margin: 0;
   font-size: 0.85rem;
   color: var(--mp-text-muted);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .meal-chips ion-chip {
-    transition: none;
+.quick-food-action {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  min-width: 86px;
+}
+
+.quick-food-action span {
+  max-width: 110px;
+  color: var(--mp-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.quick-food-action ion-button {
+  --border-radius: 10px;
+  --padding-start: 10px;
+  --padding-end: 12px;
+  min-height: 32px;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.quick-add-empty {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 24px;
+  text-align: center;
+}
+
+@media (max-width: 420px) {
+  .quick-add-modal {
+    --width: 100vw;
+    --height: 100vh;
+    --border-radius: 0;
   }
 
-  .meal-chips ion-chip:hover,
-  .meal-chips ion-chip:active {
-    transform: none;
+  .quick-food-item {
+    --padding-start: 12px;
+    --inner-padding-end: 10px;
+  }
+
+  .quick-food-action {
+    min-width: 72px;
+  }
+
+  .quick-food-action span {
+    max-width: 78px;
+    font-size: 0.66rem;
+  }
+
+  .quick-food-action ion-button {
+    --padding-start: 8px;
+    --padding-end: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-food-item {
+    scroll-behavior: auto;
   }
 }

@@ -63,6 +63,7 @@ const importFeedback = () => import("./pages/home/Feedback");
 const importEnergyNeeds = () => import("./pages/home/EnergyNeeds");
 const importUnits = () => import("./pages/home/Units");
 const importReminders = () => import("./pages/home/Reminders");
+const importPlanner = () => import("./pages/home/Planner");
 const importDataPrivacy = () => import("./pages/home/DataPrivacy");
 const importWorkout = () => import("./pages/home/Workout");
 const importChangelog = () => import("./pages/Changelog");
@@ -97,6 +98,7 @@ const Feedback = lazy(importFeedback);
 const EnergyNeeds = lazy(importEnergyNeeds);
 const Units = lazy(importUnits);
 const Reminders = lazy(importReminders);
+const Planner = lazy(importPlanner);
 const DataPrivacy = lazy(importDataPrivacy);
 const Workout = lazy(importWorkout);
 const Changelog = lazy(importChangelog);
@@ -132,6 +134,7 @@ const LAZY_ROUTE_IMPORTS = [
   importEnergyNeeds,
   importUnits,
   importReminders,
+  importPlanner,
   importDataPrivacy,
   importWorkout,
   importChangelog,
@@ -661,6 +664,7 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
         <Route exact path={SETTINGS_ROUTES.energyNeeds} render={(props) => <LazyRoute component={EnergyNeeds} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.units} render={(props) => <LazyRoute component={Units} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.reminders} render={(props) => <LazyRoute component={Reminders} {...props} />} />
+        <Route exact path={SETTINGS_ROUTES.planner} render={(props) => <LazyRoute component={Planner} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.dataPrivacy} render={(props) => <LazyRoute component={DataPrivacy} {...props} />} />
         <Route exact path={SETTINGS_ROUTES.sharing} render={(props) => <LazyRoute component={Sharing} {...props} />} />
         <Route exact path="/app/settings/shared-user/:uid" render={(props) => <LazyRoute component={SharedUserView} {...props} />} />
