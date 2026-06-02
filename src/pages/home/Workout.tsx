@@ -339,7 +339,7 @@ const Workout: React.FC = () => {
         </IonToolbar>
       </IonHeader>
 
-      <IonContent fullscreen className="home-content">
+      <IonContent fullscreen className="ion-padding tabbed-content home-content">
         <IonRefresher slot="fixed" onIonRefresh={handleRefresh}>
           <IonRefresherContent
             pullingIcon="chevron-down-outline"

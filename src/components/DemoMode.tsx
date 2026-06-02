@@ -192,6 +192,9 @@ const DemoMode: React.FC<DemoModeProps> = ({ children }) => {
     // Play video when shown
     if (videoRef.current) {
       videoRef.current.play().catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
         console.error("Demo mode: Failed to play video", err);
       });
     }

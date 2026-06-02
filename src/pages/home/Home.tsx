@@ -43,6 +43,10 @@ import {
   ellipsisVertical,
   chevronDownOutline,
   rocketOutline,
+  searchOutline,
+  barcodeOutline,
+  cameraOutline,
+  addCircleOutline,
 } from "ionicons/icons";
 import type { SwiperProps, SwiperSlideProps } from "swiper/react";
 import { useHistory, useLocation } from "react-router";
@@ -2593,6 +2597,61 @@ const Home: React.FC = () => {
             </IonButton>
           </div>
         )}
+
+        <div className="home-quick-actions" role="group" aria-label="Fast food logging">
+          <IonButton
+            className="home-quick-action"
+            fill="clear"
+            onClick={() => {
+              trackEvent("home_quick_action_search", { uid, date: activeDateKey });
+              history.push(`/add-food?meal=breakfast&date=${activeDateKey}`);
+            }}
+          >
+            <span className="home-quick-action__icon" aria-hidden="true">
+              <IonIcon icon={searchOutline} />
+            </span>
+            <span>Search</span>
+          </IonButton>
+          <IonButton
+            className="home-quick-action"
+            fill="clear"
+            onClick={() => {
+              trackEvent("home_quick_action_scan", { uid, date: activeDateKey });
+              history.push(`/scan-barcode?meal=snacks&date=${activeDateKey}`);
+            }}
+          >
+            <span className="home-quick-action__icon" aria-hidden="true">
+              <IonIcon icon={barcodeOutline} />
+            </span>
+            <span>Scan</span>
+          </IonButton>
+          <IonButton
+            className="home-quick-action"
+            fill="clear"
+            onClick={() => {
+              trackEvent("home_quick_action_photo", { uid, date: activeDateKey });
+              history.push(`/photo-food-logger?meal=snacks&date=${activeDateKey}`);
+            }}
+          >
+            <span className="home-quick-action__icon" aria-hidden="true">
+              <IonIcon icon={cameraOutline} />
+            </span>
+            <span>Photo</span>
+          </IonButton>
+          <IonButton
+            className="home-quick-action"
+            fill="clear"
+            onClick={() => {
+              trackEvent("home_quick_action_quick_add", { uid, date: activeDateKey });
+              setShowQuickAdd(true);
+            }}
+          >
+            <span className="home-quick-action__icon" aria-hidden="true">
+              <IonIcon icon={addCircleOutline} />
+            </span>
+            <span>Quick</span>
+          </IonButton>
+        </div>
 
         <IonCard className="fs-summary home-overview-card home-top-swiper-card">
           {SwiperComp && SwiperSlideComp && PaginationMod ? (

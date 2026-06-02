@@ -1,9 +1,6 @@
 import React from "react";
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonItem,
   IonLabel,
@@ -19,7 +16,9 @@ import {
   TotpMultiFactorGenerator,
   RecaptchaVerifier,
   signOut,
+  onAuthStateChanged,
   type PhoneMultiFactorInfo,
+  type User,
 } from "firebase/auth";
 import { useHistory } from "react-router-dom";
 import { auth, trackEvent } from "../../firebase";
@@ -133,6 +132,37 @@ const LoginVerification: React.FC = () => {
       }
     }, 200);
   }, [history]);
+
+  const waitForSignedInUser = React.useCallback((resolvedUser: User) => {
+    if (auth.currentUser?.uid === resolvedUser.uid) {
+      return Promise.resolve(auth.currentUser);
+    }
+
+    return new Promise<User>((resolve) => {
+      let done = false;
+      const cleanup: {
+        timeoutId?: number;
+        unsubscribe?: () => void;
+      } = {};
+      const finish = (user: User) => {
+        if (done) return;
+        done = true;
+        if (cleanup.timeoutId !== undefined) {
+          window.clearTimeout(cleanup.timeoutId);
+        }
+        cleanup.unsubscribe?.();
+        resolve(user);
+      };
+      cleanup.timeoutId = window.setTimeout(() => {
+        finish(auth.currentUser?.uid === resolvedUser.uid ? auth.currentUser : resolvedUser);
+      }, 2500);
+      cleanup.unsubscribe = onAuthStateChanged(auth, (user) => {
+        if (user?.uid === resolvedUser.uid) {
+          finish(user);
+        }
+      });
+    });
+  }, []);
 
   React.useEffect(() => {
     if (pending?.method) {
@@ -267,14 +297,15 @@ const LoginVerification: React.FC = () => {
             })();
 
       const credential = await challenge.resolver.resolveSignIn(assertion);
+      const signedInUser = await waitForSignedInUser(credential.user);
       trackEvent("login_mfa_success", {
-        uid: credential.user.uid,
+        uid: signedInUser.uid,
         factor_type: selectedMethod,
       });
 
       clearPendingMfaChallenge();
 
-      if (!credential.user.emailVerified) {
+      if (!signedInUser.emailVerified) {
         await signOut(auth);
         showToast("Please verify your email before continuing.", "warning");
         history.replace("/login");
@@ -293,7 +324,7 @@ const LoginVerification: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  }, [code, history, navigateToAuthLoading, selectedMethod, selectedMethodReady, showToast]);
+  }, [code, history, navigateToAuthLoading, selectedMethod, selectedMethodReady, showToast, waitForSignedInUser]);
 
   React.useEffect(() => {
     if (selectedMethod !== "sms" || !selectedMethodReady || busy) return;
@@ -316,12 +347,6 @@ const LoginVerification: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Two-step verification</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
       <IonContent className="login-verify-page" fullscreen>
         <div className="login-verify-shell">
           <div className="login-verify-card">

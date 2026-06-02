@@ -99,8 +99,6 @@ const patchCameraModal = () => {
             return dismissResult;
           },
         });
-      } else {
-        console.warn('[Camera Patch] Could not patch dismiss; property is read-only.');
       }
     }
     

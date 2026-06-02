@@ -1,4 +1,6 @@
 :root {
+  --mp-r-card: 8px;
+  --mp-r-control: 10px;
   --mp-primary: #1f2937;
   --mp-primary-strong: #111827;
   --mp-primary-soft: rgba(31, 41, 55, 0.12);
@@ -125,6 +127,21 @@ body.dark ion-toolbar {
   --background: var(--ion-toolbar-background);
 }
 
+.tabbed-content {
+  --mp-tabbed-content-padding-bottom: calc(
+    80px + max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) +
+      var(--softkey-inset, 0px)
+  );
+  --padding-bottom: var(--mp-tabbed-content-padding-bottom);
+}
+
+.tabbed-content::part(scroll) {
+  width: min(100%, 760px);
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding-bottom: var(--mp-tabbed-content-padding-bottom);
+}
+
 body.dark .tabbed-content ion-toolbar {
   --background: var(--ion-toolbar-background);
 }
@@ -137,7 +154,7 @@ ion-title {
 ion-card {
   --background: var(--mp-surface);
   --color: var(--mp-text);
-  border-radius: 18px;
+  border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
   box-shadow: var(--mp-shadow-soft);
   overflow: hidden;
@@ -221,6 +238,23 @@ ion-button[fill="outline"] {
   --border-radius: 14px;
   --border-style: solid;
   --border-width: 1px;
+  --box-shadow: none;
+}
+
+ion-button.button-clear,
+ion-button[fill="clear"] {
+  --background: transparent;
+  --background-hover: var(--mp-primary-soft);
+  --background-activated: var(--mp-primary-soft);
+  --border-width: 0;
+  --box-shadow: none;
+  --color: var(--ion-color-primary);
+}
+
+ion-button.button-clear:hover,
+ion-button[fill="clear"]:hover,
+ion-button.button-clear:active,
+ion-button[fill="clear"]:active {
   --box-shadow: none;
 }
 
@@ -658,8 +692,8 @@ ion-radio {
 /* Border Radius Utilities */
 :root {
   --mp-r-sm: 8px;
-  --mp-r-md: 12px;
-  --mp-r-card: 18px;
+  --mp-r-md: 10px;
+  --mp-r-card: 8px;
   --mp-r-pill: 999px;
 }
 

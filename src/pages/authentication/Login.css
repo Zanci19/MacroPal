@@ -1,15 +1,22 @@
 .login-page {
-  --background: transparent;
+  --background: var(--mp-bg);
   background: var(--mp-bg);
+}
+
+.login-page::part(scroll) {
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: clamp(24px, 7vh, 64px) 20px;
 }
 
 .login-page--embedded {
   background: transparent;
-  padding: 14px 12px calc(14px + env(safe-area-inset-bottom, 0px));
+}
+
+.login-page--embedded::part(scroll) {
+  padding: 18px 14px calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
 .login-page--embedded .login-card {
@@ -32,12 +39,8 @@ body .login-page.login-page--embedded {
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
-  padding: 28px 22px 22px;
-  border-radius: 22px;
-  background: var(--mp-surface);
-  backdrop-filter: none;
-  box-shadow: var(--mp-shadow-strong);
-  border: 1px solid var(--mp-border);
+  padding: 0;
+  background: transparent;
   color: var(--mp-text);
 }
 
@@ -62,24 +65,32 @@ body .login-page.login-page--embedded {
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .login-item {
-  --background: color-mix(in srgb, var(--mp-surface-muted) 92%, transparent);
-  --border-color: var(--mp-border);
-  --border-radius: 14px;
+  --background: transparent;
+  --border-color: transparent;
+  --border-radius: 0;
   --padding-start: 0;
   --inner-padding-end: 0;
   --highlight-color-focused: var(--ion-color-primary);
-  --padding-top: 6px;
-  --padding-bottom: 6px;
-  border: 1px solid var(--mp-border);
-  transition: border-color 0.2s ease, background 0.2s ease;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  border: 0;
+  overflow: visible;
 }
 
 .login-item.ion-item {
+  border-radius: 0;
+}
+
+.login-item ion-input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
   border-radius: 14px;
+  background: var(--mp-surface-muted);
 }
 
 .login-item ion-label {
@@ -89,8 +100,8 @@ body .login-page.login-page--embedded {
 }
 
 .password-item {
-  --inner-padding-top: 4px;
-  --inner-padding-bottom: 4px;
+  --inner-padding-top: 0;
+  --inner-padding-bottom: 0;
 }
 
 .pw-wrapper {
@@ -98,10 +109,18 @@ body .login-page.login-page--embedded {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 0 8px 0 0;
+  border-radius: 14px;
+  background: var(--mp-surface-muted);
 }
 
 .pw-input {
   flex: 1;
+}
+
+.pw-wrapper ion-input {
+  --background: transparent;
+  background: transparent;
 }
 
 .pw-toggle-btn {
@@ -114,7 +133,6 @@ body .login-page.login-page--embedded {
   cursor: pointer;
   color: var(--mp-text);
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--mp-primary) 30%, var(--mp-border));
 }
 
 .pw-toggle-btn:active {
@@ -122,9 +140,17 @@ body .login-page.login-page--embedded {
 }
 
 .login-button {
-  margin-top: 8px;
+  margin-top: 2px;
   border-radius: 999px;
   height: 48px;
+  font-weight: 700;
+}
+
+.login-secondary-link {
+  margin: -4px 0 0;
+  min-height: 34px;
+  text-transform: none;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 

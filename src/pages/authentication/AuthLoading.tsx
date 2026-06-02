@@ -139,10 +139,27 @@ const AuthLoading: React.FC = () => {
         }
 
         let unsubscribe: (() => void) | undefined;
+        let nullUserGraceTimer: ReturnType<typeof setTimeout> | undefined;
         try {
           return await withTimeout(
             new Promise<User | null>((resolve, reject) => {
-              unsubscribe = onAuthStateChanged(auth, resolve, reject);
+              unsubscribe = onAuthStateChanged(
+                auth,
+                (user) => {
+                  if (user) {
+                    resolve(user);
+                    return;
+                  }
+
+                  if (nullUserGraceTimer) {
+                    clearTimeout(nullUserGraceTimer);
+                  }
+                  nullUserGraceTimer = setTimeout(() => {
+                    resolve(auth.currentUser);
+                  }, 750);
+                },
+                reject
+              );
             }),
             AUTH_STATE_SETTLE_TIMEOUT_MS,
             "restoring your sign-in session"
@@ -156,6 +173,9 @@ const AuthLoading: React.FC = () => {
           }
           throw error;
         } finally {
+          if (nullUserGraceTimer) {
+            clearTimeout(nullUserGraceTimer);
+          }
           if (unsubscribe) {
             unsubscribe();
           }
@@ -308,6 +328,9 @@ const AuthLoading: React.FC = () => {
         if (!navigator.onLine) {
           setMessage("No internet connection. Sending you to offline screen…");
           scheduleNavigation("/offline", 1500);
+        } else if (auth.currentUser) {
+          setMessage("You're signed in, but profile sync is having trouble. Opening your home screen…");
+          scheduleNavigation("/app/home", RECOVERY_ROUTE_DELAY_MS);
         } else {
           setMessage("Could not load your account. Sending you back to login…");
           scheduleNavigation("/login", 2000);

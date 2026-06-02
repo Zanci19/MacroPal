@@ -5,9 +5,6 @@ import {
   IonInput,
   IonButton,
   IonIcon,
-  IonHeader,
-  IonTitle,
-  IonToolbar,
   IonText,
   IonItem,
   IonLabel,
@@ -321,14 +318,6 @@ const Register: React.FC<RegisterProps> = ({
 
   return (
     <IonPage>
-      {!embedded && (
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Create account</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-      )}
-
       <IonContent
         className={`register-page${embedded ? " register-page--embedded" : ""}`}
         fullscreen

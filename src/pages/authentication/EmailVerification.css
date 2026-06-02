@@ -1,16 +1,20 @@
 .verification-page {
-  --padding-top: 18px;
-  --padding-bottom: 18px;
+  --background: var(--mp-bg);
+}
+
+.verification-page::part(scroll) {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 7vh, 64px) 20px;
 }
 
 .verification-card {
   width: min(420px, 100%);
   margin: 0 auto;
-  padding: 28px 24px;
-  border-radius: 22px;
-  background: var(--mp-surface);
-  border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-strong);
+  padding: 0;
+  background: transparent;
   text-align: center;
 }
 

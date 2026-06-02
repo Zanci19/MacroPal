@@ -1231,15 +1231,6 @@ body.dark .fs-macro__val {
   margin-top: 16px;
 }
 
-/* Fix for tabbed content to prevent bottom nav from covering snacks dropdown */
-.tabbed-content {
-  --padding-bottom: calc(80px + var(--softkey-inset, 0px));
-}
-
-.tabbed-content::part(scroll) {
-  padding-bottom: calc(80px + var(--softkey-inset, 0px));
-}
-
 /* Ensure Home action sheets appear above the tab bar */
 .home-action-sheet {
   --backdrop-opacity: 0.4;
@@ -1332,4 +1323,405 @@ body.dark .fs-macro__val {
 
 .fs-empty-state__action {
   --border-radius: 12px;
+}
+
+/* ---- Professional tracker refactor pass ---- */
+
+.home-content {
+  --padding-top: 14px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-bottom: 18px;
+}
+
+.home-page ion-toolbar {
+  --min-height: 56px;
+}
+
+.home-page ion-title {
+  font-size: 1.16rem;
+}
+
+.fs-greeting {
+  display: none;
+}
+
+.fs-greeting__text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--mp-r-control);
+  background: var(--mp-surface-muted);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.fs-datebar {
+  margin-bottom: 12px;
+}
+
+.fs-datebtn {
+  max-width: 260px;
+  --border-radius: var(--mp-r-card);
+  --background: var(--mp-surface);
+  --background-hover: var(--mp-surface-muted);
+  --border-color: color-mix(in srgb, var(--mp-border) 78%, transparent);
+}
+
+.home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.home-quick-action {
+  min-width: 0;
+  height: 58px;
+  margin: 0;
+  --background: var(--mp-surface);
+  --background-hover: var(--mp-primary-soft);
+  --background-activated: var(--mp-primary-soft);
+  --color: var(--mp-text);
+  --padding-start: 0;
+  --padding-end: 0;
+  text-transform: none;
+}
+
+.home-quick-action::part(native) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--mp-border) 72%, transparent);
+  border-radius: var(--mp-r-card);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+}
+
+.home-quick-action__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--mp-r-control);
+  background: color-mix(in srgb, var(--ion-color-primary) 14%, transparent);
+  color: var(--ion-color-primary);
+}
+
+.home-quick-action__icon ion-icon {
+  font-size: 17px;
+}
+
+.home-content ion-card,
+.home-panel,
+.fs-summary,
+.fs-meal {
+  border-color: color-mix(in srgb, var(--mp-border) 70%, transparent);
+  border-radius: var(--mp-r-card);
+  box-shadow: none;
+}
+
+.home-top-swiper-card {
+  margin-bottom: 12px;
+}
+
+.fs-summary {
+  border-left: 0 !important;
+}
+
+.fs-summary__slide {
+  min-height: 0;
+}
+
+.home-panel__header {
+  padding: 12px 16px 0;
+}
+
+.home-panel__header ion-card-title {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mp-text-muted) !important;
+}
+
+.home-panel__content {
+  padding: 10px 16px 14px;
+}
+
+.fs-cal-remaining {
+  padding: 8px 0 10px;
+  border-bottom: 0;
+}
+
+.fs-cal-remaining__label {
+  margin-bottom: 6px;
+}
+
+.fs-cal-remaining__value {
+  font-size: clamp(2.25rem, 12vw, 3.4rem);
+  letter-spacing: 0;
+}
+
+.home-overview-note {
+  margin-top: 6px;
+  font-size: 0.88rem;
+}
+
+.fs-cal-table {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: center;
+  gap: 8px 10px;
+  margin: 4px 0 0;
+  padding: 12px;
+  border-radius: var(--mp-r-card);
+  background: var(--mp-surface-muted);
+}
+
+.fs-cal-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
+  align-items: stretch;
+  gap: 10px;
+  padding-bottom: 0;
+}
+
+.fs-cal-summary .fs-cal-remaining,
+.fs-cal-summary .fs-cal-table {
+  min-width: 0;
+}
+
+.fs-cal-summary .fs-cal-table {
+  margin-top: 0;
+}
+
+.fs-cal-table__cell {
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.fs-cal-table__val {
+  overflow: hidden;
+  font-size: 1rem;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-cal-table__lbl {
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
+.fs-cal-table__op {
+  display: none;
+}
+
+.fs-macro-bars--summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  padding: 0;
+}
+
+.fs-macro-row {
+  gap: 5px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: var(--mp-r-card);
+  background: var(--mp-surface-muted);
+}
+
+.fs-macro-row__header {
+  display: block;
+  min-width: 0;
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.fs-macro-row__header span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fs-macro-row__header span:last-child {
+  margin-top: 2px;
+  color: var(--mp-text);
+}
+
+.fs-macro-row__track {
+  height: 7px;
+}
+
+.fs-macro-legend {
+  display: none;
+}
+
+.home-overview-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.home-overview-actions ion-button {
+  min-height: 42px;
+  margin: 0;
+  --border-radius: var(--mp-r-card);
+  font-size: 0.78rem;
+}
+
+.fs-meal {
+  margin: 10px 0;
+  border-left: 0 !important;
+}
+
+.fs-meal__hdr {
+  padding: 0;
+}
+
+.fs-meal__row {
+  --min-height: 58px;
+  --background: transparent;
+  --background-hover: transparent;
+  --padding-start: 12px;
+  --inner-padding-end: 8px;
+  border-radius: 0;
+}
+
+.fs-meal__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  border-radius: var(--mp-r-card);
+  background: color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+  color: var(--ion-color-primary);
+  font-size: 18px;
+}
+
+.fs-meal__title-text {
+  font-size: 1rem;
+  letter-spacing: 0;
+}
+
+.fs-meal__kcal-badge {
+  font-size: 0.82rem;
+  color: var(--mp-text);
+}
+
+.fs-meal__add {
+  width: 34px;
+  height: 34px;
+  --padding-start: 0;
+  --padding-end: 0;
+  border-radius: var(--mp-r-card) !important;
+}
+
+.fs-meal__add::part(native) {
+  border-radius: var(--mp-r-card);
+}
+
+.fs-meal ion-card-content {
+  padding: 0 12px 12px;
+}
+
+.fs-meal__macro-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 8px;
+  padding: 9px 0;
+  border-top: 1px solid color-mix(in srgb, var(--mp-border) 70%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--mp-border) 70%, transparent);
+  background: transparent;
+}
+
+.fs-meal__macro-grid div {
+  padding: 0 4px;
+  text-align: center;
+}
+
+.fs-meal__more {
+  min-height: 30px;
+  margin: 0 0 4px auto;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 0.76rem;
+}
+
+.home-content ion-list {
+  padding: 0;
+  background: transparent;
+}
+
+.meal-item {
+  --background: transparent;
+  --background-hover: color-mix(in srgb, var(--mp-primary-soft) 52%, transparent);
+  --min-height: 64px;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  margin: 0;
+  border-top: 1px solid color-mix(in srgb, var(--mp-border) 58%, transparent);
+  border-radius: 0;
+}
+
+.meal-item h2 {
+  font-size: 0.93rem;
+  letter-spacing: 0;
+}
+
+.meal-item p {
+  font-size: 0.77rem;
+}
+
+.kcal-badge {
+  padding: 5px 8px;
+  border-radius: var(--mp-r-control);
+  background: var(--mp-surface-muted);
+  font-size: 0.78rem;
+}
+
+.home-secondary-panels {
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@media (min-width: 760px) {
+  .home-secondary-panels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .home-quick-actions {
+    gap: 6px;
+  }
+
+  .home-quick-action {
+    height: 54px;
+  }
+
+  .home-quick-action::part(native) {
+    font-size: 0.68rem;
+  }
+
+  .home-overview-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .fs-cal-summary,
+  .fs-macro-bars--summary {
+    grid-template-columns: 1fr;
+  }
+
+  .fs-cal-table__val {
+    font-size: 0.88rem;
+  }
 }

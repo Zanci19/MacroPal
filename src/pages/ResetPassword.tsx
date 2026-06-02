@@ -2,13 +2,10 @@ import React from "react";
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonInput,
   IonItem,
   IonPage,
   IonText,
-  IonTitle,
-  IonToolbar,
   IonToast,
   IonLabel,
 } from "@ionic/react";
@@ -132,12 +129,6 @@ const ResetPassword: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Reset Password</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
       <IonContent className="reset-password-page" fullscreen>
         <div className="reset-card">
           <div className="reset-header">

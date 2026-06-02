@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
   IonPage,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
   IonContent,
   IonItem,
   IonLabel,
@@ -53,6 +50,7 @@ type LoginProps = {
 
 const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) => {
   const history = useHistory();
+  const isNativePlatform = Capacitor.isNativePlatform();
 
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -130,32 +128,26 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
 
     if (!signedInUser.emailVerified) {
       const userForEmail = signedInUser;
-      const resend = async () => {
-        try {
-          await sendEmailVerification(userForEmail);
-          trackEvent("verification_email_resent_from_login", {
-            uid: userForEmail.uid,
-          });
-          showToast(
-            "Verification email sent. Please check your inbox.",
-            "success"
-          );
-        } catch (e) {
-          trackEvent("verification_email_resend_error_from_login", {
-            uid: userForEmail.uid,
-          });
-          showToast("Could not send verification email. Try again later.");
-          console.error(e);
-        }
-      };
+      let verificationMessage = "Please verify your email to continue.";
+      try {
+        await sendEmailVerification(userForEmail);
+        verificationMessage =
+          "Please verify your email to continue. We sent a fresh verification email.";
+        trackEvent("verification_email_resent_from_login", {
+          uid: userForEmail.uid,
+        });
+      } catch (e) {
+        trackEvent("verification_email_resend_error_from_login", {
+          uid: userForEmail.uid,
+        });
+        console.error(e);
+      }
 
       await signOut(auth);
       trackEvent("login_blocked_unverified_email", {
         uid: userForEmail.uid,
       });
-      showToast("Please verify your email to continue.", "warning", [
-        { text: "Resend email", handler: resend },
-      ]);
+      showToast(verificationMessage, "warning");
       return;
     }
 
@@ -401,14 +393,14 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
 
   const handleGoogleLogin = async () => {
     console.log(`[USER ACTION] Login: Clicked Google sign-in button`, {
-      isNativePlatform: Capacitor.isNativePlatform(),
+      isNativePlatform,
       busy,
     });
     
     if (busy) return;
     setBusy(true);
     try {
-      if (Capacitor.isNativePlatform()) {
+      if (isNativePlatform) {
         trackEvent("login_google_start", {
           method: "social_login",
         });
@@ -506,12 +498,12 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
 
   const handlePasskeyLogin = async () => {
     console.log(`[USER ACTION] Login: Clicked passkey sign-in button`, {
-      isNativePlatform: Capacitor.isNativePlatform(),
+      isNativePlatform,
       busy,
     });
 
     if (busy) return;
-    if (!Capacitor.isNativePlatform()) {
+    if (!isNativePlatform) {
       showToast(
         "Passkey sign-in is currently available only on supported Android/iOS credential-manager flows.",
         "warning"
@@ -554,14 +546,6 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
 
   return (
     <IonPage>
-      {!embedded && (
-        <IonHeader>
-          <IonToolbar>
-            <IonTitle>Log In</IonTitle>
-          </IonToolbar>
-        </IonHeader>
-      )}
-
       <IonContent
         className={`login-page${embedded ? " login-page--embedded" : ""}`}
         fullscreen
@@ -635,6 +619,19 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
             </IonItem>
 
             <IonButton
+              fill="clear"
+              expand="block"
+              className="login-secondary-link"
+              onClick={() => {
+                console.log(`[USER ACTION] Login: Clicked forgot password link`);
+                trackEvent("navigate_to_reset_password_from_login");
+                history.push("/reset-password");
+              }}
+            >
+              Forgot password?
+            </IonButton>
+
+            <IonButton
               expand="block"
               className="login-button"
               onClick={handleLogin}
@@ -659,15 +656,17 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
             Sign in with Google
           </IonButton>
 
-          <IonButton
-            expand="block"
-            fill="outline"
-            className="login-google-button"
-            onClick={handlePasskeyLogin}
-            disabled={busy}
-          >
-            Use passkey / device credential
-          </IonButton>
+          {isNativePlatform && (
+            <IonButton
+              expand="block"
+              fill="outline"
+              className="login-google-button"
+              onClick={handlePasskeyLogin}
+              disabled={busy}
+            >
+              Use passkey / device credential
+            </IonButton>
+          )}
 
           <div className="login-footer">
             <IonText color="medium">

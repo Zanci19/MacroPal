@@ -9,7 +9,10 @@ const config: CapacitorConfig = {
       overlaysWebView: false, // Works on Android 14 and below
     },
     SystemBars: {
-      insetsHandling: 'css', // Injects CSS variables for Android 15+
+      insetsHandling: 'disable', // Handled by android-edge-to-edge-support
+    },
+    Keyboard: {
+      resizeOnFullScreen: false,
     },
   },
 };

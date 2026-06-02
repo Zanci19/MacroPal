@@ -2,13 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IonButton,
   IonContent,
-  IonHeader,
   IonPage,
   IonSpinner,
   IonText,
-  IonTitle,
   IonToast,
-  IonToolbar,
 } from "@ionic/react";
 import { useHistory } from "react-router-dom";
 import { sendEmailVerification, signOut } from "firebase/auth";
@@ -51,7 +48,7 @@ const EmailVerification: React.FC = () => {
         await user.reload();
         if (user.emailVerified) {
           trackEvent("verification_email_confirmed", { uid: user.uid });
-          history.replace("/onboarding-profile");
+          history.replace("/auth-loading");
           return;
         }
         if (!silent) {
@@ -130,11 +127,6 @@ const EmailVerification: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Verify your email</IonTitle>
-        </IonToolbar>
-      </IonHeader>
       <IonContent className="ion-padding verification-page">
         <div className="verification-card">
           <IonText className="verification-title">
