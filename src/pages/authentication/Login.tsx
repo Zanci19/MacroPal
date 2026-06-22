@@ -486,10 +486,6 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
         showToast("Google sign-in failed. Please try again.");
         return;
       }
-      if (message) {
-        showToast(message);
-        return;
-      }
       showToast(handleError("login", err));
     } finally {
       setBusy(false);

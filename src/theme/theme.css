@@ -26,11 +26,11 @@
   --mp-space-8: 32px;
 
   /* ----- Surfaces & text (light) ----- */
-  --mp-bg: #eef1f6;
+  --mp-bg: #f5f5f5;
   --mp-surface: #ffffff;
   --mp-surface-elevated: #ffffff;
-  --mp-surface-muted: #f1f4f9;
-  --mp-surface-sunken: #e6ebf2;
+  --mp-surface-muted: #eeeeee;
+  --mp-surface-sunken: #e0e0e0;
   --mp-surface-glow: none;
 
   --mp-text: #0f172a;
@@ -73,13 +73,13 @@
 
   /* ----- Ionic remaps ----- */
   --ion-background-color: var(--mp-bg);
-  --ion-background-color-rgb: 238, 241, 246;
+  --ion-background-color-rgb: 245, 245, 245;
   --ion-text-color: var(--mp-text);
   --ion-text-color-rgb: 15, 23, 42;
   --ion-item-background: var(--mp-surface);
   --ion-card-background: var(--mp-surface);
   --ion-toolbar-background: var(--mp-bg);
-  --ion-tab-bar-background: rgba(255, 255, 255, 0.82);
+  --ion-tab-bar-background: #ffffff;
   --ion-border-color: var(--mp-border);
   --ion-text-color-step-400: var(--mp-text-muted);
 
@@ -87,20 +87,20 @@
 }
 
 body.dark {
-  --mp-bg: #0a0e16;
-  --mp-surface: #141a24;
-  --mp-surface-elevated: #1a212e;
-  --mp-surface-muted: #1b2330;
-  --mp-surface-sunken: #0f141d;
+  --mp-bg: #121212;
+  --mp-surface: #1e1e1e;
+  --mp-surface-elevated: #2c2c2c;
+  --mp-surface-muted: #242424;
+  --mp-surface-sunken: #0a0a0a;
   --mp-surface-glow: none;
 
   --mp-text: #e8edf4;
   --mp-text-muted: #9aa6b8;
   --mp-text-subtle: #6b7689;
   --mp-subtext: #9aa6b8;
-  --mp-border: #283142;
-  --mp-border-strong: #36415a;
-  --mp-chip-bg: #1e2632;
+  --mp-border: #2a2a2a;
+  --mp-border-strong: #3a3a3a;
+  --mp-chip-bg: #242424;
 
   --mp-primary: var(--ion-color-primary);
   --mp-primary-strong: var(--ion-color-primary-tint);
@@ -122,11 +122,11 @@ body.dark {
   --mp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55), 0 24px 48px rgba(0, 0, 0, 0.5);
 
   --ion-background-color: var(--mp-bg);
-  --ion-background-color-rgb: 10, 14, 22;
+  --ion-background-color-rgb: 18, 18, 18;
   --ion-text-color: var(--mp-text);
   --ion-text-color-rgb: 232, 237, 244;
   --ion-toolbar-background: var(--mp-bg);
-  --ion-tab-bar-background: rgba(15, 20, 29, 0.86);
+  --ion-tab-bar-background: #1e1e1e;
 
   color-scheme: dark;
 }
@@ -158,8 +158,8 @@ ion-router-outlet {
    --mp-bg and flashes white on overscroll/bounce in dark mode. Pull the dark
    surface up to <html> too. */
 html:has(body.dark) {
-  --mp-bg: #0a0e16;
-  background: #0a0e16;
+  --mp-bg: #121212;
+  background: #121212;
 }
 
 body {
@@ -353,7 +353,6 @@ ion-input:focus-within,
 ion-textarea:focus-within,
 ion-searchbar:focus-within {
   border-color: var(--ion-color-primary) !important;
-  box-shadow: 0 0 0 3px var(--mp-primary-soft);
 }
 
 ion-item.item-has-focus {
@@ -446,16 +445,9 @@ ion-tab-bar {
   --color: var(--mp-text-muted);
   --color-selected: var(--ion-color-primary);
   border-top: 1px solid var(--mp-border);
-  box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06);
-  -webkit-backdrop-filter: saturate(1.6) blur(16px);
-  backdrop-filter: saturate(1.6) blur(16px);
   transition: background 0.3s ease;
   padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
   overflow: visible;
-}
-
-body.dark ion-tab-bar {
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4);
 }
 
 .mp-tabbar {
@@ -509,7 +501,6 @@ ion-tab-button.mp-tab-btn--add::part(native) {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 24px rgba(47, 107, 224, 0.42), 0 2px 6px rgba(47, 107, 224, 0.3);
   transform: translateY(-16px);
   position: relative;
   z-index: 10;
@@ -519,7 +510,6 @@ ion-tab-button.mp-tab-btn--add::part(native) {
 .mp-tab-btn__add-circle:active,
 ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
   transform: translateY(-16px) scale(0.92);
-  box-shadow: 0 6px 16px rgba(47, 107, 224, 0.4);
 }
 
 .mp-tab-btn__add-circle ion-icon {

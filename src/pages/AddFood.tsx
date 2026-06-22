@@ -2012,17 +2012,9 @@ const AddFood: React.FC = () => {
       const data: OFFSearchResponse = await res.json();
       const foods = Array.isArray(data?.products) ? data.products : [];
 
-      const macroFiltered = foods.filter((food) => {
-        const preview = macrosPer100g(food.nutriments);
-        return (
-          (preview.calories ?? 0) > 0 ||
-          (preview.carbs ?? 0) > 0 ||
-          (preview.protein ?? 0) > 0 ||
-          (preview.fat ?? 0) > 0
-        );
-      });
+      const validFoods = foods.filter((food) => food.product_name?.trim());
 
-      const scored = macroFiltered.map(scoreFood);
+      const scored = validFoods.map(scoreFood);
 
       let kept = scored;
       if (tokenCount > 0) {
@@ -3789,6 +3781,14 @@ const AddFood: React.FC = () => {
                 onIonInput={(e) => {
                   console.log(`[USER ACTION] AddFood: Search input changed`, { query: e.detail.value });
                   setQuery(e.detail.value ?? "");
+                }}
+                onIonChange={(e) => {
+                  const q = (e.detail.value ?? "").trim();
+                  if (q.length >= 2) {
+                    foodsSearch(q, 1);
+                  } else if (!q) {
+                    resetSearchResults();
+                  }
                 }}
                 onKeyUp={(e) => {
                   if (e.key === "Enter" && query.trim()) {
