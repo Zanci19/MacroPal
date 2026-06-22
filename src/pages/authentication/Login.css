@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 7vh, 64px) 20px;
+  padding: calc(clamp(24px, 7vh, 64px) + env(safe-area-inset-top, 0px)) 20px calc(clamp(24px, 7vh, 64px) + env(safe-area-inset-bottom, 0px));
 }
 
 .login-page--embedded {

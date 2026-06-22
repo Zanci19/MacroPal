@@ -232,7 +232,7 @@
   border-radius: 999px;
   overflow: hidden;
   border: 3px solid rgba(var(--ion-color-primary-rgb), 0.35);
-  box-shadow: 0 0 0 4px rgba(var(--ion-color-primary-rgb), 0.1), var(--mp-shadow-soft);
+  box-shadow: var(--mp-shadow-soft);
 }
 
 .onboarding-photo-preview img {

@@ -53,6 +53,37 @@ export function getUserFriendlyErrorMessage(error: Error): string {
   if (message.includes("auth/network-request-failed")) {
     return "Network error. Please check your internet connection.";
   }
+  if (message.includes("auth/too-many-requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+
+  // MFA / TOTP errors
+  if (
+    message.includes("auth/invalid-verification-code") ||
+    message.includes("verification code is invalid") ||
+    message.includes("auth/code-expired")
+  ) {
+    return "The code is incorrect or has expired. Please enter a fresh code from your authenticator app.";
+  }
+  if (
+    message.includes("auth/invalid-multi-factor-session") ||
+    message.includes("multi-factor session") ||
+    message.includes("first factor")
+  ) {
+    return "Your sign-in session expired. Please log in again to restart the verification.";
+  }
+  if (
+    message.includes("auth/multi-factor-info-not-found") ||
+    message.includes("multi-factor info")
+  ) {
+    return "The authenticator enrollment was not found. Please log in again.";
+  }
+  if (message.includes("auth/missing-verification-code")) {
+    return "Please enter the code from your authenticator app.";
+  }
+  if (message.includes("auth/unsupported-first-factor")) {
+    return "Sign-in method not supported for this account. Please use email/password or Google.";
+  }
 
   // Firestore errors
   if (message.includes("permission-denied")) {

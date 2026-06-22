@@ -316,10 +316,28 @@ const LoginVerification: React.FC = () => {
       navigateToAuthLoading();
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      const errMsg = err.message.toLowerCase();
       trackEvent("login_mfa_error", {
         error: err.message,
         factor_type: selectedMethod,
       });
+
+      // If the MFA session is no longer valid, clear state and send back to login
+      if (
+        errMsg.includes("auth/invalid-multi-factor-session") ||
+        errMsg.includes("multi-factor session") ||
+        errMsg.includes("first factor") ||
+        errMsg.includes("auth/multi-factor-info-not-found")
+      ) {
+        clearPendingMfaChallenge();
+        showToast(
+          "Your sign-in session expired. Please log in again.",
+          "warning",
+        );
+        history.replace("/login");
+        return;
+      }
+
       showToast(handleError("login_mfa_verify", err));
     } finally {
       setBusy(false);

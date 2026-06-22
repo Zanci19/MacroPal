@@ -132,7 +132,7 @@
 .start-btn-primary {
   --background: var(--mp-primary-gradient);
   --background-hover: var(--ion-color-primary-shade);
-  --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.34);
+  --box-shadow: none;
 }
 
 .start-btn-secondary {
