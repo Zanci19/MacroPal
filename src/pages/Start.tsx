@@ -135,7 +135,7 @@ const Start: React.FC = () => {
           <div className="start-main">
             <section className="start-hero">
               <div className="start-logo-wrap">
-                <img src={logo} alt="MacroPal logo" className="start-logo" />
+                <img src={logo} alt="MacroPal logo" className="start-logo" decoding="async" />
               </div>
               <p className="start-kicker">MACROPAL</p>
               <p

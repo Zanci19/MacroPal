@@ -1579,7 +1579,7 @@ const Settings: React.FC = () => {
                   >
                     <IonAvatar>
                       {profilePhotoUrl ? (
-                        <img src={profilePhotoUrl} alt="Profile" />
+                        <img src={profilePhotoUrl} alt="Profile" decoding="async" />
                       ) : (
                         <IonIcon icon={personCircleOutline} />
                       )}

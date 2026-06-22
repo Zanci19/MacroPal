@@ -703,7 +703,7 @@ const OnboardingProfile: React.FC = () => {
                     {displayedPhotoUrl ? (
                       <>
                         <div className="onboarding-photo-preview">
-                          <img src={displayedPhotoUrl} alt="Profile preview" />
+                          <img src={displayedPhotoUrl} alt="Profile preview" decoding="async" />
                         </div>
                         <p className="onboarding-photo-message">
                           There! You look beautiful!

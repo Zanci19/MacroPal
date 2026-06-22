@@ -30,6 +30,18 @@
   text-align: center;
 }
 
+/* Soft brand glow behind the hero */
+.start-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 55% at 50% -8%, rgba(var(--ion-color-primary-rgb), 0.16), transparent 62%),
+    radial-gradient(90% 45% at 50% 108%, rgba(var(--ion-color-primary-rgb), 0.1), transparent 60%);
+}
+
 .start-main {
   display: flex;
   flex-direction: column;
@@ -67,7 +79,7 @@
   border: 1px solid var(--mp-border);
   display: grid;
   place-items: center;
-  box-shadow: var(--mp-shadow-soft);
+  box-shadow: var(--mp-shadow-md);
   animation: fadeInUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -118,9 +130,9 @@
 }
 
 .start-btn-primary {
-  --background: var(--ion-color-primary);
+  --background: var(--mp-primary-gradient);
   --background-hover: var(--ion-color-primary-shade);
-  --box-shadow: none;
+  --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.34);
 }
 
 .start-btn-secondary {

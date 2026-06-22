@@ -603,13 +603,15 @@ const Analytics: React.FC = () => {
     history.push(`/app/home?date=${date}`);
   };
 
+  // Ordered so macro bars (Carbs=0, Protein=1, Fat=2) match the app's macro colors,
+  // while still giving charts a cohesive, distinct set of hues.
   const palette = [
-    "#3b82f6",
-    "#22c55e",
-    "#eab308",
-    "#ef4444",
-    "#a855f7",
-    "#64748b",
+    "#f59e0b", // amber  — carbs
+    "#2f6be0", // blue   — protein
+    "#f43f5e", // rose   — fat
+    "#10b981", // emerald
+    "#8b5cf6", // violet
+    "#64748b", // slate
   ];
 
   return (

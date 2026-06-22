@@ -528,6 +528,7 @@ const PhotoFoodLogger: React.FC = () => {
                 src={photoDataUrl}
                 alt="Food"
                 className="photo-preview"
+                decoding="async"
               />
               <IonCardContent>
                 <IonGrid>

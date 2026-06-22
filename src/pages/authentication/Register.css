@@ -118,7 +118,10 @@ body .register-page.register-page--embedded {
 
 .register-divider::before,
 .register-divider::after {
-  content: none;
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--mp-border);
 }
 
 .register-google-button {

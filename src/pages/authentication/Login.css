@@ -166,7 +166,10 @@ body .login-page.login-page--embedded {
 
 .login-divider::before,
 .login-divider::after {
-  content: none;
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--mp-border);
 }
 
 .login-google-button {

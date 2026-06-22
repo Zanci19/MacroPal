@@ -102,15 +102,14 @@
 }
 
 .add-food-mode-segment {
-  margin-bottom: 8px;
-  border-radius: 0;
+  margin-bottom: 12px;
 }
 
 .add-food-mode-segment ion-segment-button {
-  min-height: 42px;
-  text-transform: uppercase;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  min-height: 40px;
+  text-transform: none;
+  font-size: 0.82rem;
+  letter-spacing: 0;
 }
 
 .add-food-search-input {

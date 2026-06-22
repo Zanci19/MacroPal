@@ -66,7 +66,9 @@ export function useThrottle<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 300
 ): T {
-  const lastRun = useRef(Date.now());
+  // Start at 0 so the very first call always runs immediately (leading edge),
+  // instead of being suppressed until `delay` has elapsed since mount.
+  const lastRun = useRef(0);
 
   return useCallback(
     ((...args) => {
@@ -88,6 +90,17 @@ export function useDebounce<T extends (...args: unknown[]) => unknown>(
   delay: number = 300
 ): T {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cancel any pending invocation when the component unmounts so the debounced
+  // callback can't fire (and touch unmounted state) after teardown.
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, []);
 
   return useCallback(
     ((...args) => {

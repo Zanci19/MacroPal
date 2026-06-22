@@ -187,127 +187,27 @@ const storeDemoAnnouncementNum = (value: number) => {
   }
 };
 
-type MacroBarKey = "fat" | "carbs" | "protein";
-type DayMacroTotals = {
-  calories: number;
-  carbs: number;
-  protein: number;
-  fat: number;
-  sugar: number;
-  fiber: number;
-  saturatedFat: number;
-};
-type MacroBarSegment = {
-  ratio: number;
-  className: string;
-};
-
-const MACRO_LEGEND_ITEMS: ReadonlyArray<{
-  label: string;
-  dotClassName: string;
-}> = [
-  {
-    label: "Saturated fat (in fat)",
-    dotClassName: "fs-macro-legend__dot--warning-shade",
-  },
-  {
-    label: "Sugar (in carbohydrates)",
-    dotClassName: "fs-macro-legend__dot--warning",
-  },
-  {
-    label: "Fiber (in carbohydrates)",
-    dotClassName: "fs-macro-legend__dot--success",
-  },
-  {
-    label: "Remaining carbs/fat/protein",
-    dotClassName: "fs-macro-legend__dot--primary",
-  },
-];
-
-const buildMacroBarSegments = (
-  macroKey: MacroBarKey,
-  dayTotals: DayMacroTotals
-): MacroBarSegment[] => {
-  if (macroKey === "fat") {
-    const totalFat = Math.max(0, dayTotals.fat);
-    const saturatedFat = Math.min(totalFat, Math.max(0, dayTotals.saturatedFat));
-    const remainingFat = Math.max(0, totalFat - saturatedFat);
-    if (totalFat <= 0) {
-      return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
-    }
-    const segments: MacroBarSegment[] = [];
-    if (remainingFat > 0) {
-      segments.push({
-        ratio: remainingFat / totalFat,
-        className: "fs-macro-row__segment--primary",
-      });
-    }
-    if (saturatedFat > 0) {
-      segments.push({
-        ratio: saturatedFat / totalFat,
-        className: "fs-macro-row__segment--warning-shade",
-      });
-    }
-    return segments.length
-      ? segments
-      : [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
-  }
-
-  if (macroKey === "carbs") {
-    const totalCarbs = Math.max(0, dayTotals.carbs);
-    const sugar = Math.min(totalCarbs, Math.max(0, dayTotals.sugar));
-    const fiber = Math.min(totalCarbs - sugar, Math.max(0, dayTotals.fiber));
-    const remainingCarbs = Math.max(0, totalCarbs - sugar - fiber);
-    if (totalCarbs <= 0) {
-      return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
-    }
-    const segments: MacroBarSegment[] = [];
-    if (remainingCarbs > 0) {
-      segments.push({
-        ratio: remainingCarbs / totalCarbs,
-        className: "fs-macro-row__segment--primary",
-      });
-    }
-    if (sugar > 0) {
-      segments.push({
-        ratio: sugar / totalCarbs,
-        className: "fs-macro-row__segment--warning",
-      });
-    }
-    if (fiber > 0) {
-      segments.push({
-        ratio: fiber / totalCarbs,
-        className: "fs-macro-row__segment--success",
-      });
-    }
-    return segments.length
-      ? segments
-      : [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
-  }
-
-  return [{ ratio: 1, className: "fs-macro-row__segment--primary" }];
-};
-
 const ProgressRing: React.FC<{
   size?: number;
   stroke?: number;
   progress: number;
-}> = React.memo(({ size = 64, stroke = 8, progress }) => {
+  color?: string;
+  children?: React.ReactNode;
+}> = React.memo(({ size = 64, stroke = 8, progress, color, children }) => {
   const r = (size - stroke) / 2;
   const C = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, progress || 0));
   return (
     <div
       className="ring-wrap"
-      style={{ "--ring-size": `${size}px` } as React.CSSProperties}
+      style={{ "--ring-size": `${size}px`, color: color ?? undefined } as React.CSSProperties}
     >
-      <svg width={size} height={size}>
+      <svg width={size} height={size} className="ring-svg">
         <circle
+          className="ring-track"
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke="currentColor"
-          strokeOpacity="0.18"
           strokeWidth={stroke}
           fill="none"
         />
@@ -321,10 +221,11 @@ const ProgressRing: React.FC<{
           strokeLinecap="round"
           strokeDasharray={`${p * C} ${C - p * C}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          style={{ transition: "stroke-dasharray 0.5s var(--mp-ease-out)" }}
         />
       </svg>
       <div className="ring-center">
-        <div className="ring-pct">{Math.round(p * 100)}%</div>
+        {children ?? <div className="ring-pct">{Math.round(p * 100)}%</div>}
       </div>
     </div>
   );
@@ -512,7 +413,7 @@ const MealCard: React.FC<{
                   >
                     {it.photoUrl && (
                       <IonThumbnail slot="start">
-                        <img src={it.photoUrl} alt={it.photoName || it.name} />
+                        <img src={it.photoUrl} alt={it.photoName || it.name} loading="lazy" decoding="async" />
                       </IonThumbnail>
                     )}
                     <IonLabel>
@@ -2677,110 +2578,89 @@ const Home: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        <div className="fs-cal-summary">
-                          <div className="fs-cal-remaining">
-                            <div className="fs-cal-remaining__label">{summaryDifferenceLabel}</div>
-                            <div
-                              className="fs-cal-remaining__value fs-accent-value"
-                              style={{ "--fs-accent-color": ringColor } as React.CSSProperties}
-                            >
-                              {summaryDifferenceValue}
+                        <div className="cal-hero">
+                          <ProgressRing
+                            size={156}
+                            stroke={13}
+                            progress={progress}
+                            color={ringColor}
+                          >
+                            <div className="cal-hero__center">
+                              <span className="cal-hero__value">{summaryDifferenceValue}</span>
+                              <span className="cal-hero__unit">kcal</span>
                             </div>
+                          </ProgressRing>
+                          <div className="cal-hero__caption">
+                            <span className="cal-hero__label">{summaryDifferenceLabel}</span>
                             {showAchievements && (
-                              <p className="home-overview-note">You're on a {streak} day streak!</p>
+                              <span className="cal-hero__streak">🔥 {streak} day streak</span>
                             )}
                           </div>
-                          <div className="fs-cal-table">
-                            <div className="fs-cal-table__cell">
-                              <div className="fs-cal-table__val">{kcalGoal}</div>
-                              <div className="fs-cal-table__lbl">Goal</div>
+                          <div className="cal-hero__stats">
+                            <div className="cal-stat">
+                              <span className="cal-stat__val">{kcalGoal}</span>
+                              <span className="cal-stat__lbl">Goal</span>
                             </div>
-                            <div className="fs-cal-table__op">−</div>
-                            <div className="fs-cal-table__cell">
-                              <div className="fs-cal-table__val">{kcalConsumed}</div>
-                              <div className="fs-cal-table__lbl">Food</div>
+                            <span className="cal-stat__sep" aria-hidden="true" />
+                            <div className="cal-stat">
+                              <span className="cal-stat__val">{kcalConsumed}</span>
+                              <span className="cal-stat__lbl">Food</span>
                             </div>
-                            <div className="fs-cal-table__op">+</div>
-                            <div className="fs-cal-table__cell">
-                              <div className="fs-cal-table__val">{workoutCalories}</div>
-                              <div className="fs-cal-table__lbl">Exercise</div>
-                            </div>
-                            <div className="fs-cal-table__op">=</div>
-                            <div className="fs-cal-table__cell">
-                              <div
-                                className="fs-cal-table__val fs-accent-value"
-                                style={{ "--fs-accent-color": ringColor } as React.CSSProperties}
-                              >
-                                {summaryDifferenceValue}
-                              </div>
-                              <div className="fs-cal-table__lbl">Remaining</div>
+                            <span className="cal-stat__sep" aria-hidden="true" />
+                            <div className="cal-stat">
+                              <span className="cal-stat__val">{workoutCalories}</span>
+                              <span className="cal-stat__lbl">Exercise</span>
                             </div>
                           </div>
                         </div>
 
                         {macroTargets && (
-                          <div className="fs-macro-bars fs-macro-bars--summary">
+                          <div className="macros">
                             {([
-                              {
-                                k: "fat",
-                                g: totals.day.fat,
-                                tg: macroTargets.fatG,
-                                l: "Fat",
-                              },
-                              {
-                                k: "carbs",
-                                g: totals.day.carbs,
-                                tg: macroTargets.carbsG,
-                                l: "Carbohydrates",
-                              },
                               {
                                 k: "protein",
                                 g: totals.day.protein,
                                 tg: macroTargets.proteinG,
                                 l: "Protein",
                               },
+                              {
+                                k: "carbs",
+                                g: totals.day.carbs,
+                                tg: macroTargets.carbsG,
+                                l: "Carbs",
+                              },
+                              {
+                                k: "fat",
+                                g: totals.day.fat,
+                                tg: macroTargets.fatG,
+                                l: "Fat",
+                              },
                             ] as const).map(({ k, g, tg, l }) => {
                               const pct = tg ? Math.min(1, g / tg) : 0;
-                              const segments = buildMacroBarSegments(k, totals.day);
+                              // Exceeding protein is a win, not a warning — only flag carbs/fat over goal.
+                              const over = k !== "protein" && !!tg && g > tg;
 
                               return (
-                                <div key={k} className="fs-macro-row">
-                                  <div className="fs-macro-row__header">
-                                    <span>{l}</span>
-                                    <span>
-                                      {g.toFixed(0)} / {tg} g
+                                <div
+                                  key={k}
+                                  className={`macro macro--${k}${over ? " is-over" : ""}`}
+                                >
+                                  <div className="macro__top">
+                                    <span className="macro__name">{l}</span>
+                                    <span className="macro__val">
+                                      <strong>{g.toFixed(0)}</strong>
+                                      <span className="macro__target"> / {tg} g</span>
                                     </span>
                                   </div>
-                                  <div className="fs-macro-row__track">
+                                  <div className="macro__track">
                                     <div
-                                      className="fs-macro-row__fill"
+                                      className="macro__fill"
                                       style={{ width: `${pct * 100}%` }}
-                                    >
-                                      <div className="fs-macro-row__segments">
-                                        {segments.map((segment, index) => (
-                                          <div
-                                            key={`${k}-${index}`}
-                                            className={segment.className}
-                                            style={{ width: `${segment.ratio * 100}%` }}
-                                          />
-                                        ))}
-                                      </div>
-                                    </div>
+                                    />
                                   </div>
                                 </div>
                               );
                             })}
-                            <div className="fs-macro-legend">
-                              {MACRO_LEGEND_ITEMS.map(({ label, dotClassName }) => (
-                                <span key={label} className="fs-macro-legend__item">
-                                  <span
-                                    aria-hidden="true"
-                                    className={`fs-macro-legend__dot ${dotClassName}`}
-                                  />
-                                  <span>{label}</span>
-                                </span>
-                              ))}
-                            </div>
                           </div>
                         )}
 

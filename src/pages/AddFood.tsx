@@ -4631,6 +4631,7 @@ const AddFood: React.FC = () => {
                               <img
                                 src={photoPreview}
                                 alt="Selected food"
+                                decoding="async"
                                 style={{
                                   width: "100%",
                                   maxHeight: 220,

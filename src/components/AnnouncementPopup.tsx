@@ -81,6 +81,7 @@ const AnnouncementPopup: React.FC<AnnouncementPopupProps> = ({
             <img
               src={imageUrl}
               alt={announcement.imageAlt}
+              decoding="async"
               className={`announcement-popup-image ${imageLoaded ? "loaded" : ""}`}
               onLoad={() => setImageLoaded(true)}
               onError={() => {

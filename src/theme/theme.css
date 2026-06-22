@@ -1,77 +1,132 @@
+/* =================================================================
+   MacroPal — Design tokens + global component skins
+   Refined-blue, layered-surface system. Font stack is intentionally
+   left as the system UI stack (see body{} below) — do not add a web
+   font; "Inter" is a label, the app renders in the platform UI font.
+   ================================================================= */
+
 :root {
-  --mp-r-card: 8px;
-  --mp-r-control: 10px;
-  --mp-primary: #1f2937;
-  --mp-primary-strong: #111827;
-  --mp-primary-soft: rgba(31, 41, 55, 0.12);
-  --mp-primary-gradient: var(--ion-color-primary);
+  /* ----- Radius scale ----- */
+  --mp-r-xs: 8px;
+  --mp-r-sm: 10px;
+  --mp-r-md: 12px;
+  --mp-r-lg: 16px;
+  --mp-r-xl: 22px;
+  --mp-r-card: 18px;
+  --mp-r-control: 12px;
+  --mp-r-pill: 999px;
 
-  --mp-bg: #ffffff;
+  /* ----- Spacing scale ----- */
+  --mp-space-1: 4px;
+  --mp-space-2: 8px;
+  --mp-space-3: 12px;
+  --mp-space-4: 16px;
+  --mp-space-5: 20px;
+  --mp-space-6: 24px;
+  --mp-space-8: 32px;
+
+  /* ----- Surfaces & text (light) ----- */
+  --mp-bg: #eef1f6;
   --mp-surface: #ffffff;
-  --mp-surface-muted: #f5f5f5;
-
+  --mp-surface-elevated: #ffffff;
+  --mp-surface-muted: #f1f4f9;
+  --mp-surface-sunken: #e6ebf2;
   --mp-surface-glow: none;
 
-  --mp-text: #121212;
-  --mp-text-muted: #5f6368;
-  --mp-border: #e0e0e0;
+  --mp-text: #0f172a;
+  --mp-text-muted: #5b6675;
+  --mp-text-subtle: #8a94a6;
+  --mp-subtext: #5b6675;
+  --mp-border: #e3e8ef;
+  --mp-border-strong: #cdd5e0;
+  --mp-chip-bg: #eef2f8;
 
-  --mp-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --mp-shadow-strong: 0 4px 16px rgba(0, 0, 0, 0.10), 0 1px 4px rgba(0, 0, 0, 0.07);
+  /* ----- Brand accent tokens ----- */
+  --mp-primary: var(--ion-color-primary);
+  --mp-primary-strong: var(--ion-color-primary-shade);
+  --mp-primary-soft: rgba(47, 107, 224, 0.1);
+  --mp-primary-softer: rgba(47, 107, 224, 0.06);
+  --mp-primary-gradient: linear-gradient(135deg, var(--ion-color-primary-tint), var(--ion-color-primary));
 
-  --mp-chip-bg: #f0f0f0;
-
-  /* Macro accent colors */
-  --mp-color-protein: #357be4;
+  /* ----- Macro accent colors (now actually used) ----- */
+  --mp-color-protein: #2f6be0;
+  --mp-color-protein-soft: rgba(47, 107, 224, 0.14);
   --mp-color-carbs: #f59e0b;
-  --mp-color-fat: #ef4444;
-  --mp-color-fiber: #22c55e;
+  --mp-color-carbs-soft: rgba(245, 158, 11, 0.16);
+  --mp-color-fat: #f43f5e;
+  --mp-color-fat-soft: rgba(244, 63, 94, 0.14);
+  --mp-color-fiber: #10b981;
+  --mp-color-fiber-soft: rgba(16, 185, 129, 0.14);
 
-  /* Reusable transition timing */
+  /* ----- Elevation scale ----- */
+  --mp-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --mp-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --mp-shadow-md: 0 2px 6px rgba(15, 23, 42, 0.06), 0 10px 26px rgba(15, 23, 42, 0.08);
+  --mp-shadow-lg: 0 6px 16px rgba(15, 23, 42, 0.1), 0 20px 44px rgba(15, 23, 42, 0.14);
+  /* Legacy aliases */
+  --mp-shadow-soft: var(--mp-shadow-sm);
+  --mp-shadow-strong: var(--mp-shadow-lg);
+
+  /* ----- Motion ----- */
   --mp-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
+  /* ----- Ionic remaps ----- */
   --ion-background-color: var(--mp-bg);
+  --ion-background-color-rgb: 238, 241, 246;
   --ion-text-color: var(--mp-text);
+  --ion-text-color-rgb: 15, 23, 42;
   --ion-item-background: var(--mp-surface);
   --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgb(255, 255, 255);
-  --ion-tab-bar-background: rgba(255, 255, 255, 0.75);
+  --ion-toolbar-background: var(--mp-bg);
+  --ion-tab-bar-background: rgba(255, 255, 255, 0.82);
+  --ion-border-color: var(--mp-border);
+  --ion-text-color-step-400: var(--mp-text-muted);
 
   color-scheme: light;
 }
 
 body.dark {
-  --mp-primary: #7bb2ff;
-  --mp-primary-strong: #5a9cf6;
-  --mp-primary-soft: rgba(123, 178, 255, 0.22);
-
-  --mp-bg: #121212;
-  --mp-surface: #1e1e1e;
-  --mp-surface-muted: #232323;
-
+  --mp-bg: #0a0e16;
+  --mp-surface: #141a24;
+  --mp-surface-elevated: #1a212e;
+  --mp-surface-muted: #1b2330;
+  --mp-surface-sunken: #0f141d;
   --mp-surface-glow: none;
 
-  --mp-text: #e6e6e6;
-  --mp-text-muted: #b0b0b0;
-  --mp-border: #2a2a2a;
+  --mp-text: #e8edf4;
+  --mp-text-muted: #9aa6b8;
+  --mp-text-subtle: #6b7689;
+  --mp-subtext: #9aa6b8;
+  --mp-border: #283142;
+  --mp-border-strong: #36415a;
+  --mp-chip-bg: #1e2632;
 
-  --mp-shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.30), 0 2px 8px rgba(0, 0, 0, 0.20);
-  --mp-shadow-strong: 0 4px 16px rgba(0, 0, 0, 0.40), 0 1px 4px rgba(0, 0, 0, 0.30);
+  --mp-primary: var(--ion-color-primary);
+  --mp-primary-strong: var(--ion-color-primary-tint);
+  --mp-primary-soft: rgba(91, 141, 239, 0.2);
+  --mp-primary-softer: rgba(91, 141, 239, 0.12);
 
-  --mp-chip-bg: #2a2a2a;
+  --mp-color-protein: #5b8def;
+  --mp-color-protein-soft: rgba(91, 141, 239, 0.22);
+  --mp-color-carbs: #fbbf24;
+  --mp-color-carbs-soft: rgba(251, 191, 36, 0.2);
+  --mp-color-fat: #fb7185;
+  --mp-color-fat-soft: rgba(251, 113, 133, 0.2);
+  --mp-color-fiber: #34d399;
+  --mp-color-fiber-soft: rgba(52, 211, 153, 0.2);
 
-  /* Macro accent colors (darkened for dark mode) */
-  --mp-color-protein: #5a9cf6;
-  --mp-color-carbs: #f6b144;
-  --mp-color-fat: #f06060;
-  --mp-color-fiber: #3dd075;
+  --mp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --mp-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45), 0 12px 28px rgba(0, 0, 0, 0.42);
+  --mp-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.55), 0 24px 48px rgba(0, 0, 0, 0.5);
 
   --ion-background-color: var(--mp-bg);
+  --ion-background-color-rgb: 10, 14, 22;
   --ion-text-color: var(--mp-text);
-  --ion-item-background: var(--mp-surface);
-  --ion-card-background: var(--mp-surface);
-  --ion-toolbar-background: rgb(18, 18, 18);
-  --ion-tab-bar-background: rgba(18, 18, 18, 0.92);
+  --ion-text-color-rgb: 232, 237, 244;
+  --ion-toolbar-background: var(--mp-bg);
+  --ion-tab-bar-background: rgba(15, 20, 29, 0.86);
 
   color-scheme: dark;
 }
@@ -99,37 +154,45 @@ ion-router-outlet {
   color: var(--mp-text);
 }
 
+/* `body.dark` cannot style its own <html> parent, so <html> keeps the light
+   --mp-bg and flashes white on overscroll/bounce in dark mode. Pull the dark
+   surface up to <html> too. */
+html:has(body.dark) {
+  --mp-bg: #0a0e16;
+  background: #0a0e16;
+}
+
 body {
   background: var(--mp-bg);
   min-height: 100vh;
+  /* Keep the existing system UI font stack — do not swap in a web font. */
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 ion-content::part(background) {
   background: var(--mp-bg);
 }
 
+/* ---------- Toolbar ---------- */
 ion-toolbar {
   --background: var(--ion-toolbar-background);
   --color: var(--mp-text);
-  border-bottom: 1px solid var(--mp-border);
-  transition: background 0.3s ease, border-color 0.3s ease;
+  --border-width: 0;
+  --min-height: 56px;
+  --padding-top: 4px;
+  --padding-bottom: 4px;
+  transition: background 0.3s ease;
 }
 
-body.dark ion-toolbar {
-  --background: var(--ion-toolbar-background);
-  border-color: var(--mp-border);
-}
-
-/* Opaque toolbars for tabbed pages to prevent overlap during animations */
 .tabbed-content ion-toolbar {
   --background: var(--ion-toolbar-background);
 }
 
 .tabbed-content {
   --mp-tabbed-content-padding-bottom: calc(
-    80px + max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) +
+    84px + max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px)) +
       var(--softkey-inset, 0px)
   );
   --padding-bottom: var(--mp-tabbed-content-padding-bottom);
@@ -142,31 +205,31 @@ body.dark ion-toolbar {
   padding-bottom: var(--mp-tabbed-content-padding-bottom);
 }
 
-body.dark .tabbed-content ion-toolbar {
-  --background: var(--ion-toolbar-background);
-}
-
 ion-title {
   color: var(--mp-text) !important;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
+/* ---------- Cards ---------- */
 ion-card {
   --background: var(--mp-surface);
   --color: var(--mp-text);
   border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
+  box-shadow: var(--mp-shadow-sm);
   overflow: hidden;
   transition: border-color 0.2s ease, background-color 0.3s ease, box-shadow 0.2s ease;
 }
 
 ion-card-header {
-  padding: 16px 18px 10px 18px;
+  padding: 18px 18px 8px 18px;
 }
 
 ion-card-title {
   color: var(--mp-text) !important;
+  font-weight: 750;
+  letter-spacing: -0.01em;
 }
 
 ion-card-content {
@@ -174,24 +237,442 @@ ion-card-content {
   color: var(--mp-text);
 }
 
+/* ---------- Buttons ---------- */
 ion-button {
   --background: var(--ion-color-primary);
   --background-hover: var(--ion-color-primary-shade);
-  --border-radius: 14px;
+  --background-activated: var(--ion-color-primary-shade);
+  --background-focused: var(--ion-color-primary-shade);
+  --border-radius: var(--mp-r-control);
   --box-shadow: none;
   --color: #ffffff;
-  font-weight: 700;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  --padding-top: 16px;
+  --padding-bottom: 16px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
 }
 
-ion-button:hover {
-  --box-shadow: none;
+ion-button::part(native) {
+  letter-spacing: 0;
 }
 
+ion-button:hover,
 ion-button:active {
   --box-shadow: none;
 }
 
+/* Tonal / soft button variant */
+ion-button.mp-btn-tonal,
+ion-button[fill="solid"].mp-btn-tonal {
+  --background: var(--mp-primary-soft);
+  --background-hover: var(--mp-primary-softer);
+  --background-activated: var(--mp-primary-soft);
+  --color: var(--ion-color-primary);
+  --box-shadow: none;
+}
+
+ion-button.button-outline,
+ion-button[fill="outline"] {
+  --color: var(--mp-text);
+  --background: transparent;
+  --background-hover: var(--mp-primary-soft);
+  --background-activated: var(--mp-primary-soft);
+  --border-color: var(--mp-border-strong);
+  --border-radius: var(--mp-r-control);
+  --border-style: solid;
+  --border-width: 1.5px;
+  --box-shadow: none;
+}
+
+ion-button.button-clear,
+ion-button[fill="clear"] {
+  --background: transparent;
+  --background-hover: var(--mp-primary-soft);
+  --background-activated: var(--mp-primary-soft);
+  --border-width: 0;
+  --box-shadow: none;
+  --color: var(--ion-color-primary);
+}
+
+ion-button.button-clear:hover,
+ion-button[fill="clear"]:hover,
+ion-button.button-clear:active,
+ion-button[fill="clear"]:active {
+  --box-shadow: none;
+}
+
+/* ---------- Inputs ---------- */
+ion-input,
+ion-select,
+ion-textarea,
+ion-searchbar {
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --padding-top: 13px;
+  --padding-bottom: 13px;
+  --background: var(--mp-surface-muted);
+  --border-radius: var(--mp-r-control);
+  --border-color: transparent;
+  --border-width: 0;
+  --highlight-height: 0;
+  --highlight-color-focused: transparent;
+  --highlight-color-valid: transparent;
+  --highlight-color-invalid: transparent;
+  --placeholder-color: var(--mp-text-subtle);
+  --placeholder-opacity: 1;
+  border: 1px solid transparent;
+  border-radius: var(--mp-r-control);
+  outline: none;
+  box-shadow: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+ion-searchbar {
+  --box-shadow: none;
+  padding: 0;
+}
+
+ion-searchbar .searchbar-input-container {
+  border-radius: var(--mp-r-control);
+}
+
+ion-input::part(native),
+ion-textarea::part(native),
+ion-searchbar::part(input) {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+ion-input.has-focus,
+ion-textarea.has-focus,
+ion-select.select-expanded,
+ion-input:focus-within,
+ion-textarea:focus-within,
+ion-searchbar:focus-within {
+  border-color: var(--ion-color-primary) !important;
+  box-shadow: 0 0 0 3px var(--mp-primary-soft);
+}
+
+ion-item.item-has-focus {
+  --highlight-height: 0;
+}
+
+/* ---------- Lists ----------
+   Ionic's md ion-list falls back to a hard-coded white background because the
+   app themes via `body.dark` rather than Ionic's `.ion-palette-dark` palette.
+   Keep lists transparent so they inherit the surrounding card/content surface
+   (otherwise cards render white in dark mode). */
+ion-list {
+  background: transparent;
+}
+
+ion-list.list-md,
+ion-list.list-ios {
+  background: transparent;
+}
+
+/* ---------- Items ---------- */
+ion-item {
+  --background: var(--mp-surface);
+  --border-color: var(--mp-border);
+  --color: var(--mp-text);
+  border-radius: var(--mp-r-md);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+ion-item:hover {
+  --background: var(--mp-primary-soft);
+}
+
+ion-label {
+  color: var(--mp-text) !important;
+}
+
+ion-label p {
+  color: var(--mp-text-muted) !important;
+}
+
+ion-item ion-label[position="stacked"] {
+  display: block;
+  margin-bottom: 8px;
+  white-space: normal;
+  font-weight: 600;
+  color: var(--mp-text-muted) !important;
+}
+
+ion-item ion-label[position="stacked"] + ion-input,
+ion-item ion-label[position="stacked"] + ion-select,
+ion-item ion-label[position="stacked"] + ion-textarea,
+ion-item ion-label[position="stacked"] + ion-datetime {
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* ---------- Segment (pill) ---------- */
+ion-segment {
+  --background: var(--mp-surface-muted);
+  border-radius: var(--mp-r-pill);
+  padding: 4px;
+  gap: 2px;
+}
+
+ion-segment-button {
+  --background: transparent;
+  --background-checked: var(--mp-surface);
+  --background-hover: transparent;
+  --color: var(--mp-text-muted);
+  --color-checked: var(--mp-text);
+  --indicator-color: var(--mp-surface);
+  --indicator-box-shadow: var(--mp-shadow-xs);
+  --border-radius: var(--mp-r-pill);
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  min-height: 38px;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ---------- Tabs + floating add button ---------- */
+ion-tabs {
+  overflow: visible;
+}
+
+ion-tab-bar {
+  --background: var(--ion-tab-bar-background);
+  --color: var(--mp-text-muted);
+  --color-selected: var(--ion-color-primary);
+  border-top: 1px solid var(--mp-border);
+  box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  backdrop-filter: saturate(1.6) blur(16px);
+  transition: background 0.3s ease;
+  padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
+  overflow: visible;
+}
+
+body.dark ion-tab-bar {
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.4);
+}
+
+.mp-tabbar {
+  overflow: visible;
+}
+
+:root body.has-softkeys .mp-tabbar {
+  padding-bottom: var(--softkey-inset);
+}
+
+.mp-tab-btn ion-label {
+  opacity: 0.9;
+  font-weight: 600;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.mp-tab-btn--active ion-label {
+  font-weight: 750;
+  opacity: 1;
+}
+
+.mp-tab-btn ion-icon {
+  transition: transform 0.2s var(--mp-ease-bounce), opacity 0.2s ease;
+}
+
+.mp-tab-btn--active ion-icon {
+  transform: scale(1.06);
+}
+
+.mp-tab-btn--add {
+  --color: #ffffff;
+  --ripple-color: transparent;
+  position: relative;
+  overflow: visible !important;
+}
+
+ion-tab-button.mp-tab-btn--add::part(native) {
+  overflow: visible;
+}
+
+.mp-tab-btn__add-circle {
+  width: 60px;
+  height: 60px;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 60px;
+  border-radius: 50%;
+  background: var(--mp-primary-gradient);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(47, 107, 224, 0.42), 0 2px 6px rgba(47, 107, 224, 0.3);
+  transform: translateY(-16px);
+  position: relative;
+  z-index: 10;
+  transition: transform 0.2s var(--mp-ease-bounce), box-shadow 0.2s ease;
+}
+
+.mp-tab-btn__add-circle:active,
+ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
+  transform: translateY(-16px) scale(0.92);
+  box-shadow: 0 6px 16px rgba(47, 107, 224, 0.4);
+}
+
+.mp-tab-btn__add-circle ion-icon {
+  font-size: 30px;
+}
+
+.mp-tab-btn__hidden-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Overlays ---------- */
+ion-modal {
+  --background: var(--mp-surface);
+  --box-shadow: var(--mp-shadow-lg);
+  --border-radius: var(--mp-r-xl);
+  --border-color: var(--mp-border);
+}
+
+ion-popover {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  --border-color: var(--mp-border);
+  --box-shadow: var(--mp-shadow-md);
+}
+
+ion-popover::part(content) {
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-lg);
+  background: var(--mp-surface);
+  color: var(--mp-text);
+}
+
+body.dark ion-popover ion-select-popover,
+body.dark ion-popover ion-select-popover ion-item,
+body.dark ion-popover ion-select-popover .select-interface-option,
+body.dark ion-popover ion-select-popover ion-label {
+  --color: #ffffff;
+  color: #ffffff !important;
+}
+
+ion-action-sheet {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+  --button-color: var(--mp-text);
+  --button-background: transparent;
+  --border-color: var(--mp-border);
+}
+
+body.dark ion-action-sheet {
+  --color: #ffffff;
+  --button-color: #ffffff;
+}
+
+body.dark ion-action-sheet .action-sheet-title,
+body.dark ion-action-sheet .action-sheet-button,
+body.dark ion-action-sheet .action-sheet-option,
+body.dark ion-action-sheet .action-sheet-button-inner {
+  color: #ffffff !important;
+}
+
+/* ---------- Chips & badges ---------- */
+ion-chip {
+  --background: var(--mp-chip-bg);
+  --color: var(--mp-text);
+  --border-color: var(--mp-border);
+  border-radius: var(--mp-r-pill);
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+ion-badge {
+  --background: var(--ion-color-primary);
+  --color: #ffffff;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: var(--mp-r-pill);
+  letter-spacing: 0.01em;
+}
+
+ion-refresher-content .refresher-pulling-icon,
+ion-refresher-content .refresher-refreshing-icon {
+  color: var(--ion-color-primary);
+}
+
+ion-toggle {
+  --handle-background: #ffffff;
+  --handle-background-checked: #ffffff;
+}
+
+/* ---------- Toast & alert ---------- */
+ion-toast {
+  --background: var(--mp-surface-elevated);
+  --color: var(--mp-text);
+  --border-radius: var(--mp-r-md);
+  --box-shadow: var(--mp-shadow-lg);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: var(--mp-border);
+}
+
+ion-alert {
+  --background: var(--mp-surface);
+  --color: var(--mp-text);
+}
+
+ion-alert .alert-wrapper {
+  border-radius: var(--mp-r-lg) !important;
+  border: 1px solid var(--mp-border);
+}
+
+body.dark ion-alert .alert-title,
+body.dark ion-alert .alert-sub-title,
+body.dark ion-alert .alert-message {
+  color: var(--mp-text) !important;
+}
+
+body.dark ion-alert .alert-radio-label,
+body.dark ion-alert .alert-checkbox-label {
+  color: #ffffff !important;
+}
+
+body.dark ion-alert .alert-button {
+  color: #ffffff !important;
+}
+
+/* ---------- Scrollbar ---------- */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--mp-border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--mp-text-subtle);
+}
+
+/* ---------- Reduced motion / coarse pointer ---------- */
 @media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
   html,
   body,
@@ -229,342 +710,8 @@ ion-button:active {
   }
 }
 
-ion-button.button-outline,
-ion-button[fill="outline"] {
-  --color: var(--mp-text);
-  --background: transparent;
-  --background-hover: var(--mp-primary-soft);
-  --border-color: var(--mp-border);
-  --border-radius: 14px;
-  --border-style: solid;
-  --border-width: 1px;
-  --box-shadow: none;
-}
-
-ion-button.button-clear,
-ion-button[fill="clear"] {
-  --background: transparent;
-  --background-hover: var(--mp-primary-soft);
-  --background-activated: var(--mp-primary-soft);
-  --border-width: 0;
-  --box-shadow: none;
-  --color: var(--ion-color-primary);
-}
-
-ion-button.button-clear:hover,
-ion-button[fill="clear"]:hover,
-ion-button.button-clear:active,
-ion-button[fill="clear"]:active {
-  --box-shadow: none;
-}
-
-ion-input,
-ion-select,
-ion-textarea,
-ion-searchbar {
-  --padding-start: 14px;
-  --padding-end: 14px;
-  --padding-top: 12px;
-  --padding-bottom: 12px;
-  --background: var(--mp-surface-muted);
-  --border-radius: 14px;
-  --border-color: transparent;
-  --border-width: 0;
-  --highlight-height: 0;
-  --highlight-color-focused: transparent;
-  --highlight-color-valid: transparent;
-  --highlight-color-invalid: transparent;
-  border: none !important;
-  outline: none;
-  box-shadow: none;
-  transition: background-color 0.2s ease;
-}
-
-ion-input::part(native),
-ion-textarea::part(native),
-ion-searchbar::part(input) {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-ion-input:focus-within,
-ion-select:focus-within,
-ion-textarea:focus-within,
-ion-searchbar:focus-within {
-  border-color: transparent !important;
-  box-shadow: none;
-}
-
-ion-item.item-has-focus {
-  --highlight-height: 0;
-}
-
-ion-item {
-  --background: var(--mp-surface);
-  --border-color: var(--mp-border);
-  --color: var(--mp-text);
-  border-radius: 14px;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-ion-item:hover {
-  --background: var(--mp-primary-soft);
-}
-
-ion-label {
-  color: var(--mp-text) !important;
-}
-
-ion-label p {
-  color: var(--mp-text-muted) !important;
-}
-
-/* Keep stacked form labels clear from input/select surfaces */
-ion-item ion-label[position="stacked"] {
-  display: block;
-  margin-bottom: 8px;
-  white-space: normal;
-}
-
-ion-item ion-label[position="stacked"] + ion-input,
-ion-item ion-label[position="stacked"] + ion-select,
-ion-item ion-label[position="stacked"] + ion-textarea,
-ion-item ion-label[position="stacked"] + ion-datetime {
-  width: 100%;
-  margin-top: 2px;
-}
-
-/* Allow button to overlap the tab bar */
-ion-tabs {
-  overflow: visible;
-}
-
-ion-tab-bar {
-  --background: var(--mp-surface);
-  --color: var(--mp-text-muted);
-  --color-selected: var(--mp-text);
-  border-top: 1px solid var(--mp-border);
-  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
-  transition: background 0.3s ease;
-  /* Handle Android navigation bar overlap - supports both approaches */
-  /* Use Capacitor 8 injected CSS variable first, fallback to env() */
-  padding-bottom: max(var(--safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px));
-  /* Allow the add button to overlap/stick out of the tab bar */
-  overflow: visible;
-}
-
-body.dark ion-tab-bar {
-  --background: #181818;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
-}
-
-.mp-tabbar {
-  overflow: visible;
-}
-
-.mp-tab-btn ion-label {
-  opacity: 0.85;
-  font-weight: 600;
-  transition: opacity 0.2s ease, font-weight 0.2s ease;
-}
-
-.mp-tab-btn--active ion-label {
-  font-weight: 800;
-  opacity: 1;
-}
-
-.mp-tab-btn ion-icon {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
-}
-
-.mp-tab-btn--active ion-icon {
-  transform: scale(1.04);
-}
-
-.mp-tab-btn--add {
-  --color: #ffffff;
-  --ripple-color: transparent;
-  position: relative;
-  overflow: visible !important;
-}
-
-ion-tab-button.mp-tab-btn--add::part(native) {
-  overflow: visible;
-}
-
-.mp-tab-btn__add-circle {
-  width: 64px;
-  height: 64px;
-  aspect-ratio: 1 / 1;
-  flex: 0 0 64px;
-  border-radius: 50%;
-  background: var(--ion-color-primary);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none;
-  transform: translateY(-16px);
-  /* Ensure button appears above content */
-  position: relative;
-  z-index: 10;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.mp-tab-btn__add-circle:active,
-ion-tab-button.mp-tab-btn--add:active .mp-tab-btn__add-circle {
-  transform: translateY(-16px) scale(0.92);
-  box-shadow: none;
-}
-
-.mp-tab-btn__add-circle ion-icon {
-  font-size: 34px;
-}
-
-.mp-tab-btn__hidden-label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-ion-modal {
-  --background: var(--mp-surface);
-  --box-shadow: var(--mp-shadow-strong);
-  --border-radius: 20px;
-  --border-color: var(--mp-border);
-}
-
-ion-popover {
-  --background: var(--mp-surface);
-  --color: var(--mp-text);
-  --border-color: var(--mp-border);
-}
-
-ion-popover::part(content) {
-  border: 1px solid var(--mp-border);
-  background: var(--mp-surface);
-  color: var(--mp-text);
-}
-
-body.dark ion-popover ion-select-popover,
-body.dark ion-popover ion-select-popover ion-item,
-body.dark ion-popover ion-select-popover .select-interface-option,
-body.dark ion-popover ion-select-popover ion-label {
-  --color: #ffffff;
-  color: #ffffff !important;
-}
-
-ion-action-sheet {
-  --background: var(--mp-surface);
-  --color: var(--mp-text);
-  --button-color: var(--mp-text);
-  --button-background: transparent;
-  --border-color: var(--mp-border);
-}
-
-body.dark ion-action-sheet {
-  --color: #ffffff;
-  --button-color: #ffffff;
-}
-
-body.dark ion-action-sheet .action-sheet-title,
-body.dark ion-action-sheet .action-sheet-button,
-body.dark ion-action-sheet .action-sheet-option,
-body.dark ion-action-sheet .action-sheet-button-inner {
-  color: #ffffff !important;
-}
-
-ion-chip {
-  --background: var(--mp-surface-muted);
-  --color: var(--mp-text);
-  --border-color: var(--mp-border);
-  border-radius: 999px;
-  transition: background-color 0.2s ease;
-}
-
-ion-badge {
-  --background: var(--mp-primary);
-  --color: #ffffff;
-  font-weight: 700;
-  padding: 6px 10px;
-  border-radius: 999px;
-}
-
-ion-refresher-content .refresher-pulling-icon,
-ion-refresher-content .refresher-refreshing-icon {
-  color: var(--mp-primary);
-}
-
-.mp-tabbar {
-  overflow: visible;
-}
-
-:root body.has-softkeys .mp-tabbar {
-  padding-bottom: var(--softkey-inset);
-}
-
-/* Toast styling for all themes */
-ion-toast {
-  --background: var(--mp-surface);
-  --color: var(--mp-text);
-  --border-radius: 14px;
-  --box-shadow: var(--mp-shadow-strong);
-  --border-width: 1px;
-  --border-style: solid;
-  --border-color: var(--mp-border);
-}
-
-/* Alert styling for all themes */
-ion-alert {
-  --background: var(--mp-surface);
-  --color: var(--mp-text);
-}
-
-body.dark ion-alert .alert-title,
-body.dark ion-alert .alert-sub-title,
-body.dark ion-alert .alert-message {
-  color: var(--mp-text) !important;
-}
-
-body.dark ion-alert .alert-radio-label,
-body.dark ion-alert .alert-checkbox-label {
-  color: #ffffff !important;
-}
-
-body.dark ion-alert .alert-button {
-  color: #ffffff !important;
-}
-
-/* Improved scrollbar for all themes */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--mp-border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--mp-text-muted);
-}
-
-/* Performance optimizations: CSS containment for layout performance.
-   NOTE: ion-page is intentionally excluded — Ionic manages its own containment
-   (contain: layout style size) and overriding with `paint` creates a new stacking
-   context that can break z-index during slide transitions. */
+/* ---------- Performance: CSS containment ----------
+   ion-page intentionally excluded (Ionic manages its own containment). */
 ion-content,
 ion-card,
 ion-item,
@@ -573,12 +720,10 @@ ion-toolbar {
   contain: layout style paint;
 }
 
-/* Don't contain ion-tab-bar to allow button overflow */
 ion-tab-bar {
   contain: style;
 }
 
-/* Remove containment for interactive elements */
 ion-button,
 ion-input,
 ion-textarea,
@@ -589,245 +734,78 @@ ion-radio {
   contain: none;
 }
 
-/* Utility Classes for Consistent Design */
+/* =================================================================
+   Utility classes (kept for existing markup)
+   ================================================================= */
 
-/* Spacing Utilities */
-.mp-spacing-xs {
-  gap: 4px;
-}
+.mp-spacing-xs { gap: 4px; }
+.mp-spacing-sm { gap: 8px; }
+.mp-spacing-md { gap: 12px; }
+.mp-spacing-lg { gap: 16px; }
+.mp-spacing-xl { gap: 20px; }
 
-.mp-spacing-sm {
-  gap: 8px;
-}
+.mp-mb-xs { margin-bottom: 4px; }
+.mp-mb-sm { margin-bottom: 8px; }
+.mp-mb-md { margin-bottom: 12px; }
+.mp-mb-lg { margin-bottom: 16px; }
+.mp-mb-xl { margin-bottom: 20px; }
 
-.mp-spacing-md {
-  gap: 12px;
-}
+.mp-mt-xs { margin-top: 4px; }
+.mp-mt-sm { margin-top: 8px; }
+.mp-mt-md { margin-top: 12px; }
+.mp-mt-lg { margin-top: 16px; }
+.mp-mt-xl { margin-top: 20px; }
+.mp-mt-0 { margin-top: 0; }
 
-.mp-spacing-lg {
-  gap: 16px;
-}
+.mp-ml-xs { margin-left: 4px; }
+.mp-ml-sm { margin-left: 6px; }
+.mp-ml-md { margin-left: 12px; }
+.mp-mr-sm { margin-right: -8px; }
 
-.mp-spacing-xl {
-  gap: 20px;
-}
+.mp-p-sm { padding: 8px; }
+.mp-p-md { padding: 12px; }
+.mp-p-lg { padding: 16px; }
+.mp-p-xl { padding: 20px; }
 
-.mp-mb-xs {
-  margin-bottom: 4px;
-}
+.mp-rounded-sm { border-radius: var(--mp-r-sm); }
+.mp-rounded-md { border-radius: var(--mp-r-md); }
+.mp-rounded-card { border-radius: var(--mp-r-card); }
+.mp-rounded-pill { border-radius: var(--mp-r-pill); }
 
-.mp-mb-sm {
-  margin-bottom: 8px;
-}
+.mp-text-xs { font-size: 0.75rem; line-height: 1.4; }
+.mp-text-sm { font-size: 0.875rem; line-height: 1.5; }
+.mp-text-base { font-size: 1rem; line-height: 1.5; }
+.mp-text-lg { font-size: 1.125rem; line-height: 1.5; }
+.mp-text-xl { font-size: 1.25rem; line-height: 1.4; }
+.mp-text-2xl { font-size: 1.5rem; line-height: 1.3; }
+.mp-text-3xl { font-size: 1.875rem; line-height: 1.2; }
+.mp-text-4xl { font-size: 2.125rem; line-height: 1.2; }
 
-.mp-mb-md {
-  margin-bottom: 12px;
-}
+.mp-font-normal { font-weight: 400; }
+.mp-font-medium { font-weight: 500; }
+.mp-font-semibold { font-weight: 600; }
+.mp-font-bold { font-weight: 700; }
+.mp-font-extrabold { font-weight: 800; }
 
-.mp-mb-lg {
-  margin-bottom: 16px;
-}
+.mp-text-primary { color: var(--mp-text); }
+.mp-text-muted { color: var(--mp-text-muted); }
 
-.mp-mb-xl {
-  margin-bottom: 20px;
-}
+.mp-flex { display: flex; }
+.mp-flex-col { display: flex; flex-direction: column; }
+.mp-flex-row { display: flex; flex-direction: row; }
+.mp-items-center { align-items: center; }
+.mp-justify-center { justify-content: center; }
+.mp-justify-between { justify-content: space-between; }
+.mp-flex-wrap { flex-wrap: wrap; }
 
-.mp-mt-xs {
-  margin-top: 4px;
-}
+.mp-btn-standard { --border-radius: var(--mp-r-control); }
+.mp-btn-pill { --border-radius: var(--mp-r-pill); }
 
-.mp-mt-sm {
-  margin-top: 8px;
-}
-
-.mp-mt-md {
-  margin-top: 12px;
-}
-
-.mp-mt-lg {
-  margin-top: 16px;
-}
-
-.mp-mt-xl {
-  margin-top: 20px;
-}
-
-.mp-ml-xs {
-  margin-left: 4px;
-}
-
-.mp-ml-sm {
-  margin-left: 6px;
-}
-
-.mp-ml-md {
-  margin-left: 12px;
-}
-
-.mp-mr-sm {
-  margin-right: -8px;
-}
-
-.mp-mt-0 {
-  margin-top: 0;
-}
-
-/* Padding Utilities */
-.mp-p-sm {
-  padding: 8px;
-}
-
-.mp-p-md {
-  padding: 12px;
-}
-
-.mp-p-lg {
-  padding: 16px;
-}
-
-.mp-p-xl {
-  padding: 20px;
-}
-
-/* Border Radius Utilities */
-:root {
-  --mp-r-sm: 8px;
-  --mp-r-md: 10px;
-  --mp-r-card: 8px;
-  --mp-r-pill: 999px;
-}
-
-.mp-rounded-sm {
-  border-radius: var(--mp-r-sm);
-}
-
-.mp-rounded-md {
-  border-radius: var(--mp-r-md);
-}
-
-.mp-rounded-card {
-  border-radius: var(--mp-r-card);
-}
-
-.mp-rounded-pill {
-  border-radius: var(--mp-r-pill);
-}
-
-/* Typography Utilities */
-.mp-text-xs {
-  font-size: 0.75rem; /* 12px */
-  line-height: 1.4;
-}
-
-.mp-text-sm {
-  font-size: 0.875rem; /* 14px */
-  line-height: 1.5;
-}
-
-.mp-text-base {
-  font-size: 1rem; /* 16px */
-  line-height: 1.5;
-}
-
-.mp-text-lg {
-  font-size: 1.125rem; /* 18px */
-  line-height: 1.5;
-}
-
-.mp-text-xl {
-  font-size: 1.25rem; /* 20px */
-  line-height: 1.4;
-}
-
-.mp-text-2xl {
-  font-size: 1.5rem; /* 24px */
-  line-height: 1.3;
-}
-
-.mp-text-3xl {
-  font-size: 1.875rem; /* 30px */
-  line-height: 1.2;
-}
-
-.mp-text-4xl {
-  font-size: 2.125rem; /* 34px */
-  line-height: 1.2;
-}
-
-.mp-font-normal {
-  font-weight: 400;
-}
-
-.mp-font-medium {
-  font-weight: 500;
-}
-
-.mp-font-semibold {
-  font-weight: 600;
-}
-
-.mp-font-bold {
-  font-weight: 700;
-}
-
-.mp-font-extrabold {
-  font-weight: 800;
-}
-
-/* Text Colors */
-.mp-text-primary {
-  color: var(--mp-text);
-}
-
-.mp-text-muted {
-  color: var(--mp-text-muted);
-}
-
-/* Flexbox Utilities */
-.mp-flex {
-  display: flex;
-}
-
-.mp-flex-col {
-  display: flex;
-  flex-direction: column;
-}
-
-.mp-flex-row {
-  display: flex;
-  flex-direction: row;
-}
-
-.mp-items-center {
-  align-items: center;
-}
-
-.mp-justify-center {
-  justify-content: center;
-}
-
-.mp-justify-between {
-  justify-content: space-between;
-}
-
-.mp-flex-wrap {
-  flex-wrap: wrap;
-}
-
-/* Button Utilities */
-.mp-btn-standard {
-  --border-radius: 14px;
-}
-
-.mp-btn-pill {
-  --border-radius: var(--mp-r-pill);
-}
-
-/* Card Utilities */
 .mp-card {
   background: var(--mp-surface);
   border: 1px solid var(--mp-border);
   border-radius: var(--mp-r-card);
+  box-shadow: var(--mp-shadow-sm);
   padding: 18px;
 }
 
@@ -838,11 +816,15 @@ ion-radio {
   margin-bottom: 12px;
 }
 
-.mp-card-content {
-  color: var(--mp-text);
-}
+.mp-card-content { color: var(--mp-text); }
 
-/* Width Utilities */
-.mp-w-full {
-  width: 100%;
+.mp-w-full { width: 100%; }
+
+/* Reusable section eyebrow used across remade screens */
+.mp-section-label {
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--mp-text);
+  margin: 0 0 10px;
 }
