@@ -71,17 +71,61 @@
 }
 
 .fs-result-kcal {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--mp-text);
-  min-width: 48px;
+  min-width: 52px;
   text-align: right;
+  line-height: 1.05;
 }
 
 .fs-result-kcal__unit {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
+/* FatSecret-style result row layout */
+.fs-result-label {
+  margin: 2px 0;
+}
+
+.fs-result-name {
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--mp-text);
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.fs-result-brand {
+  font-size: 0.76rem;
   font-weight: 500;
-  opacity: 0.7;
+  color: var(--mp-text-muted);
+  margin-top: 1px;
+  white-space: normal;
+}
+
+.fs-result-macros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 4px;
+  font-size: 0.76rem;
+  color: var(--mp-text-muted);
+}
+
+.fs-result-basis {
+  font-weight: 600;
+  color: var(--mp-subtext, var(--mp-text-muted));
+}
+
+.fs-result-macro b {
+  font-weight: 600;
+  color: var(--mp-text);
 }
 
 .add-food-page {

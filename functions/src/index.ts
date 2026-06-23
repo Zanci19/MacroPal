@@ -169,13 +169,50 @@ export const offBarcode = onRequest({ region: "europe-west1" }, async (req, res)
   }
 });
 
-/* ============ OFF: Search (V3 primary, V1 fallback) ============ */
+/* ============ OFF: Search (Search-a-licious primary, V1 fallback) ============ */
 /**
  * GET /offSearch?q=term&page=1&page_size=20&lc=en&country=slovenia&fresh=0
- * - V3 (Search-a-licious) is the primary full-text search (best relevance).
- * - V1 is used as a reliable fallback for free-text queries.
- * - Add &fresh=1 only when you truly need uncached results.
+ * - Search-a-licious (search.openfoodfacts.org) is the primary full-text engine.
+ *   It has by far the best relevance for free-text food queries.
+ * - The legacy V1 (/cgi/search.pl) is kept as a rock-solid fallback.
+ * - Results are filtered to products that actually have nutrition data and
+ *   re-ranked to surface generic, on-topic foods first (FatSecret-style).
  */
+type OffProduct = Record<string, unknown>;
+
+const offSearchFields =
+  "code,product_name,brands,nutriments,serving_size,image_front_url,nutriscore_grade,unique_scans_n";
+
+/** A product is only useful to a macro tracker if it carries nutrition data. */
+function offProductHasMacros(p: OffProduct): boolean {
+  const n = (p?.nutriments || {}) as Record<string, unknown>;
+  return (
+    typeof n["energy-kcal_100g"] === "number" ||
+    typeof n["energy-kcal_serving"] === "number" ||
+    typeof n["proteins_100g"] === "number" ||
+    typeof n["carbohydrates_100g"] === "number" ||
+    typeof n["fat_100g"] === "number"
+  );
+}
+
+/** Lightweight relevance score so the most on-topic foods float to the top. */
+function offRelevanceScore(p: OffProduct, qLower: string): number {
+  const name = String(p?.product_name || "").toLowerCase().trim();
+  if (!name) return -1;
+  let s = 0;
+  if (name === qLower) s += 100;
+  else if (name.startsWith(qLower)) s += 60;
+  else if (name.includes(qLower)) s += 30;
+  // Prefer short, generic names without a brand (closer to FatSecret's generics)
+  const brand = String(p?.brands || "").toLowerCase().trim();
+  if (!brand) s += 10;
+  if (name.split(/\s+/).length <= 3) s += 6;
+  // Popularity as a gentle tiebreaker
+  const scans = Number((p as { unique_scans_n?: unknown }).unique_scans_n) || 0;
+  s += Math.min(scans, 2000) / 2000;
+  return s;
+}
+
 export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) => {
   setCors(res);
   if (req.method === "OPTIONS") return void res.status(204).send("");
@@ -190,28 +227,57 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
 
   if (!qRaw) return void res.status(400).json({ error: "missing_query" });
 
+  const finalize = (json: Record<string, unknown>, products: OffProduct[]) => {
+    const cleaned = products
+      .filter((p) => String(p?.product_name || "").trim() && offProductHasMacros(p))
+      .sort((a, b) => offRelevanceScore(b, qLower) - offRelevanceScore(a, qLower));
+    res.set("Content-Type", "application/json");
+    setCaching(res);
+    return void res
+      .status(200)
+      .send(JSON.stringify({ ...json, products: cleaned }));
+  };
+
   try {
-    // Shared fields list for compact responses
-    const fields =
-      "code,product_name,brands,nutriments,serving_size,image_front_url,nutriscore_grade";
+    // ---------- Primary: Search-a-licious (best full-text relevance) ----------
+    const salUrl = new URL("https://search.openfoodfacts.org/api/v1/search");
+    salUrl.searchParams.set("q", qRaw);
+    salUrl.searchParams.set("page", String(page));
+    salUrl.searchParams.set("page_size", String(pageSize));
+    salUrl.searchParams.set("fields", offSearchFields);
+    salUrl.searchParams.set("boost_phrase", "true");
 
-    // ---------- V3 (Search-a-licious) ----------
-    // Note: V3 is evolving; current deployments expose it under /api/v3/search on OFF hosts.
-    // We keep V1 as a rock-solid fallback if a given mirror/version is unavailable.
-    const makeV3 = (host: string) => {
-      const u = new URL(`https://${host}/api/v3/search`);
-      u.searchParams.set("q", qRaw);
-      u.searchParams.set("page", String(page));
-      u.searchParams.set("page_size", String(pageSize));
-      u.searchParams.set("fields", fields);
-      if (lc) u.searchParams.set("lc", lc);
-      if (country) u.searchParams.set("countries_tags_en", country);
-      if (fresh) u.searchParams.set("nocache", "1"); // opt-in only
-      return u.toString();
-    };
-    const v3Urls = [makeV3("world.openfoodfacts.org"), makeV3("world.openfoodfacts.net")];
+    try {
+      const salRes = await fetchWithTimeout(
+        salUrl.toString(),
+        {
+          headers: {
+            "User-Agent": "MacroPal/1.0 (support@macropal.app)",
+            "Accept": "application/json",
+          },
+        },
+        6000
+      );
+      if (salRes.ok) {
+        const salJson = await salRes.json();
+        // Search-a-licious returns matches under `hits`, not `products`.
+        const hits: OffProduct[] = Array.isArray(salJson?.hits) ? salJson.hits : [];
+        if (hits.length > 0) {
+          return finalize(
+            {
+              count: typeof salJson?.count === "number" ? salJson.count : undefined,
+              page,
+              page_size: pageSize,
+            },
+            hits
+          );
+        }
+      }
+    } catch (e) {
+      console.warn("offSearch: Search-a-licious unavailable, falling back to V1:", e);
+    }
 
-    // ---------- V1 (legacy free-text) fallback ----------
+    // ---------- Fallback: V1 (legacy free-text) ----------
     const makeV1 = (host: string) => {
       const u = new URL(`https://${host}/cgi/search.pl`);
       u.searchParams.set("action", "process");
@@ -221,7 +287,7 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
       u.searchParams.set("sort_by", "unique_scans_n");
       u.searchParams.set("page", String(page));
       u.searchParams.set("page_size", String(pageSize));
-      u.searchParams.set("fields", fields);
+      u.searchParams.set("fields", offSearchFields);
       if (lc) u.searchParams.set("lc", lc);
       if (country) u.searchParams.set("countries_tags_en", country);
       if (fresh) u.searchParams.set("nocache", "1"); // opt-in only
@@ -229,54 +295,16 @@ export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) 
     };
     const v1Urls = [makeV1("world.openfoodfacts.org"), makeV1("world.openfoodfacts.net")];
 
-    let r: Response;
-    try {
-      r = await raceOk(v3Urls, {
-        headers: {
-          "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-          "Accept": "application/json",
-        },
-      });
-      // If V3 responds but shape is unexpected or empty, we can choose to fall back.
-      // We'll parse first and decide below.
-      const probe = await r.clone().json().catch(() => null);
-      const products = Array.isArray(probe?.products) ? probe.products : [];
-      if (!products || products.length === 0) {
-        // Fallback to V1 for robustness
-        r = await raceOk(v1Urls, {
-          headers: {
-            "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-            "Accept": "application/json",
-          },
-        });
-      } else {
-        // reuse parsed body below
-      }
-    } catch {
-      // V3 unavailable => go V1
-      r = await raceOk(v1Urls, {
-        headers: {
-          "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-          "Accept": "application/json",
-        },
-      });
-    }
-
-    const json = await r.json();
-    const products: Record<string, unknown>[] = Array.isArray(json?.products) ? json.products : [];
-
-    // Lightweight relevance boost (product_name contains the query)
-    products.sort((a, b) => {
-      const na = (String(a.product_name || "")).toLowerCase();
-      const nb = (String(b.product_name || "")).toLowerCase();
-      const scoreA = na.includes(qLower) ? 1 : 0;
-      const scoreB = nb.includes(qLower) ? 1 : 0;
-      return scoreB - scoreA;
+    const r = await raceOk(v1Urls, {
+      headers: {
+        "User-Agent": "MacroPal/1.0 (support@macropal.app)",
+        "Accept": "application/json",
+      },
     });
 
-    res.set("Content-Type", "application/json");
-    setCaching(res);
-    return void res.status(200).send(JSON.stringify({ ...json, products }));
+    const json = await r.json();
+    const products: OffProduct[] = Array.isArray(json?.products) ? json.products : [];
+    return finalize(json, products);
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error(String(e));
     const aborted = error.name === "AbortError";

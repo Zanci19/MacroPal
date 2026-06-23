@@ -306,6 +306,7 @@ const FAVORITES_LOAD_DELAY_MS = 300;
 const RECENT_FOODS_LOAD_DELAY_MS = 500;
 const MEAL_PRESETS_LOAD_DELAY_MS = 700;
 const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_PAGE_SIZE = 25;
 
 // Validation constants for custom food creation
 const MAX_CALORIES = 10000;
@@ -2004,7 +2005,7 @@ const AddFood: React.FC = () => {
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
-      url.searchParams.set("page_size", "20");
+      url.searchParams.set("page_size", String(SEARCH_PAGE_SIZE));
 
       const res = await fetch(url.toString(), { signal: controller.signal });
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
@@ -2053,8 +2054,8 @@ const AddFood: React.FC = () => {
 
       // Determine if there are more pages based on API total count
       const hasMorePages = typeof data.count === 'number'
-        ? pageNumber * 20 < data.count
-        : foods.length >= 20;
+        ? pageNumber * SEARCH_PAGE_SIZE < data.count
+        : foods.length >= SEARCH_PAGE_SIZE;
 
       // If navigating forward and got no new results, stay on current page
       if (pageNumber > 1 && deduped.length === 0) {
@@ -3944,14 +3945,29 @@ const AddFood: React.FC = () => {
               </div>
             )}
 
-            <IonList className="add-food-results-list" ref={resultsListRef}>
+            <IonList className="add-food-results-list fs-results-list" ref={resultsListRef}>
               {results.map((food) => {
-                const preview = macrosPer100g(food.nutriments);
+                const per100 = macrosPer100g(food.nutriments);
+                const perServ = macrosPerServing(food.nutriments);
+                const hasServ =
+                  !!food.serving_size &&
+                  !!(
+                    perServ.calories ||
+                    perServ.carbs ||
+                    perServ.protein ||
+                    perServ.fat
+                  );
+                const preview = hasServ ? perServ : per100;
+                const basis = hasServ
+                  ? `Per ${food.serving_size}`
+                  : "Per 100 g";
 
                 return (
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
                     button
+                    detail={false}
+                    className="fs-result-item"
                     disabled={foodDetailLoading !== null}
                     onClick={() => {
                       console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
@@ -3962,19 +3978,35 @@ const AddFood: React.FC = () => {
                       fetchFoodDetailsByCode(food.code);
                     }}
                   >
-                    <IonLabel>
-                      <h2>
+                    <IonLabel className="fs-result-label">
+                      <h2 className="fs-result-name">
                         {food.product_name || "(no name)"}
-                        {food.brands ? ` · ${food.brands}` : ""}
                       </h2>
-                      <p>
-                        {food.serving_size ? `Per serving: ${food.serving_size}` : "Per 100g"} · C {preview.carbs || 0}g · P {preview.protein || 0}g · F {preview.fat || 0}g
+                      {food.brands ? (
+                        <p className="fs-result-brand">{food.brands}</p>
+                      ) : null}
+                      <p className="fs-result-macros">
+                        <span className="fs-result-basis">{basis}</span>
+                        <span className="fs-result-macro">
+                          Fat <b>{preview.fat || 0}g</b>
+                        </span>
+                        <span className="fs-result-macro">
+                          Carbs <b>{preview.carbs || 0}g</b>
+                        </span>
+                        <span className="fs-result-macro">
+                          Prot <b>{preview.protein || 0}g</b>
+                        </span>
                       </p>
                     </IonLabel>
-                    {foodDetailLoading === food.code
-                      ? <IonSpinner slot="end" name="crescent" />
-                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<br /><span className="fs-result-kcal__unit">kcal</span></div>
-                    }
+                    {foodDetailLoading === food.code ? (
+                      <IonSpinner slot="end" name="crescent" />
+                    ) : (
+                      <div slot="end" className="fs-result-kcal">
+                        {Math.round(preview.calories || 0)}
+                        <br />
+                        <span className="fs-result-kcal__unit">kcal</span>
+                      </div>
+                    )}
                   </IonItem>
                 );
               })}
