@@ -3945,29 +3945,14 @@ const AddFood: React.FC = () => {
               </div>
             )}
 
-            <IonList className="add-food-results-list fs-results-list" ref={resultsListRef}>
+            <IonList className="add-food-results-list" ref={resultsListRef}>
               {results.map((food) => {
-                const per100 = macrosPer100g(food.nutriments);
-                const perServ = macrosPerServing(food.nutriments);
-                const hasServ =
-                  !!food.serving_size &&
-                  !!(
-                    perServ.calories ||
-                    perServ.carbs ||
-                    perServ.protein ||
-                    perServ.fat
-                  );
-                const preview = hasServ ? perServ : per100;
-                const basis = hasServ
-                  ? `Per ${food.serving_size}`
-                  : "Per 100 g";
+                const preview = macrosPer100g(food.nutriments);
 
                 return (
                   <IonItem
                     key={`${food.code}-${food.product_name || ""}`}
                     button
-                    detail={false}
-                    className="fs-result-item"
                     disabled={foodDetailLoading !== null}
                     onClick={() => {
                       console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
@@ -3978,35 +3963,19 @@ const AddFood: React.FC = () => {
                       fetchFoodDetailsByCode(food.code);
                     }}
                   >
-                    <IonLabel className="fs-result-label">
-                      <h2 className="fs-result-name">
+                    <IonLabel>
+                      <h2>
                         {food.product_name || "(no name)"}
+                        {food.brands ? ` · ${food.brands}` : ""}
                       </h2>
-                      {food.brands ? (
-                        <p className="fs-result-brand">{food.brands}</p>
-                      ) : null}
-                      <p className="fs-result-macros">
-                        <span className="fs-result-basis">{basis}</span>
-                        <span className="fs-result-macro">
-                          Fat <b>{preview.fat || 0}g</b>
-                        </span>
-                        <span className="fs-result-macro">
-                          Carbs <b>{preview.carbs || 0}g</b>
-                        </span>
-                        <span className="fs-result-macro">
-                          Prot <b>{preview.protein || 0}g</b>
-                        </span>
+                      <p>
+                        {food.serving_size ? `Per serving: ${food.serving_size}` : "Per 100g"} · C {preview.carbs || 0}g · P {preview.protein || 0}g · F {preview.fat || 0}g
                       </p>
                     </IonLabel>
-                    {foodDetailLoading === food.code ? (
-                      <IonSpinner slot="end" name="crescent" />
-                    ) : (
-                      <div slot="end" className="fs-result-kcal">
-                        {Math.round(preview.calories || 0)}
-                        <br />
-                        <span className="fs-result-kcal__unit">kcal</span>
-                      </div>
-                    )}
+                    {foodDetailLoading === food.code
+                      ? <IonSpinner slot="end" name="crescent" />
+                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<br /><span className="fs-result-kcal__unit">kcal</span></div>
+                    }
                   </IonItem>
                 );
               })}

@@ -1,3 +1,21 @@
+/* =====================================================================
+   AddFood — FatSecret-inspired food search UI
+   Clean surface, pill search bar, flat result rows with a prominent
+   calorie figure and a muted macro sub-line.
+   ===================================================================== */
+
+/* ---------- Page shell ---------- */
+
+.add-food-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 6px;
+  background:
+    radial-gradient(circle at 12% -16%, var(--mp-primary-softer, transparent), transparent 46%),
+    var(--mp-bg);
+}
+
 .add-food-page--quick-add-enter {
   animation: add-food-quick-add-enter 260ms cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -19,121 +37,7 @@
   }
 }
 
-/* ---- FatSecret-style search bar ---- */
-
-.fs-search-bar {
-  display: flex;
-  align-items: center;
-  border: 1.5px solid var(--mp-border);
-  border-radius: 9999px;
-  padding: 4px 4px 4px 14px;
-  background: var(--mp-surface);
-  margin-bottom: 10px;
-  transition: border-color 0.2s ease;
-}
-
-.fs-search-bar:focus-within {
-  border-color: var(--ion-color-primary);
-}
-
-.fs-search-bar__icon {
-  font-size: 18px;
-  color: var(--mp-text-muted);
-  flex-shrink: 0;
-  margin-right: 4px;
-}
-
-.fs-search-bar__input {
-  flex: 1;
-  --padding-start: 0;
-  --padding-end: 0;
-  font-size: 1rem;
-}
-
-.fs-search-bar__action {
-  --padding-start: 6px;
-  --padding-end: 6px;
-  --border-radius: 9999px;
-  flex-shrink: 0;
-  color: var(--mp-text-muted);
-}
-
-/* FatSecret-style search results list items */
-.add-food-results-list ion-item h2 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--mp-text);
-}
-
-.add-food-results-list ion-item p {
-  font-size: 0.8rem;
-  color: var(--mp-text-muted);
-}
-
-.fs-result-kcal {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--mp-text);
-  min-width: 52px;
-  text-align: right;
-  line-height: 1.05;
-}
-
-.fs-result-kcal__unit {
-  font-size: 0.62rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  opacity: 0.6;
-}
-
-/* FatSecret-style result row layout */
-.fs-result-label {
-  margin: 2px 0;
-}
-
-.fs-result-name {
-  font-size: 0.96rem;
-  font-weight: 600;
-  color: var(--mp-text);
-  white-space: normal;
-  line-height: 1.25;
-}
-
-.fs-result-brand {
-  font-size: 0.76rem;
-  font-weight: 500;
-  color: var(--mp-text-muted);
-  margin-top: 1px;
-  white-space: normal;
-}
-
-.fs-result-macros {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  margin-top: 4px;
-  font-size: 0.76rem;
-  color: var(--mp-text-muted);
-}
-
-.fs-result-basis {
-  font-weight: 600;
-  color: var(--mp-subtext, var(--mp-text-muted));
-}
-
-.fs-result-macro b {
-  font-weight: 600;
-  color: var(--mp-text);
-}
-
-.add-food-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding-top: 6px;
-}
+/* ---------- Header ---------- */
 
 .add-food-header ion-toolbar {
   --padding-start: 8px;
@@ -143,28 +47,371 @@
 .add-food-header ion-title {
   text-align: left;
   font-size: 1.1rem;
+  font-weight: 700;
 }
 
+/* ---------- Segmented mode switch (Search / Favourites) ---------- */
+
 .add-food-mode-segment {
+  --background: var(--mp-surface-muted);
+  border-radius: var(--mp-r-pill, 9999px);
+  padding: 3px;
   margin-bottom: 12px;
+  box-shadow: inset 0 0 0 1px var(--mp-border);
 }
 
 .add-food-mode-segment ion-segment-button {
-  min-height: 40px;
+  --background-checked: var(--mp-surface);
+  --color: var(--mp-text-muted);
+  --color-checked: var(--mp-primary-strong, var(--mp-primary));
+  --indicator-color: transparent;
+  --border-radius: var(--mp-r-pill, 9999px);
+  min-height: 38px;
   text-transform: none;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
-.add-food-search-input {
-  --background: transparent;
-  --border-radius: 9999px;
-  --padding-start: 10px;
-  --inner-padding-end: 10px;
-  border: 1px solid var(--mp-border);
+.add-food-mode-segment ion-segment-button.segment-button-checked {
+  box-shadow: var(--mp-shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.12));
 }
 
-/* Swiper pagination styling for nutrition info */
+/* ---------- FatSecret-style search bar ---------- */
+
+.fs-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-pill, 9999px);
+  padding: 4px 6px 4px 14px;
+  background: var(--mp-surface);
+  box-shadow: var(--mp-shadow-soft);
+  margin-bottom: 10px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.fs-search-bar:focus-within {
+  border-color: var(--mp-primary);
+  box-shadow: 0 0 0 3px var(--mp-primary-softer, transparent);
+}
+
+.fs-search-bar__icon {
+  font-size: 19px;
+  color: var(--mp-text-muted);
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.fs-search-bar__input {
+  flex: 1;
+  --padding-start: 0;
+  --padding-end: 0;
+  --placeholder-color: var(--mp-text-muted);
+  --placeholder-opacity: 1;
+  font-size: 1rem;
+}
+
+.fs-search-bar__action {
+  --padding-start: 6px;
+  --padding-end: 6px;
+  --border-radius: var(--mp-r-pill, 9999px);
+  flex-shrink: 0;
+  color: var(--mp-text-muted);
+}
+
+/* ---------- Section headers & chips ---------- */
+
+.add-food-recent-section {
+  margin-top: 8px;
+}
+
+.add-food-favorites-section {
+  margin-top: 12px;
+}
+
+.add-food-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--mp-border);
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.add-food-section-text {
+  padding: 4px 2px;
+  display: block;
+  color: var(--mp-text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.add-food-section-text--spaced {
+  margin-top: 10px;
+}
+
+.add-food-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.add-food-chips-container ion-chip {
+  --background: var(--mp-chip-bg, var(--mp-surface-muted));
+  border: 1px solid var(--mp-border);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* ---------- Search results ---------- */
+
+.add-food-results-meta {
+  margin: 8px 2px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.add-food-results-meta ion-text {
+  display: inline-block;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-pill, 9999px);
+  padding: 5px 12px;
+  background: var(--mp-surface-muted);
+  color: var(--mp-text-muted);
+}
+
+.add-food-results-list {
+  margin-top: 4px;
+  background: transparent;
+}
+
+.add-food-results-list ion-item {
+  --background: var(--mp-surface);
+  --border-color: var(--mp-border);
+  --inner-border-width: 0 0 1px 0;
+  --inner-padding-start: 2px;
+  --inner-padding-end: 2px;
+  --padding-start: 6px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+  --min-height: 66px;
+}
+
+.add-food-results-list ion-item h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mp-text);
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.add-food-results-list ion-item p {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: var(--mp-text-muted);
+  white-space: normal;
+  line-height: 1.3;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .add-food-results-list ion-item:hover {
+    --background: var(--mp-surface-muted);
+  }
+}
+
+/* Prominent calorie figure on the right of each row */
+.fs-result-kcal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 56px;
+  text-align: right;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--mp-primary-strong, var(--mp-primary));
+}
+
+.fs-result-kcal br {
+  display: none;
+}
+
+.fs-result-kcal__unit {
+  margin-top: 2px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mp-text-muted);
+}
+
+.add-food-end-of-results {
+  width: fit-content;
+  margin: 14px auto 4px;
+  padding: 5px 14px;
+  border-radius: var(--mp-r-pill, 9999px);
+  border: 1px solid var(--mp-border);
+  background: var(--mp-surface-muted);
+  color: var(--mp-subtext, var(--mp-text-muted));
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+/* ---------- Pagination ---------- */
+
+.add-food-pagination {
+  display: flex;
+  gap: 10px;
+  padding: 4px 8px;
+}
+
+.add-food-pagination ion-button {
+  flex: 1;
+  --border-radius: var(--mp-r-control, 12px);
+}
+
+.add-food-pagination-toolbar {
+  --padding-start: 0;
+  --padding-end: 0;
+  --background: transparent;
+}
+
+/* ---------- Search helper / empty & tip cards ---------- */
+
+.add-food-search-helper {
+  margin-top: 12px;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card, 16px);
+  box-shadow: var(--mp-shadow-soft);
+}
+
+.add-food-search-helper ion-card-content {
+  padding: 14px 16px;
+}
+
+.add-food-search-helper__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--mp-text-muted);
+}
+
+.add-food-search-helper__title {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: var(--mp-text);
+}
+
+.add-food-search-helper__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.add-food-search-helper--no-results {
+  border-color: var(--mp-border-strong, var(--mp-border));
+}
+
+.add-food-empty-state {
+  padding: 14px 4px;
+  color: var(--mp-text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* ---------- Favourites tab ---------- */
+
+.add-food-favorites-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.add-food-favorites-search {
+  margin-bottom: 0;
+}
+
+.add-food-favorites-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.add-food-favorites-filter ion-button {
+  --border-radius: var(--mp-r-control, 12px);
+  flex: 1;
+  min-width: 140px;
+}
+
+.add-food-favorites-list {
+  margin-top: 4px;
+}
+
+.add-food-favorites-list ion-item {
+  --background: var(--mp-surface);
+  --border-color: var(--mp-border);
+  --inner-border-width: 0 0 1px 0;
+  --min-height: 64px;
+}
+
+.add-food-favorites-list ion-item h2 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mp-text);
+}
+
+.add-food-favorites-list ion-item p {
+  font-size: 0.78rem;
+  color: var(--mp-text-muted);
+}
+
+/* ---------- Custom-nutrient editor ---------- */
+
+.add-food-custom-nutrients {
+  margin: 14px 0 0;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card, 16px);
+  box-shadow: var(--mp-shadow-soft);
+}
+
+.add-food-custom-nutrients ion-card-content {
+  padding: 0 8px 10px;
+}
+
+.add-food-custom-nutrients__item {
+  --background: var(--mp-surface-muted);
+  --border-radius: 10px;
+  --min-height: 68px;
+  border: 1px solid var(--mp-border);
+  border-radius: 10px;
+}
+
+.add-food-custom-nutrients__item ion-label {
+  font-size: 0.72rem;
+  white-space: normal;
+}
+
+/* ---------- Loading states ---------- */
+
+.add-food-loading-state {
+  padding: 16px;
+}
+
+.add-food-loading-state-sm {
+  padding: 8px;
+}
+
+/* ---------- Swiper pagination (nutrition detail) ---------- */
+
 .add-food-page .swiper-pagination {
   position: relative !important;
   margin-top: 12px;
@@ -186,7 +433,8 @@
   border-radius: 4px !important;
 }
 
-/* Micronutrient scrollbar */
+/* ---------- Slim scrollbar (micronutrients) ---------- */
+
 .add-food-page ::-webkit-scrollbar {
   width: 4px;
 }
@@ -198,267 +446,4 @@
 .add-food-page ::-webkit-scrollbar-thumb {
   background: var(--mp-border);
   border-radius: 2px;
-}
-
-/* AddFood specific utilities to replace inline styles */
-.add-food-actions-grid {
-  display: grid;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.add-food-recent-section {
-  margin-top: 8px;
-}
-
-.add-food-favorites-section {
-  margin-top: 12px;
-}
-
-.add-food-results-list {
-  margin-top: 8px;
-}
-
-.add-food-results-meta {
-  margin-top: 10px;
-  margin-bottom: 4px;
-  padding: 0 2px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.add-food-results-list ion-item {
-  --background: transparent;
-  --inner-padding-start: 2px;
-  --inner-padding-end: 2px;
-  --min-height: 64px;
-}
-
-.add-food-section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.add-food-chips-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.add-food-favorites-filter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.add-food-favorites-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-
-.add-food-favorites-search {
-  margin-bottom: 0;
-}
-
-.add-food-pagination {
-  display: flex;
-  gap: 8px;
-  padding: 4px 8px;
-}
-
-.add-food-pagination ion-button {
-  flex: 1;
-}
-
-.add-food-pagination-toolbar {
-  --padding-start: 0;
-  --padding-end: 0;
-}
-
-.add-food-end-of-results {
-  text-align: center;
-  padding: 12px;
-  opacity: 0.6;
-  font-size: 0.875rem;
-  font-style: italic;
-}
-
-.add-food-section-text {
-  padding: 4px 12px;
-  display: block;
-  color: var(--mp-text-muted);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.add-food-section-text--spaced {
-  margin-top: 8px;
-}
-
-.add-food-favorites-list {
-  margin-top: 4px;
-}
-
-.add-food-search-helper {
-  margin-top: 12px;
-}
-
-.add-food-search-helper ion-card-content {
-  padding: 12px 14px;
-}
-
-.add-food-search-helper__label {
-  font-size: 0.74rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  font-weight: 700;
-}
-
-.add-food-search-helper__title {
-  margin: 8px 0 0;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  color: var(--mp-text);
-}
-
-.add-food-search-helper__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.add-food-search-helper--no-results .add-food-search-helper__title {
-  font-weight: 600;
-}
-
-.add-food-empty-state {
-  padding: 12px;
-  opacity: 0.7;
-  font-size: 0.875rem;
-}
-
-.add-food-custom-nutrients {
-  margin: 14px 0 0;
-  border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
-}
-
-.add-food-custom-nutrients ion-card-content {
-  padding: 0 8px 10px;
-}
-
-.add-food-custom-nutrients__item {
-  --background: color-mix(in srgb, var(--mp-surface-muted) 72%, var(--mp-surface));
-  --border-radius: 8px;
-  --min-height: 68px;
-  border: 1px solid var(--mp-border);
-  border-radius: 8px;
-}
-
-.add-food-custom-nutrients__item ion-label {
-  font-size: 0.72rem;
-  white-space: normal;
-}
-
-.add-food-loading-state {
-  padding: 16px;
-}
-
-.add-food-loading-state-sm {
-  padding: 8px;
-}
-
-/* ---- Visual polish pass ---- */
-
-.add-food-page {
-  background:
-    radial-gradient(circle at 10% -14%, color-mix(in srgb, var(--ion-color-primary) 8%, transparent), transparent 44%),
-    radial-gradient(circle at 94% -12%, color-mix(in srgb, var(--ion-color-secondary) 8%, transparent), transparent 40%),
-    var(--mp-bg);
-}
-
-.add-food-page .fs-search-bar {
-  border: 1px solid color-mix(in srgb, var(--ion-color-primary) 16%, var(--mp-border));
-  box-shadow: var(--mp-shadow-soft);
-}
-
-.add-food-page .fs-search-bar__action {
-  --border-radius: 10px;
-}
-
-.add-food-page .add-food-section-header {
-  border-bottom: 1px solid var(--mp-border);
-  padding-bottom: 6px;
-  margin-bottom: 8px;
-}
-
-.add-food-page .add-food-chips-container ion-chip {
-  border: 1px solid color-mix(in srgb, var(--ion-color-primary) 18%, var(--mp-border));
-  background: color-mix(in srgb, var(--mp-surface-muted) 74%, var(--mp-surface));
-}
-
-.add-food-page .add-food-results-meta {
-  margin: 8px 2px 10px;
-}
-
-.add-food-page .add-food-results-meta ion-text {
-  display: inline-block;
-  border: 1px solid var(--mp-border);
-  border-radius: 9999px;
-  padding: 5px 10px;
-  background: color-mix(in srgb, var(--mp-surface-muted) 72%, var(--mp-surface));
-}
-
-.add-food-page .add-food-results-list ion-item {
-  --background: color-mix(in srgb, var(--mp-surface) 96%, var(--mp-surface-muted));
-  --border-color: transparent;
-  --inner-border-width: 0;
-  --padding-top: 10px;
-  --padding-bottom: 10px;
-  border: 1px solid var(--mp-border);
-  border-radius: 14px;
-  margin-bottom: 8px;
-  box-shadow: var(--mp-shadow-soft);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .add-food-page .add-food-results-list ion-item:hover {
-    border-color: color-mix(in srgb, var(--ion-color-primary) 24%, var(--mp-border));
-    box-shadow: var(--mp-shadow-strong);
-    transform: translateY(-1px);
-  }
-}
-
-.add-food-page .add-food-search-helper {
-  border: 1px solid var(--mp-border);
-  box-shadow: var(--mp-shadow-soft);
-}
-
-.add-food-page .add-food-search-helper--no-results {
-  border-color: color-mix(in srgb, var(--ion-color-warning) 28%, var(--mp-border));
-}
-
-.add-food-page .add-food-favorites-filter {
-  gap: 10px;
-}
-
-.add-food-page .add-food-favorites-filter ion-button {
-  --border-radius: 12px;
-}
-
-.add-food-end-of-results {
-  width: fit-content;
-  margin: 12px auto 4px;
-  padding: 4px 12px;
-  border-radius: 9999px;
-  border: 1px solid var(--mp-border);
-  background: color-mix(in srgb, var(--mp-surface-muted) 72%, var(--mp-surface));
-  color: var(--mp-subtext);
-  opacity: 1;
-  font-style: normal;
 }
