@@ -306,6 +306,7 @@ const FAVORITES_LOAD_DELAY_MS = 300;
 const RECENT_FOODS_LOAD_DELAY_MS = 500;
 const MEAL_PRESETS_LOAD_DELAY_MS = 700;
 const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_PAGE_SIZE = 25;
 
 // Validation constants for custom food creation
 const MAX_CALORIES = 10000;
@@ -2004,7 +2005,7 @@ const AddFood: React.FC = () => {
       const url = new URL(`${FN_BASE}/offSearch`);
       url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
-      url.searchParams.set("page_size", "20");
+      url.searchParams.set("page_size", String(SEARCH_PAGE_SIZE));
 
       const res = await fetch(url.toString(), { signal: controller.signal });
       if (!res.ok) throw new Error(`Search failed: ${res.status}`);
@@ -2053,8 +2054,8 @@ const AddFood: React.FC = () => {
 
       // Determine if there are more pages based on API total count
       const hasMorePages = typeof data.count === 'number'
-        ? pageNumber * 20 < data.count
-        : foods.length >= 20;
+        ? pageNumber * SEARCH_PAGE_SIZE < data.count
+        : foods.length >= SEARCH_PAGE_SIZE;
 
       // If navigating forward and got no new results, stay on current page
       if (pageNumber > 1 && deduped.length === 0) {
