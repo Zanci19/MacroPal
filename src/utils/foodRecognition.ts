@@ -610,12 +610,12 @@ export async function searchOpenFoodFacts(
   pageSize = 10
 ): Promise<FoodDatabaseItem[]> {
   try {
-    const url = new URL(`${FUNCTIONS_API_BASE}/offSearch`);
+    const url = new URL(`${FUNCTIONS_API_BASE}/foodSearch`);
     url.searchParams.set('q', query);
     url.searchParams.set('page', '1');
     url.searchParams.set('page_size', String(pageSize));
 
-    debugLog('[FoodRecognition] Searching OpenFoodFacts for:', query);
+    debugLog('[FoodRecognition] Searching food database for:', query);
     
     const response = await fetch(url.toString());
     if (!response.ok) {
