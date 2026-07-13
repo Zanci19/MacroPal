@@ -168,7 +168,8 @@ type OFFSearchHit = {
   image_front_url?: string | null;
   nutriscore_grade?: string | null;
   nutriments?: OFFNutriments;
-  dataSource?: "local" | "openfoodfacts" | "ai_recognition" | "user_custom";
+  food_type?: string;
+  dataSource?: "local" | "openfoodfacts" | "fatsecret" | "ai_recognition" | "user_custom";
 };
 
 type OFFProduct = OFFSearchHit;
@@ -955,6 +956,19 @@ const AddFood: React.FC = () => {
     const canServing =
       !!product.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
     setSelectedFood(product);
+    setUseServing(canServing);
+    setServingsQty(1);
+    setWeightQty(100);
+    setOpen(true);
+  }, []);
+
+  // Search hits that already carry full nutrition inline (FatSecret, local) can be
+  // opened directly without a second network round-trip.
+  const openInlineFoodDetails = useCallback((food: OFFSearchHit) => {
+    const ps = macrosPerServing(food.nutriments);
+    const canServing =
+      !!food.serving_size && !!(ps.calories || ps.carbs || ps.protein || ps.fat);
+    setSelectedFood(food);
     setUseServing(canServing);
     setServingsQty(1);
     setWeightQty(100);
@@ -2001,7 +2015,7 @@ const AddFood: React.FC = () => {
         return localResults.length;
       }
 
-      const url = new URL(`${FN_BASE}/offSearch`);
+      const url = new URL(`${FN_BASE}/foodSearch`);
       url.searchParams.set("q", raw);
       url.searchParams.set("page", String(pageNumber));
       url.searchParams.set("page_size", "20");
@@ -2014,22 +2028,20 @@ const AddFood: React.FC = () => {
 
       const validFoods = foods.filter((food) => food.product_name?.trim());
 
-      const scored = validFoods.map(scoreFood);
+      // The backend (FatSecret) already returns results ordered by relevance, so we
+      // preserve that order and only apply a light local nudge — we never drop remote
+      // results, which is what previously caused "sometimes nothing" for valid queries.
+      const scored = validFoods.map((food, index) => ({
+        ...scoreFood(food),
+        index,
+      }));
 
-      let kept = scored;
-      if (tokenCount > 0) {
-        kept = scored.filter((x) => x.matched >= x.required);
-      }
-
-      if (tokenCount > 0 && kept.length < 5) {
-        kept = scored.filter((x) => x.matched >= 1);
-      }
+      const kept = scored;
 
       kept.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
-        const an = (a.food.product_name || "").toLowerCase();
-        const bn = (b.food.product_name || "").toLowerCase();
-        return an.localeCompare(bn);
+        // Fall back to the API's original relevance ordering, not alphabetical.
+        return a.index - b.index;
       });
 
       const deduped: OFFSearchHit[] = [];
@@ -3958,22 +3970,34 @@ const AddFood: React.FC = () => {
                       trackEvent("search_result_click", {
                         code: food.code,
                         name: food.product_name || "(no name)",
+                        source: food.dataSource,
                       });
-                      fetchFoodDetailsByCode(food.code);
+                      // FatSecret / local hits carry full nutrition inline — open them
+                      // directly. Only barcode-style OFF hits need a details fetch.
+                      if (
+                        food.code.startsWith("fs:") ||
+                        food.dataSource === "fatsecret" ||
+                        food.dataSource === "local" ||
+                        food.dataSource === "user_custom"
+                      ) {
+                        openInlineFoodDetails(food);
+                      } else {
+                        fetchFoodDetailsByCode(food.code);
+                      }
                     }}
                   >
                     <IonLabel>
-                      <h2>
+                      <h2 className="fs-result-name">
                         {food.product_name || "(no name)"}
-                        {food.brands ? ` · ${food.brands}` : ""}
+                        {food.brands ? <span className="fs-result-brand"> · {food.brands}</span> : null}
                       </h2>
-                      <p>
-                        {food.serving_size ? `Per serving: ${food.serving_size}` : "Per 100g"} · C {preview.carbs || 0}g · P {preview.protein || 0}g · F {preview.fat || 0}g
+                      <p className="fs-result-macros">
+                        Per 100g · P {preview.protein || 0}g · C {preview.carbs || 0}g · F {preview.fat || 0}g
                       </p>
                     </IonLabel>
                     {foodDetailLoading === food.code
                       ? <IonSpinner slot="end" name="crescent" />
-                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<br /><span className="fs-result-kcal__unit">kcal</span></div>
+                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<span className="fs-result-kcal__unit">kcal</span></div>
                     }
                   </IonItem>
                 );

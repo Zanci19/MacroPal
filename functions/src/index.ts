@@ -5,6 +5,7 @@ import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import type { Response as ExpressResponse } from "express";
+import crypto from "node:crypto";
 
 initializeApp();
 const firestore = getFirestore();
@@ -71,6 +72,8 @@ async function raceOk(urls: string[], init: RequestInit) {
 }
 
 const googleVisionApiKey = defineSecret("GOOGLE_VISION_API_KEY");
+const fatsecretConsumerKey = defineSecret("FATSECRET_CONSUMER_KEY");
+const fatsecretConsumerSecret = defineSecret("FATSECRET_CONSUMER_SECRET");
 
 /* ============ Google Vision (proxy) ============ */
 export const visionRecognize = onRequest(
@@ -169,114 +172,363 @@ export const offBarcode = onRequest({ region: "europe-west1" }, async (req, res)
   }
 });
 
-/* ============ OFF: Search (V3 primary, V1 fallback) ============ */
+/* ============ Food search normalization types ============ */
+type SearchHit = {
+  code: string;
+  product_name: string;
+  brands: string;
+  serving_size?: string;
+  image_front_url?: string | null;
+  nutriscore_grade?: string | null;
+  nutriments: Record<string, number | undefined>;
+  dataSource: "fatsecret" | "openfoodfacts";
+  food_type?: string;
+};
+
+/* ============ FatSecret (OAuth 1.0 two-legged) ============ */
+// FatSecret's premier account provisions foods.search.v5 under both OAuth 1.0 and
+// OAuth 2.0. We use OAuth 1.0 request-signing here because it is two-legged (no
+// token endpoint) and, unlike OAuth 2.0, does NOT require the caller's egress IP
+// to be pre-registered — which matters because Cloud Functions egress IPs are dynamic.
+const FATSECRET_ENDPOINT = "https://platform.fatsecret.com/rest/server.api";
+
+function rfc3986(str: string): string {
+  return encodeURIComponent(str).replace(
+    /[!*'()]/g,
+    (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase()
+  );
+}
+
+/** Build a signed FatSecret request URL (GET, HMAC-SHA1). */
+function signFatSecretUrl(
+  params: Record<string, string>,
+  consumerKey: string,
+  consumerSecret: string
+): string {
+  const oauth: Record<string, string> = {
+    ...params,
+    oauth_consumer_key: consumerKey,
+    oauth_nonce: crypto.randomBytes(16).toString("hex"),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_version: "1.0",
+  };
+  const paramStr = Object.keys(oauth)
+    .sort()
+    .map((k) => `${rfc3986(k)}=${rfc3986(oauth[k])}`)
+    .join("&");
+  const baseStr = ["GET", rfc3986(FATSECRET_ENDPOINT), rfc3986(paramStr)].join("&");
+  const signature = crypto
+    .createHmac("sha1", `${rfc3986(consumerSecret)}&`)
+    .update(baseStr)
+    .digest("base64");
+  const finalParams: Record<string, string> = { ...oauth, oauth_signature: signature };
+  const qs = Object.keys(finalParams)
+    .map((k) => `${rfc3986(k)}=${rfc3986(finalParams[k])}`)
+    .join("&");
+  return `${FATSECRET_ENDPOINT}?${qs}`;
+}
+
+const toNum = (v: unknown): number | undefined => {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
+  return Number.isFinite(n) ? n : undefined;
+};
+const round2 = (v: number | undefined): number | undefined =>
+  v === undefined ? undefined : Math.round(v * 100) / 100;
+const asArray = <T>(x: T | T[] | undefined | null): T[] =>
+  Array.isArray(x) ? x : x != null ? [x] : [];
+
+type FsServing = Record<string, unknown>;
+
+/** Grams (or ml) represented by a serving's metric block, converting oz if needed. */
+function servingGrams(s: FsServing): number | undefined {
+  const amt = toNum(s.metric_serving_amount);
+  if (!amt || amt <= 0) return undefined;
+  const unit = String(s.metric_serving_unit || "").toLowerCase();
+  if (unit === "g" || unit === "ml") return amt;
+  if (unit === "oz") return amt * 28.3495;
+  return undefined;
+}
+
+/** Convert a FatSecret v5 food object into the app's OFF-compatible hit shape. */
+function normalizeFatSecretFood(food: Record<string, unknown>): SearchHit | null {
+  const name = String((food.food_name as string) ?? "").trim();
+  if (!name) return null;
+
+  const servings = asArray(
+    (food.servings as { serving?: FsServing | FsServing[] } | undefined)?.serving
+  );
+
+  // Base serving with a metric weight => lets us derive per-100g values.
+  let base: FsServing | undefined;
+  let grams: number | undefined;
+  for (const s of servings) {
+    const g = servingGrams(s);
+    if (g) {
+      base = s;
+      grams = g;
+      break;
+    }
+  }
+  const def =
+    servings.find((s) => String(s.is_default) === "1") || servings[0] || undefined;
+
+  const nutriments: Record<string, number | undefined> = {};
+  if (base && grams) {
+    const per100 = (v: unknown) => round2(((toNum(v) ?? 0) * 100) / grams!);
+    nutriments["energy-kcal_100g"] = per100(base.calories);
+    nutriments["proteins_100g"] = per100(base.protein);
+    nutriments["carbohydrates_100g"] = per100(base.carbohydrate);
+    nutriments["fat_100g"] = per100(base.fat);
+    nutriments["sugars_100g"] = per100(base.sugar);
+    nutriments["fiber_100g"] = per100(base.fiber);
+    nutriments["saturated-fat_100g"] = per100(base.saturated_fat);
+    nutriments["trans-fat_100g"] = per100(base.trans_fat);
+    nutriments["polyunsaturated-fat_100g"] = per100(base.polyunsaturated_fat);
+    nutriments["monounsaturated-fat_100g"] = per100(base.monounsaturated_fat);
+    // FatSecret reports sodium in mg; the app renders sodium/salt in grams (OFF
+    // convention), so convert mg -> g here. Other minerals (potassium, calcium,
+    // iron, cholesterol) stay in mg and vitamins in µg to match their display units.
+    if (base.sodium !== undefined) {
+      const sodiumG100 = round2(((toNum(base.sodium) ?? 0) * 100) / grams! / 1000);
+      nutriments["sodium_100g"] = sodiumG100;
+      nutriments["salt_100g"] =
+        sodiumG100 === undefined ? undefined : round2(sodiumG100 * 2.5);
+    }
+    nutriments["potassium_100g"] = per100(base.potassium);
+    nutriments["cholesterol_100g"] = per100(base.cholesterol);
+    nutriments["calcium_100g"] = per100(base.calcium);
+    nutriments["iron_100g"] = per100(base.iron);
+    nutriments["vitamin-a_100g"] = per100(base.vitamin_a);
+    nutriments["vitamin-c_100g"] = per100(base.vitamin_c);
+    nutriments["vitamin-d_100g"] = per100(base.vitamin_d);
+  }
+  if (def) {
+    nutriments["energy-kcal_serving"] = toNum(def.calories);
+    nutriments["proteins_serving"] = toNum(def.protein);
+    nutriments["carbohydrates_serving"] = toNum(def.carbohydrate);
+    nutriments["fat_serving"] = toNum(def.fat);
+    nutriments["sugars_serving"] = toNum(def.sugar);
+    nutriments["fiber_serving"] = toNum(def.fiber);
+    nutriments["saturated-fat_serving"] = toNum(def.saturated_fat);
+    // Per-serving sodium also mg -> g for the macro card.
+    if (def.sodium !== undefined) {
+      const sodiumGServing = round2((toNum(def.sodium) ?? 0) / 1000);
+      nutriments["sodium_serving"] = sodiumGServing;
+      nutriments["salt_serving"] =
+        sodiumGServing === undefined ? undefined : round2(sodiumGServing * 2.5);
+    }
+  }
+
+  const image =
+    asArray(
+      (food.food_images as { food_image?: Array<{ image_url?: string }> } | undefined)
+        ?.food_image
+    )[0]?.image_url ?? null;
+
+  return {
+    code: `fs:${food.food_id}`,
+    product_name: name,
+    brands: String((food.brand_name as string) ?? "").trim(),
+    serving_size: def?.serving_description ? String(def.serving_description) : undefined,
+    image_front_url: image,
+    nutriscore_grade: null,
+    nutriments,
+    dataSource: "fatsecret",
+    food_type: food.food_type ? String(food.food_type) : undefined,
+  };
+}
+
+/** Query FatSecret foods.search.v5. Returns null on any failure so callers can fall back. */
+async function searchFatSecret(
+  qRaw: string,
+  page: number,
+  pageSize: number,
+  consumerKey: string,
+  consumerSecret: string
+): Promise<{ products: SearchHit[]; count: number } | null> {
+  const params: Record<string, string> = {
+    method: "foods.search.v5",
+    format: "json",
+    search_expression: qRaw,
+    page_number: String(Math.max(0, page - 1)), // FatSecret pages are 0-based
+    max_results: String(pageSize),
+    flag_default_serving: "true",
+    include_food_images: "true",
+  };
+  const url = signFatSecretUrl(params, consumerKey, consumerSecret);
+
+  try {
+    const r = await fetchWithTimeout(url, { headers: { Accept: "application/json" } }, 6000);
+    if (!r.ok) {
+      console.warn(`FatSecret HTTP ${r.status}`);
+      return null;
+    }
+    const json = (await r.json()) as {
+      foods_search?: {
+        total_results?: string | number;
+        results?: { food?: Record<string, unknown> | Record<string, unknown>[] };
+      };
+      error?: { message?: string };
+    };
+    if (json.error) {
+      console.warn("FatSecret error:", json.error.message);
+      return null;
+    }
+    const foods = asArray(json.foods_search?.results?.food);
+    const products = foods
+      .map(normalizeFatSecretFood)
+      .filter((p): p is SearchHit => p !== null);
+    const count = toNum(json.foods_search?.total_results) ?? products.length;
+    return { products, count };
+  } catch (e) {
+    console.warn("FatSecret request failed:", e);
+    return null;
+  }
+}
+
+/* ============ OpenFoodFacts search (fallback) ============ */
+/** Free-text OFF search used as a worldwide fallback when FatSecret has no hits. */
+async function searchOpenFoodFacts(
+  qRaw: string,
+  page: number,
+  pageSize: number,
+  lc: string,
+  country: string
+): Promise<{ products: SearchHit[]; count: number }> {
+  const fields =
+    "code,product_name,brands,nutriments,serving_size,image_front_url,nutriscore_grade";
+
+  const makeV1 = (host: string) => {
+    const u = new URL(`https://${host}/cgi/search.pl`);
+    u.searchParams.set("action", "process");
+    u.searchParams.set("json", "1");
+    u.searchParams.set("search_terms", qRaw);
+    u.searchParams.set("search_simple", "1");
+    u.searchParams.set("sort_by", "popularity_key");
+    u.searchParams.set("page", String(page));
+    u.searchParams.set("page_size", String(pageSize));
+    u.searchParams.set("fields", fields);
+    if (lc) u.searchParams.set("lc", lc);
+    if (country) u.searchParams.set("countries_tags_en", country);
+    return u.toString();
+  };
+  const urls = [makeV1("world.openfoodfacts.org"), makeV1("world.openfoodfacts.net")];
+
+  const r = await raceOk(urls, {
+    headers: {
+      "User-Agent": "MacroPal/1.0 (support@macropal.app)",
+      Accept: "application/json",
+    },
+  });
+  const json = (await r.json()) as {
+    products?: Record<string, unknown>[];
+    count?: number;
+  };
+  const raw = Array.isArray(json.products) ? json.products : [];
+  const products: SearchHit[] = raw
+    .filter((p) => String(p.product_name || "").trim())
+    .map((p) => ({
+      code: String(p.code ?? ""),
+      product_name: String(p.product_name ?? "").trim(),
+      brands: String(p.brands ?? "").trim(),
+      serving_size: p.serving_size ? String(p.serving_size) : undefined,
+      image_front_url: (p.image_front_url as string) ?? null,
+      nutriscore_grade: (p.nutriscore_grade as string) ?? null,
+      nutriments: (p.nutriments as Record<string, number | undefined>) ?? {},
+      dataSource: "openfoodfacts" as const,
+    }));
+  return { products, count: json.count ?? products.length };
+}
+
+/* ============ Food search (FatSecret primary, OFF fallback) ============ */
 /**
- * GET /offSearch?q=term&page=1&page_size=20&lc=en&country=slovenia&fresh=0
- * - V3 (Search-a-licious) is the primary full-text search (best relevance).
- * - V1 is used as a reliable fallback for free-text queries.
- * - Add &fresh=1 only when you truly need uncached results.
+ * GET /foodSearch?q=term&page=1&page_size=20&lc=en&country=slovenia
+ * Primary: FatSecret foods.search.v5 (curated food-logging database, best relevance).
+ * Fallback: OpenFoodFacts free-text search (worldwide barcode/brand coverage) when
+ * FatSecret is unavailable or returns nothing.
  */
+export const foodSearch = onRequest(
+  { region: "europe-west1", secrets: [fatsecretConsumerKey, fatsecretConsumerSecret] },
+  async (req, res) => {
+    setCors(res);
+    if (req.method === "OPTIONS") return void res.status(204).send("");
+
+    const qRaw = (req.query.q || "").toString().trim();
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const pageSize = Math.min(50, Math.max(1, Number(req.query.page_size ?? 20) || 20));
+    const lc = (req.query.lc || "en").toString().trim();
+    const country = (req.query.country || "").toString().trim().toLowerCase();
+
+    if (!qRaw) return void res.status(400).json({ error: "missing_query" });
+
+    try {
+      const key = fatsecretConsumerKey.value();
+      const secret = fatsecretConsumerSecret.value();
+
+      if (key && secret) {
+        const fs = await searchFatSecret(qRaw, page, pageSize, key, secret);
+        if (fs && fs.products.length > 0) {
+          res.set("Content-Type", "application/json");
+          setCaching(res);
+          return void res.status(200).send(
+            JSON.stringify({
+              products: fs.products,
+              count: fs.count,
+              page,
+              page_size: pageSize,
+              source: "fatsecret",
+            })
+          );
+        }
+      }
+
+      // Fallback: OpenFoodFacts
+      const off = await searchOpenFoodFacts(qRaw, page, pageSize, lc, country);
+      res.set("Content-Type", "application/json");
+      setCaching(res);
+      return void res.status(200).send(
+        JSON.stringify({
+          products: off.products,
+          count: off.count,
+          page,
+          page_size: pageSize,
+          source: "openfoodfacts",
+        })
+      );
+    } catch (e: unknown) {
+      const error = e instanceof Error ? e : new Error(String(e));
+      const aborted = error.name === "AbortError";
+      console.error("foodSearch failed:", aborted ? "timeout" : error);
+      res
+        .status(aborted ? 504 : 502)
+        .json({
+          error: aborted ? "upstream_timeout" : "upstream_bad_gateway",
+          message: error.message ?? "unknown",
+        });
+    }
+  }
+);
+
+/* ============ OFF: Search (legacy alias, OFF-only) ============ */
+/** Kept for backwards compatibility with older clients; new clients use /foodSearch. */
 export const offSearch = onRequest({ region: "europe-west1" }, async (req, res) => {
   setCors(res);
   if (req.method === "OPTIONS") return void res.status(204).send("");
 
   const qRaw = (req.query.q || "").toString().trim();
-  const qLower = qRaw.toLowerCase();
   const page = Math.max(1, Number(req.query.page ?? 1) || 1);
   const pageSize = Math.min(50, Math.max(1, Number(req.query.page_size ?? 20) || 20));
   const lc = (req.query.lc || "en").toString().trim();
   const country = (req.query.country || "").toString().trim().toLowerCase();
-  const fresh = (req.query.fresh || "").toString().trim() === "1";
 
   if (!qRaw) return void res.status(400).json({ error: "missing_query" });
 
   try {
-    // Shared fields list for compact responses
-    const fields =
-      "code,product_name,brands,nutriments,serving_size,image_front_url,nutriscore_grade";
-
-    // ---------- V3 (Search-a-licious) ----------
-    // Note: V3 is evolving; current deployments expose it under /api/v3/search on OFF hosts.
-    // We keep V1 as a rock-solid fallback if a given mirror/version is unavailable.
-    const makeV3 = (host: string) => {
-      const u = new URL(`https://${host}/api/v3/search`);
-      u.searchParams.set("q", qRaw);
-      u.searchParams.set("page", String(page));
-      u.searchParams.set("page_size", String(pageSize));
-      u.searchParams.set("fields", fields);
-      if (lc) u.searchParams.set("lc", lc);
-      if (country) u.searchParams.set("countries_tags_en", country);
-      if (fresh) u.searchParams.set("nocache", "1"); // opt-in only
-      return u.toString();
-    };
-    const v3Urls = [makeV3("world.openfoodfacts.org"), makeV3("world.openfoodfacts.net")];
-
-    // ---------- V1 (legacy free-text) fallback ----------
-    const makeV1 = (host: string) => {
-      const u = new URL(`https://${host}/cgi/search.pl`);
-      u.searchParams.set("action", "process");
-      u.searchParams.set("json", "1");
-      u.searchParams.set("search_terms", qRaw);
-      u.searchParams.set("search_simple", "1"); // free-text
-      u.searchParams.set("sort_by", "unique_scans_n");
-      u.searchParams.set("page", String(page));
-      u.searchParams.set("page_size", String(pageSize));
-      u.searchParams.set("fields", fields);
-      if (lc) u.searchParams.set("lc", lc);
-      if (country) u.searchParams.set("countries_tags_en", country);
-      if (fresh) u.searchParams.set("nocache", "1"); // opt-in only
-      return u.toString();
-    };
-    const v1Urls = [makeV1("world.openfoodfacts.org"), makeV1("world.openfoodfacts.net")];
-
-    let r: Response;
-    try {
-      r = await raceOk(v3Urls, {
-        headers: {
-          "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-          "Accept": "application/json",
-        },
-      });
-      // If V3 responds but shape is unexpected or empty, we can choose to fall back.
-      // We'll parse first and decide below.
-      const probe = await r.clone().json().catch(() => null);
-      const products = Array.isArray(probe?.products) ? probe.products : [];
-      if (!products || products.length === 0) {
-        // Fallback to V1 for robustness
-        r = await raceOk(v1Urls, {
-          headers: {
-            "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-            "Accept": "application/json",
-          },
-        });
-      } else {
-        // reuse parsed body below
-      }
-    } catch {
-      // V3 unavailable => go V1
-      r = await raceOk(v1Urls, {
-        headers: {
-          "User-Agent": "MacroPal/1.0 (support@macropal.app)",
-          "Accept": "application/json",
-        },
-      });
-    }
-
-    const json = await r.json();
-    const products: Record<string, unknown>[] = Array.isArray(json?.products) ? json.products : [];
-
-    // Lightweight relevance boost (product_name contains the query)
-    products.sort((a, b) => {
-      const na = (String(a.product_name || "")).toLowerCase();
-      const nb = (String(b.product_name || "")).toLowerCase();
-      const scoreA = na.includes(qLower) ? 1 : 0;
-      const scoreB = nb.includes(qLower) ? 1 : 0;
-      return scoreB - scoreA;
-    });
-
+    const off = await searchOpenFoodFacts(qRaw, page, pageSize, lc, country);
     res.set("Content-Type", "application/json");
     setCaching(res);
-    return void res.status(200).send(JSON.stringify({ ...json, products }));
+    return void res.status(200).send(JSON.stringify({ ...off, source: "openfoodfacts" }));
   } catch (e: unknown) {
     const error = e instanceof Error ? e : new Error(String(e));
     const aborted = error.name === "AbortError";
