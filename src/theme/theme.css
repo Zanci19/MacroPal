@@ -5,15 +5,44 @@
    font; "Inter" is a label, the app renders in the platform UI font.
    ================================================================= */
 
+/* Self-hosted brand typeface (variable). Offered alongside the native system
+   stack; users choose in Appearance settings via body.font-system. */
+@font-face {
+  font-family: "Inter var";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+}
+
 :root {
-  /* ----- Radius scale ----- */
+  /* ----- Typography ----- */
+  --mp-font-brand: "Inter var", "Inter", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mp-font-system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --mp-font: var(--mp-font-brand);
+
+  --mp-fs-display: 30px;
+  --mp-fs-title: 18px;
+  --mp-fs-heading: 15px;
+  --mp-fs-body: 15px;
+  --mp-fs-caption: 12px;
+  --mp-fs-label: 11px;
+  --mp-fw-body: 450;
+  --mp-fw-medium: 600;
+  --mp-fw-heading: 700;
+  --mp-fw-display: 800;
+
+  /* ----- Radius scale (one disciplined set) ----- */
   --mp-r-xs: 8px;
   --mp-r-sm: 10px;
   --mp-r-md: 12px;
   --mp-r-lg: 16px;
-  --mp-r-xl: 22px;
-  --mp-r-card: 18px;
-  --mp-r-control: 12px;
+  --mp-r-xl: 20px;
+  --mp-r-card: 16px;
+  --mp-r-control: 10px;
+  --mp-r-sheet: 24px;
   --mp-r-pill: 999px;
 
   /* ----- Spacing scale ----- */
@@ -25,20 +54,20 @@
   --mp-space-6: 24px;
   --mp-space-8: 32px;
 
-  /* ----- Surfaces & text (light) ----- */
-  --mp-bg: #f5f5f5;
+  /* ----- Surfaces & text (light) — cool slate, biased toward the brand blue ----- */
+  --mp-bg: #eef1f6;
   --mp-surface: #ffffff;
   --mp-surface-elevated: #ffffff;
-  --mp-surface-muted: #eeeeee;
-  --mp-surface-sunken: #e0e0e0;
+  --mp-surface-muted: #f6f8fc;
+  --mp-surface-sunken: #eef1f7;
   --mp-surface-glow: none;
 
   --mp-text: #0f172a;
-  --mp-text-muted: #5b6675;
-  --mp-text-subtle: #8a94a6;
-  --mp-subtext: #5b6675;
-  --mp-border: #e3e8ef;
-  --mp-border-strong: #cdd5e0;
+  --mp-text-muted: #59647a;
+  --mp-text-subtle: #8a93a6;
+  --mp-subtext: #59647a;
+  --mp-border: #e4e9f2;
+  --mp-border-strong: #d3dae6;
   --mp-chip-bg: #eef2f8;
 
   /* ----- Brand accent tokens ----- */
@@ -48,15 +77,15 @@
   --mp-primary-softer: rgba(47, 107, 224, 0.06);
   --mp-primary-gradient: linear-gradient(135deg, var(--ion-color-primary-tint), var(--ion-color-primary));
 
-  /* ----- Macro accent colors (now actually used) ----- */
+  /* ----- Macro accent colors (used only on data) ----- */
   --mp-color-protein: #2f6be0;
-  --mp-color-protein-soft: rgba(47, 107, 224, 0.14);
-  --mp-color-carbs: #f59e0b;
-  --mp-color-carbs-soft: rgba(245, 158, 11, 0.16);
-  --mp-color-fat: #f43f5e;
-  --mp-color-fat-soft: rgba(244, 63, 94, 0.14);
-  --mp-color-fiber: #10b981;
-  --mp-color-fiber-soft: rgba(16, 185, 129, 0.14);
+  --mp-color-protein-soft: rgba(47, 107, 224, 0.12);
+  --mp-color-carbs: #e08a1e;
+  --mp-color-carbs-soft: rgba(224, 138, 30, 0.14);
+  --mp-color-fat: #ef4b6b;
+  --mp-color-fat-soft: rgba(239, 75, 107, 0.13);
+  --mp-color-fiber: #12a870;
+  --mp-color-fiber-soft: rgba(18, 168, 112, 0.13);
 
   /* ----- Elevation scale ----- */
   --mp-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -87,20 +116,20 @@
 }
 
 body.dark {
-  --mp-bg: #121212;
-  --mp-surface: #1e1e1e;
-  --mp-surface-elevated: #2c2c2c;
-  --mp-surface-muted: #242424;
-  --mp-surface-sunken: #0a0a0a;
+  --mp-bg: #0b0e13;
+  --mp-surface: #161b22;
+  --mp-surface-elevated: #1b212a;
+  --mp-surface-muted: #1b212a;
+  --mp-surface-sunken: #10151c;
   --mp-surface-glow: none;
 
   --mp-text: #e8edf4;
-  --mp-text-muted: #9aa6b8;
-  --mp-text-subtle: #6b7689;
-  --mp-subtext: #9aa6b8;
-  --mp-border: #2a2a2a;
-  --mp-border-strong: #3a3a3a;
-  --mp-chip-bg: #242424;
+  --mp-text-muted: #98a3b6;
+  --mp-text-subtle: #6b7688;
+  --mp-subtext: #98a3b6;
+  --mp-border: #242c38;
+  --mp-border-strong: #313b49;
+  --mp-chip-bg: #1b212a;
 
   --mp-primary: var(--ion-color-primary);
   --mp-primary-strong: var(--ion-color-primary-tint);
@@ -109,12 +138,12 @@ body.dark {
 
   --mp-color-protein: #5b8def;
   --mp-color-protein-soft: rgba(91, 141, 239, 0.22);
-  --mp-color-carbs: #fbbf24;
-  --mp-color-carbs-soft: rgba(251, 191, 36, 0.2);
-  --mp-color-fat: #fb7185;
-  --mp-color-fat-soft: rgba(251, 113, 133, 0.2);
-  --mp-color-fiber: #34d399;
-  --mp-color-fiber-soft: rgba(52, 211, 153, 0.2);
+  --mp-color-carbs: #f5b344;
+  --mp-color-carbs-soft: rgba(245, 179, 68, 0.2);
+  --mp-color-fat: #fb6f8c;
+  --mp-color-fat-soft: rgba(251, 111, 140, 0.2);
+  --mp-color-fiber: #2ecb8b;
+  --mp-color-fiber-soft: rgba(46, 203, 139, 0.2);
 
   --mp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
   --mp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -158,17 +187,22 @@ ion-router-outlet {
    --mp-bg and flashes white on overscroll/bounce in dark mode. Pull the dark
    surface up to <html> too. */
 html:has(body.dark) {
-  --mp-bg: #121212;
-  background: #121212;
+  --mp-bg: #0b0e13;
+  background: #0b0e13;
 }
 
 body {
   background: var(--mp-bg);
   min-height: 100vh;
-  /* Keep the existing system UI font stack — do not swap in a web font. */
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Brand typeface by default; body.font-system swaps to the native stack. */
+  font-family: var(--mp-font);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Font preference: native system stack (chosen in Appearance settings). */
+body.font-system {
+  --mp-font: var(--mp-font-system);
 }
 
 ion-content::part(background) {
@@ -263,8 +297,11 @@ ion-button:active {
   --box-shadow: none;
 }
 
-/* Tonal / soft button variant */
+/* Secondary (tonal / soft) button — the tinted role in the 3-role system.
+   .mp-btn-secondary is the canonical name; .mp-btn-tonal kept as an alias. */
+ion-button.mp-btn-secondary,
 ion-button.mp-btn-tonal,
+ion-button[fill="solid"].mp-btn-secondary,
 ion-button[fill="solid"].mp-btn-tonal {
   --background: var(--mp-primary-soft);
   --background-hover: var(--mp-primary-softer);
