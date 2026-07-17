@@ -246,9 +246,12 @@ ion-toolbar {
 }
 
 .tabbed-content::part(scroll) {
-  width: min(100%, 760px);
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-bottom: var(--mp-tabbed-content-padding-bottom);
 }
 

@@ -2528,8 +2528,9 @@ const Home: React.FC = () => {
           </div>
         )}
 
-        {!loading &&
-          MEALS.map((meal) => {
+        {!loading && (
+          <div className="home-meals">
+          {MEALS.map((meal) => {
             const items = dayData[meal] || [];
             const isCollapsed = collapsedMeals[meal];
             const mealTotals = totals.perMeal[meal];
@@ -2605,6 +2606,8 @@ const Home: React.FC = () => {
               />
             );
           })}
+          </div>
+        )}
 
         {!loading && (
           <div className="home-secondary-panels">

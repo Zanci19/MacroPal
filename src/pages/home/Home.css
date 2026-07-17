@@ -465,6 +465,21 @@ body.dark .ring-track {
   color: var(--mp-text);
 }
 
+/* ---------- Meals: fill wide screens with a responsive grid ---------- */
+.home-meals {
+  display: grid;
+  gap: 14px;
+}
+.home-meals > * {
+  margin: 0;
+}
+@media (min-width: 900px) {
+  .home-meals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
 /* ---------- Secondary panels ---------- */
 .home-secondary-panels {
   display: grid;
