@@ -31,6 +31,8 @@ import {
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import {
   applyTheme,
+  applyFontPreference,
+  getStoredFontPreference,
   getLazyLoadPreference,
   getStoredThemeMode,
 } from "./utils/preferences";
@@ -790,6 +792,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
     applyTheme(getStoredThemeMode());
+    applyFontPreference(getStoredFontPreference());
 
     // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {

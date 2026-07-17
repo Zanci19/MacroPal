@@ -25,6 +25,8 @@ import {
   applyLazyLoadPreference,
   applyMealCountPreference,
   applyTheme,
+  applyFontPreference,
+  applyHomeLayout,
   getAnimationPreference,
   getAutoExpandMealsPreference,
   getChartAnimationPreference,
@@ -32,8 +34,14 @@ import {
   getLazyLoadPreference,
   getMealCountPreference,
   getStoredThemeMode,
+  getStoredFontPreference,
+  getHomeLayout,
+  FONT_PREFERENCES,
+  HOME_LAYOUTS,
   THEME_MODES,
   type ThemeMode,
+  type FontPreference,
+  type HomeLayout,
 } from "../../utils/preferences";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import { getCurrentUser } from "../../utils/demoAuth";
@@ -41,6 +49,8 @@ import "./AppearanceSettings.css";
 
 interface UserProfile {
   themeMode?: string;
+  fontPreference?: string;
+  homeLayout?: string;
   tabAnimationsEnabled?: boolean;
   chartAnimationsEnabled?: boolean;
   debugOverlayEnabled?: boolean;
@@ -58,6 +68,10 @@ const AppearanceSettings: React.FC = () => {
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [loading, setLoading] = React.useState(true);
   const [themeMode, setThemeMode] = React.useState<ThemeMode>(() => getStoredThemeMode());
+  const [fontPreference, setFontPreference] = React.useState<FontPreference>(() =>
+    getStoredFontPreference()
+  );
+  const [homeLayout, setHomeLayoutState] = React.useState<HomeLayout>(() => getHomeLayout());
   const [tabAnimationsEnabled, setTabAnimationsEnabled] = React.useState<boolean>(() =>
     getAnimationPreference()
   );
@@ -105,6 +119,20 @@ const AppearanceSettings: React.FC = () => {
           const nextTheme = savedTheme as ThemeMode;
           setThemeMode(nextTheme);
           applyTheme(nextTheme);
+        }
+
+        const savedFontPref = profile?.fontPreference;
+        if (savedFontPref && FONT_PREFERENCES.includes(savedFontPref as FontPreference)) {
+          const nextFont = savedFontPref as FontPreference;
+          setFontPreference(nextFont);
+          applyFontPreference(nextFont);
+        }
+
+        const savedHomeLayout = profile?.homeLayout;
+        if (savedHomeLayout && HOME_LAYOUTS.includes(savedHomeLayout as HomeLayout)) {
+          const nextLayout = savedHomeLayout as HomeLayout;
+          setHomeLayoutState(nextLayout);
+          applyHomeLayout(nextLayout);
         }
 
         const savedAnimationPref = profile?.tabAnimationsEnabled;
@@ -208,6 +236,50 @@ const AppearanceSettings: React.FC = () => {
     }
   };
 
+  const handleFontChange = async (newFont: FontPreference) => {
+    const previous = fontPreference;
+    setFontPreference(newFont);
+    applyFontPreference(newFont);
+    try {
+      await updateProfilePreference(
+        { "profile.fontPreference": newFont },
+        "settings_font_change",
+        { font: newFont }
+      );
+    } catch (error: unknown) {
+      const err = error as Error;
+      setFontPreference(previous);
+      applyFontPreference(previous);
+      setToast({
+        show: true,
+        message: err?.message || "Could not save font preference.",
+        color: "danger",
+      });
+    }
+  };
+
+  const handleHomeLayoutChange = async (newLayout: HomeLayout) => {
+    const previous = homeLayout;
+    setHomeLayoutState(newLayout);
+    applyHomeLayout(newLayout);
+    try {
+      await updateProfilePreference(
+        { "profile.homeLayout": newLayout },
+        "settings_home_layout_change",
+        { layout: newLayout }
+      );
+    } catch (error: unknown) {
+      const err = error as Error;
+      setHomeLayoutState(previous);
+      applyHomeLayout(previous);
+      setToast({
+        show: true,
+        message: err?.message || "Could not save home layout preference.",
+        color: "danger",
+      });
+    }
+  };
+
   const handleBooleanPreference = async (
     checked: boolean,
     currentValue: boolean,
@@ -247,6 +319,8 @@ const AppearanceSettings: React.FC = () => {
     if (typeof window === "undefined") return;
     const keys = [
       "mp_theme",
+      "mp_font",
+      "mp_home_layout",
       "mp_tab_animations",
       "mp_debug_overlay",
       "mp_lazy_load",
@@ -356,6 +430,35 @@ const AppearanceSettings: React.FC = () => {
                     <IonSelectOption value="system">System Default</IonSelectOption>
                     <IonSelectOption value="light">Light</IonSelectOption>
                     <IonSelectOption value="dark">Dark</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+                <IonItem lines="none">
+                  <IonLabel>Home layout</IonLabel>
+                  <IonSelect
+                    slot="end"
+                    interface="popover"
+                    value={homeLayout}
+                    onIonChange={(e) => {
+                      void handleHomeLayoutChange(e.detail.value as HomeLayout);
+                    }}
+                  >
+                    <IonSelectOption value="bold">Bold &amp; modern</IonSelectOption>
+                    <IonSelectOption value="data">Clean &amp; data-first</IonSelectOption>
+                    <IonSelectOption value="friendly">Warm &amp; friendly</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+                <IonItem lines="none">
+                  <IonLabel>Typeface</IonLabel>
+                  <IonSelect
+                    slot="end"
+                    interface="popover"
+                    value={fontPreference}
+                    onIonChange={(e) => {
+                      void handleFontChange(e.detail.value as FontPreference);
+                    }}
+                  >
+                    <IonSelectOption value="brand">Inter (brand)</IonSelectOption>
+                    <IonSelectOption value="system">System default</IonSelectOption>
                   </IonSelect>
                 </IonItem>
               </IonList>
