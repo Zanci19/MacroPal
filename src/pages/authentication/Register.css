@@ -89,7 +89,7 @@ body .register-page.register-page--embedded {
   display: block;
   width: 100%;
   min-height: 48px;
-  border-radius: 14px;
+  border-radius: var(--mp-r-control);
   background: var(--mp-surface-muted);
 }
 
@@ -101,7 +101,7 @@ body .register-page.register-page--embedded {
 
 .register-button {
   margin-top: 2px;
-  border-radius: 999px;
+  border-radius: var(--mp-r-control);
   height: 48px;
   font-weight: 700;
 }
@@ -125,10 +125,10 @@ body .register-page.register-page--embedded {
 }
 
 .register-google-button {
-  border-radius: 999px;
+  border-radius: var(--mp-r-control);
   height: 46px;
   font-weight: 700;
-  --border-color: color-mix(in srgb, var(--mp-text) 18%, transparent);
+  --border-color: var(--mp-border-strong);
   --color: var(--mp-text);
   --background-hover: color-mix(in srgb, var(--mp-primary) 8%, transparent);
 }

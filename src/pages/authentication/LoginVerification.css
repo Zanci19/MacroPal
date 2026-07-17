@@ -73,7 +73,7 @@
   display: block;
   width: 100%;
   min-height: 48px;
-  border-radius: 14px;
+  border-radius: var(--mp-r-control);
   background: var(--mp-surface-muted);
 }
 
@@ -94,7 +94,7 @@
 }
 
 .login-verify-button {
-  border-radius: 999px;
+  border-radius: var(--mp-r-control);
   height: 46px;
   font-weight: 700;
 }

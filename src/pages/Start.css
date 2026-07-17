@@ -30,18 +30,6 @@
   text-align: center;
 }
 
-/* Soft brand glow behind the hero */
-.start-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(120% 55% at 50% -8%, rgba(var(--ion-color-primary-rgb), 0.16), transparent 62%),
-    radial-gradient(90% 45% at 50% 108%, rgba(var(--ion-color-primary-rgb), 0.1), transparent 60%);
-}
-
 .start-main {
   display: flex;
   flex-direction: column;
@@ -74,7 +62,7 @@
 .start-logo-wrap {
   width: 100px;
   height: 100px;
-  border-radius: 28px;
+  border-radius: var(--mp-r-sheet);
   background: var(--mp-surface);
   border: 1px solid var(--mp-border);
   display: grid;
@@ -122,7 +110,7 @@
 
 .start-btn {
   width: 100%;
-  border-radius: 18px;
+  border-radius: var(--mp-r-control);
   height: 52px;
   font-weight: 700;
   text-transform: none;
@@ -130,17 +118,18 @@
 }
 
 .start-btn-primary {
-  --background: var(--mp-primary-gradient);
+  --background: var(--mp-primary);
   --background-hover: var(--ion-color-primary-shade);
   --box-shadow: none;
 }
 
+/* Secondary = tinted role (not near-black), so the two CTAs read as one family. */
 .start-btn-secondary {
-  --border-color: var(--mp-border);
-  --background: var(--mp-surface);
-  --background-hover: var(--mp-surface-muted);
-  --color: var(--mp-text);
-  color: var(--mp-text);
+  --border-color: transparent;
+  --background: var(--mp-primary-soft);
+  --background-hover: var(--mp-primary-softer);
+  --color: var(--mp-primary);
+  color: var(--mp-primary);
 }
 
 .start-caret {
@@ -166,10 +155,10 @@
 }
 
 .start-auth-modal::part(content) {
-  border-radius: 26px 26px 0 0;
+  border-radius: var(--mp-r-sheet) var(--mp-r-sheet) 0 0;
   border-top: 1px solid var(--mp-border);
   background: var(--mp-surface);
-  box-shadow: var(--mp-shadow-strong);
+  box-shadow: var(--mp-shadow-md);
 }
 
 @keyframes caretBlink {
