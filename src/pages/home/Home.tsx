@@ -48,7 +48,6 @@ import {
   cameraOutline,
   addCircleOutline,
 } from "ionicons/icons";
-import type { SwiperProps, SwiperSlideProps } from "swiper/react";
 import { useHistory, useLocation } from "react-router";
 import { db, trackEvent } from "../../firebase";
 import {
@@ -103,6 +102,7 @@ import { WaterIntake } from "../../components/WaterIntake";
 import { QuickAddModal, type QuickFood } from "../../components/QuickAddModal";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
 import { createEntryId } from "../../utils/id";
+import HomeSummary from "./HomeSummary";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -893,27 +893,6 @@ const Home: React.FC = () => {
 
   const showWellnessTip = profile?.showWellnessTip ?? true;
   const showAchievements = profile?.showAchievements ?? true;
-  const [swiperParts, setSwiperParts] = useState<{
-    Swiper: React.ComponentType<SwiperProps>;
-    SwiperSlide: React.ComponentType<SwiperSlideProps>;
-    Pagination: unknown;
-  } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      import("swiper/react"),
-      import("swiper/modules"),
-      import("swiper/css"),
-      import("swiper/css/pagination"),
-    ]).then(([{ Swiper, SwiperSlide }, { Pagination }]) => {
-      if (cancelled) return;
-      setSwiperParts({ Swiper, SwiperSlide, Pagination });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     if (quoteDateKey === todayKey) {
@@ -2014,10 +1993,6 @@ const Home: React.FC = () => {
     void fetchInspirationalQuote();
   }, [fetchInspirationalQuote, quoteDateKey, showWellnessTip, todayKey]);
 
-  const SwiperComp = swiperParts?.Swiper;
-  const SwiperSlideComp = swiperParts?.SwiperSlide;
-  const PaginationMod = swiperParts?.Pagination;
-
   const copyDaySummary = async () => {
     if (!profile || caloriesNeeded == null || !macroTargets) return;
 
@@ -2143,68 +2118,6 @@ const Home: React.FC = () => {
       });
       trackEvent("weigh_in_save_error", { uid, date: activeDateKey });
     }
-  };
-
-  const nutritionLabels: Record<string, { label: string; unit?: string }> = {
-    carbs: { label: "Carbohydrates", unit: "g" },
-    protein: { label: "Protein", unit: "g" },
-    fat: { label: "Fat", unit: "g" },
-    sugar: { label: "Sugar", unit: "g" },
-    fiber: { label: "Fiber", unit: "g" },
-    saturatedFat: { label: "Saturated fat", unit: "g" },
-    salt: { label: "Salt", unit: "g" },
-    sodium: { label: "Sodium", unit: "g" },
-    "vitamin-a_100g": { label: "Vitamin A", unit: "µg" },
-    "vitamin-c_100g": { label: "Vitamin C", unit: "mg" },
-    "vitamin-d_100g": { label: "Vitamin D", unit: "µg" },
-    "vitamin-e_100g": { label: "Vitamin E", unit: "mg" },
-    "vitamin-k_100g": { label: "Vitamin K", unit: "µg" },
-    "vitamin-b1_100g": { label: "Vitamin B1", unit: "mg" },
-    "vitamin-b2_100g": { label: "Vitamin B2", unit: "mg" },
-    "vitamin-b6_100g": { label: "Vitamin B6", unit: "mg" },
-    "vitamin-b12_100g": { label: "Vitamin B12", unit: "µg" },
-    "vitamin-b9_100g": { label: "Vitamin B9", unit: "µg" },
-  };
-
-  const nutritionEntries = useMemo(() => {
-    const entries = Object.entries(nutritionTotals)
-      .filter(([, value]) => value > 0)
-      .map(([key, value]) => ({ key, value }));
-    const priority = [
-      "carbs",
-      "protein",
-      "fat",
-      "sugar",
-      "fiber",
-      "saturatedFat",
-      "salt",
-      "sodium",
-    ];
-
-    entries.sort((a, b) => {
-      const aIndex = priority.indexOf(a.key);
-      const bIndex = priority.indexOf(b.key);
-      if (aIndex === -1 && bIndex === -1) {
-        return a.key.localeCompare(b.key);
-      }
-      if (aIndex === -1) return 1;
-      if (bIndex === -1) return -1;
-      return aIndex - bIndex;
-    });
-
-    return entries;
-  }, [nutritionTotals]);
-
-  const formatNutritionLabel = (key: string) => {
-    if (nutritionLabels[key]?.label) return nutritionLabels[key].label;
-    const cleaned = key.replace(/_100g|_serving/g, "").replace(/[_-]+/g, " ");
-    return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
-  };
-
-  const formatNutritionValue = (value: number) => {
-    if (value < 1) return value.toFixed(2);
-    if (value < 10) return value.toFixed(1);
-    return value.toFixed(0);
   };
 
   const fetchAnnouncement = useCallback(
@@ -2563,164 +2476,24 @@ const Home: React.FC = () => {
           </IonButton>
         </div>
 
-        <IonCard className="fs-summary home-overview-card home-top-swiper-card">
-          {SwiperComp && SwiperSlideComp && PaginationMod ? (
-            <SwiperComp
-              modules={[PaginationMod as never]}
-              pagination={{ clickable: true }}
-              slidesPerView={1}
-              autoHeight
-              className="home-top-swiper fs-summary__swiper"
-              observer
-              observeParents
-              observeSlideChildren
-            >
-              <SwiperSlideComp>
-                <div className="fs-summary__slide">
-                  <IonCardHeader className="home-panel__header">
-                    <IonCardTitle>Daily overview</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent className="home-panel__content home-overview-card__content">
-                    {!profile || caloriesNeeded == null ? (
-                      <div className="ion-text-center fs-loading-block">
-                        <IonSpinner name="dots" />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="cal-hero">
-                          <ProgressRing
-                            size={156}
-                            stroke={13}
-                            progress={progress}
-                            color={ringColor}
-                          >
-                            <div className="cal-hero__center">
-                              <span className="cal-hero__value">{summaryDifferenceValue}</span>
-                              <span className="cal-hero__unit">kcal</span>
-                            </div>
-                          </ProgressRing>
-                          <div className="cal-hero__caption">
-                            <span className="cal-hero__label">{summaryDifferenceLabel}</span>
-                            {showAchievements && (
-                              <span className="cal-hero__streak">🔥 {streak} day streak</span>
-                            )}
-                          </div>
-                          <div className="cal-hero__stats">
-                            <div className="cal-stat">
-                              <span className="cal-stat__val">{kcalGoal}</span>
-                              <span className="cal-stat__lbl">Goal</span>
-                            </div>
-                            <span className="cal-stat__sep" aria-hidden="true" />
-                            <div className="cal-stat">
-                              <span className="cal-stat__val">{kcalConsumed}</span>
-                              <span className="cal-stat__lbl">Food</span>
-                            </div>
-                            <span className="cal-stat__sep" aria-hidden="true" />
-                            <div className="cal-stat">
-                              <span className="cal-stat__val">{workoutCalories}</span>
-                              <span className="cal-stat__lbl">Exercise</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {macroTargets && (
-                          <div className="macros">
-                            {([
-                              {
-                                k: "protein",
-                                g: totals.day.protein,
-                                tg: macroTargets.proteinG,
-                                l: "Protein",
-                              },
-                              {
-                                k: "carbs",
-                                g: totals.day.carbs,
-                                tg: macroTargets.carbsG,
-                                l: "Carbs",
-                              },
-                              {
-                                k: "fat",
-                                g: totals.day.fat,
-                                tg: macroTargets.fatG,
-                                l: "Fat",
-                              },
-                            ] as const).map(({ k, g, tg, l }) => {
-                              const pct = tg ? Math.min(1, g / tg) : 0;
-                              // Exceeding protein is a win, not a warning — only flag carbs/fat over goal.
-                              const over = k !== "protein" && !!tg && g > tg;
-
-                              return (
-                                <div
-                                  key={k}
-                                  className={`macro macro--${k}${over ? " is-over" : ""}`}
-                                >
-                                  <div className="macro__top">
-                                    <span className="macro__name">{l}</span>
-                                    <span className="macro__val">
-                                      <strong>{g.toFixed(0)}</strong>
-                                      <span className="macro__target"> / {tg} g</span>
-                                    </span>
-                                  </div>
-                                  <div className="macro__track">
-                                    <div
-                                      className="macro__fill"
-                                      style={{ width: `${pct * 100}%` }}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        <div className="home-overview-actions">
-                          <IonButton fill="outline" onClick={() => void copyDaySummary()}>
-                            Copy summary
-                          </IonButton>
-                          <IonButton onClick={openWeighInModal}>Log weigh-in</IonButton>
-                        </div>
-                      </>
-                    )}
-                  </IonCardContent>
-                </div>
-              </SwiperSlideComp>
-
-              <SwiperSlideComp>
-                <div className="fs-summary__slide">
-                  <IonCardHeader className="home-panel__header">
-                    <IonCardTitle>Nutrition breakdown</IonCardTitle>
-                  </IonCardHeader>
-                  <IonCardContent className="home-panel__content home-panel__content--compact">
-                    {nutritionEntries.length ? (
-                      <div className="fs-summary__nutrition-grid">
-                        {nutritionEntries.map(({ key, value }) => {
-                          const unit = nutritionLabels[key]?.unit;
-                          return (
-                            <div key={key} className="fs-summary__nutrition-item">
-                              <span className="fs-summary__nutrition-label">
-                                {formatNutritionLabel(key)}
-                              </span>
-                              <span className="fs-summary__nutrition-value">
-                                {formatNutritionValue(value)}
-                                {unit ? ` ${unit}` : ""}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <IonText color="medium">No nutrition data logged yet.</IonText>
-                    )}
-                  </IonCardContent>
-                </div>
-              </SwiperSlideComp>
-            </SwiperComp>
-          ) : (
-            <div className="ion-text-center fs-loading-block">
-              <IonSpinner name="dots" />
-            </div>
-          )}
-        </IonCard>
+        <HomeSummary
+          loading={!profile || caloriesNeeded == null}
+          isToday={isToday}
+          progress={progress}
+          ringColor={ringColor}
+          kcalConsumed={kcalConsumed}
+          kcalGoal={kcalGoal}
+          workoutCalories={workoutCalories}
+          summaryDifferenceLabel={summaryDifferenceLabel}
+          summaryDifferenceValue={summaryDifferenceValue}
+          macroTargets={macroTargets}
+          dayMacros={{ protein: totals.day.protein, carbs: totals.day.carbs, fat: totals.day.fat }}
+          nutritionTotals={nutritionTotals}
+          showAchievements={Boolean(showAchievements)}
+          streak={streak}
+          onCopySummary={() => void copyDaySummary()}
+          onLogWeighIn={openWeighInModal}
+        />
 
         {loading && (
           <div className="ion-text-center fs-loading-block">
