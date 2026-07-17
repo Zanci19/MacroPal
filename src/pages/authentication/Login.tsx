@@ -452,7 +452,6 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
     } catch (error: unknown) {
       const err = error as Error & { code?: string };
       const code = err?.code || "unknown";
-      const message = typeof err?.message === "string" ? err.message : "";
 
       if (code === "auth/multi-factor-auth-required") {
         await beginMfaSignInChallenge(err as MultiFactorError, "google");
