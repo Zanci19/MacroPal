@@ -7,7 +7,9 @@ import {
 import { auth } from "../firebase";
 
 type SocialLoginPlugin = {
-  initialize: (options: { google: { webClientId: string } }) => Promise<void>;
+  initialize: (options: {
+    google: { webClientId: string; iOSClientId?: string };
+  }) => Promise<void>;
   login: (options: {
     provider: "google";
     options?: {
@@ -56,9 +58,15 @@ const initializeSocialLogin = async () => {
       throw new Error("Missing VITE_GOOGLE_WEB_CLIENT_ID for Google sign-in.");
     }
 
+    // Android only needs the Web client id (used as the server-client id for the
+    // idToken). iOS additionally requires its own OAuth client id — pass it when
+    // available so the iOS plugin can initialize instead of rejecting.
+    const iosClientId = import.meta.env.VITE_GOOGLE_IOS_CLIENT_ID;
+
     await SocialLogin.initialize({
       google: {
         webClientId,
+        ...(iosClientId ? { iOSClientId: iosClientId } : {}),
       },
     });
   })().catch((error) => {

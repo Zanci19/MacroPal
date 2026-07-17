@@ -102,6 +102,7 @@ import TutorialOverlay from "../../components/TutorialOverlay";
 import { WaterIntake } from "../../components/WaterIntake";
 import { QuickAddModal, type QuickFood } from "../../components/QuickAddModal";
 import { SETTINGS_ROUTES } from "../../utils/settingsRoutes";
+import { createEntryId } from "../../utils/id";
 
 function safeNum(n: unknown, dp = 2): number {
   const v = typeof n === "number" ? n : Number(n);
@@ -1093,6 +1094,12 @@ const Home: React.FC = () => {
     snacks: fastFoodOutline,
   };
 
+  // Match a diary entry by its stable id when present, else fall back to the
+  // legacy addedAt timestamp (older entries have no id). Prevents deleting the
+  // wrong entry when two share an addedAt.
+  const sameEntry = (a: DiaryEntry, b: DiaryEntry) =>
+    a.id && b.id ? a.id === b.id : a.addedAt === b.addedAt;
+
   const deleteFood = async (meal: MealKey, index: number) => {
     if (!uid) return;
     const dayKey = activeDateKey;
@@ -1120,7 +1127,7 @@ const Home: React.FC = () => {
         const path = `users/${uid}/foods/${dayKey}`;
         const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const arr: DiaryEntry[] = [...(data[meal] || [])];
-        const idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+        const idx = arr.findIndex((x) => sameEntry(x, item));
         if (idx >= 0) arr.splice(idx, 1);
         else if (index <= arr.length) arr.splice(index, 1);
         await setDocData(path, { [meal]: arr }, { merge: true });
@@ -1131,7 +1138,7 @@ const Home: React.FC = () => {
           const snap = await tx.get(ref);
           const data = snap.data() || {};
           const arr: DiaryEntry[] = [...(data[meal] || [])];
-          const idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+          const idx = arr.findIndex((x) => sameEntry(x, item));
           if (idx >= 0) arr.splice(idx, 1);
           else if (index <= arr.length) arr.splice(index, 1);
           tx.set(ref, { [meal]: arr }, { merge: true });
@@ -1188,7 +1195,7 @@ const Home: React.FC = () => {
         const data = ((await getDocData(path)) || {}) as DayDiaryDoc;
         const cur: DiaryEntry[] = [...(data[meal] || [])];
 
-        const exists = cur.some((x) => x.addedAt === item.addedAt);
+        const exists = cur.some((x) => sameEntry(x, item));
         if (!exists) {
           const pos = Math.min(Math.max(index, 0), cur.length);
           cur.splice(pos, 0, item);
@@ -1202,7 +1209,7 @@ const Home: React.FC = () => {
           const data = snap.data() || {};
           const cur: DiaryEntry[] = [...(data[meal] || [])];
 
-          const exists = cur.some((x) => x.addedAt === item.addedAt);
+          const exists = cur.some((x) => sameEntry(x, item));
           if (!exists) {
             const pos = Math.min(Math.max(index, 0), cur.length);
             cur.splice(pos, 0, item);
@@ -1220,7 +1227,7 @@ const Home: React.FC = () => {
       });
     } catch {
       const arr2 = [...(dayData[meal] || [])];
-      const i2 = arr2.findIndex((x) => x.addedAt === item.addedAt);
+      const i2 = arr2.findIndex((x) => sameEntry(x, item));
       if (i2 >= 0) {
         arr2.splice(i2, 1);
         setDayData({ ...dayData, [meal]: arr2 });
@@ -1392,6 +1399,7 @@ const Home: React.FC = () => {
       fat: safeNum(food.fat, 1),
     };
     const newEntry: DiaryEntry = {
+      id: createEntryId(),
       fdcId: Date.now() + Math.floor(Math.random() * 1000000),
       name: food.name,
       base: {
@@ -1522,6 +1530,7 @@ const Home: React.FC = () => {
     const baseTime = Date.now();
     const items = (template.items || []).map((item, index) => ({
       ...item,
+      id: createEntryId(),
       addedAt: new Date(baseTime + index).toISOString(),
     })) as DiaryEntry[];
 

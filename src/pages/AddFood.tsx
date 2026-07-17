@@ -93,6 +93,13 @@ import {
 } from "../utils/recentQueries";
 import { clearRecentFoodsHistory } from "../utils/recentFoods";
 import basicFoods from "../data/basicFoods.json";
+import type { Nutrients } from "../types";
+import {
+  nutrientsFromNutriments,
+  scaleNutrients,
+  deriveSaltSodium,
+  NUTRIENTS,
+} from "../utils/nutrients";
 import "./AddFood.css";
 
 // Import Swiper for swipeable nutrition pages
@@ -184,17 +191,10 @@ type OFFSearchResponse = {
   page_size?: number;
 };
 
-type MacroSet = {
-  calories: number;
-  carbs: number;
-  protein: number;
-  fat: number;
-  sugar?: number;
-  fiber?: number;
-  saturatedFat?: number;
-  salt?: number;
-  sodium?: number;
-};
+// MacroSet is now the canonical, full-nutrient model (PCF + extended macros
+// + micronutrients). Kept as a local alias so the many existing call sites
+// don't need renaming; the extra optional fields flow through automatically.
+type MacroSet = Nutrients;
 
 type MealKey = "breakfast" | "lunch" | "dinner" | "snacks";
 const MEAL_ORDER: MealKey[] = ["breakfast", "lunch", "dinner", "snacks"];
@@ -254,6 +254,7 @@ type UserCustomFood = {
 };
 
 type DiaryEntryDoc = {
+  id?: string;
   name?: string;
   brand?: string | null;
   base?: { amount: number; unit: string; label: string };
@@ -409,85 +410,21 @@ function parseServingSize(
   return { label, grams: undefined, ml: undefined };
 }
 
+// Extraction/scaling now delegate to the shared nutrient model so every
+// nutrient (extended macros + micronutrients) is preserved end-to-end.
 function macrosPer100g(nutri?: OFFNutriments): MacroSet {
-  return {
-    calories: safeNum(nutri?.["energy-kcal_100g"], 0),
-    carbs: safeNum(nutri?.["carbohydrates_100g"], 2),
-    protein: safeNum(nutri?.["proteins_100g"], 2),
-    fat: safeNum(nutri?.["fat_100g"], 2),
-    sugar:
-      nutri?.["sugars_100g"] !== undefined
-        ? safeNum(nutri["sugars_100g"], 2)
-        : undefined,
-    fiber:
-      nutri?.["fiber_100g"] !== undefined
-        ? safeNum(nutri["fiber_100g"], 2)
-        : undefined,
-    saturatedFat:
-      nutri?.["saturated-fat_100g"] !== undefined
-        ? safeNum(nutri["saturated-fat_100g"], 2)
-        : undefined,
-    salt:
-      nutri?.["salt_100g"] !== undefined
-        ? safeNum(nutri["salt_100g"], 2)
-        : undefined,
-    sodium:
-      nutri?.["sodium_100g"] !== undefined
-        ? safeNum(nutri["sodium_100g"], 2)
-        : undefined,
-  };
+  return nutrientsFromNutriments(nutri, "100g");
 }
 
 function macrosPerServing(nutri?: OFFNutriments): MacroSet {
-  return {
-    calories: safeNum(nutri?.["energy-kcal_serving"], 0),
-    carbs: safeNum(nutri?.["carbohydrates_serving"], 2),
-    protein: safeNum(nutri?.["proteins_serving"], 2),
-    fat: safeNum(nutri?.["fat_serving"], 2),
-    sugar:
-      nutri?.["sugars_serving"] !== undefined
-        ? safeNum(nutri["sugars_serving"], 2)
-        : undefined,
-    fiber:
-      nutri?.["fiber_serving"] !== undefined
-        ? safeNum(nutri["fiber_serving"], 2)
-        : undefined,
-    saturatedFat:
-      nutri?.["saturated-fat_serving"] !== undefined
-        ? safeNum(nutri["saturated-fat_serving"], 2)
-        : undefined,
-    salt:
-      nutri?.["salt_serving"] !== undefined
-        ? safeNum(nutri["salt_serving"], 2)
-        : undefined,
-    sodium:
-      nutri?.["sodium_serving"] !== undefined
-        ? safeNum(nutri["sodium_serving"], 2)
-        : undefined,
-  };
+  return nutrientsFromNutriments(nutri, "serving");
 }
 
 function scale(base: MacroSet, qty: number): MacroSet {
-  return {
-    calories: safeNum(base.calories * qty, 0),
-    carbs: safeNum(base.carbs * qty, 1),
-    protein: safeNum(base.protein * qty, 1),
-    fat: safeNum(base.fat * qty, 1),
-    sugar:
-      base.sugar !== undefined ? safeNum(base.sugar * qty, 1) : undefined,
-    fiber:
-      base.fiber !== undefined ? safeNum(base.fiber * qty, 1) : undefined,
-    saturatedFat:
-      base.saturatedFat !== undefined
-        ? safeNum(base.saturatedFat * qty, 1)
-        : undefined,
-    salt: base.salt !== undefined ? safeNum(base.salt * qty, 2) : undefined,
-    sodium:
-      base.sodium !== undefined ? safeNum(base.sodium * qty, 2) : undefined,
-  };
+  return scaleNutrients(base, qty);
 }
 
-function stripUndefined<T extends Record<string, unknown>>(obj: T): T {
+function stripUndefined<T extends object>(obj: T): T {
   const out: Record<string, unknown> = {};
   Object.entries(obj).forEach(([k, v]) => {
     if (v !== undefined) out[k] = v;
@@ -651,6 +588,10 @@ const AddFood: React.FC = () => {
   const [mealPresetCarbs, setMealPresetCarbs] = useState("");
   const [mealPresetProtein, setMealPresetProtein] = useState("");
   const [mealPresetFat, setMealPresetFat] = useState("");
+  const [mealPresetNutrients, setMealPresetNutrients] = useState<
+    Record<CustomNutrientInputKey, string>
+  >(createEmptyCustomNutrients);
+  const [savingMealPreset, setSavingMealPreset] = useState(false);
 
   const [showRecentItemsEnabled, setShowRecentItemsEnabled] = useState(true);
   const [showRecentSearchesEnabled, setShowRecentSearchesEnabled] =
@@ -2563,35 +2504,9 @@ const AddFood: React.FC = () => {
         if (!oldValue || oldValue <= 0) oldValue = mode === "serving" ? 1 : 100;
         const ratio = newValue / oldValue;
 
+        // Scale every nutrient (extended macros + micronutrients), not just PCF.
         const oldTotal = (item.total || {}) as MacroSet;
-        const newTotalRaw: MacroSet = {
-          calories: safeNum((oldTotal.calories || 0) * ratio, 0),
-          carbs: safeNum((oldTotal.carbs || 0) * ratio, 2),
-          protein: safeNum((oldTotal.protein || 0) * ratio, 2),
-          fat: safeNum((oldTotal.fat || 0) * ratio, 2),
-          sugar:
-            oldTotal.sugar !== undefined
-              ? safeNum((oldTotal.sugar || 0) * ratio, 2)
-              : undefined,
-          fiber:
-            oldTotal.fiber !== undefined
-              ? safeNum((oldTotal.fiber || 0) * ratio, 2)
-              : undefined,
-          saturatedFat:
-            oldTotal.saturatedFat !== undefined
-              ? safeNum((oldTotal.saturatedFat || 0) * ratio, 2)
-              : undefined,
-          salt:
-            oldTotal.salt !== undefined
-              ? safeNum((oldTotal.salt || 0) * ratio, 2)
-              : undefined,
-          sodium:
-            oldTotal.sodium !== undefined
-              ? safeNum((oldTotal.sodium || 0) * ratio, 2)
-              : undefined,
-        };
-
-        const newTotal = stripUndefined(newTotalRaw);
+        const newTotal = stripUndefined(scaleNutrients(oldTotal, ratio) as MacroSet);
 
         const newSel = {
           ...(sel || {}),
@@ -2653,8 +2568,10 @@ const AddFood: React.FC = () => {
             : [];
 
           let idx = index;
-          if (idx < 0 || idx >= arr.length) {
-            idx = arr.findIndex((x) => x.addedAt === item.addedAt);
+          const matchesEdit = (x: DiaryEntryDoc) =>
+            item.id && x.id ? x.id === item.id : x.addedAt === item.addedAt;
+          if (idx < 0 || idx >= arr.length || !matchesEdit(arr[idx])) {
+            idx = arr.findIndex(matchesEdit);
           }
           if (idx < 0) return;
 
@@ -2709,22 +2626,9 @@ const AddFood: React.FC = () => {
         weightQtyForSel,
       } = payload;
 
-      const perBaseClean = stripUndefined({
-        calories: safeNum(perBase.calories, 0),
-        carbs: safeNum(perBase.carbs, 2),
-        protein: safeNum(perBase.protein, 2),
-        fat: safeNum(perBase.fat, 2),
-        sugar: perBase.sugar !== undefined ? safeNum(perBase.sugar, 2) : undefined,
-        fiber: perBase.fiber !== undefined ? safeNum(perBase.fiber, 2) : undefined,
-        saturatedFat:
-          perBase.saturatedFat !== undefined
-            ? safeNum(perBase.saturatedFat, 2)
-            : undefined,
-        salt: perBase.salt !== undefined ? safeNum(perBase.salt, 2) : undefined,
-        sodium: perBase.sodium !== undefined ? safeNum(perBase.sodium, 2) : undefined,
-      } as MacroSet);
-
-      const totalClean = stripUndefined(total);
+      // Preserve every nutrient (extended macros + micronutrients), not just PCF.
+      const perBaseClean = stripUndefined(deriveSaltSodium(perBase) as MacroSet);
+      const totalClean = stripUndefined(deriveSaltSodium(total) as MacroSet);
 
       // Upload photo to Storage if it's a base64 photo
       let finalPhotoUrl: string | null = null;
@@ -2763,6 +2667,7 @@ const AddFood: React.FC = () => {
         total: totalClean,
         photoUrl: finalPhotoUrl,
         photoName: finalPhotoName,
+        id: createLocalDocId(),
         addedAt: new Date().toISOString(),
       };
 
@@ -2822,22 +2727,9 @@ const AddFood: React.FC = () => {
     } = payload;
 
     try {
-      const perBaseClean = stripUndefined({
-        calories: safeNum(perBase.calories, 0),
-        carbs: safeNum(perBase.carbs, 2),
-        protein: safeNum(perBase.protein, 2),
-        fat: safeNum(perBase.fat, 2),
-        sugar: perBase.sugar !== undefined ? safeNum(perBase.sugar, 2) : undefined,
-        fiber: perBase.fiber !== undefined ? safeNum(perBase.fiber, 2) : undefined,
-        saturatedFat:
-          perBase.saturatedFat !== undefined
-            ? safeNum(perBase.saturatedFat, 2)
-            : undefined,
-        salt: perBase.salt !== undefined ? safeNum(perBase.salt, 2) : undefined,
-        sodium: perBase.sodium !== undefined ? safeNum(perBase.sodium, 2) : undefined,
-      } as MacroSet);
-
-      const totalClean = stripUndefined(total);
+      // Preserve every nutrient (extended macros + micronutrients), not just PCF.
+      const perBaseClean = stripUndefined(deriveSaltSodium(perBase) as MacroSet);
+      const totalClean = stripUndefined(deriveSaltSodium(total) as MacroSet);
 
       const favData: Omit<FavoriteFood, "id"> = {
         name: selectedFood.product_name || "(no name)",
@@ -3055,37 +2947,21 @@ const AddFood: React.FC = () => {
       parsedCustomServing.grams ?? parsedCustomServing.ml ?? null;
     if (servingSize && servingAmount && servingAmount > 0) {
       const servingFactor = servingAmount / 100;
-      const servingPairs: Array<[keyof OFFNutriments, keyof OFFNutriments, number]> = [
-        ["energy-kcal_100g", "energy-kcal_serving", 0],
-        ["carbohydrates_100g", "carbohydrates_serving", 2],
-        ["proteins_100g", "proteins_serving", 2],
-        ["fat_100g", "fat_serving", 2],
-        ["sugars_100g", "sugars_serving", 2],
-        ["fiber_100g", "fiber_serving", 2],
-        ["saturated-fat_100g", "saturated-fat_serving", 2],
-        ["salt_100g", "salt_serving", 2],
-        ["sodium_100g", "sodium_serving", 2],
-      ];
-
-      servingPairs.forEach(([per100gKey, servingKey, decimals]) => {
-        const value = nutriments[per100gKey];
+      // Compute per-serving values for every nutrient from the shared model.
+      const nutriMap = nutriments as Record<string, number | undefined>;
+      NUTRIENTS.forEach(({ off100g, offServing, decimals }) => {
+        const value = nutriMap[off100g];
         if (value !== undefined) {
-          nutriments[servingKey] = safeNum(value * servingFactor, decimals);
+          nutriMap[offServing] = safeNum(value * servingFactor, decimals);
         }
       });
     }
 
-    const perBase = stripUndefined({
-      calories,
-      carbs,
-      protein,
-      fat,
-      sugar: nutriments["sugars_100g"],
-      fiber: nutriments["fiber_100g"],
-      saturatedFat: nutriments["saturated-fat_100g"],
-      salt: nutriments["salt_100g"],
-      sodium: nutriments["sodium_100g"],
-    } as MacroSet);
+    // Build perBase from the full nutriments map so extended macros AND
+    // micronutrients (vitamins/minerals) are preserved on the diary entry.
+    const perBase = stripUndefined(
+      deriveSaltSodium(nutrientsFromNutriments(nutriments, "100g")) as MacroSet
+    );
     const baseMeta = { amount: 100, unit: "g", label: "100 g" };
     const selection = {
       mode: "weight" as const,
@@ -3229,6 +3105,7 @@ const AddFood: React.FC = () => {
       selection: fav.selection,
       perBase: fav.perBase,
       total: fav.total,
+      id: createLocalDocId(),
       addedAt: new Date().toISOString(),
     };
 
@@ -3356,6 +3233,7 @@ const AddFood: React.FC = () => {
         }),
       perBase: src.perBase ? stripUndefined(src.perBase) : total,
       total,
+      id: createLocalDocId(),
       addedAt: new Date().toISOString(),
     };
 
@@ -3378,14 +3256,61 @@ const AddFood: React.FC = () => {
     const user = getCurrentUser();
     if (!user) return;
 
-    const name = mealPresetName.trim() || "(no name)";
+    const name = mealPresetName.trim();
     const calories = safeNum(parseFloat(mealPresetCalories || "0"), 0);
     const carbs = safeNum(parseFloat(mealPresetCarbs || "0"), 1);
     const protein = safeNum(parseFloat(mealPresetProtein || "0"), 1);
     const fat = safeNum(parseFloat(mealPresetFat || "0"), 1);
-    const total: MacroSet = { calories, carbs, protein, fat };
+
+    // Validation (parity with custom food): require a name and non-empty macros.
+    if (!name) {
+      setToast({ show: true, message: "Please enter a meal name", color: "warning" });
+      return;
+    }
+    if (calories <= 0 && carbs <= 0 && protein <= 0 && fat <= 0) {
+      setToast({
+        show: true,
+        message: "Enter at least calories or one macronutrient",
+        color: "warning",
+      });
+      return;
+    }
+    if (
+      calories > MAX_CALORIES ||
+      carbs > MAX_MACRONUTRIENT_GRAMS ||
+      protein > MAX_MACRONUTRIENT_GRAMS ||
+      fat > MAX_MACRONUTRIENT_GRAMS
+    ) {
+      setToast({ show: true, message: "One of the values looks too large", color: "warning" });
+      return;
+    }
+
+    // Fold the full optional-nutrient set (extended macros + micros) into total.
+    const optional: Record<string, number> = {};
+    for (const field of CUSTOM_OPTIONAL_NUTRIENTS) {
+      const raw = mealPresetNutrients[field.key];
+      if (raw === undefined || raw === "") continue;
+      const value = parseFloat(raw);
+      if (!isFinite(value) || value < 0 || value > MAX_OPTIONAL_NUTRIENT_AMOUNT) {
+        setToast({
+          show: true,
+          message: `Please enter a valid ${field.label.toLowerCase()} value`,
+          color: "warning",
+        });
+        return;
+      }
+      optional[field.key] = safeNum(value, 2);
+    }
+    const total: MacroSet = deriveSaltSodium({
+      calories,
+      carbs,
+      protein,
+      fat,
+      ...optional,
+    } as MacroSet);
     const note = mealPresetNote.trim() || undefined;
 
+    setSavingMealPreset(true);
     try {
       const data: Omit<CustomMealPreset, "id"> = {
         name,
@@ -3421,6 +3346,7 @@ const AddFood: React.FC = () => {
       setMealPresetCarbs("");
       setMealPresetProtein("");
       setMealPresetFat("");
+      setMealPresetNutrients(createEmptyCustomNutrients());
 
       trackEvent("meal_preset_saved", {
         uid: user.uid,
@@ -3439,6 +3365,8 @@ const AddFood: React.FC = () => {
       trackEvent("meal_preset_save_error", {
         error: e?.message || String(e),
       });
+    } finally {
+      setSavingMealPreset(false);
     }
   };
 
@@ -3461,6 +3389,7 @@ const AddFood: React.FC = () => {
       },
       perBase: preset.total,
       total: preset.total,
+      id: createLocalDocId(),
       addedAt: new Date().toISOString(),
     };
 
@@ -5116,10 +5045,45 @@ const AddFood: React.FC = () => {
               />
             </IonItem>
 
+            <IonCard className="add-food-custom-nutrients">
+              <IonCardHeader>
+                <IonCardTitle style={{ fontSize: 16 }}>
+                  Optional nutrients (total)
+                </IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent>
+                <IonGrid>
+                  <IonRow>
+                    {CUSTOM_OPTIONAL_NUTRIENTS.map((field) => (
+                      <IonCol size="6" key={field.key}>
+                        <IonItem lines="none" className="add-food-custom-nutrients__item">
+                          <IonLabel position="stacked">
+                            {field.label} ({field.unit})
+                          </IonLabel>
+                          <IonInput
+                            type="number"
+                            inputMode="decimal"
+                            value={mealPresetNutrients[field.key]}
+                            onIonChange={(e) => {
+                              setMealPresetNutrients((prev) => ({
+                                ...prev,
+                                [field.key]: e.detail.value || "",
+                              }));
+                            }}
+                          />
+                        </IonItem>
+                      </IonCol>
+                    ))}
+                  </IonRow>
+                </IonGrid>
+              </IonCardContent>
+            </IonCard>
+
             <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
               <IonButton
                 expand="block"
                 fill="outline"
+                disabled={savingMealPreset}
                 onClick={() => {
                   console.log(`[USER ACTION] AddFood: Cancel meal preset creation clicked`);
                   setShowCreateMealPreset(false);
@@ -5128,11 +5092,18 @@ const AddFood: React.FC = () => {
               >
                 Cancel
               </IonButton>
-              <IonButton expand="block" onClick={() => {
+              <IonButton expand="block" disabled={savingMealPreset} onClick={() => {
                 console.log(`[USER ACTION] AddFood: Save custom meal clicked`, { name: mealPresetName });
                 createMealPreset();
               }}>
-                Save custom meal
+                {savingMealPreset ? (
+                  <>
+                    <IonSpinner name="dots" />
+                    &nbsp;Saving...
+                  </>
+                ) : (
+                  "Save custom meal"
+                )}
               </IonButton>
             </div>
           </IonContent>

@@ -180,9 +180,19 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
         throw new Error("This account requires a second factor that this app does not support yet.");
       }
 
+      // Prefer the authenticator (TOTP) factor when the account has one: it is
+      // far more reliable inside the Capacitor WebView than SMS, which needs an
+      // invisible reCAPTCHA that frequently fails there. The user can still
+      // switch to SMS on the verification screen (both methods stay listed in
+      // availableMethods, and "Resend SMS code" bootstraps it on demand).
+      const preferTotp = Boolean(selectedTotpHint);
+      const selectedMethod: "sms" | "authenticator" = preferTotp
+        ? "authenticator"
+        : "sms";
+
       let verificationId: string | null = null;
       let smsBootstrapError: Error | null = null;
-      if (selectedPhoneHint) {
+      if (selectedPhoneHint && !preferTotp) {
         try {
           const verifier = await ensureMfaRecaptcha();
           const provider = new PhoneAuthProvider(auth);
@@ -203,8 +213,6 @@ const Login: React.FC<LoginProps> = ({ embedded = false, onSwitchToRegister }) =
           }
         }
       }
-
-      const selectedMethod = selectedPhoneHint ? "sms" : "authenticator";
 
       setPendingMfaChallenge({
         resolver,

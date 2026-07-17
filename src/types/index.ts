@@ -11,6 +11,50 @@ export type Macros = {
   fat: number;
 };
 
+/**
+ * Canonical nutrient model used across the whole app. Calories + the primary
+ * PCF trio are always present; extended macros and micronutrients are optional
+ * (undefined = "unknown", never coerce to 0 or charts show false zeros).
+ * The single source of truth for keys/units/OFF-mapping is
+ * `src/utils/nutrients.ts` (`NUTRIENTS`).
+ */
+export interface Nutrients {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+
+  // ----- extended macros -----
+  sugar?: number;
+  fiber?: number;
+  saturatedFat?: number;
+  salt?: number; // grams
+  sodium?: number; // grams
+
+  // ----- vitamins -----
+  vitaminA?: number; // µg
+  vitaminC?: number; // mg
+  vitaminD?: number; // µg
+  vitaminE?: number; // mg
+  vitaminK?: number; // µg
+  vitaminB1?: number; // mg
+  vitaminB2?: number; // mg
+  vitaminB3?: number; // mg
+  vitaminB6?: number; // mg
+  vitaminB12?: number; // µg
+  folate?: number; // µg
+
+  // ----- minerals -----
+  calcium?: number; // mg
+  iron?: number; // mg
+  magnesium?: number; // mg
+  potassium?: number; // mg
+  zinc?: number; // mg
+}
+
+/** A totals bag: canonical nutrients plus room for legacy/extra numeric keys. */
+export type NutrientTotals = Nutrients & { [k: string]: number | undefined };
+
 /** =========================
  *  User / profile
  *  ========================= */
@@ -80,11 +124,14 @@ export interface DiaryEntry {
   /** What the user actually selected for this entry */
   selection?: SelectionInfo;
 
-  /** Macros per base amount (e.g. per 100 g) */
-  perBase?: Macros;
+  /** Nutrients per base amount (e.g. per 100 g) */
+  perBase?: Nutrients;
 
-  /** Total macros for this logged entry (after scaling) */
-  total: Macros & Record<string, number>;
+  /** Total nutrients for this logged entry (after scaling) */
+  total: NutrientTotals;
+
+  /** Stable unique id for this entry (used for edit/delete/undo). */
+  id?: string;
 
   /** ISO date-time string when entry was added */
   addedAt: string;

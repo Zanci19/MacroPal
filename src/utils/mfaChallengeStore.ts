@@ -14,23 +14,34 @@ export type PendingMfaChallenge = {
   createdAt: number;
 };
 
-let pendingMfaChallenge: PendingMfaChallenge | null = null;
 const MFA_CHALLENGE_TTL_MS = 10 * 60 * 1000;
 
+// The challenge holds a live Firebase MultiFactorResolver (non-serializable),
+// so it can only live in memory — a full page reload unavoidably drops it.
+// Back the singleton with globalThis so it survives module re-evaluation
+// (HMR, lazy-loaded chunks) within the same page context, which is where the
+// previous module-local variable could be silently reset between /login and
+// /login-verify.
+type MfaStore = { challenge: PendingMfaChallenge | null };
+const STORE_KEY = "__macropal_mfa_challenge__";
+const globalScope = globalThis as unknown as Record<string, MfaStore | undefined>;
+const store: MfaStore = globalScope[STORE_KEY] ?? { challenge: null };
+globalScope[STORE_KEY] = store;
+
 export const setPendingMfaChallenge = (challenge: PendingMfaChallenge) => {
-  pendingMfaChallenge = challenge;
+  store.challenge = challenge;
 };
 
 export const getPendingMfaChallenge = () => {
-  if (!pendingMfaChallenge) return null;
-  if (Date.now() - pendingMfaChallenge.createdAt > MFA_CHALLENGE_TTL_MS) {
-    pendingMfaChallenge = null;
+  if (!store.challenge) return null;
+  if (Date.now() - store.challenge.createdAt > MFA_CHALLENGE_TTL_MS) {
+    store.challenge = null;
     return null;
   }
-  return pendingMfaChallenge;
+  return store.challenge;
 };
 
 export const clearPendingMfaChallenge = () => {
-  pendingMfaChallenge = null;
+  store.challenge = null;
 };
 
