@@ -58,12 +58,15 @@ import type {
   DiaryEntry,
   DayDiaryDoc,
   WeighInEntry,
+  NutrientTotals,
 } from "../../types";
 import { useProfile } from "../../hooks/useProfile";
 import { getChartAnimationPreference } from "../../utils/preferences";
 import { useHistory } from "react-router";
 import { fromMetricWeight, getUnitSystem, weightLabel } from "../../utils/units";
 import { toDateKey } from "../../utils/date";
+import { sumNutrients } from "../../utils/nutrients";
+import NutrientBreakdown from "../../components/NutrientBreakdown";
 
 import "./Analytics.css";
 
@@ -431,6 +434,20 @@ const Analytics: React.FC = () => {
       fat: +(totals.fat / n).toFixed(1),
     };
   }, [totals, nonEmptyDayTable.length]);
+
+  // Daily-average of the full nutrient set (extended macros + micronutrients)
+  // across logged days, for the Average-day breakdown.
+  const nutrientAvg = useMemo(() => {
+    const dayCount = nonEmptyView.length;
+    if (!dayCount) return null;
+    const items = nonEmptyView.flatMap((d) => d.roll.items || []);
+    const totalsBag = sumNutrients(items as Array<{ total?: NutrientTotals }>);
+    const out: Record<string, number> = {};
+    Object.entries(totalsBag).forEach(([k, v]) => {
+      if (typeof v === "number" && Number.isFinite(v)) out[k] = v / dayCount;
+    });
+    return out;
+  }, [nonEmptyView]);
 
   const caloriesTarget = useMemo(() => {
     if (!profile) return null;
@@ -801,6 +818,14 @@ const Analytics: React.FC = () => {
                                   </div>
                                 );
                               })()}
+                              {nutrientAvg && (
+                                <div className="an-nutrient-breakdown">
+                                  <NutrientBreakdown
+                                    totals={nutrientAvg}
+                                    subtitle={`Daily average · ${nonEmptyView.length} days`}
+                                  />
+                                </div>
+                              )}
                             </IonCardContent>
                           </IonCard>
                         </IonCol>

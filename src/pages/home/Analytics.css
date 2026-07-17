@@ -389,3 +389,10 @@
   max-width: 260px;
   line-height: 1.55;
 }
+
+/* Nutrient breakdown inside the Average-day card */
+.an-nutrient-breakdown {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--mp-border);
+}
