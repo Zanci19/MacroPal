@@ -60,7 +60,7 @@
 }
 
 .settings-mfa-modal::part(content) {
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--mp-r-card) var(--mp-r-card) 0 0;
 }
 
 .settings-mfa-setup-content {

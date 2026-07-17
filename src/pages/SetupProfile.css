@@ -20,7 +20,7 @@ body.dark .setup-profile-page {
   max-width: 420px;
   margin: 0 auto;
   padding: 24px 20px 20px;
-  border-radius: 22px;
+  border-radius: var(--mp-r-card);
   background: var(--mp-surface);
   backdrop-filter: none;
   box-shadow: var(--mp-shadow-strong);
@@ -83,7 +83,7 @@ body.dark .setup-profile-page {
 
 .setup-save-button {
   margin-top: 8px;
-  border-radius: 999px;
+  border-radius: var(--mp-r-pill);
   height: 44px;
   font-weight: 600;
 }

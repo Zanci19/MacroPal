@@ -78,7 +78,7 @@
 .hs-friendly__sub { font-size: 12.5px; color: var(--mp-text-muted); margin-top: -6px; }
 .hs-friendly__ring { display: flex; justify-content: center; padding: 4px 0; }
 .hs-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left; }
-.hs-chip { display: flex; align-items: center; gap: 9px; background: var(--mp-surface-muted); border-radius: 14px; padding: 10px 12px; }
+.hs-chip { display: flex; align-items: center; gap: 9px; background: var(--mp-surface-muted); border-radius: var(--mp-r-card); padding: 10px 12px; }
 .hs-chip__dot { width: 26px; height: 26px; border-radius: 8px; background: var(--c); flex: none; }
 .hs-chip__k { font-size: 11px; color: var(--mp-text-subtle); font-weight: 600; flex: 1; }
 .hs-chip__v { font-size: 15px; font-weight: var(--mp-fw-display); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }

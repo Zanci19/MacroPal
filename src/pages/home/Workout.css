@@ -27,7 +27,7 @@
 
 .workout-summary__stat {
   padding: 14px 16px;
-  border-radius: 14px;
+  border-radius: var(--mp-r-card);
   border: 1px solid var(--mp-border);
   background: var(--mp-surface-muted);
   display: flex;

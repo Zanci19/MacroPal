@@ -7,7 +7,7 @@
   max-width: 760px;
   margin: 0 auto;
   background: var(--mp-surface);
-  border-radius: 20px;
+  border-radius: var(--mp-r-card);
   padding: 24px;
   box-shadow: var(--mp-shadow-soft);
   border: 1px solid var(--mp-border);

@@ -1,7 +1,7 @@
 .quick-add-modal {
   --width: min(560px, calc(100vw - 24px));
   --height: min(720px, calc(100vh - 40px));
-  --border-radius: 18px;
+  --border-radius: var(--mp-r-card);
 }
 
 .quick-add-content {

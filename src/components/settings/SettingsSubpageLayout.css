@@ -11,7 +11,7 @@
 .settings-subpage-intro {
   padding: 12px 14px;
   border: 1px solid var(--mp-border);
-  border-radius: 14px;
+  border-radius: var(--mp-r-card);
   background: var(--mp-surface-muted);
 }
 
