@@ -36,6 +36,7 @@ import {
   getLazyLoadPreference,
   getStoredThemeMode,
 } from "./utils/preferences";
+import { applyRuntimePerformanceMode, isLowEndDevice } from "./utils/performanceMode";
 import {
   LEGACY_SETTINGS_ROUTE_REDIRECTS,
   SETTINGS_ROUTES,
@@ -367,7 +368,10 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
     const stored = localStorage.getItem("mp_tab_animations");
     return stored !== "disabled"; // Default to enabled
   });
-  const effectiveAnimationsEnabled = isDemoMode || animationsEnabled;
+  // Skip the JS page transitions on low-end/data-saver devices — the largest
+  // contributor to perceived lag "between animations" on weak hardware.
+  const lowEndDevice = useMemo(() => isLowEndDevice(), []);
+  const effectiveAnimationsEnabled = isDemoMode || (animationsEnabled && !lowEndDevice);
 
   // Listen for animation preference changes
   useEffect(() => {
@@ -793,6 +797,9 @@ const App: React.FC = () => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
     applyTheme(getStoredThemeMode());
     applyFontPreference(getStoredFontPreference());
+    // Reduce animation work on low-end / data-saver devices (adds
+    // body.mp-low-end-mode; see theme.css). Directly targets perceived lag.
+    applyRuntimePerformanceMode();
 
     // Only listen for system preference changes if using system theme
     const listener = (event: MediaQueryListEvent) => {

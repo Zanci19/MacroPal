@@ -205,6 +205,19 @@ body.font-system {
   --mp-font: var(--mp-font-system);
 }
 
+/* Low-end / data-saver devices: make CSS animations & transitions effectively
+   instant so weak GPUs/CPUs don't stutter between screens. Applied at boot by
+   applyRuntimePerformanceMode(); mirrors prefers-reduced-motion. */
+body.mp-low-end-mode *,
+body.mp-low-end-mode *::before,
+body.mp-low-end-mode *::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+}
+
 ion-content::part(background) {
   background: var(--mp-bg);
 }
