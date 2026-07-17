@@ -1966,6 +1966,13 @@ const AddFood: React.FC = () => {
         kept = scored.filter((x) => x.matched >= 1);
       }
 
+      // The server already ranked these by relevance; never let strict client
+      // token-matching throw away every result (a common cause of "search
+      // returns nothing"). Fall back to the full scored list, best-first.
+      if (kept.length === 0 && scored.length > 0) {
+        kept = scored;
+      }
+
       kept.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         const an = (a.food.product_name || "").toLowerCase();
@@ -2033,20 +2040,33 @@ const AddFood: React.FC = () => {
       const e = error as Error & { name?: string };
       if (e?.name === "AbortError") return 0;
 
-      const msg = handleError("food_search", e);
+      // Remote search failed (function down, timeout, or connectivity lost
+      // mid-request). Fall back to local results so the user still gets the
+      // bundled foods and their own custom foods instead of a blank screen.
+      // Do NOT cache this fallback, so a retry re-hits the online search.
+      if (pageNumber === 1) {
+        setResults(localResults);
+        setPage(1);
+        setNoMoreResults(true);
+        recordRecentQuery(raw);
+      }
+
       setToast({
         show: true,
-        message: msg,
-        color: "danger",
+        message: localResults.length
+          ? "Showing offline matches — online search is unavailable right now."
+          : handleError("food_search", e),
+        color: localResults.length ? "medium" : "danger",
       });
 
       trackEvent("food_search_error", {
         query: raw,
         page: pageNumber,
         error: e?.message || String(e),
+        local_fallback: localResults.length,
       });
 
-      return 0;
+      return localResults.length;
     } finally {
       if (searchAbortRef.current === controller) {
         searchAbortRef.current = null;
@@ -3708,11 +3728,13 @@ const AddFood: React.FC = () => {
                 debounce={SEARCH_DEBOUNCE_MS}
                 ref={searchInputRef}
                 onIonInput={(e) => {
-                  console.log(`[USER ACTION] AddFood: Search input changed`, { query: e.detail.value });
-                  setQuery(e.detail.value ?? "");
-                }}
-                onIonChange={(e) => {
-                  const q = (e.detail.value ?? "").trim();
+                  const value = e.detail.value ?? "";
+                  console.log(`[USER ACTION] AddFood: Search input changed`, { query: value });
+                  setQuery(value);
+                  // Search-as-you-type: IonInput's `debounce` debounces ionInput,
+                  // and ionChange only fires on blur/Enter — so triggering here is
+                  // what makes results appear while typing.
+                  const q = value.trim();
                   if (q.length >= 2) {
                     foodsSearch(q, 1);
                   } else if (!q) {
