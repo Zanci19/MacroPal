@@ -715,8 +715,20 @@ body.dark ion-alert .alert-button {
   background: var(--mp-text-subtle);
 }
 
-/* ---------- Reduced motion / coarse pointer ---------- */
-@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+/* ---------- Coarse pointer / no hover ----------
+   Touch devices only: drop hover affordances, which either never fire or
+   stick after a tap. Motion is NOT disabled here — every phone matches
+   (hover: none) and (pointer: coarse), so killing transitions in this block
+   would turn animations off for all mobile users regardless of preference. */
+@media (hover: none) {
+  ion-button:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Reduced motion ----------
+   Only when the user has actually asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
   html,
   body,
   ion-app,
@@ -730,7 +742,6 @@ body.dark ion-alert .alert-button {
     transition: none !important;
   }
 
-  ion-button:hover,
   ion-button:active {
     transform: none;
   }

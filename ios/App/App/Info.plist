@@ -22,6 +22,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MacroPal uses the microphone so you can add foods to your diary by speaking them.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>MacroPal converts your speech to text so it can find and log the foods you say.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

@@ -68,6 +68,7 @@ import {
   barcodeOutline,
   searchOutline,
   closeCircleOutline,
+  micOutline,
 } from "ionicons/icons";
 import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
 import {
@@ -92,6 +93,11 @@ import {
   clearAddFoodRecentQueries,
 } from "../utils/recentQueries";
 import { clearRecentFoodsHistory } from "../utils/recentFoods";
+import VoiceFoodModal, {
+  type VoiceFoodDraft,
+} from "../components/VoiceFoodModal";
+import type { FoodMatch } from "../utils/voiceFoodResolver";
+import { isSpeechRecognitionSupported } from "../utils/speechRecognition";
 import basicFoods from "../data/basicFoods.json";
 import type { Nutrients } from "../types";
 import {
@@ -517,6 +523,9 @@ const AddFood: React.FC = () => {
   const [showMealPicker, setShowMealPicker] = useState(false);
   const [quickAddEnterActive, setQuickAddEnterActive] = useState(false);
   const [tab, setTab] = useState<"search" | "favorites">("search");
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  // Support never changes at runtime, so probe it once per mount.
+  const voiceInputSupported = useMemo(() => isSpeechRecognitionSupported(), []);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OFFSearchHit[]>([]);
@@ -3227,6 +3236,117 @@ const AddFood: React.FC = () => {
     });
   };
 
+  // --- Voice logging -------------------------------------------------------
+
+  /** Foods the voice matcher can resolve without a network round-trip. */
+  const voiceLocalFoods = useMemo<OFFSearchHit[]>(
+    () => [
+      ...customFoods.map(customFoodToSearchHit),
+      ...BASIC_FOODS.map((food) => ({ ...food, dataSource: "local" as const })),
+    ],
+    [customFoods]
+  );
+
+  /** Remote lookup used only for spoken foods the local database can't cover. */
+  const voiceSearchRemote = useCallback(
+    async (voiceQuery: string): Promise<OFFSearchHit[]> => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return [];
+
+      const url = new URL(`${FN_BASE}/offSearch`);
+      url.searchParams.set("q", voiceQuery);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("page_size", "20");
+
+      const res = await fetch(url.toString());
+      if (!res.ok) throw new Error(`Voice search failed: ${res.status}`);
+
+      const data: OFFSearchResponse = await res.json();
+      const products = Array.isArray(data?.products) ? data.products : [];
+      // Nutrient data is mandatory here: unlike the search list, the user never
+      // opens a detail screen that could fill in the missing numbers.
+      return products.filter(
+        (product) =>
+          product.product_name?.trim() &&
+          typeof product.nutriments?.["energy-kcal_100g"] === "number"
+      );
+    },
+    []
+  );
+
+  const addVoiceFoodsToMeal = async (
+    drafts: Array<VoiceFoodDraft<OFFSearchHit> & { match: FoodMatch<OFFSearchHit> }>
+  ) => {
+    const user = getCurrentUser();
+    if (!user || drafts.length === 0) return;
+
+    const items = drafts.map((draft) => {
+      const food = draft.match.food;
+      const grams = Math.max(1, draft.grams);
+      const per100 = macrosPer100g(food.nutriments);
+
+      return {
+        code: food.code,
+        name: food.product_name || draft.parsed.query,
+        brand: food.brands || null,
+        dataSource: food.dataSource ?? "openfoodfacts",
+        base: { amount: 100, unit: "g", label: "100 g" },
+        selection: {
+          mode: "weight" as const,
+          note: `${safeNum(grams, 0)} g`,
+          servingsQty: null,
+          weightQty: grams,
+        },
+        perBase: stripUndefined(deriveSaltSodium(per100) as MacroSet),
+        total: stripUndefined(deriveSaltSodium(scale(per100, grams / 100)) as MacroSet),
+        photoUrl: null,
+        photoName: null,
+        id: createLocalDocId(),
+        addedAt: new Date().toISOString(),
+      };
+    });
+
+    // One write for the whole spoken meal — the point of the feature is speed.
+    await arrayUnionField(`users/${user.uid}/foods/${dateKey}`, meal, items);
+
+    await Promise.all(
+      items.map((item) =>
+        upsertRecentFood({
+          name: item.name,
+          brand: item.brand,
+          code: item.code,
+        }).catch((error) => {
+          // Recent-foods is a convenience cache; never fail the log over it.
+          console.warn("Recent food update failed", error);
+        })
+      )
+    );
+
+    trackEvent("diary_add_from_voice", {
+      uid: user.uid,
+      meal,
+      date: dateKey,
+      count: items.length,
+      calories: items.reduce((sum, item) => sum + (item.total.calories || 0), 0),
+    });
+
+    setShowVoiceModal(false);
+    setToast({
+      show: true,
+      message: `Added ${items.length} ${
+        items.length === 1 ? "food" : "foods"
+      } to ${meal[0].toUpperCase() + meal.slice(1)}`,
+      color: "success",
+    });
+    history.replace(`/app/home?date=${dateKey}`);
+  };
+
+  const openVoiceModal = () => {
+    console.log(`[USER ACTION] AddFood: Voice input button clicked`, { meal, date: dateKey });
+    trackEvent("voice_food_modal_open", { meal, date: dateKey });
+    void hideKeyboard();
+    setShowVoiceModal(true);
+  };
+
   const addHistoryFoodToMeal = async (src: DiaryEntryDoc) => {
     console.log(`[USER ACTION] AddFood: Recent food clicked to add to meal`, { foodName: src.name, meal });
     const user = getCurrentUser();
@@ -3750,6 +3870,17 @@ const AddFood: React.FC = () => {
                   }
                 }}
               />
+              {voiceInputSupported && (
+                <IonButton
+                  fill="clear"
+                  className="fs-search-bar__action"
+                  color="medium"
+                  onClick={openVoiceModal}
+                  aria-label="Add foods by voice"
+                >
+                  <IonIcon slot="icon-only" icon={micOutline} />
+                </IonButton>
+              )}
               <IonButton
                 fill="clear"
                 className="fs-search-bar__action"
@@ -4718,6 +4849,15 @@ const AddFood: React.FC = () => {
             console.log(`[USER ACTION] AddFood: Toast dismissed`);
             setToast({ ...toast, show: false });
           }}
+        />
+
+        <VoiceFoodModal<OFFSearchHit>
+          isOpen={showVoiceModal}
+          onDismiss={() => setShowVoiceModal(false)}
+          mealLabel={meal[0].toUpperCase() + meal.slice(1)}
+          localFoods={voiceLocalFoods}
+          searchRemote={voiceSearchRemote}
+          onConfirm={addVoiceFoodsToMeal}
         />
 
         <IonAlert

@@ -1,0 +1,210 @@
+/* Voice food logging modal — listening stage and review list. */
+
+.voice-food__stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 16px;
+  min-height: 60vh;
+  padding: 24px 8px;
+}
+
+.voice-food__headline {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--mp-text);
+  margin: 0;
+}
+
+.voice-food__hint {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Mic button */
+
+.voice-food__mic {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--mp-r-pill);
+  border: none;
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--mp-shadow-sm);
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.voice-food__mic ion-icon {
+  font-size: 40px;
+}
+
+.voice-food__mic:active {
+  transform: scale(0.95);
+}
+
+.voice-food__mic:disabled {
+  background: var(--mp-surface-sunken);
+  color: var(--mp-text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.voice-food__mic--live {
+  background: var(--ion-color-danger);
+  color: var(--ion-color-danger-contrast);
+  animation: voice-food-pulse 1.6s ease-out infinite;
+}
+
+@keyframes voice-food-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--ion-color-danger-rgb), 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 22px rgba(var(--ion-color-danger-rgb), 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--ion-color-danger-rgb), 0);
+  }
+}
+
+/* Respect users who ask for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .voice-food__mic--live {
+    animation: none;
+  }
+  .voice-food__mic {
+    transition: none;
+  }
+}
+
+.voice-food__transcript {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--mp-text);
+  margin: 0;
+  max-width: 32ch;
+  min-height: 1.5em;
+}
+
+.voice-food__placeholder {
+  color: var(--mp-text-muted);
+}
+
+/* Review stage */
+
+.voice-food__heard {
+  background: var(--mp-surface-muted);
+  border-radius: var(--mp-r-card);
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.voice-food__heard p {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--mp-text);
+  line-height: 1.4;
+}
+
+.voice-food__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.voice-food__item {
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card);
+  background: var(--mp-surface);
+  padding: 12px 12px 12px 14px;
+  box-shadow: var(--mp-shadow-sm);
+}
+
+.voice-food__item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.voice-food__item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-food__item-name {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--mp-text);
+  line-height: 1.3;
+}
+
+.voice-food__item-meta {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.voice-food__item-spinner {
+  margin-top: 6px;
+}
+
+.voice-food__amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-control);
+  padding: 0 12px;
+  max-width: 160px;
+}
+
+.voice-food__amount-input {
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 0.95rem;
+}
+
+.voice-food__amount-unit {
+  color: var(--mp-text-muted);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.voice-food__unmatched {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--mp-text-muted);
+}
+
+.voice-food__redo {
+  margin-top: 16px;
+}
+
+.voice-food__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(var(--ion-color-danger-rgb), 0.1);
+  color: var(--ion-color-danger);
+  border-radius: var(--mp-r-card);
+  padding: 10px 14px;
+  font-size: 0.88rem;
+  margin-bottom: 12px;
+}
+
+.voice-food__error ion-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
