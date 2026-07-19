@@ -86,7 +86,7 @@ import {
   shiftDateKey,
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
-import { computeGenericFoodBoost } from "../utils/genericFoodBoosts";
+import { rankFoods } from "../utils/foodSearch";
 import {
   ADD_FOOD_RECENT_QUERY_KEY,
   RECENT_QUERIES_CLEARED_EVENT,
@@ -1679,32 +1679,6 @@ const AddFood: React.FC = () => {
   const normalizeText = (text: string) =>
     text.toLowerCase().replace(/[^a-z0-9]+/gi, " ").trim();
 
-  const tokenize = (text: string) => normalizeText(text).split(" ").filter(Boolean);
-
-  const expandToken = (token: string): string[] => {
-    const t = token.trim().toLowerCase();
-    const variants = new Set<string>();
-    if (!t) return [];
-    variants.add(t);
-    if (t.endsWith("s") && t.length > 3) variants.add(t.slice(0, -1));
-    if (t.endsWith("es") && t.length > 4) variants.add(t.slice(0, -2));
-    if (t.endsWith("ies") && t.length > 4) variants.add(t.slice(0, -3) + "y");
-    return Array.from(variants);
-  };
-
-  const countTokenMatches = (hay: string, tokenVariants: string[][]) => {
-    let matched = 0;
-    for (const variants of tokenVariants) {
-      if (variants.some((v) => hay.includes(v))) matched++;
-    }
-    return matched;
-  };
-
-  const looksLikeRecipeOrSpecific = (nameNorm: string) =>
-    /\b(with|and|recipe|recipes|flavor|flavoured|flavored|sauce|mix|salad|cookies|cake|bar|drink|juice|smoothie|ketchup|spread|chocolate)\b/i.test(
-      nameNorm
-    );
-
   const recordRecentQuery = (text: string) => {
     const normalized = normalizeText(text);
     if (!normalized) return;
@@ -1826,9 +1800,6 @@ const AddFood: React.FC = () => {
     }
 
     const normalizedQuery = normalizeText(raw);
-    const queryTokens = tokenize(raw);
-    const expandedTokens = queryTokens.map(expandToken);
-    const tokenCount = queryTokens.length;
 
     const cacheKey = `${normalizedQuery}|${pageNumber}`;
     const cached = searchCacheRef.current.get(cacheKey);
@@ -1852,59 +1823,6 @@ const AddFood: React.FC = () => {
       date: dateKey,
     });
 
-    const computeGenericBoost = (food: OFFSearchHit) => {
-      const nameNorm = normalizeText(food.product_name || "");
-      const brandNorm = normalizeText(food.brands || "");
-      let boost = 0;
-
-      if (nameNorm === normalizedQuery && !brandNorm) boost += 450;
-      if (!brandNorm) boost += 120;
-
-      const nTokens = tokenize(nameNorm).length;
-      if (nTokens <= 3) boost += 50;
-      else if (nTokens <= 5) boost += 15;
-
-      if (/\b(\d+\s*x\s*\d+|\dx)\b/.test(nameNorm)) boost -= 25;
-      if (/\b\d+\s*(kg|g|ml|l)\b/.test(nameNorm)) boost -= 10;
-
-      return boost;
-    };
-
-    const scoreFood = (food: OFFSearchHit) => {
-      const nameRaw = food.product_name || "";
-      const brandRaw = food.brands || "";
-      const codeRaw = food.code || "";
-      const nameNorm = normalizeText(nameRaw);
-      const brandNorm = normalizeText(brandRaw);
-      const codeNorm = normalizeText(codeRaw);
-      const combined = `${nameNorm} ${brandNorm} ${codeNorm}`.trim();
-
-      if (!combined) return { food, score: -9999, matched: 0, required: 0 };
-
-      const matched = countTokenMatches(combined, expandedTokens);
-      const required =
-        tokenCount <= 1 ? 1 : tokenCount <= 3 ? Math.min(2, tokenCount) : 3;
-
-      let score = 0;
-
-      if (codeNorm === normalizedQuery) score += 1600;
-      if (nameNorm === normalizedQuery) score += 1400;
-      else if (nameNorm.startsWith(normalizedQuery)) score += 1100;
-      else if (combined.includes(normalizedQuery)) score += 800;
-
-      score += matched * 180;
-      if (tokenCount > 0) score += (matched / tokenCount) * 120;
-
-      score -= tokenize(nameNorm).length * 2;
-
-      if (looksLikeRecipeOrSpecific(nameNorm) && tokenCount <= 2) score -= 220;
-
-      score += computeGenericFoodBoost(nameNorm, brandNorm);
-      score += computeGenericBoost(food);
-
-      return { food, score, matched, required };
-    };
-
     const userCustomFoods = customFoods.map(customFoodToSearchHit);
     const localFoods = [
       ...userCustomFoods,
@@ -1914,21 +1832,7 @@ const AddFood: React.FC = () => {
       })),
     ];
 
-    const localScored = localFoods.map(scoreFood);
-    let localKept = localScored;
-    if (tokenCount > 0) {
-      localKept = localScored.filter((x) => x.matched >= x.required);
-    }
-    if (tokenCount > 0 && localKept.length < 5) {
-      localKept = localScored.filter((x) => x.matched >= 1);
-    }
-    localKept.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      const an = (a.food.product_name || "").toLowerCase();
-      const bn = (b.food.product_name || "").toLowerCase();
-      return an.localeCompare(bn);
-    });
-    const localResults = localKept.map((item) => item.food);
+    const { results: localResults } = rankFoods(localFoods, raw);
 
     try {
       // When offline, skip the remote API and return only local results
@@ -1964,30 +1868,16 @@ const AddFood: React.FC = () => {
 
       const validFoods = foods.filter((food) => food.product_name?.trim());
 
-      const scored = validFoods.map(scoreFood);
+      // rankFoods already falls back to near-matches when nothing matches
+      // strictly, and reports it via `relaxed` rather than silently padding
+      // the list out to five items the way the previous filter chain did.
+      const { results: remoteResults, relaxed } = rankFoods(validFoods, raw);
 
-      let kept = scored;
-      if (tokenCount > 0) {
-        kept = scored.filter((x) => x.matched >= x.required);
-      }
-
-      if (tokenCount > 0 && kept.length < 5) {
-        kept = scored.filter((x) => x.matched >= 1);
-      }
-
-      // The server already ranked these by relevance; never let strict client
-      // token-matching throw away every result (a common cause of "search
-      // returns nothing"). Fall back to the full scored list, best-first.
-      if (kept.length === 0 && scored.length > 0) {
-        kept = scored;
-      }
-
-      kept.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        const an = (a.food.product_name || "").toLowerCase();
-        const bn = (b.food.product_name || "").toLowerCase();
-        return an.localeCompare(bn);
-      });
+      // The server ranked these by its own relevance; if our stricter client
+      // pass discards everything, keep the server order rather than showing an
+      // empty list (a long-standing cause of "search returns nothing").
+      const kept =
+        remoteResults.length > 0 ? remoteResults : validFoods;
 
       const deduped: OFFSearchHit[] = [];
       const seen = new Set<string>();
@@ -2000,8 +1890,7 @@ const AddFood: React.FC = () => {
           deduped.push(f);
         }
       }
-      for (const item of kept) {
-        const f = item.food;
+      for (const f of kept) {
         const key = f.code || `${f.product_name || ""}|${f.brands || ""}`;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -2034,6 +1923,14 @@ const AddFood: React.FC = () => {
         setToast({
           show: true,
           message: "No results found. Try refining your search.",
+          color: "medium",
+        });
+      } else if (relaxed) {
+        // Nothing matched every word. Say so, rather than letting near-misses
+        // pass for real hits the way the old silent widening did.
+        setToast({
+          show: true,
+          message: "No exact matches — showing the closest ones.",
           color: "medium",
         });
       }
