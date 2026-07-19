@@ -85,53 +85,64 @@
 }
 
 /* ---------- Quick actions ---------- */
+/* One cohesive toolbar rather than four floating cards. The previous version
+   -- a bordered rounded card per action, each wrapping an accent-tinted
+   rounded-square icon tile -- is the "accent tile on a rounded card" pattern
+   that reads as generated. This groups the actions into a single surface with
+   hairline dividers, the shape a native app's action bar takes. */
 .home-quick-actions {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0;
   margin: 0 0 16px;
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-md);
+  overflow: hidden;
 }
 
 .home-quick-action {
   min-width: 0;
-  height: 76px;
+  height: 66px;
   margin: 0;
-  --background: var(--mp-surface);
+  --background: transparent;
   --background-hover: var(--mp-primary-soft);
   --background-activated: var(--mp-primary-soft);
   --color: var(--mp-text);
-  --border-radius: var(--mp-r-lg);
+  --border-radius: 0;
   --padding-start: 0;
   --padding-end: 0;
   --box-shadow: none;
   text-transform: none;
-  font-weight: 650;
+  font-weight: 600;
+}
+
+/* Hairline dividers between cells, drawn on the inner cells only. */
+.home-quick-action + .home-quick-action::part(native) {
+  border-left: 1px solid var(--mp-border);
 }
 
 .home-quick-action::part(native) {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   justify-content: center;
   padding: 0;
-  border: 1px solid var(--mp-border);
-  border-radius: var(--mp-r-lg);
-  font-size: 0.74rem;
+  border-radius: 0;
+  font-size: 0.76rem;
   letter-spacing: 0;
 }
 
+/* No tinted tile: the icon sits on its own in the accent colour, which is
+   quieter and less templated than a filled square behind every glyph. */
 .home-quick-action__icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--mp-r-md);
-  background: var(--mp-primary-soft);
-  color: var(--ion-color-primary);
+  color: var(--mp-primary);
 }
 
 .home-quick-action__icon ion-icon {
-  font-size: 19px;
+  font-size: 23px;
 }
 
 /* ---------- Cards / panels ---------- */
@@ -831,16 +842,12 @@ body.dark .fs-datepicker {
 
 /* ---------- Small phones ---------- */
 @media (max-width: 380px) {
-  .home-quick-actions {
-    gap: 8px;
-  }
-
   .home-quick-action {
-    height: 70px;
+    height: 62px;
   }
 
   .home-quick-action::part(native) {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
   }
 
   .cal-hero__value {
