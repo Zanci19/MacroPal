@@ -49,7 +49,12 @@ const Ring: React.FC<{ size: number; stroke: number; progress: number; color: st
   return (
     <div className="hs-ring" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--mp-surface-sunken)" strokeWidth={stroke} />
+        {/* Track uses --mp-border-strong, not --mp-surface-sunken: the sunken
+            token is #eef1f7 on a white card (invisible) and, in dark mode,
+            darker than the card itself (reads as a hole). border-strong stays
+            visible against the card in both themes, so a low fill reads as a
+            small arc on a ring rather than a blob floating in a void. */}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--mp-border-strong)" strokeWidth={stroke} />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke}
           strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - p)}

@@ -32,7 +32,7 @@
 .hs-macro__val { color: var(--mp-text-muted); font-variant-numeric: tabular-nums; }
 .hs-macro__val strong { color: var(--mp-text); }
 .hs-macro__val.is-over { color: var(--mp-color-fat); }
-.hs-track { height: 7px; border-radius: var(--mp-r-pill); background: var(--mp-surface-sunken); overflow: hidden; }
+.hs-track { height: 7px; border-radius: var(--mp-r-pill); background: var(--mp-border-strong); overflow: hidden; /* not surface-sunken: it vanishes on the card (invisible on white, darker-than-card in dark) */ }
 .hs-track > i { display: block; height: 100%; border-radius: var(--mp-r-pill); background: var(--c); transition: width .4s var(--mp-ease-out); }
 
 /* ---- shared: extended macros mini grid ---- */
@@ -55,7 +55,7 @@
 .hs-micro__list { display: flex; flex-direction: column; gap: 9px; padding: 6px 2px 4px; }
 .hs-micro__row { display: grid; grid-template-columns: 84px 1fr 40px; align-items: center; gap: 9px; }
 .hs-micro__k { font-size: 12px; color: var(--mp-text-muted); }
-.hs-micro__track { height: 6px; border-radius: var(--mp-r-pill); background: var(--mp-surface-sunken); overflow: hidden; }
+.hs-micro__track { height: 6px; border-radius: var(--mp-r-pill); background: var(--mp-border-strong); overflow: hidden; /* not surface-sunken: it vanishes on the card (invisible on white, darker-than-card in dark) */ }
 .hs-micro__track > i { display: block; height: 100%; border-radius: var(--mp-r-pill); background: var(--mp-primary); }
 .hs-micro__p { font-size: 11px; font-weight: 700; text-align: right; color: var(--mp-text-muted); font-variant-numeric: tabular-nums; }
 
@@ -67,7 +67,7 @@
 .hs-bold__cap { font-size: var(--mp-fs-label); letter-spacing: .14em; text-transform: uppercase; color: var(--mp-text-subtle); font-weight: var(--mp-fw-heading); }
 .hs-bold__big { font-size: 46px; font-weight: var(--mp-fw-display); letter-spacing: -.03em; line-height: 1; color: var(--mp-text); font-variant-numeric: tabular-nums; }
 .hs-bold__big span { font-size: 18px; color: var(--mp-text-muted); font-weight: 700; letter-spacing: -.01em; }
-.hs-bold__bar { height: 12px; border-radius: var(--mp-r-pill); background: var(--mp-surface-sunken); overflow: hidden; display: flex; }
+.hs-bold__bar { height: 12px; border-radius: var(--mp-r-pill); background: var(--mp-border-strong); overflow: hidden; /* not surface-sunken: it vanishes on the card (invisible on white, darker-than-card in dark) */ display: flex; }
 .hs-bold__bar > i { height: 100%; transition: width .4s var(--mp-ease-out); }
 .hs-bold__meta { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--mp-text-muted); }
 .hs-bold__meta strong { color: var(--mp-text); }
