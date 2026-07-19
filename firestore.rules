@@ -34,6 +34,22 @@ service cloud.firestore {
       return isSelf(userUid) || (signedIn() && isAssigned(request.auth.uid, userUid));
     }
 
+    // `role` is what isClinician()/isAdmin() gate every privileged path on, so
+    // it must never be self-assignable. Clients legitimately write role:"user"
+    // (see the clinician-invite transaction in ClinicianConnect.tsx), so the
+    // constraint is on the VALUE, not on touching the field: a client may leave
+    // role untouched or set it to "user", never to "clinician" or "admin".
+    // Elevated roles are granted out-of-band (admin console / Cloud Function).
+    function roleNotEscalated() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(["role"])
+        || request.resource.data.role == "user";
+    }
+
+    function roleSafeOnCreate() {
+      return !("role" in request.resource.data)
+        || request.resource.data.role == "user";
+    }
+
     function canSetHasEverLoggedFood(uid) {
       return signedIn()
         && isAssigned(request.auth.uid, uid)
@@ -51,8 +67,8 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if canReadUser(uid);
-      allow create: if isSelf(uid);
-      allow update: if isSelf(uid) || canSetHasEverLoggedFood(uid);
+      allow create: if isSelf(uid) && roleSafeOnCreate();
+      allow update: if (isSelf(uid) && roleNotEscalated()) || canSetHasEverLoggedFood(uid);
       allow delete: if isSelf(uid);
 
       match /foods/{dateKey} {

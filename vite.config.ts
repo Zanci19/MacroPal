@@ -45,5 +45,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/setupTests.ts',
+    // tests/ holds the Firestore rules suite, which runs against the emulator
+    // via `npm run test.rules` rather than in jsdom.
+    exclude: ['**/node_modules/**', '**/dist/**', 'tests/**'],
   }
 })
