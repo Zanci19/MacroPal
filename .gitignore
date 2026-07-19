@@ -13,7 +13,12 @@
 
 # production
 /dist
-/android
+
+# NOTE: android/ is intentionally NOT ignored. The native project holds
+# hand-maintained config (AndroidManifest permissions, the speech-recognizer
+# <queries> block) that is silently lost on a fresh clone or `cap add android`
+# if it is untracked. Build output and local.properties are excluded by
+# android/.gitignore.
 
 # misc
 .DS_Store

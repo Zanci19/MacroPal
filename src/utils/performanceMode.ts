@@ -28,19 +28,22 @@ export const isLowEndDevice = (): boolean => {
   const connection = nav.connection;
   const effectiveType = connection?.effectiveType ?? "";
   const saveData = Boolean(connection?.saveData);
-  const isAndroid = /Android/i.test(nav.userAgent || "");
   const reducedMotion =
     typeof window !== "undefined" &&
     typeof window.matchMedia === "function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const weakCpu = cores > 0 && cores <= 4;
-  const weakMemory = memory > 0 && memory <= 3;
+  // navigator.deviceMemory is deliberately coarse and CAPPED AT 4 by the spec
+  // (reported values are 0.25/0.5/1/2/4), so 4 means ">= 4GB" — i.e. a healthy
+  // device — not "only 4GB". Any threshold of `memory <= 4` is therefore true
+  // for every device that reports the hint at all, and must never be used as a
+  // weakness signal on its own.
+  const weakMemory = memory > 0 && memory <= 2;
   const constrainedNetwork =
     saveData || effectiveType === "slow-2g" || effectiveType === "2g";
-  const weakAndroid = isAndroid && cores <= 6 && memory <= 4;
 
-  return reducedMotion || weakCpu || weakMemory || constrainedNetwork || weakAndroid;
+  return reducedMotion || weakCpu || weakMemory || constrainedNetwork;
 };
 
 export const applyRuntimePerformanceMode = (): boolean => {
