@@ -1,0 +1,142 @@
+/* Food search result row.
+   Built on the --mp-* token layer in theme/theme.css so it inherits both
+   themes, the font preference and the low-end animation suppression. */
+
+.mp-result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mp-space-3);
+  width: 100%;
+  padding: var(--mp-space-3) var(--mp-space-4);
+  border: 0;
+  border-bottom: 1px solid var(--mp-border);
+  background: var(--mp-surface);
+  color: var(--mp-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s var(--mp-ease-out);
+}
+
+.mp-result:last-child {
+  border-bottom: 0;
+}
+
+.mp-result:hover:not(:disabled) {
+  background: var(--mp-surface-muted);
+}
+
+.mp-result:active:not(:disabled) {
+  background: var(--mp-surface-sunken);
+}
+
+.mp-result:focus-visible {
+  outline: 2px solid var(--mp-primary);
+  outline-offset: -2px;
+}
+
+.mp-result:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Unbranded entries rank above branded ones, so give them a faint ground that
+   makes that grouping visible rather than looking like an arbitrary order. */
+.mp-result--generic {
+  background: var(--mp-primary-softer);
+}
+
+.mp-result--generic:hover:not(:disabled) {
+  background: var(--mp-primary-soft);
+}
+
+.mp-result__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mp-result__name {
+  font-size: var(--mp-fs-body);
+  font-weight: var(--mp-fw-medium);
+  line-height: 1.35;
+}
+
+/* The brand is context, not identity -- de-emphasised so the food name is what
+   the eye lands on when scanning a column of results. */
+.mp-result__brand {
+  font-style: normal;
+  font-weight: var(--mp-fw-body);
+  color: var(--mp-text-subtle);
+}
+
+.mp-result__tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border: 1px solid var(--mp-border-strong);
+  /* Deliberately square-ish: pill-shaped chips everywhere is the look we're
+     moving away from. */
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: var(--mp-fw-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* --mp-primary at this size only reached 4.0:1 on the light generic row.
+     -strong resolves to the shade in light and the tint in dark, so it gains
+     contrast in both directions rather than fixing one theme and hurting the other. */
+  color: var(--mp-primary-strong);
+  vertical-align: 1px;
+}
+
+.mp-result__macros {
+  font-size: var(--mp-fs-caption);
+  color: var(--mp-text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.mp-result__kcal {
+  flex: none;
+  min-width: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mp-result__kcal b {
+  font-size: 1.05rem;
+  font-weight: var(--mp-fw-heading);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A plain CSS spinner rather than <ion-spinner>: this row is presentational,
+   and pulling a Stencil web component in for it also broke cleanly under jsdom. */
+.mp-result__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--mp-border-strong);
+  border-top-color: var(--mp-primary);
+  border-radius: 50%;
+  animation: mp-result-spin 0.7s linear infinite;
+}
+
+@keyframes mp-result-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-result__spinner { animation-duration: 2s; }
+}
+
+.mp-result__kcal-unit {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mp-text-subtle);
+}

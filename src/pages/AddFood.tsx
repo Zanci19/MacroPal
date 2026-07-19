@@ -87,6 +87,7 @@ import {
 } from "../utils/date";
 import { handleError } from "../utils/handleError";
 import { rankFoods } from "../utils/foodSearch";
+import FoodResultRow from "../components/FoodResultRow";
 import {
   ADD_FOOD_RECENT_QUERY_KEY,
   RECENT_QUERIES_CLEARED_EVENT,
@@ -3924,39 +3925,29 @@ const AddFood: React.FC = () => {
             )}
 
             <IonList className="add-food-results-list" ref={resultsListRef}>
-              {results.map((food) => {
-                const preview = macrosPer100g(food.nutriments);
-
-                return (
-                  <IonItem
-                    key={`${food.code}-${food.product_name || ""}`}
-                    button
-                    disabled={foodDetailLoading !== null}
-                    onClick={() => {
-                      console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
-                      trackEvent("search_result_click", {
-                        code: food.code,
-                        name: food.product_name || "(no name)",
-                      });
-                      fetchFoodDetailsByCode(food.code);
-                    }}
-                  >
-                    <IonLabel>
-                      <h2>
-                        {food.product_name || "(no name)"}
-                        {food.brands ? ` · ${food.brands}` : ""}
-                      </h2>
-                      <p>
-                        {food.serving_size ? `Per serving: ${food.serving_size}` : "Per 100g"} · C {preview.carbs || 0}g · P {preview.protein || 0}g · F {preview.fat || 0}g
-                      </p>
-                    </IonLabel>
-                    {foodDetailLoading === food.code
-                      ? <IonSpinner slot="end" name="crescent" />
-                      : <div slot="end" className="fs-result-kcal">{preview.calories || 0}<br /><span className="fs-result-kcal__unit">kcal</span></div>
-                    }
-                  </IonItem>
-                );
-              })}
+              {results.map((food) => (
+                <FoodResultRow
+                  key={`${food.code}-${food.product_name || ""}`}
+                  name={food.product_name || "(no name)"}
+                  brand={food.brands}
+                  // The figures below are per 100 g, so the label says 100 g.
+                  // The previous row read "Per serving: {serving_size}" while
+                  // still rendering macrosPer100g, mislabelling the numbers for
+                  // every product that declared a serving size.
+                  basisLabel="100 g"
+                  macros={macrosPer100g(food.nutriments)}
+                  loading={foodDetailLoading === food.code}
+                  disabled={foodDetailLoading !== null}
+                  onSelect={() => {
+                    console.log(`[USER ACTION] AddFood: Search result clicked`, { code: food.code, name: food.product_name });
+                    trackEvent("search_result_click", {
+                      code: food.code,
+                      name: food.product_name || "(no name)",
+                    });
+                    fetchFoodDetailsByCode(food.code);
+                  }}
+                />
+              ))}
             </IonList>
 
             {noMoreResults && results.length > 0 && (
