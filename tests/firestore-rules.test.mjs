@@ -3,7 +3,15 @@ import {
   assertFails,
   assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, setDoc, updateDoc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  getDoc,
+  getDocs,
+  deleteDoc,
+  collection,
+} from "firebase/firestore";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
@@ -135,6 +143,72 @@ await check("an admin's existing role survives an unrelated profile update", asy
   });
   assert.equal(roleAfter, "admin", "admin role was clobbered");
 });
+
+console.log("\n--- clinician assignment requires patient consent ---");
+
+const CLINICIAN = "clinician-uid";
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "users", CLINICIAN), { role: "clinician" });
+});
+const clinician = env.authenticatedContext(CLINICIAN).firestore();
+
+await check("clinician CANNOT self-assign a patient who never consented", () =>
+  assertFails(
+    setDoc(doc(clinician, "users", CLINICIAN, "assignedUsers", VICTIM), {
+      uid: VICTIM,
+    })
+  )
+);
+
+await check("patient CAN accept an invite (the ClinicianConnect flow)", () =>
+  assertSucceeds(
+    setDoc(
+      doc(victim, "users", CLINICIAN, "assignedUsers", VICTIM),
+      { uid: VICTIM, assignedAt: "2026-07-19" },
+      { merge: true }
+    )
+  )
+);
+
+await check("patient CANNOT assign themselves to a non-clinician", () =>
+  assertFails(
+    setDoc(doc(victim, "users", ATTACKER, "assignedUsers", VICTIM), { uid: VICTIM })
+  )
+);
+
+await check("patient CAN revoke their own assignment", () =>
+  assertSucceeds(deleteDoc(doc(victim, "users", CLINICIAN, "assignedUsers", VICTIM)))
+);
+
+console.log("\n--- pairing code enumeration and deletion ---");
+
+await env.withSecurityRulesDisabled(async (ctx) => {
+  await setDoc(doc(ctx.firestore(), "pairingCodes", "12345678"), {
+    ownerUid: VICTIM,
+    ownerName: "Victim",
+    expiresAt: "2099-01-01T00:00:00.000Z",
+  });
+});
+
+await check("attacker CANNOT list all pairing codes to harvest uids", () =>
+  assertFails(getDocs(collection(attacker, "pairingCodes")))
+);
+
+await check("attacker CANNOT delete someone else's pairing code", () =>
+  assertFails(deleteDoc(doc(attacker, "pairingCodes", "12345678")))
+);
+
+await check("a redeemer CAN still look up a code they were given", () =>
+  assertSucceeds(getDoc(doc(attacker, "pairingCodes", "12345678")))
+);
+
+await check("owner CAN delete their own pairing code", () =>
+  assertSucceeds(deleteDoc(doc(victim, "pairingCodes", "12345678")))
+);
+
+await check("attacker CANNOT list clinician invites", () =>
+  assertFails(getDocs(collection(attacker, "clinicianInvites")))
+);
 
 await env.cleanup();
 console.log(`\n${pass} passed, ${fail} failed`);

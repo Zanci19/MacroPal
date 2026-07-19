@@ -126,8 +126,10 @@ export function useSharing() {
     const viewerData = viewerSnap.data() || {};
     const existingShared: SharedUserEntry[] = viewerData.sharedUsers ?? [];
     if (existingShared.some((s) => s.uid === data.ownerUid)) {
-      // Already paired – just delete the code and return
-      await deleteDoc(codeRef);
+      // Already paired. Cleanup is best-effort: only the code's owner may
+      // delete it, so a redeemer's delete is denied by the rules. The code
+      // expires on its own after CODE_TTL_MS.
+      await deleteDoc(codeRef).catch(() => {});
       throw new Error("You are already paired with this user");
     }
 
@@ -152,8 +154,9 @@ export function useSharing() {
       viewers: arrayUnion(newViewer),
     });
 
-    // Delete the used code
-    await deleteDoc(codeRef);
+    // Best-effort cleanup of the consumed code; see the note above. A failure
+    // here must not surface as a pairing error, since the pairing succeeded.
+    await deleteDoc(codeRef).catch(() => {});
 
     return newSharedUser;
   }, []);

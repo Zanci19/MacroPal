@@ -111,9 +111,20 @@ service cloud.firestore {
         allow read, write: if isSelf(uid);
       }
 
+      // {uid} is the clinician, {userUid} is the patient being assigned.
+      //
+      // Creation is the consent step, so it belongs to the PATIENT: only the
+      // user being assigned may create the link, and only toward an account
+      // that genuinely holds a clinician role. The previous rule keyed on
+      // isSelf(uid) -- the clinician -- which both let any clinician silently
+      // assign arbitrary patients to themselves and denied the real invite
+      // redemption in ClinicianConnect.tsx, where the patient performs this
+      // write. Either party may end the relationship.
       match /assignedUsers/{userUid} {
         allow read: if isSelf(uid) || isAdmin(request.auth.uid);
-        allow create, update, delete: if isSelf(uid) && isClinician(request.auth.uid);
+        allow create: if isSelf(userUid) && isClinician(uid);
+        allow update: if isSelf(userUid);
+        allow delete: if isSelf(userUid) || isSelf(uid);
       }
 
       match /carePlanTemplates/{templateId} {
@@ -149,12 +160,25 @@ service cloud.firestore {
 
     match /pairingCodes/{code} {
       allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow read: if signedIn();
-      allow delete: if signedIn();
+
+      // `get` stays open because redeeming requires looking up a code someone
+      // was handed out-of-band. `list` is denied: a blanket read let any signed-in
+      // user enumerate every pairing code and harvest the ownerUid on each,
+      // which is how an attacker built a target list of user ids.
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Only the owner may delete. `delete: if signedIn()` let anyone destroy
+      // anyone else's pairing codes. Redeemers no longer delete the code they
+      // consumed -- it self-expires via the 5 minute TTL in useSharing.ts.
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
     }
 
     match /clinicianInvites/{code} {
-      allow read: if signedIn();
+      // Same split as pairingCodes: redeeming needs `get`, but listing exposed
+      // every clinician/patient relationship to any signed-in user.
+      allow get: if signedIn();
+      allow list: if signedIn() && isAdmin(request.auth.uid);
       allow create, update, delete: if signedIn() && (
         request.resource.data.clinicianUid == request.auth.uid ||
         resource.data.clinicianUid == request.auth.uid ||
