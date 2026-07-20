@@ -545,11 +545,15 @@ ion-tab-bar {
 }
 
 .mp-tab-btn ion-icon {
+  opacity: 0.75;
   transition: transform 0.2s var(--mp-ease-bounce), opacity 0.2s ease;
 }
 
+/* Scale is deliberately perceptible: 1.06 on a 24px icon is ~1.4px of travel,
+   which reads as nothing. The opacity step does most of the work. */
 .mp-tab-btn--active ion-icon {
-  transform: scale(1.06);
+  opacity: 1;
+  transform: scale(1.15);
 }
 
 .mp-tab-btn--add {

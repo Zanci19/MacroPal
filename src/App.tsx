@@ -578,25 +578,16 @@ const TabsShell: React.FC<RouteComponentProps> = () => {
             )
         );
 
-      // Keep a 35% parallax exit while ensuring the leaving page stays under the entering page.
+      // The leaving page is parked under the entering one but NOT animated.
+      // A parallax exit means compositing a second full-screen layer for every
+      // tab switch, which is the main source of transition jank in the WebView;
+      // the entering slide alone reads just as clearly.
       if (leavingEl) {
         rootAnimation.addAnimation(
           createAnimation()
             .addElement(leavingEl)
-            .beforeStyles({
-              position: "absolute",
-              top: "0",
-              left: "0",
-              right: "0",
-              bottom: "0",
-              "z-index": "10",
-            })
-            .afterClearStyles(["position", "top", "left", "right", "bottom", "z-index"])
-            .fromTo(
-              "transform",
-              "translate3d(0, 0, 0)",
-              `translate3d(${-directionFactor * 35}%, 0, 0)`
-            )
+            .beforeStyles({ "z-index": "10" })
+            .afterClearStyles(["z-index"])
         );
       }
 
@@ -801,11 +792,12 @@ const App: React.FC = () => {
     // body.mp-low-end-mode; see theme.css). Directly targets perceived lag.
     applyRuntimePerformanceMode();
 
-    // Only listen for system preference changes if using system theme
-    const listener = (event: MediaQueryListEvent) => {
-      const currentTheme = getStoredThemeMode();
-      if (currentTheme !== "system") return;
-      document.body.classList.toggle("dark", event.matches);
+    // Only listen for system preference changes if using system theme.
+    // Route through applyTheme (rather than toggling the class directly) so the
+    // native status bar is re-synced too when the OS theme flips.
+    const listener = () => {
+      if (getStoredThemeMode() !== "system") return;
+      applyTheme("system");
     };
     if ("addEventListener" in prefersDark) {
       prefersDark.addEventListener("change", listener);
