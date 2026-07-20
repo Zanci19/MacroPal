@@ -103,18 +103,16 @@
 
 .home-quick-action {
   min-width: 0;
-  height: 66px;
+  height: 52px;
   margin: 0;
   --background: transparent;
   --background-hover: var(--mp-primary-soft);
   --background-activated: var(--mp-primary-soft);
-  --color: var(--mp-text);
+  --color: var(--mp-primary);
   --border-radius: 0;
   --padding-start: 0;
   --padding-end: 0;
   --box-shadow: none;
-  text-transform: none;
-  font-weight: 600;
 }
 
 /* Hairline dividers between cells, drawn on the inner cells only. */
@@ -124,17 +122,14 @@
 
 .home-quick-action::part(native) {
   display: flex;
-  flex-direction: column;
-  gap: 7px;
   justify-content: center;
+  align-items: center;
   padding: 0;
   border-radius: 0;
-  font-size: 0.76rem;
-  letter-spacing: 0;
 }
 
-/* No tinted tile: the icon sits on its own in the accent colour, which is
-   quieter and less templated than a filled square behind every glyph. */
+/* Icon-only: labels were removed (accessible names live on aria-label). The
+   glyph carries the action, in the accent colour, no filled tile behind it. */
 .home-quick-action__icon {
   display: grid;
   place-items: center;
@@ -142,7 +137,7 @@
 }
 
 .home-quick-action__icon ion-icon {
-  font-size: 23px;
+  font-size: 24px;
 }
 
 /* ---------- Cards / panels ---------- */
@@ -557,14 +552,14 @@ body.dark .ring-track {
 .fs-meal__icon {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   margin-inline-end: 12px;
-  padding: 8px;
-  border-radius: var(--mp-r-md);
-  background: var(--mp-primary-soft);
-  color: var(--ion-color-primary);
-  font-size: 19px;
+  /* No tinted square behind the glyph -- same accent-tile pattern the quick
+     actions used. The bold element on this screen is the calorie ring;
+     everything else, meal glyphs included, stays quiet. */
+  color: var(--mp-primary);
+  font-size: 22px;
 }
 
 .fs-meal__title {
@@ -843,11 +838,7 @@ body.dark .fs-datepicker {
 /* ---------- Small phones ---------- */
 @media (max-width: 380px) {
   .home-quick-action {
-    height: 62px;
-  }
-
-  .home-quick-action::part(native) {
-    font-size: 0.72rem;
+    height: 48px;
   }
 
   .cal-hero__value {

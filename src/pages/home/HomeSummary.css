@@ -36,8 +36,12 @@
 .hs-track > i { display: block; height: 100%; border-radius: var(--mp-r-pill); background: var(--c); transition: width .4s var(--mp-ease-out); }
 
 /* ---- shared: extended macros mini grid ---- */
-.hs-mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.hs-mini__cell { background: var(--mp-surface-muted); border-radius: var(--mp-r-control); padding: 10px 6px; text-align: center; }
+/* One divided strip rather than four filled cards -- the equal-weight card
+   grid is another templated-looking pattern, and these are secondary numbers
+   that should sit quietly under the macros. */
+.hs-mini { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--mp-border); border-radius: var(--mp-r-md); overflow: hidden; }
+.hs-mini__cell { padding: 9px 6px; text-align: center; }
+.hs-mini__cell + .hs-mini__cell { border-left: 1px solid var(--mp-border); }
 .hs-mini__v { font-size: 16px; font-weight: var(--mp-fw-display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--mp-text); }
 .hs-mini__v small { font-size: 11px; color: var(--mp-text-subtle); font-weight: 600; margin-left: 1px; }
 .hs-mini__k { font-size: 10px; color: var(--mp-text-subtle); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }

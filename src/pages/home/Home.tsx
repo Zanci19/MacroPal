@@ -2425,6 +2425,8 @@ const Home: React.FC = () => {
           <IonButton
             className="home-quick-action"
             fill="clear"
+            aria-label="Search foods"
+            title="Search"
             onClick={() => {
               trackEvent("home_quick_action_search", { uid, date: activeDateKey });
               history.push(`/add-food?meal=breakfast&date=${activeDateKey}`);
@@ -2433,11 +2435,12 @@ const Home: React.FC = () => {
             <span className="home-quick-action__icon" aria-hidden="true">
               <IonIcon icon={searchOutline} />
             </span>
-            <span>Search</span>
           </IonButton>
           <IonButton
             className="home-quick-action"
             fill="clear"
+            aria-label="Scan a barcode"
+            title="Scan"
             onClick={() => {
               trackEvent("home_quick_action_scan", { uid, date: activeDateKey });
               history.push(`/scan-barcode?meal=snacks&date=${activeDateKey}`);
@@ -2446,11 +2449,12 @@ const Home: React.FC = () => {
             <span className="home-quick-action__icon" aria-hidden="true">
               <IonIcon icon={barcodeOutline} />
             </span>
-            <span>Scan</span>
           </IonButton>
           <IonButton
             className="home-quick-action"
             fill="clear"
+            aria-label="Log food from a photo"
+            title="Photo"
             onClick={() => {
               trackEvent("home_quick_action_photo", { uid, date: activeDateKey });
               history.push(`/photo-food-logger?meal=snacks&date=${activeDateKey}`);
@@ -2459,11 +2463,12 @@ const Home: React.FC = () => {
             <span className="home-quick-action__icon" aria-hidden="true">
               <IonIcon icon={cameraOutline} />
             </span>
-            <span>Photo</span>
           </IonButton>
           <IonButton
             className="home-quick-action"
             fill="clear"
+            aria-label="Quick add calories and macros"
+            title="Quick add"
             onClick={() => {
               trackEvent("home_quick_action_quick_add", { uid, date: activeDateKey });
               setShowQuickAdd(true);
@@ -2472,7 +2477,6 @@ const Home: React.FC = () => {
             <span className="home-quick-action__icon" aria-hidden="true">
               <IonIcon icon={addCircleOutline} />
             </span>
-            <span>Quick</span>
           </IonButton>
         </div>
 
