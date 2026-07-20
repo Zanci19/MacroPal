@@ -1585,7 +1585,7 @@ const Settings: React.FC = () => {
                       )}
                     </IonAvatar>
                   </div>
-                  <IonLabel>
+                  <IonLabel className="settings-account-label">
                     <h2>{accountUser.displayName || "Unnamed User"}</h2>
                     <p>{accountUser.email}</p>
                   </IonLabel>

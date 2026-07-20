@@ -34,6 +34,20 @@
   cursor: pointer;
 }
 
+/* Truncate the name and email so a long address ellipses cleanly instead of
+   being hard-clipped mid-character against the Verified note / card edge.
+   min-width:0 lets the label shrink inside the flex item so ellipsis engages. */
+.settings-account-label {
+  min-width: 0;
+}
+
+.settings-account-label h2,
+.settings-account-label p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .settings-avatar ion-avatar {
   width: 56px;
   height: 56px;
