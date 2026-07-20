@@ -1,3 +1,5 @@
+import { syncStatusBar } from "./platformSetup";
+
 export const THEME_MODES = ["system", "light", "dark"] as const;
 export type ThemeMode = (typeof THEME_MODES)[number];
 
@@ -30,6 +32,11 @@ export const applyTheme = (mode: ThemeMode) => {
   }
 
   window.localStorage.setItem("mp_theme", mode);
+
+  // Re-theme the native status bar to match. The web `dark` class cannot touch
+  // it, so without this a theme switch leaves the native bar stuck at its
+  // launch colour (dark app, white status bar). No-op on web.
+  syncStatusBar(document.body.classList.contains("dark"));
 };
 
 /* ----- Font preference: brand (Inter) vs native system stack ----- */
