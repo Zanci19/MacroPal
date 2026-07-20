@@ -465,7 +465,11 @@ ion-item ion-label[position="stacked"] + ion-datetime {
 
 /* ---------- Segment (pill) ---------- */
 ion-segment {
-  --background: var(--mp-surface-muted);
+  /* Track uses the sunken tone so the selected pill (elevated) reads as raised
+     in BOTH themes. The old track (surface-muted) inverted in dark mode, where
+     surface-muted (#1b212a) is no lighter than the selected fill, so the
+     selected tab did not stand out. */
+  --background: var(--mp-surface-sunken);
   border-radius: var(--mp-r-pill);
   padding: 4px;
   gap: 2px;
@@ -473,12 +477,12 @@ ion-segment {
 
 ion-segment-button {
   --background: transparent;
-  --background-checked: var(--mp-surface);
+  --background-checked: transparent;
   --background-hover: transparent;
   --color: var(--mp-text-muted);
   --color-checked: var(--mp-text);
-  --indicator-color: var(--mp-surface);
-  --indicator-box-shadow: var(--mp-shadow-xs);
+  --indicator-color: transparent;
+  --indicator-box-shadow: none;
   --border-radius: var(--mp-r-pill);
   --padding-top: 8px;
   --padding-bottom: 8px;
@@ -486,6 +490,22 @@ ion-segment-button {
   font-weight: 650;
   text-transform: none;
   letter-spacing: 0;
+}
+
+/* Ionic's MD segment draws the checked state as a 2px indicator underline with
+   a box-shadow; under the pill radius that showed as a ghost sliver poking out
+   below the selected tab, and --background-checked did not fill the native
+   button. Hide the built-in indicator and paint the selected pill on the
+   native part directly, so the toggle renders identically across modes and
+   both themes. */
+ion-segment-button::part(indicator) {
+  display: none;
+}
+
+ion-segment-button.segment-button-checked::part(native) {
+  background: var(--mp-surface-elevated);
+  border-radius: var(--mp-r-pill);
+  box-shadow: var(--mp-shadow-xs);
 }
 
 /* ---------- Tabs + floating add button ---------- */
