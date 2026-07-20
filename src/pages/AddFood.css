@@ -103,6 +103,10 @@
 
 .add-food-mode-segment {
   margin-bottom: 12px;
+  /* Track darker than the selected pill so selection reads as raised. Needed
+     because in dark mode surface-elevated == surface-muted, so the default
+     muted track gave the pill nothing to stand against. */
+  --background: var(--mp-surface-sunken);
 }
 
 .add-food-mode-segment ion-segment-button {
@@ -110,6 +114,24 @@
   text-transform: none;
   font-size: 0.82rem;
   letter-spacing: 0;
+}
+
+/* The Search / Favourites toggle rendered with a broken selected state: in MD
+   mode Ionic draws the checked indicator as a 2px underline-with-shadow which,
+   under the pill radius, showed as a ghost sliver poking out below the selected
+   tab, while --background-checked never filled the button. On top of that, the
+   default checked colour (--mp-surface) is darker than the track
+   (--mp-surface-muted) in dark mode, so selection read as recessed.
+   Fix: hide the built-in indicator and paint the selected pill on the native
+   part ourselves, using an elevated tone that reads as raised in both themes. */
+.add-food-mode-segment ion-segment-button::part(indicator) {
+  display: none;
+}
+
+.add-food-mode-segment ion-segment-button.segment-button-checked::part(native) {
+  background: var(--mp-surface-elevated);
+  border-radius: var(--mp-r-pill);
+  box-shadow: var(--mp-shadow-xs);
 }
 
 .add-food-search-input {
