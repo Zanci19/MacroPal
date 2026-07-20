@@ -101,7 +101,9 @@
 .an-macro-bar__track {
   flex: 1;
   height: 9px;
-  background: var(--mp-surface-muted);
+  /* not surface-muted: only ~1.07 contrast on the card in dark mode. Same
+     invisible-track issue fixed on the Home ring/rails. */
+  background: var(--mp-border-strong);
   border-radius: 5px;
   overflow: hidden;
 }

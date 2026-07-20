@@ -11,9 +11,21 @@
   margin-top: 4px;
 }
 
-.nb__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+/* One grouped, bordered box rather than a grid of filled cards. These are
+   secondary numbers; the equal-weight card grid read as templated. Grouping
+   in a single container with transparent cells tolerates the variable count
+   (fiber/sugar/sat-fat/sodium/salt wraps to a second row) and the 2-column
+   breakpoint without per-cell divider bookkeeping. */
+.nb__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px 0;
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-md);
+  padding: 6px 2px;
+}
 @media (max-width: 360px) { .nb__grid { grid-template-columns: repeat(2, 1fr); } }
-.nb__cell { background: var(--mp-surface-muted); border-radius: var(--mp-r-control); padding: 10px 6px; text-align: center; }
+.nb__cell { padding: 8px 6px; text-align: center; }
 .nb__v { font-size: 16px; font-weight: var(--mp-fw-display); letter-spacing: -.02em; color: var(--mp-text); font-variant-numeric: tabular-nums; }
 .nb__v small { font-size: 11px; color: var(--mp-text-subtle); font-weight: 600; margin-left: 1px; }
 .nb__k { font-size: 10px; color: var(--mp-text-subtle); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
@@ -21,7 +33,7 @@
 .nb__rows { display: flex; flex-direction: column; gap: 9px; }
 .nb__row { display: grid; grid-template-columns: 92px 1fr auto 42px; align-items: center; gap: 9px; }
 .nb__label { font-size: 12px; color: var(--mp-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nb__track { height: 6px; border-radius: var(--mp-r-pill); background: var(--mp-surface-sunken); overflow: hidden; }
+.nb__track { height: 6px; border-radius: var(--mp-r-pill); background: var(--mp-border-strong); overflow: hidden; /* not surface-sunken: invisible on the card (see the Home ring/rail fix) */ }
 .nb__track > i { display: block; height: 100%; border-radius: var(--mp-r-pill); background: var(--mp-primary); }
 .nb__amt { font-size: 11px; color: var(--mp-text-subtle); font-variant-numeric: tabular-nums; text-align: right; }
 .nb__dv { font-size: 11px; font-weight: 700; color: var(--mp-text-muted); text-align: right; font-variant-numeric: tabular-nums; }
